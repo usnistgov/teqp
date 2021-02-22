@@ -92,9 +92,3 @@ public:
 		return alphar(T, rho, rhotot_) * R * T * rhotot_;
 	}
 };
-
-template<typename Model, typename TType, typename RhoType>
-auto build_Psir_Hessian(const Model& model, const TType T, const RhoType& rho) {
-	// Double derivatives in each component's concentration
-
-}
