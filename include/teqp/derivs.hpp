@@ -29,7 +29,6 @@ derivrhoi(const FuncType& f, TType T, const ContainerType& rho, Integer j) {
     return f(T, rhocom).imag() / h;
 }
 
-
 template<typename Model, typename TType, typename RhoType>
 auto build_Psir_Hessian(const Model& model, const TType T, const RhoType& rho) {
     // Double derivatives in each component's concentration

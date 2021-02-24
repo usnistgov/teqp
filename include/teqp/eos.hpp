@@ -2,13 +2,15 @@
 
 #include "core.hpp"
 
-/* A simple implementation of the van der Waals EOS*/
+/* A (very) simple implementation of the van der Waals EOS*/
 class vdWEOS1 {
 private:
     double a, b;
-    double R = get_R_gas<double>();
+    
 public:
     vdWEOS1(double a, double b) : a(a), b(b) {};
+
+    const double R = get_R_gas<double>();
 
     template<typename TType, typename RhoType>
     auto alphar(TType T, const RhoType& rho) const {
@@ -18,22 +20,16 @@ public:
         return Psiminus - a / (R * T) * Psiplus;
     }
 
-    template<typename TType, typename RhoType>
-    auto Psir(TType T, const RhoType& rho) const {
-        auto rhotot = std::accumulate(std::begin(rho), std::end(rho), (RhoType::value_type)0.0);
-        return alphar(T, rho) * R * T * rhotot;
-    }
-
     double p(double T, double v) {
-        return R * T / (v - b) - a / (v * v);
+        return R*T/(v - b) - a/(v*v);
     }
 };
 
-/* A slightly more involved implementation of van der Waals, this time with mixture properties */
+/* A slightly more involved implementation of van der Waals, 
+this time with mixture properties */
 template <typename NumType>
 class vdWEOS {
 private:
-    NumType R = get_R_gas<NumType>();
     std::valarray<NumType> ai, bi;
     std::valarray<std::valarray<NumType>> k;
 public:
@@ -48,9 +44,13 @@ public:
         k = std::valarray<std::valarray<NumType>>(std::valarray<NumType>(0.0, Tc_K.size()), Tc_K.size());
     };
 
-    template<typename TType, typename IndexType> auto get_ai(TType T, IndexType i) const { return ai[i]; }
+    const NumType R = get_R_gas<double>();
 
-    template<typename TType, typename IndexType> auto get_bi(TType T, IndexType i) const { return bi[i]; }
+    template<typename TType, typename IndexType> 
+    auto get_ai(TType T, IndexType i) const { return ai[i]; }
+
+    template<typename TType, typename IndexType> 
+    auto get_bi(TType T, IndexType i) const { return bi[i]; }
 
     template<typename TType, typename CompType>
     auto a(TType T, const CompType& molefracs) const {
@@ -79,16 +79,10 @@ public:
         const RhoType& rho,
         const std::optional<typename RhoType::value_type> rhotot = std::nullopt) const
     {
-        RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rho), std::end(rho), (RhoType::value_type)0.0);
+        RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rho), std::end(rho), (decltype(rho[0]))0.0);
         auto molefrac = rho / rhotot_;
         auto Psiminus = -log(1.0 - b(molefrac) * rhotot_);
         auto Psiplus = rhotot_;
         return Psiminus - a(T, molefrac) / (R * T) * Psiplus;
-    }
-
-    template<typename TType, typename RhoType>
-    auto Psir(TType T, const RhoType& rho, const std::optional<typename RhoType::value_type> rhotot = std::nullopt) const {
-        RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rho), std::end(rho), (RhoType::value_type)0.0);
-        return alphar(T, rho, rhotot_) * R * T * rhotot_;
     }
 };

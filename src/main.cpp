@@ -32,9 +32,14 @@ void test_vdW() {
 
     auto t21 = std::chrono::steady_clock::now();
     
-    auto Psir = vdW.Psir(T, rhovec);
-    auto dPsirdrho0 = rhovec[0] * derivrhoi([&vdW](const auto& T, const auto& rhovec) { return vdW.Psir(T, rhovec); }, T, rhovec, 0);
-    auto dPsirdrho1 = rhovec[1] * derivrhoi([&vdW](const auto& T, const auto& rhovec) { return vdW.Psir(T, rhovec); }, T, rhovec, 1);
+    auto fPsir = [&vdW](const auto& T, const auto& rhovec) {
+        using container = decltype(rhovec);
+        auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+        return vdW.alphar(T, rhovec) * vdW.R * T * rhotot_;
+    };
+    auto Psir = fPsir(T, rhovec);
+    auto dPsirdrho0 = rhovec[0] * derivrhoi(fPsir, T, rhovec, 0);
+    auto dPsirdrho1 = rhovec[1] * derivrhoi(fPsir, T, rhovec, 1);
     auto pfromderiv = rho * R * T - Psir + dPsirdrho0 + dPsirdrho1;
 
     auto t31 = std::chrono::steady_clock::now();
@@ -57,9 +62,14 @@ void test_vdwMix() {
 
     auto t2 = std::chrono::steady_clock::now();
 
-    auto Psir = vdW.Psir(T, rhovec);
-    auto dPsirdrho0 = rhovec[0] * derivrhoi([&vdW, rhotot](const auto& T, const auto& rhovec) { return vdW.Psir(T, rhovec); }, T, rhovec, 0);
-    auto dPsirdrho1 = rhovec[1] * derivrhoi([&vdW, rhotot](const auto& T, const auto& rhovec) { return vdW.Psir(T, rhovec); }, T, rhovec, 1);
+    auto fPsir = [&vdW](const auto& T, const auto& rhovec) {
+        using container = decltype(rhovec);
+        auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+        return vdW.alphar(T, rhovec)*vdW.R*T*rhotot_;
+    };
+    auto Psir = fPsir(T, rhovec);
+    auto dPsirdrho0 = rhovec[0]*derivrhoi(fPsir, T, rhovec, 0);
+    auto dPsirdrho1 = rhovec[1]*derivrhoi(fPsir, T, rhovec, 1);
     auto pfromderiv = rho*R*T - Psir + dPsirdrho0 + dPsirdrho1;
     {
         auto term0 = rhovec[0] * derivrhoi([&vdW, rhotot](const auto& T, const auto& rhovec) { return vdW.alphar(T, rhovec); }, T, rhovec, 0);
@@ -75,7 +85,7 @@ void test_vdwMix() {
 }
 
 int main(){
-    test_vdW();
+    //test_vdW();
     test_vdwMix();
     return EXIT_SUCCESS;
 }
