@@ -60,7 +60,15 @@ void test_vdwMix() {
 	auto Psir = vdW.Psir(T, rhovec);
 	auto dPsirdrho0 = rhovec[0] * deriv2([&vdW, rhotot](const auto& T, const auto& rhovec) { return vdW.Psir(T, rhovec); }, T, rhovec);
 	auto dPsirdrho1 = rhovec[1] * deriv3([&vdW, rhotot](const auto& T, const auto& rhovec) { return vdW.Psir(T, rhovec); }, T, rhovec);
-	auto pfromderiv = rho * R * T - Psir + dPsirdrho0 + dPsirdrho1;
+	auto pfromderiv = rho*R*T - Psir + dPsirdrho0 + dPsirdrho1;
+	{
+		auto term0 = rhovec[0] * deriv2([&vdW, rhotot](const auto& T, const auto& rhovec) { return vdW.alphar(T, rhovec); }, T, rhovec);
+		auto term1 = rhovec[1] * deriv3([&vdW, rhotot](const auto& T, const auto& rhovec) { return vdW.alphar(T, rhovec); }, T, rhovec);
+		auto pr = (term0 + term1)*rhotot*R*T;
+		auto pfromderiv2 = rho*R*T + pr;
+		auto err2 = pfromderiv / pfromderiv2 - 1;
+		int err = 0;
+	}
 
 	auto t3 = std::chrono::steady_clock::now();
 	std::cout << std::chrono::duration<double>(t3 - t2).count() << " from isochoric (mix) " << std::endl;
