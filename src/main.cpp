@@ -33,7 +33,7 @@ void test_vdW() {
 
     std::cout << std::chrono::duration<double>(t31 - t21).count() << " from isochoric" << std::endl;
     auto err = pfromderiv / pp - 1.0;
-    std::cout << std::setprecision(20) << "Error (fractional): " << err << std::endl;
+    std::cout << "Error (fractional): " << err << std::endl;
 }
 
 void test_vdwMix() {
@@ -60,13 +60,20 @@ void test_vdwMix() {
     auto pfromderiv = rho*R*T - Psir + dPsirdrho0 + dPsirdrho1;
     auto sr = get_splus(vdW, T, rhovec);
 
-    auto dT1 = derivT(fPsir, T, rhovec);
-    auto dT2 = derivTmcx(fPsir, T, rhovec);
-
     auto t2 = std::chrono::steady_clock::now();
     auto pfromderiv3 = rhotot*R*T + get_pr(vdW, T, rhovec);
     auto t3 = std::chrono::steady_clock::now();
     std::cout << std::chrono::duration<double>(t3 - t2).count() << " from isochoric (mix) " << std::endl;
+
+    {
+    auto t1 = std::chrono::steady_clock::now();
+    volatile auto dT1 = derivT(fPsir, T, rhovec);
+    auto t2 = std::chrono::steady_clock::now();
+    volatile auto dT2 = derivTmcx(fPsir, T, rhovec);
+    auto t3 = std::chrono::steady_clock::now();
+    std::cout << std::chrono::duration<double>(t2 - t1).count() << " with complex step" << std::endl; 
+    std::cout << std::chrono::duration<double>(t3 - t2).count() << " with multicomplex " << std::endl;
+    }
 }
 
 int main(){
