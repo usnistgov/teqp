@@ -38,7 +38,7 @@ get_Psir(const Model& model, const TType T, const ContainerType& rhovec) {
 }
 
 /**
-// Calculate the residual pressure from derivatives of alphar
+/// Calculate the residual pressure from derivatives of alphar
 */
 template <typename Model, typename TType, typename ContainerType>
 typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
@@ -50,6 +50,15 @@ get_pr(const Model& model, const TType T, const ContainerType& rhovec) {
         pr += rhovec[i]*derivrhoi([&model](const auto& T, const auto& rhovec){ return model.alphar(T, rhovec); }, T, rhovec, i);
     }
     return pr*rhotot_*model.R*T;
+}
+
+/**
+/// Calculate the residual entropy (s^+=-sr/R) from derivatives of alphar
+*/
+template <typename Model, typename TType, typename ContainerType>
+typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
+get_splus(const Model& model, const TType T, const ContainerType& rhovec) {
+    return model.alphar(T, rhovec) + T*derivT([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec);
 }
 
 template<typename Model, typename TType, typename RhoType>

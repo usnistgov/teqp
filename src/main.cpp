@@ -60,6 +60,7 @@ void test_vdwMix() {
     auto dPsirdrho0 = rhovec[0]*derivrhoi(fPsir, T, rhovec, 0);
     auto dPsirdrho1 = rhovec[1]*derivrhoi(fPsir, T, rhovec, 1);
     auto pfromderiv = rho*R*T - Psir + dPsirdrho0 + dPsirdrho1;
+    auto sr = get_splus(vdW, T, rhovec);
 
     auto t2 = std::chrono::steady_clock::now();
     auto pfromderiv3 = rhotot*R*T + get_pr(vdW, T, rhovec);
