@@ -1,15 +1,11 @@
+#include "teqp/core.hpp"
+
 #include <iostream>
 #include <algorithm>
 #include <numeric>
-#include <vector>
 #include <valarray>
-#include <functional>
-#include <complex>
 #include <chrono>
-#include <optional>
 #include <iomanip>
-
-#include "teqp/core.hpp"
 
 void test_vdW() {
     volatile double T = 298.15;
@@ -30,9 +26,11 @@ void test_vdW() {
     std::cout << std::chrono::duration<double>(t3 - t2).count() << " from p(T,v)" << std::endl;
 
     const std::valarray<double> rhovec = { rho, 0.0 };
+
     auto t21 = std::chrono::steady_clock::now();
     auto pfromderiv = rho*R*T + get_pr(vdW, T, rhovec);
     auto t31 = std::chrono::steady_clock::now();
+
     std::cout << std::chrono::duration<double>(t31 - t21).count() << " from isochoric" << std::endl;
     auto err = pfromderiv / pp - 1.0;
     std::cout << std::setprecision(20) << "Error (fractional): " << err << std::endl;
@@ -61,6 +59,9 @@ void test_vdwMix() {
     auto dPsirdrho1 = rhovec[1]*derivrhoi(fPsir, T, rhovec, 1);
     auto pfromderiv = rho*R*T - Psir + dPsirdrho0 + dPsirdrho1;
     auto sr = get_splus(vdW, T, rhovec);
+
+    auto dT1 = derivT(fPsir, T, rhovec);
+    auto dT2 = derivTmcx(fPsir, T, rhovec);
 
     auto t2 = std::chrono::steady_clock::now();
     auto pfromderiv3 = rhotot*R*T + get_pr(vdW, T, rhovec);

@@ -1,5 +1,11 @@
 #pragma once
 
+#include <optional>
+#include <complex>
+#include <tuple>
+
+#include "MultiComplex/MultiComplex.hpp"
+
 template <typename TType, typename ContainerType, typename FuncType>
 typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
 caller(const FuncType& f, TType T, const ContainerType& rho) {
@@ -18,7 +24,21 @@ derivT(const FuncType& f, TType T, const ContainerType& rho) {
 }
 
 /***
-* \brief Given a function, use complex step derivatives to calculate the derivative with respect to the given composition variable
+* \brief Given a function, use multicomplex derivatives to calculate the derivative with
+* respect to the first variable which here is temperature
+*/
+template <typename TType, typename ContainerType, typename FuncType>
+typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
+derivTmcx(const FuncType& f, TType T, const ContainerType& rho) {
+    using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
+    fcn_t wrapper = [&rho, &f](const MultiComplex<TType>& T_) {return f(T_, rho); };
+    auto ders = diff_mcx1(wrapper, T, 1);
+    return ders[0];
+}
+
+/***
+* \brief Given a function, use complex step derivatives to calculate the derivative with respect 
+* to the given composition variable
 */
 template <typename TType, typename ContainerType, typename FuncType, typename Integer>
 typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type

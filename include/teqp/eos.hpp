@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core.hpp"
+#include <optional>
 
 /* A (very) simple implementation of the van der Waals EOS*/
 class vdWEOS1 {
@@ -9,10 +9,10 @@ private:
 public:
     vdWEOS1(double a, double b) : a(a), b(b) {};
 
-    const double R = get_R_gas<double>();
+    const double R = 1.380649e-23*6.02214076e23; ///< Exact value, given by k_B*N_A
 
     template<typename TType, typename RhoType>
-    auto alphar(TType T, const RhoType& rho) const {
+    auto alphar(const TType T, const RhoType& rho) const {
         auto rhotot = std::accumulate(std::begin(rho), std::end(rho), (RhoType::value_type)0.0);
         auto Psiminus = -log(1.0 - b * rhotot);
         auto Psiplus = rhotot;
