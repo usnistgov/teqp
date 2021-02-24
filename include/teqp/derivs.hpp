@@ -29,6 +29,29 @@ derivrhoi(const FuncType& f, TType T, const ContainerType& rho, Integer i) {
     return f(T, rhocom).imag() / h;
 }
 
+template <typename TType, typename ContainerType, typename Model>
+typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
+get_Psir(const Model& model, const TType T, const ContainerType& rhovec) {
+    using container = decltype(rhovec);
+    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+    return model.alphar(T, rhovec)*model.R*T*rhotot_;
+}
+
+/**
+// Calculate the residual pressure from derivatives of alphar
+*/
+template <typename Model, typename TType, typename ContainerType>
+typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
+get_pr(const Model& model, const TType T, const ContainerType& rhovec) {
+    using container = decltype(rhovec);
+    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+    decltype(rhovec[0] * T) pr = 0.0;
+    for (auto i = 0; i < rhovec.size(); ++i) {
+        pr += rhovec[i]*derivrhoi([&model](const auto& T, const auto& rhovec){ return model.alphar(T, rhovec); }, T, rhovec, i);
+    }
+    return pr*rhotot_*model.R*T;
+}
+
 template<typename Model, typename TType, typename RhoType>
 auto build_Psir_Hessian(const Model& model, const TType T, const RhoType& rho) {
     // Double derivatives in each component's concentration
