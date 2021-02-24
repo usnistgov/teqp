@@ -17,8 +17,7 @@ caller(const FuncType& f, TType T, const ContainerType& rho) {
 * respect to the first variable which here is temperature
 */
 template <typename TType, typename ContainerType, typename FuncType>
-typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
-derivT(const FuncType& f, TType T, const ContainerType& rho) {
+typename ContainerType::value_type derivT(const FuncType& f, TType T, const ContainerType& rho) {
     double h = 1e-100;
     return f(std::complex<TType>(T, h), rho).imag() / h;
 }
@@ -28,8 +27,7 @@ derivT(const FuncType& f, TType T, const ContainerType& rho) {
 * respect to the first variable which here is temperature
 */
 template <typename TType, typename ContainerType, typename FuncType>
-typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
-derivTmcx(const FuncType& f, TType T, const ContainerType& rho) {
+typename ContainerType::value_type derivTmcx(const FuncType& f, TType T, const ContainerType& rho) {
     using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
     fcn_t wrapper = [&rho, &f](const MultiComplex<TType>& T_) {return f(T_, rho); };
     auto ders = diff_mcx1(wrapper, T, 1);
@@ -41,8 +39,7 @@ derivTmcx(const FuncType& f, TType T, const ContainerType& rho) {
 * to the given composition variable
 */
 template <typename TType, typename ContainerType, typename FuncType, typename Integer>
-typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
-derivrhoi(const FuncType& f, TType T, const ContainerType& rho, Integer i) {
+typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const ContainerType& rho, Integer i) {
     double h = 1e-100;
     using comtype = std::complex<ContainerType::value_type>;
     std::valarray<comtype> rhocom(rho.size());
@@ -57,8 +54,7 @@ derivrhoi(const FuncType& f, TType T, const ContainerType& rho, Integer i) {
 * \brief Calculate the Psir=ar*rho
 */
 template <typename TType, typename ContainerType, typename Model>
-typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
-get_Psir(const Model& model, const TType T, const ContainerType& rhovec) {
+typename ContainerType::value_type get_Psir(const Model& model, const TType T, const ContainerType& rhovec) {
     using container = decltype(rhovec);
     auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
     return model.alphar(T, rhovec)*model.R*T*rhotot_;
@@ -68,12 +64,8 @@ get_Psir(const Model& model, const TType T, const ContainerType& rhovec) {
 * \brief Calculate the residual pressure from derivatives of alphar
 */
 template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_pr(
-    const Model& model, 
-    const TType T, 
-    const ContainerType& rhovec) 
+typename ContainerType::value_type get_pr(const Model& model, const TType T, const ContainerType& rhovec)
 {
-    using container = decltype(rhovec);
     auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
     decltype(rhovec[0] * T) pr = 0.0;
     for (auto i = 0; i < rhovec.size(); ++i) {
@@ -82,16 +74,17 @@ typename ContainerType::value_type get_pr(
     return pr*rhotot_*model.R*T;
 }
 
+template <typename Model, typename TType, typename ContainerType>
+typename ContainerType::value_type get_Ar10(const Model& model, const TType T, const ContainerType& rhovec){
+    return T*derivT([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec);
+}
+
 /***
 * \brief Calculate the residual entropy (s^+ = -sr/R) from derivatives of alphar
 */
 template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_splus(
-    const Model& model, 
-    const TType T, 
-    const ContainerType& rhovec)
-{
-    return model.alphar(T, rhovec) + T*derivT([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec);
+typename ContainerType::value_type get_splus(const Model& model, const TType T, const ContainerType& rhovec){
+    return model.alphar(T, rhovec) - get_Ar10(model, T, rhovec);
 }
 
 /***
