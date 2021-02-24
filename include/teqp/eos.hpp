@@ -28,7 +28,7 @@ public:
 this time with mixture properties */
 template <typename NumType>
 class vdWEOS {
-private:
+protected:
     std::valarray<NumType> ai, bi;
     std::valarray<std::valarray<NumType>> k;
 
@@ -45,7 +45,7 @@ private:
         for (auto i = 0; i < molefracs.size(); ++i) {
             for (auto j = 0; j < molefracs.size(); ++j) {
                 auto aij = (1 - k[i][j]) * sqrt(ai[i] * ai[j]);
-                a_ += molefracs[i] * molefracs[j] * aij;
+                a_ = a_ + molefracs[i] * molefracs[j] * aij;
             }
         }
         return a_;
@@ -55,7 +55,7 @@ private:
     auto b(const CompType& molefracs) const {
         CompType::value_type b_ = 0.0;
         for (auto i = 0; i < molefracs.size(); ++i) {
-            b_ += molefracs[i] * bi[i];
+            b_ = b_ + molefracs[i] * bi[i];
         }
         return b_;
     }

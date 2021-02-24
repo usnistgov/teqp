@@ -87,6 +87,17 @@ typename ContainerType::value_type get_splus(const Model& model, const TType T, 
     return model.alphar(T, rhovec) - get_Ar10(model, T, rhovec);
 }
 
+// Generic setting functions to handle Eigen types and STL types with the same interface
+template<typename MatrixLike, typename Integer, typename ValType>
+void setval(MatrixLike &m, Integer i, Integer j, const ValType val) {
+    m(i,j) = val;
+}
+
+// Partial specialization for valarray "matrix"
+template <> void setval<std::valarray<std::valarray<double>>, std::size_t, double>(std::valarray<std::valarray<double>>& m, std::size_t i, std::size_t j, const double val) {
+    m[i][j] = val;
+}
+
 /***
 * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations
 * 
@@ -96,11 +107,27 @@ template<typename Model, typename TType, typename RhoType>
 auto build_Psir_Hessian(const Model& model, const TType T, const RhoType& rho) {
     // Double derivatives in each component's concentration
     // N^N matrix (symmetric)
-    for (auto i = 0; i < rho.size(); ++i) {
-        for (auto j = i; j < rho.size(); ++j) {
-            auto val = diff_mcxN();
-            H(i,j) = val;
-            H(j,i) = val;
+
+    // Lambda function for getting Psir with multicomplex concentrations
+    auto func = [&model, &T](const std::vector<MultiComplex<double>>& rhovec) {
+        auto N = rhovec.size();
+        std::valarray<MultiComplex<double>> xs(N); for (auto i = 0; i < N; ++i) { xs[i] = rhovec[i]; }
+        return get_Psir(model, T, xs);
+    };
+    // The set of values around which the pertubations will happen
+    const std::size_t N = rho.size();
+    std::vector<double> xs(N); for(auto i = 0; i < N; ++i){ xs[i] = rho[i]; }
+
+    Eigen::MatrixXd H(N, N);
+    
+    for (std::size_t i = 0; i < rho.size(); ++i) {
+        for (std::size_t j = i; j < rho.size(); ++j) {
+            std::vector<int> order = { 0, 0 };
+            order[i] += 1;
+            order[j] += 1;
+            auto val = diff_mcxN<double>(func, xs, order);
+            setval(H,i,j,val);
+            setval(H,j,i,val);
         }
     }
     return H;

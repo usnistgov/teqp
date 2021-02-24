@@ -1,3 +1,6 @@
 [submodule "externals/mcx"]
 	path = externals/mcx
 	url = https://github.com/ianhbell/mcx.git
+[submodule "externals/Eigen"]
+	path = externals/Eigen
+	url = https://gitlab.com/libeigen/eigen.git
