@@ -65,8 +65,8 @@ public:
     {
         RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
         auto molefrac = rhovec / rhotot_;
-        auto Tred = redfunc.Tr(molefrac);
-        auto rhored = redfunc.rhor(molefrac);
+        auto Tred = redfunc.get_Tr(molefrac);
+        auto rhored = redfunc.get_rhor(molefrac);
         auto delta = rhotot_ / rhored;
         auto tau = Tred / T;
         using resulttype = decltype(T* rhovec[0]);
@@ -74,13 +74,19 @@ public:
     }
 };
 
+
 class MultiFluidReducingFunction {
 private:
     Eigen::MatrixXd betaT, gammaT, betaV, gammaV, YT, Yv;
+    Eigen::ArrayXd Tc, vc;
 
     template <typename Num>
-    auto cube(Num x) {
-        return x * x * x;
+    auto cube(Num x) const {
+        return x*x*x;
+    }
+    template <typename Num>
+    auto square(Num x) const {
+        return x*x;
     }
 
 public:
@@ -90,7 +96,7 @@ public:
         const Eigen::MatrixXd& betaT, const Eigen::MatrixXd& gammaT,
         const Eigen::MatrixXd& betaV, const Eigen::MatrixXd& gammaV,
         const ArrayLike& Tc, const ArrayLike& vc)
-        : betaT(betaT), gammaT(gammaT), betaV(betaV), gammaV(gammaV) {
+        : betaT(betaT), gammaT(gammaT), betaV(betaV), gammaV(gammaV), Tc(Tc), vc(vc) {
 
         auto N = Tc.size();
 
@@ -107,15 +113,22 @@ public:
     }
 
     template <typename MoleFractions>
-    auto Y(const MoleFractions& z, const Eigen::MatrixXd& Yc, const Eigen::MatrixXd& beta, const Eigen::MatrixXd& Yij) {
-        auto sum2 = 0.0;
+    auto Y(const MoleFractions& z, const Eigen::ArrayXd& Yc, const Eigen::MatrixXd& beta, const Eigen::MatrixXd& Yij) const {
+
         auto N = z.size();
-        for i in range(0, N - 1) {
-            for j in range(i + 1, N) {
-                sum2 += 2 * z[i] * z[j] * (z[i] + z[j]) / (beta[i, j] * *2 * z[i] + z[j]) * Yij[i, j];
+        MoleFractions::value_type sum1 = 0.0;
+        for (auto i = 0; i < N - 1; ++i) {
+            sum1 = sum1 + square(z[i]) * Yc[i];
+        }
+        
+        MoleFractions::value_type sum2 = 0.0;
+        for (auto i = 0; i < N-1; ++i){
+            for (auto j = i+1; j < N; ++j) {
+                sum2 = sum2 + 2*z[i]*z[j]*(z[i] + z[j])/(square(beta(i, j))*z[i] + z[j]) * Yij(i, j);
             }
         }
-        return (z * z * Yc).sum() + sum2;
+
+        return sum1 + sum2;
     }
 
     static auto get_BIPdep(const nlohmann::json& collection, const std::vector<std::string>& components) {
@@ -158,15 +171,17 @@ public:
         return std::make_tuple(betaT, gammaT, betaV, gammaV);
     }
     static auto get_Tcvc(const std::string& coolprop_root, const std::vector<std::string>& components) {
-        std::vector<double> Tc, vc;
+        Eigen::ArrayXd Tc(components.size()), vc(components.size());
         using namespace nlohmann;
+        auto i = 0;
         for (auto& c : components) {
             auto j = json::parse(std::ifstream(coolprop_root + "/dev/fluids/" + c + ".json"));
             auto red = j["EOS"][0]["STATES"]["reducing"];
             double Tc_ = red["T"];
             double rhoc_ = red["rhomolar"];
-            Tc.push_back(Tc_);
-            vc.push_back(1.0 / rhoc_);
+            Tc[i] = Tc_;
+            vc[i] = 1.0 / rhoc_;
+            i++;
         }
         return std::make_tuple(Tc, vc);
     }
@@ -183,8 +198,8 @@ public:
         }
         return F;
     }
-    template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return Y(z, Tc, betaT, YT); }
-    template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(z, vc, betaV, Yv); }
+    template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return Y(molefracs, Tc, betaT, YT); }
+    template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, vc, betaV, Yv); }
 };
 
 class DummyEOS {
@@ -193,8 +208,8 @@ public:
 };
 class DummyReducingFunction {
 public:
-    template<typename MoleFractions> auto Tr(const MoleFractions& molefracs) const { return molefracs[0]; }
-    template<typename MoleFractions> auto rhor(const MoleFractions& molefracs) const { return molefracs[0]; }
+    template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return molefracs[0]; }
+    template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return molefracs[0]; }
 };
 auto build_dummy_multifluid_model(const std::vector<std::string>& components) {
     std::vector<DummyEOS> EOSs(2);
