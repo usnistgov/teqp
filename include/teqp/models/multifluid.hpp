@@ -49,13 +49,14 @@ public:
 };
 
 template<typename ReducingFunction, typename CorrespondingTerm, typename DepartureTerm>
-class MultiFluid {
-private:
+class MultiFluid {  
+
+public:
     const ReducingFunction redfunc;
     const CorrespondingTerm corr;
     const DepartureTerm dep;
 
-public:
+    const double R = get_R_gas<double>();
 
     MultiFluid(ReducingFunction&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep) : redfunc(redfunc), corr(corr), dep(dep) {};
 
@@ -79,7 +80,7 @@ public:
 class MultiFluidReducingFunction {
 private:
     Eigen::MatrixXd betaT, gammaT, betaV, gammaV, YT, Yv;
-    Eigen::ArrayXd Tc, vc;
+    
 
     template <typename Num>
     auto cube(Num x) const {
@@ -91,6 +92,7 @@ private:
     }
 
 public:
+    Eigen::ArrayXd Tc, vc;
 
     template<typename ArrayLike>
     MultiFluidReducingFunction(
@@ -125,7 +127,7 @@ public:
         MoleFractions::value_type sum2 = 0.0;
         for (auto i = 0; i < N-1; ++i){
             for (auto j = i+1; j < N; ++j) {
-                sum2 = sum2 + 2*z[i]*z[j]*(z[i] + z[j])/(square(beta(i, j))*z[i] + z[j]) * Yij(i, j);
+                sum2 = sum2 + 2*z[i]*z[j]*(z[i] + z[j])/(square(beta(i, j))*z[i] + z[j])*Yij(i, j);
             }
         }
 
@@ -329,7 +331,7 @@ private:
 public:
     Eigen::ArrayXd n, t, d, c, l, eta, beta, gamma, epsilon;
 
-    void allocate(int N) {
+    void allocate(std::size_t N) {
         auto go = [&N](Eigen::ArrayXd &v){ v.resize(N); v.setZero(); };
         go(n); go(t); go(d); go(l); go(c); go(eta); go(beta); go(gamma); go(epsilon);
     }
@@ -349,11 +351,6 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         return (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
-        /*case (types::GERG2004):
-            return (n * pow(tau, t) * pow(delta, d) * exp(-eta * (delta - epsilon).square() - beta * (delta - gamma))).sum();
-        default:
-            throw - 1;
-        }*/
     }
 };
 
@@ -363,7 +360,7 @@ auto get_EOS(const std::string& coolprop_root, const std::string& name)
     auto j = json::parse(std::ifstream(coolprop_root + "/dev/fluids/" + name + ".json"));
     auto alphar = j["EOS"][0]["alphar"];
 
-    auto ncoeff = 0;
+    std::size_t ncoeff = 0;
 
     const std::vector<std::string> allowable_types = {"ResidualHelmholtzPower", "ResidualHelmholtzGaussian"};
     auto isallowed = [&allowable_types](const std::string &name){ for (auto &a : allowable_types){ if (name == a){return true;};} return false;};
@@ -382,9 +379,9 @@ auto get_EOS(const std::string& coolprop_root, const std::string& name)
     
     auto toeig = [](const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); };
     
-    auto offset = 0;
+    std::size_t offset = 0;
     for (auto &term: alphar){
-        auto N = term["n"].size();
+        std::size_t N = term["n"].size();
 
         auto eigorzero = [&term, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
             if (!term[name].empty()) {
