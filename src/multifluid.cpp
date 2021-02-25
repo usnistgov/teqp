@@ -1,5 +1,4 @@
 #include "teqp/core.hpp"
-#include <any>
 
 template<typename EOSCollection>
 class CorrespondingStatesContribution {
