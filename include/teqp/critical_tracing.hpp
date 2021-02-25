@@ -62,8 +62,7 @@ auto eigen_problem(const Model& model, const TType T, const RhoType& rhovec) {
             }
         }
         Eigen::MatrixXd Hprime = H(indicesToKeep, indicesToKeep);
-        std::cout << H << std::endl;
-        std::cout << Hprime << std::endl;
+
         auto [eigenvalues, eigenvectors] = sorted_eigen(Hprime);
 
         // Inject values into the U^T and v0 vectors

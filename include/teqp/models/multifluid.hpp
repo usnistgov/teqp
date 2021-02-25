@@ -5,6 +5,22 @@
 #include <fstream>
 #include <string>
 
+// See https://eigen.tuxfamily.org/dox/TopicCustomizing_CustomScalar.html
+namespace Eigen {
+    template<typename TN> struct NumTraits<MultiComplex<TN>> : NumTraits<double> // permits to get the epsilon, dummy_precision, lowest, highest functions
+    {
+        enum {
+            IsComplex = 1,
+            IsInteger = 0,
+            IsSigned = 1,
+            RequireInitialization = 1,
+            ReadCost = 1,
+            AddCost = 3,
+            MulCost = 3
+        };
+    };
+}
+
 template<typename EOSCollection>
 class CorrespondingStatesContribution {
 
@@ -15,7 +31,7 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = decltype(tau* delta* molefracs[0]);
+        using resulttype = std::remove_const<decltype(tau* delta* molefracs[0])>::type; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
@@ -36,12 +52,12 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = decltype(tau* delta* molefracs[0]);
+        using resulttype = std::remove_const<decltype(tau* delta* molefracs[0])>::type; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
             for (auto j = i+1; j < N; ++j) {
-                alphar = alphar + molefracs[i] * molefracs[j] * F(i,j) * funcs[i][j].alphar(tau, delta);
+                alphar = alphar + molefracs[i] * molefracs[j] * F(i, j) * funcs[i][j].alphar(tau, delta);
             }
         }
         return alphar;
@@ -71,7 +87,7 @@ public:
         auto rhored = redfunc.get_rhor(molefrac);
         auto delta = rhotot_ / rhored;
         auto tau = Tred / T;
-        using resulttype = decltype(T* rhovec[0]);
+        using resulttype = decltype(T*rhovec[0]);
         return corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
     }
 };
@@ -127,7 +143,7 @@ public:
         MoleFractions::value_type sum2 = 0.0;
         for (auto i = 0; i < N-1; ++i){
             for (auto j = i+1; j < N; ++j) {
-                sum2 = sum2 + 2*z[i]*z[j]*(z[i] + z[j])/(square(beta(i, j))*z[i] + z[j])*Yij(i, j);
+                sum2 = sum2 + 2.0*z[i]*z[j]*(z[i] + z[j])/(square(beta(i, j))*z[i] + z[j])*Yij(i, j);
             }
         }
 
@@ -321,6 +337,24 @@ auto get_departure_function_matrix(const std::string& coolprop_root, const nlohm
         }
     }
     return funcs;
+}
+
+template<typename T>
+auto pow(const std::complex<T> &x, const Eigen::ArrayXd& e) {
+    Eigen::Array<std::complex<T>, Eigen::Dynamic, 1> o(e.size());
+    for (auto i = 0; i < e.size(); ++i) {
+        o[i] = pow(x, e[i]);
+    }
+    return o;
+}
+
+template<typename T>
+auto pow(const MultiComplex<T> &x, const Eigen::ArrayXd& e) {
+    Eigen::Array<MultiComplex<T>, Eigen::Dynamic, 1> o(e.size());
+    for (auto i = 0; i < e.size(); ++i) {
+        o[i] = pow(x, e[i]);
+    }
+    return o;
 }
 
 class MultiFluidEOS {

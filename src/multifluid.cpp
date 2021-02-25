@@ -22,30 +22,35 @@ auto build_multifluid_model(const std::vector<std::string>& components) {
     );
 }
 
-//void trace() {
-//    auto model = build_multifluid_model({ "methane", "ethane" });
-//    auto rhoc0 = 1.0/model.redfunc.vc[0];
-//    auto T = model.redfunc.Tc[0];
-//    const auto dT = 1;
-//    std::valarray<double> rhovec = { rhoc0, 0.0 };
-//    for (auto iter = 0; iter < 1000; ++iter) {
-//        auto drhovecdT = get_drhovec_dT_crit(model, T, rhovec);
-//        rhovec += drhovecdT * dT;
-//        T += dT;
-//        int rr = 0;
-//        auto z0 = rhovec[0] / rhovec.sum();
-//        std::cout << z0 << " ," << rhovec[0] << "," << T << std::endl;
-//        if (z0 < 0) {
-//            break;
-//        }
-//    }
-//}
+void trace() {
+    auto model = build_multifluid_model({ "methane", "ethane" });
+    auto rhoc0 = 1.0/model.redfunc.vc[0];
+    auto T = model.redfunc.Tc[0];
+    const auto dT = 1;
+    std::valarray<double> rhovec = { rhoc0, 0.0 };
+    for (auto iter = 0; iter < 1000; ++iter) {
+        auto drhovecdT = get_drhovec_dT_crit(model, T, rhovec);
+        rhovec += drhovecdT * dT;
+        T += dT;
+        int rr = 0;
+        auto z0 = rhovec[0] / rhovec.sum();
+        std::cout << z0 << " ," << rhovec[0] << "," << T << std::endl;
+        if (z0 < 0) {
+            break;
+        }
+    }
+}
 
 int main(){
     //test_dummy();
-    //trace();
+    trace();
     auto model = build_multifluid_model({ "methane", "ethane" });
     std::valarray<double> rhovec = { 1.0, 2.0 };
-    auto alphar = model.alphar(300.0, rhovec);
+    double T = 300;
+    auto alphar = model.alphar(T, rhovec);
+    double h = 1e-100;
+    auto alpharcom = model.alphar(std::complex<double>(T, h), rhovec).imag()/h;
+    MultiComplex<double> Th{{T, h}};
+    auto alpharcom2 = model.alphar(Th, rhovec).complex().imag()/h;
     return EXIT_SUCCESS;
 }
