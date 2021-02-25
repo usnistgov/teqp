@@ -75,6 +75,11 @@ class MultiFluidReducingFunction {
 private:
     Eigen::MatrixXd betaT, gammaT, betaV, gammaV, YT, Yv;
 
+    template <typename Num>
+    auto cube(Num x) {
+        return x * x * x;
+    }
+
 public:
 
     template<typename ArrayLike>

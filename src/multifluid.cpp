@@ -5,11 +5,6 @@
 #include "json.hpp"
 #include "teqp/models/multifluid.hpp"
 
-template <typename Num>
-auto cube(Num x) {
-    return x*x*x;
-}
-
 
 auto build_multifluid_model(const std::vector<std::string>& components) {
     using namespace nlohmann;
