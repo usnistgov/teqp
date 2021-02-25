@@ -1,5 +1,8 @@
 #pragma once
 
+#include "json.hpp"
+#include <Eigen/Dense>
+#include <fstream>
 
 template<typename EOSCollection>
 class CorrespondingStatesContribution {
