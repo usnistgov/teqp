@@ -89,7 +89,7 @@ auto eigen_problem(const Model& model, const TType T, const RhoType& rhovec) {
         ed.eigenvectorscols = U.transpose();
     }
     else {
-        std::invalid_argument("More than one non-zero concentration value found; not currently supported");
+        throw std::invalid_argument("More than one non-zero concentration value found; not currently supported");
     }
     ed.v0 = ed.eigenvectorscols.col(0);
     ed.v1 = ed.eigenvectorscols.col(1);
@@ -203,7 +203,7 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
         stepping_desc = "backwards";
     }
     else {
-        std::invalid_argument("This is not possible I think.");
+        throw std::invalid_argument("This is not possible I think.");
     }
 
     // The columns of b are from Eq. 31 and Eq. 33
