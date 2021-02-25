@@ -72,25 +72,16 @@ public:
 
 class DummyEOS {
 public:
-    template<typename TType, typename RhoType>
-    auto alphar(TType tau, const RhoType& delta) const{ return tau*delta;}
+    template<typename TType, typename RhoType> auto alphar(TType tau, const RhoType& delta) const{ return tau*delta;}
 };
 
 class DummyReducingFunction {
 public:
-    template<typename MoleFractions>
-    auto Tr(const MoleFractions &molefracs) const
-    {
-        return molefracs[0];
-    }
-    template<typename MoleFractions>
-    auto rhor(const MoleFractions& molefracs) const
-    {
-        return molefracs[0];
-    }
+    template<typename MoleFractions> auto Tr(const MoleFractions &molefracs) const { return molefracs[0]; }
+    template<typename MoleFractions> auto rhor(const MoleFractions& molefracs) const { return molefracs[0]; }
 };
 
-auto build_multifluid_model(const std::vector<std::string>& components) {
+auto build_dummy_multifluid_model(const std::vector<std::string>& components) {
     std::vector<DummyEOS> EOSs(2);
     std::vector<std::vector<DummyEOS>> funcs(2); for (auto i =0; i < funcs.size(); ++i){ funcs[i].resize(funcs.size()); }
     std::vector<std::vector<double>> F(2); for (auto i = 0; i < F.size(); ++i) { F[i].resize(F.size()); }
@@ -99,7 +90,7 @@ auto build_multifluid_model(const std::vector<std::string>& components) {
 }
 
 int main(){
-    auto model = build_multifluid_model({"Methane", "Ethane"});
+    auto model = build_dummy_multifluid_model({"Methane", "Ethane"});
     std::valarray<double> rhovec = { 1.0, 2.0 };
     auto alphar = model.alphar(300.0, rhovec);
     return EXIT_SUCCESS;
