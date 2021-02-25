@@ -11,3 +11,8 @@ add_executable(trace "${CMAKE_CURRENT_SOURCE_DIR}/src/trace_critical.cpp")
 if (MSVC)
     target_sources(trace PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
+
+add_executable(multifluid "${CMAKE_CURRENT_SOURCE_DIR}/src/multifluid.cpp")
+if (MSVC)
+    target_sources(multifluid PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+endif()
