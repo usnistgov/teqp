@@ -2,6 +2,9 @@
 #include "teqp/models/multifluid.hpp"
 #include "teqp/critical_tracing.hpp"
 
+#include "autodiff/forward.hpp"
+#include "autodiff/reverse.hpp"
+
 auto build_multifluid_model(const std::vector<std::string>& components) {
     using namespace nlohmann;
     std::string coolprop_root = "C:/Users/ihb/Code/CoolProp";
@@ -52,5 +55,9 @@ int main(){
     auto alpharcom = model.alphar(std::complex<double>(T, h), rhovec).imag()/h;
     MultiComplex<double> Th{{T, h}};
     auto alpharcom2 = model.alphar(Th, rhovec).complex().imag()/h;
+
+    //autodiff::dual varT;
+    //auto dalphardT = derivative([&model, &rhovec](auto &T){return model.alphar(T, rhovec); }, wrt(varT), at(varT));
+
     return EXIT_SUCCESS;
 }
