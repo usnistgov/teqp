@@ -238,7 +238,7 @@ public:
 
 class MultiFluidDepartureFunction {
 public:
-    enum class types { NOTSETTYPE, GERG2004, GaussianExponential };
+    enum class types { NOTSETTYPE, GERG2004, GaussianExponential, NoDeparture };
 private:
     types type = types::NOTSETTYPE;
 public:
@@ -250,6 +250,9 @@ public:
         }
         else if (kind == "Gaussian+Exponential") {
             type = types::GaussianExponential;
+        }
+        else if (kind == "none") {
+            type = types::NoDeparture;
         }
         else {
             throw std::invalid_argument("Bad type:" + kind);
@@ -263,6 +266,8 @@ public:
             return (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
         case (types::GERG2004):
             return (n * pow(tau, t) * pow(delta, d) * exp(-eta * (delta - epsilon).square() - beta * (delta - gamma))).sum();
+        case (types::NoDeparture):
+            return 0.0*(tau*delta);
         default:
             throw - 1;
         }
@@ -333,6 +338,12 @@ auto get_departure_function_matrix(const std::string& coolprop_root, const nlohm
                 funcs[i][j] = f;
                 funcs[j][i] = f;
                 int rr = 0;
+            }
+            else {
+                MultiFluidDepartureFunction f;
+                f.set_type("none");
+                funcs[i][j] = f;
+                funcs[j][i] = f;
             }
         }
     }
