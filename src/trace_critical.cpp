@@ -22,7 +22,7 @@ void trace() {
         T += dT;
         int rr = 0;
         auto z0 = rhovec[0] / rhovec.sum();
-        std::cout << z0 <<  " ," << rhovec[0] << "," << T << std::endl;
+        std::cout << z0 <<  "," << rhovec[0] << "," << T << "," << get_splus(vdW, T, rhovec) << std::endl;
         if (z0 < 0) {
             break;
         }

@@ -69,9 +69,9 @@
     "function": "Methane-CarbonDioxide",
     "Name1": "R1123",
     "Name2": "R32",
-    "betaT": 1.00052,
+    "betaT": 0.999480270259465,
     "gammaT": 0.948538, 
-    "betaV": 0.993346, 
+    "betaV": 1.0066985723000847, 
     "gammaV": 1.02211
   },
   {
@@ -86,9 +86,6 @@
     "betaV": 1.0, 
     "gammaV": 1.02879
   },
-
-
-
 
 
 

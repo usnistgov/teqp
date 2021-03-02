@@ -72,6 +72,20 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, in
     double t = 0.0, dt = 100;
     std::valarray<double> last_drhodt;
     std::valarray<double> rhovec(2); rhovec[i] = { rhoc0 }; rhovec[1-i] = 0.0;
+
+    // Non-analytic terms make it impossible to initialize AT the pure components
+    if (fluids[0] == "CarbonDioxide" || fluids[1] == "CarbonDioxide"){
+        if (i == 0) {
+            rhovec[i] *= 0.9999;
+            rhovec[1 - i] = 0.9999;
+        }
+        else {
+            rhovec[i] *= 1.0001;
+            rhovec[1-i] = 1.0001;
+        }
+        double zi = rhovec[i]/rhovec.sum();
+        T = zi* model.redfunc.Tc[i] + (1-zi)* model.redfunc.Tc[1-i];
+    }
     auto dot = [](const auto& v1, const auto& v2) { return (v1 * v2).sum(); }; 
     auto norm = [](const auto &v){ return sqrt((v*v).sum()); };
     std::string filename = fluids[0] + "_" + fluids[1] + ".csv";
@@ -81,6 +95,31 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, in
     for (auto iter = 0; iter < 1000; ++iter) {
         auto rhotot = rhovec.sum();
         auto z0 = rhovec[0] / rhotot;
+
+        if (fluids[0] == "CarbonDioxide" || fluids[1] == "CarbonDioxide") {
+            auto polish_x_resid = [&model, &z0](const auto& x) {
+                auto T = x[0];
+                std::valarray<double> rhovec = { x[1], x[2] };
+                auto z0new = rhovec[0] / rhovec.sum();
+                auto derivs = get_derivs(model, T, rhovec);
+                // First two are residuals on critical point, third is residual on composition
+                return (Eigen::ArrayXd(3) << derivs.tot[2], derivs.tot[3], z0new - z0).finished();
+            };
+            try {
+                Eigen::ArrayXd x0(3); x0 << T, rhovec[0], rhovec[1];
+                auto r0 = polish_x_resid(x0);
+                auto x = NewtonRaphson(polish_x_resid, x0, 1e-10);
+                auto r = polish_x_resid(x);
+                Eigen::ArrayXd change = x0 - x;
+                if (!std::isfinite(T) || !std::isfinite(x[1]) || !std::isfinite(x[2])) {
+                    throw std::invalid_argument("Something not finite; aborting polishing");
+                }
+                T = x[0]; rhovec[0] = x[1]; rhovec[1] = x[2];
+            }
+            catch (std::exception& e) {
+                std::cout << e.what() << std::endl;
+            }
+        }
 
         auto write_line = [&rhovec, &rhotot, &z0, &model, &T, &c, &ofs](){
             std::stringstream out;
@@ -109,6 +148,9 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, in
         T += c*dTdt*dt;
 
         z0 = rhovec[0] / rhovec.sum();
+        if (z0 < 0 || z0 > 1) {
+            break;
+        }
 
         auto polish_x_resid = [&model, &z0](const auto& x) {
             auto T = x[0];
@@ -145,6 +187,8 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, in
 }
 
 int main(){
+
+    
     //test_dummy();
     //trace(); 
     std::string coolprop_root = "C:/Users/ihb/Code/CoolProp";
@@ -153,9 +197,10 @@ int main(){
         std::ifstream(coolprop_root + "/dev/mixtures/mixture_binary_pairs.json")
     );
     std::vector<std::vector<std::string>> pairs = { 
-        { "CarbonDioxide", "R1234YF" }, { "CarbonDioxide","R1234ZE(E)" }, { "ETHYLENE","R1243ZF" }, 
-        { "R1234YF","R1234ZE(E)" }, { "R134A","R1234YF" }, { "R23","R1234YF" }, 
-        { "R32","R1123" }, { "R32","R1234YF" }, { "R32","R1234ZE(E)" }
+        { "CarbonDioxide", "R1234YF" }
+//, { "CarbonDioxide","R1234ZE(E)" }, { "ETHYLENE","R1243ZF" }, 
+        //{ "R1234YF","R1234ZE(E)" }, { "R134A","R1234YF" }, { "R23","R1234YF" }, 
+        //{ "R32","R1123" }, { "R32","R1234YF" }, { "R32","R1234ZE(E)" }
     };
     for (auto &pp : pairs) {
         using ModelType = decltype(build_multifluid_model(pp, coolprop_root, BIPcollection));

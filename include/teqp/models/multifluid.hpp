@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <fstream>
 #include <string>
+#include <cmath>
 
 // See https://eigen.tuxfamily.org/dox/TopicCustomizing_CustomScalar.html
 namespace Eigen {
@@ -370,32 +371,77 @@ auto pow(const MultiComplex<T> &x, const Eigen::ArrayXd& e) {
 
 class MultiFluidEOS {
 public:
-    enum class types { NOTSETTYPE, GERG2004, GaussianExponential };
+    enum class types { NOTSETTYPE, GERG2004, GaussianExponential, GaussianExponentialNonAnalytic };
 private:
     types type = types::NOTSETTYPE;
 public:
     Eigen::ArrayXd n, t, d, c, l, eta, beta, gamma, epsilon;
+
+    Eigen::ArrayXd na_A, na_B, na_C, na_D, na_a, na_b, na_beta, na_n;
 
     void allocate(std::size_t N) {
         auto go = [&N](Eigen::ArrayXd &v){ v.resize(N); v.setZero(); };
         go(n); go(t); go(d); go(l); go(c); go(eta); go(beta); go(gamma); go(epsilon);
     }
 
-    //void set_type(const std::string& kind) {
-    //    if (kind == "GERG-2004" || kind == "GERG-2008") {
-    //        type = types::GERG2004;
-    //    }
-    //    else if (kind == "Gaussian+Exponential") {
-    //        type = types::GaussianExponential;
-    //    }
-    //    else {
-    //        throw std::invalid_argument("Bad type:" + kind);
-    //    }
-    //}
+    void allocate_na(std::size_t N) {
+        auto go = [&N](Eigen::ArrayXd& v) { v.resize(N); v.setZero(); };
+        go(na_A); go(na_B); go(na_C); go(na_D); go(na_a); go(na_b); go(na_beta); go(na_n);
+    }
+
+    void set_type(const std::string& kind) {
+        if (kind == "GaussianExponential") {
+            type = types::GaussianExponential;
+        }
+        else if (kind == "GaussianExponentialNonAnalytic") {
+            type = types::GaussianExponentialNonAnalytic;
+        }
+        else {
+            throw std::invalid_argument("Bad type to set_type:" + kind);
+        }
+    }
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        return (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+        using NumType = std::remove_const<decltype(tau* delta)>::type; 
+        NumType o;
+        switch (type) {
+            case types::GaussianExponential:
+                o = (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+                break;
+            case types::GaussianExponentialNonAnalytic:
+                {
+                // All the "normal" terms
+                auto o1 = (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum(); 
+                
+                // The non-analytic terms
+                auto delta_min1_sq = pow(delta-1.0, 2.0);
+
+                Eigen::Array<NumType, Eigen::Dynamic, 1> Psi = exp(-na_C*delta_min1_sq -na_D*pow(tau-1.0, 2.0));
+                const Eigen::ArrayXd k = 1.0/(2.0*na_beta);
+                Eigen::Array<NumType, Eigen::Dynamic, 1> theta = (1.0-tau) + na_A*pow(delta_min1_sq, k);
+                Eigen::Array<NumType, Eigen::Dynamic, 1> Delta = theta.square() + na_B*pow(delta_min1_sq, na_a);
+
+                //{  
+                //    using namespace std;
+                //    double delta_ = delta.real(), tau_ = tau.real();
+                //    auto delta_min1_sq = pow(delta_ - 1.0, 2.0);
+                //    Eigen::ArrayXd Psi = exp(-na_C * delta_min1_sq - na_D * pow(tau_ - 1.0, 2.0));
+                //    const Eigen::ArrayXd k = 1.0 / (2.0 * na_beta);
+                //    Eigen::ArrayXd theta = (1.0 - tau_) + na_A * pow(delta_min1_sq, k);
+                //    Eigen::ArrayXd Delta = theta * theta + na_B * pow(delta_min1_sq, na_a);
+                //    Eigen::ArrayXd que = na_n * pow(Delta, na_b) * delta_ * Psi;
+                //    auto rrrrrrrrrrrrrrrr =0 ;
+                //}
+                auto o2 = (na_n * pow(Delta, na_b) * delta * Psi).sum();
+                
+                o = o1 + o2;
+                break;
+                }
+            default:
+                throw -1;
+        }
+        return o;
     }
 };
 
@@ -405,29 +451,55 @@ auto get_EOS(const std::string& coolprop_root, const std::string& name)
     auto j = json::parse(std::ifstream(coolprop_root + "/dev/fluids/" + name + ".json"));
     auto alphar = j["EOS"][0]["alphar"];
 
-    std::size_t ncoeff = 0;
+    std::size_t ncoeff_conventional = 0;
 
-    const std::vector<std::string> allowable_types = {"ResidualHelmholtzPower", "ResidualHelmholtzGaussian"};
-    auto isallowed = [&allowable_types](const std::string &name){ for (auto &a : allowable_types){ if (name == a){return true;};} return false;};
+    const std::vector<std::string> conventional_types = {"ResidualHelmholtzPower", "ResidualHelmholtzGaussian"};
+    const std::vector<std::string> weird_types = { "ResidualHelmholtzNonAnalytic" };
+
+    auto isallowed = [&](const auto &conventional_types, const std::string &name){ 
+        for (auto &a : conventional_types){ if (name == a){return true;};} return false;
+    };
+
     for (auto& term : alphar) {
         std::string type = term["type"];
-        if (!isallowed(type)){
+        if (!isallowed(conventional_types, type) & !isallowed(weird_types, type)){
             throw std::invalid_argument("Bad type:" + type);
         }
         else{
-            ncoeff += term["n"].size();
+            if (isallowed(conventional_types, type)){
+                ncoeff_conventional += term["n"].size();
+            }
         }
     }
     
     MultiFluidEOS eos; 
-    eos.allocate(ncoeff); // Allocate arrays to the right size, fill with zero
+    eos.allocate(ncoeff_conventional); // Allocate arrays to the right size for conventional terms, fill with zero
+    eos.set_type("GaussianExponential"); // The default, generic formulation
     
     auto toeig = [](const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); };
+
+    /// lambda function for adding non-analytic terms
+    auto add_na = [&eos, &toeig](auto &term){
+        auto eigorzero = [&term, &toeig](const std::string& name) -> Eigen::ArrayXd {
+            return toeig(term[name]);
+        };
+        eos.na_n = eigorzero("n");
+        eos.na_A = eigorzero("A");
+        eos.na_B = eigorzero("B");
+        eos.na_C = eigorzero("C");
+        eos.na_D = eigorzero("D");
+        eos.na_a = eigorzero("a");
+        eos.na_b = eigorzero("b");
+        eos.na_beta = eigorzero("beta");
+        eos.set_type("GaussianExponentialNonAnalytic");
+    };
     
     std::size_t offset = 0;
     for (auto &term: alphar){
-        std::size_t N = term["n"].size();
-
+        if (term["type"] == "ResidualHelmholtzNonAnalytic") {
+            add_na(term); continue;
+        }
+        std::size_t N = term["n"].size(); 
         auto eigorzero = [&term, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
             if (!term[name].empty()) {
                 return toeig(term[name]);
@@ -435,7 +507,7 @@ auto get_EOS(const std::string& coolprop_root, const std::string& name)
             else {
                 return Eigen::ArrayXd::Zero(N);
             }
-        };        
+        };
 
         eos.n.segment(offset, N) = eigorzero("n");
         eos.t.segment(offset, N) = eigorzero("t");
