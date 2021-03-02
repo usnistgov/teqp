@@ -65,26 +65,26 @@ auto NewtonRaphson(Callable f, const Inputs &args, double tol) {
 }
 
 template<typename ModelType>
-void trace_arclength(std::vector<std::string> fluids, const ModelType &model, int i) {
+void trace_arclength(std::vector<std::string> fluids, const ModelType &model, std::size_t i) {
 
     auto rhoc0 = 1.0 / model.redfunc.vc[i];
     auto T = model.redfunc.Tc[i];
     double t = 0.0, dt = 100;
     std::valarray<double> last_drhodt;
-    std::valarray<double> rhovec(2); rhovec[i] = { rhoc0 }; rhovec[1-i] = 0.0;
+    std::valarray<double> rhovec(2); rhovec[i] = { rhoc0 }; rhovec[1L-i] = 0.0;
 
     // Non-analytic terms make it impossible to initialize AT the pure components
     if (fluids[0] == "CarbonDioxide" || fluids[1] == "CarbonDioxide"){
         if (i == 0) {
             rhovec[i] *= 0.9999;
-            rhovec[1 - i] = 0.9999;
+            rhovec[1L - i] = 0.9999;
         }
         else {
             rhovec[i] *= 1.0001;
-            rhovec[1-i] = 1.0001;
+            rhovec[1L-i] = 1.0001;
         }
         double zi = rhovec[i]/rhovec.sum();
-        T = zi* model.redfunc.Tc[i] + (1-zi)* model.redfunc.Tc[1-i];
+        T = zi* model.redfunc.Tc[i] + (1-zi)* model.redfunc.Tc[1L-i];
     }
     auto dot = [](const auto& v1, const auto& v2) { return (v1 * v2).sum(); }; 
     auto norm = [](const auto &v){ return sqrt((v*v).sum()); };
@@ -187,8 +187,7 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, in
 }
 
 int main(){
-
-    
+   
     //test_dummy();
     //trace(); 
     std::string coolprop_root = "C:/Users/ihb/Code/CoolProp";
@@ -196,11 +195,11 @@ int main(){
     auto BIPcollection = nlohmann::json::parse(
         std::ifstream(coolprop_root + "/dev/mixtures/mixture_binary_pairs.json")
     );
+
     std::vector<std::vector<std::string>> pairs = { 
-        { "CarbonDioxide", "R1234YF" }
-//, { "CarbonDioxide","R1234ZE(E)" }, { "ETHYLENE","R1243ZF" }, 
-        //{ "R1234YF","R1234ZE(E)" }, { "R134A","R1234YF" }, { "R23","R1234YF" }, 
-        //{ "R32","R1123" }, { "R32","R1234YF" }, { "R32","R1234ZE(E)" }
+        { "CarbonDioxide", "R1234YF" }, { "CarbonDioxide","R1234ZE(E)" }, { "ETHYLENE","R1243ZF" }, 
+        { "R1234YF","R1234ZE(E)" }, { "R134A","R1234YF" }, { "R23","R1234YF" }, 
+        { "R32","R1123" }, { "R32","R1234YF" }, { "R32","R1234ZE(E)" }
     };
     for (auto &pp : pairs) {
         using ModelType = decltype(build_multifluid_model(pp, coolprop_root, BIPcollection));

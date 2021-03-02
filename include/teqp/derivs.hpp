@@ -67,7 +67,7 @@ template <typename Model, typename TType, typename ContainerType>
 typename ContainerType::value_type get_pr(const Model& model, const TType T, const ContainerType& rhovec)
 {
     auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-    decltype(rhovec[0] * T) pr = 0.0;
+    decltype(rhovec[0]*T) pr = 0.0;
     for (auto i = 0; i < rhovec.size(); ++i) {
         pr += rhovec[i]*derivrhoi([&model](const auto& T, const auto& rhovec){ return model.alphar(T, rhovec); }, T, rhovec, i);
     }

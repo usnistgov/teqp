@@ -415,25 +415,14 @@ public:
                 auto o1 = (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum(); 
                 
                 // The non-analytic terms
-                auto delta_min1_sq = pow(delta-1.0, 2.0);
-
-                Eigen::Array<NumType, Eigen::Dynamic, 1> Psi = exp(-na_C*delta_min1_sq -na_D*pow(tau-1.0, 2.0));
+                auto square = [](auto x) { return x * x; };
+                auto delta_min1_sq = square(delta-1.0);
+                Eigen::Array<NumType, Eigen::Dynamic, 1> Psi = exp(-na_C*delta_min1_sq -na_D*square(tau-1.0));
                 const Eigen::ArrayXd k = 1.0/(2.0*na_beta);
                 Eigen::Array<NumType, Eigen::Dynamic, 1> theta = (1.0-tau) + na_A*pow(delta_min1_sq, k);
                 Eigen::Array<NumType, Eigen::Dynamic, 1> Delta = theta.square() + na_B*pow(delta_min1_sq, na_a);
 
-                //{  
-                //    using namespace std;
-                //    double delta_ = delta.real(), tau_ = tau.real();
-                //    auto delta_min1_sq = pow(delta_ - 1.0, 2.0);
-                //    Eigen::ArrayXd Psi = exp(-na_C * delta_min1_sq - na_D * pow(tau_ - 1.0, 2.0));
-                //    const Eigen::ArrayXd k = 1.0 / (2.0 * na_beta);
-                //    Eigen::ArrayXd theta = (1.0 - tau_) + na_A * pow(delta_min1_sq, k);
-                //    Eigen::ArrayXd Delta = theta * theta + na_B * pow(delta_min1_sq, na_a);
-                //    Eigen::ArrayXd que = na_n * pow(Delta, na_b) * delta_ * Psi;
-                //    auto rrrrrrrrrrrrrrrr =0 ;
-                //}
-                auto o2 = (na_n * pow(Delta, na_b) * delta * Psi).sum();
+                auto o2 = (na_n*pow(Delta, na_b)*delta*Psi).sum();
                 
                 o = o1 + o2;
                 break;
