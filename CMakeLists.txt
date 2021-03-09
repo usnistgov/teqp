@@ -8,9 +8,10 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/mcx/pymcx/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
 
-#add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
-#set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen")
-#add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
+set(BUILD_TESTING FALSE CACHE BOOL "Turn off Eigen tests")
+set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
 ### TARGETS
 add_executable(main "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
@@ -24,4 +25,10 @@ add_executable(multifluid "${CMAKE_CURRENT_SOURCE_DIR}/src/multifluid.cpp")
 if (MSVC)
     target_sources(multifluid PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
-#target_link_libraries(multifluid autodiff)
+
+
+add_executable(test_autodiff "${CMAKE_CURRENT_SOURCE_DIR}/src/test_autodiff.cpp")
+if (MSVC)
+    target_sources(test_autodiff PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+endif()
+target_link_libraries(test_autodiff autodiff)
