@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <numeric>
 #include <valarray>
+#include <complex>
 
 #include "autodiff/forward.hpp"
 #include "autodiff/reverse.hpp"
@@ -16,8 +17,8 @@ public:
     const double R = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
 
     template<typename TType, typename RhoType>
-    auto alphar(const TType &T, const RhoType& rho) const {
-        auto rhotot = std::accumulate(std::begin(rho), std::end(rho), (RhoType::value_type)0.0);
+    auto alphar(const TType &T, const RhoType& rho) const -> TType{
+        auto rhotot = std::accumulate(std::begin(rho), std::end(rho), static_cast<typename RhoType::value_type>(0.0));
         auto Psiminus = -log(1.0 - b * rhotot);
         auto Psiplus = rhotot;
         return Psiminus - a / (R * T) * Psiplus;
@@ -40,10 +41,15 @@ void test_vdW_autodiff() {
     double bi = 1.0/8.0*R*Tc_K[i]/pc_Pa[i];
     vdWEOSSimple vdW(ai, bi);
 
-    autodiff::dual varT = T;
+    autodiff::dual varT {T};
     auto u = vdW.alphar(varT, rhovec);
     int rr = 0;
     auto dalphardT = derivative([&vdW, &rhovec](auto& T) {return vdW.alphar(T, rhovec); }, wrt(varT), at(varT));
+
+    double h = 1e-100;
+    auto dalphardT_comstep = vdW.alphar(std::complex<double>(T,h), rhovec).imag()/h;
+    std::cout << dalphardT-dalphardT_comstep << " diff, absolute" << std::endl;
+
 }
 
 int main() {
