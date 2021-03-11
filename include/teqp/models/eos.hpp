@@ -1,5 +1,6 @@
 #pragma once
 
+#include "teqp/core.hpp"
 #include <optional>
 
 /* A (very) simple implementation of the van der Waals EOS*/

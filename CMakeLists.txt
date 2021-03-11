@@ -3,6 +3,7 @@ project(teqp)
 
 ####  SETUP
 set(CMAKE_CXX_STANDARD 17)
+
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/mcx/pymcx/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
@@ -10,6 +11,11 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
 
 set(BUILD_TESTING FALSE CACHE BOOL "Turn off Eigen tests")
 set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
+
+set(AUTODIFF_BUILD_TESTS FALSE CACHE BOOL "No autodiff tests")
+set(AUTODIFF_BUILD_PYTHON FALSE CACHE BOOL "No autodiff python")
+set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
+
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
