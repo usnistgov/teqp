@@ -1,10 +1,8 @@
-#include <Eigen/Dense>
 #include <tuple>
 #include <valarray>
 #include <iostream>
 
 #include "teqp/core.hpp"
-#include "teqp/critical_tracing.hpp"
 
 void trace() { 
     // Argon + Xenon

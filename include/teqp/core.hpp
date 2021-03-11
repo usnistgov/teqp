@@ -10,4 +10,5 @@ const NumType get_R_gas() {
 
 #include "teqp/types.hpp"
 #include "teqp/derivs.hpp"
-#include "teqp/eos.hpp"
+#include "teqp/models/eos.hpp"
+#include "teqp/algorithms/critical_tracing.hpp"

@@ -1,6 +1,6 @@
 #include "teqp/core.hpp"
 #include "teqp/models/multifluid.hpp"
-#include "teqp/critical_tracing.hpp"
+
 #include <optional>
 
 //#include "autodiff/forward.hpp"

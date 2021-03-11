@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Eigen/Dense>
+
 /***
 * \brief Simple wrapper to sort the eigenvalues(and associated eigenvectors) in increasing order
 * \param H The matrix, in this case, the Hessian matrix of Psi w.r.t.the molar concentrations
