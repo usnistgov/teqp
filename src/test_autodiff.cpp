@@ -7,7 +7,6 @@
 
 #include "MultiComplex/MultiComplex.hpp"
 
-
 // autodiff include
 #include <autodiff/forward/dual.hpp>
 #include <autodiff/forward/dual/eigen.hpp>
