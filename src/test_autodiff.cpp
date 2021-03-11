@@ -7,7 +7,11 @@
 
 #include "MultiComplex/MultiComplex.hpp"
 
-#include "autodiff/forward/dual.hpp"
+
+// autodiff include
+#include <autodiff/forward/dual.hpp>
+#include <autodiff/forward/dual/eigen.hpp>
+using namespace autodiff;
 
 auto build_simple() {
     // Argon + Xenon
@@ -67,10 +71,22 @@ void test_autodiff(Model model) {
     /*std::cout << (dalphardT-dalphardT_comstep)/dalphardT << " diff, rel (first deriv)" << std::endl;
     std::cout << (d2alphardT2 - diffs[2])/diffs[2] << " diff, rel (second deriv)" << std::endl;*/
 
-    std::cout << std::chrono::duration<double>(tic0 - ticn1).count() / Nrep * 1e6 << " us (function evaluation in double)" << std::endl; 
+    std::cout << std::chrono::duration<double>(tic0 - ticn1).count()/Nrep*1e6 << " us (function evaluation in double)" << std::endl; 
     std::cout << std::chrono::duration<double>(tic1 - tic0).count()/Nrep*1e6 << " us (autodiff)" << std::endl;
     std::cout << std::chrono::duration<double>(tic2 - tic1).count()/Nrep*1e6 << " us (CSD)" << std::endl;
     std::cout << std::chrono::duration<double>(tic3 - tic2).count()/Nrep*1e6 << " us (MCX)" << std::endl;
+
+    // Test evaluation of Hessian of Psir
+    dual2nd u; // the output scalar u = f(x), evaluated together with Hessian below
+    VectorXdual2nd g;
+    VectorXdual2nd rhovecc(2); rhovecc << rhovec[0], rhovec[1];
+    auto hfunc = [&model, &T](const VectorXdual2nd& rho_) {
+        auto rhotot_ = std::accumulate(std::begin(rho_), std::end(rho_), (decltype(rho_[0]))0.0);
+        return eval(model.alphar(T, rho_)*model.R*T*rhotot_);
+    };
+    Eigen::MatrixXd H = autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g); // evaluate the function value u, its gradient, and its Hessian matrix H
+    std::cout << H;
+
     auto ffff = 0;
 }
 
