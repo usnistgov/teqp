@@ -21,6 +21,7 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
 ### TARGETS
 add_executable(main "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+target_link_libraries(main autodiff)
 
 add_executable(trace "${CMAKE_CURRENT_SOURCE_DIR}/src/trace_critical.cpp")
 if (MSVC)
@@ -32,7 +33,7 @@ add_executable(multifluid "${CMAKE_CURRENT_SOURCE_DIR}/src/multifluid.cpp")
 if (MSVC)
     target_sources(multifluid PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
-
+target_link_libraries(multifluid autodiff)
 
 add_executable(test_autodiff "${CMAKE_CURRENT_SOURCE_DIR}/src/test_autodiff.cpp")
 if (MSVC)
