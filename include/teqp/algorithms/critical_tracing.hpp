@@ -32,7 +32,11 @@ auto eigen_problem(const Model& model, const TType T, const RhoType& rhovec) {
     auto mask = (rhovec != 0);
 
     // Build the Hessian for the residual part;
-    auto H = build_Psir_Hessian(model, T, rhovec);
+#if defined(USE_AUTODIFF)
+    auto H = build_Psir_Hessian_autodiff(model, T, rhovec);
+#else
+    auto H = build_Psir_Hessian_mcx(model, T, rhovec);
+#endif
     // ... and add ideal-gas terms to H
     for (auto i = 0; i < N; ++i) {
         if (mask[i]) {
@@ -116,6 +120,18 @@ auto get_derivs(const Model& model, const TType T, const RhoType& rhovec) {
         }
     }
 
+#if defined(USE_AUTODIFF)
+    // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
+    VectorXdual4th v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
+    VectorXdual4th rhovecad(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecad[i] = rhovec[i]; }
+    dual4th varsigma{0.0};
+    auto wrapper = [&rhovecad, &v0, &T, &model](const auto &sigma_1) {
+        auto rhovecused = rhovecad + sigma_1*v0;
+        return get_Psir(model, T, rhovecused);
+    };
+    auto derivs = derivatives(wrapper, wrt(varsigma, varsigma, varsigma, varsigma), at(varsigma));
+    auto psir_derivs = std::valarray<double>(&derivs[0], derivs.size());
+#else
     // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
     std::valarray<MultiComplex<double>> v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
     std::valarray<MultiComplex<double>> rhovecmcx(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecmcx[i] = rhovec[i]; }
@@ -126,6 +142,7 @@ auto get_derivs(const Model& model, const TType T, const RhoType& rhovec) {
     };
     auto psir_derivs_ = diff_mcx1(wrapper, 0.0, 4, true);
     auto psir_derivs = std::valarray<double>(&psir_derivs_[0], psir_derivs_.size());
+#endif
 
     // As a sanity check, the minimum eigenvalue of the Hessian constructed based on the molar concentrations
     // must match the second derivative of psi_tot w.r.t. sigma_1. This is not always satisfied for derivatives

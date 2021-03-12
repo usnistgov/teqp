@@ -109,13 +109,13 @@ template <> void setval<std::valarray<std::valarray<double>>, std::size_t, doubl
 * Requires the use of multicomplex derivatives to calculate second partial derivatives
 */
 template<typename Model, typename TType, typename RhoType>
-auto build_Psir_Hessian(const Model& model, const TType T, const RhoType& rho) {
+auto build_Psir_Hessian_autodiff(const Model& model, const TType T, const RhoType& rho) {
     // Double derivatives in each component's concentration
     // N^N matrix (symmetric)
 
     dual2nd u; // the output scalar u = f(x), evaluated together with Hessian below
     VectorXdual2nd g;
-    VectorXdual2nd rhovecc(2); rhovecc << rho[0], rho[1];
+    VectorXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
     auto hfunc = [&model, &T](const VectorXdual2nd& rho_) {
         auto rhotot_ = std::accumulate(std::begin(rho_), std::end(rho_), (decltype(rho_[0]))0.0);
         return eval(model.alphar(T, rho_) * model.R * T * rhotot_);
