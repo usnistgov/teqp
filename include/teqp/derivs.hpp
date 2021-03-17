@@ -81,7 +81,34 @@ typename ContainerType::value_type get_pr(const Model& model, const TType T, con
 
 template <typename Model, typename TType, typename ContainerType>
 typename ContainerType::value_type get_Ar10(const Model& model, const TType T, const ContainerType& rhovec){
-    return T*derivT([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec);
+    return -T*derivT([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec);
+}
+
+template <typename Model, typename TType, typename ContainerType>
+typename ContainerType::value_type get_Ar01(const Model& model, const TType T, const ContainerType& rhovec) {
+
+    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+    decltype(rhovec[0] * T) Ar01 = 0.0;
+    for (auto i = 0; i < rhovec.size(); ++i) {
+        Ar01 += rhovec[i] * derivrhoi([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec, i);
+    }
+    return Ar01;
+}
+
+template <typename Model, typename TType, typename ContainerType>
+typename ContainerType::value_type get_B2vir(const Model& model, const TType T, const ContainerType& molefrac) {
+    auto rhovec = 0.0*molefrac;
+    double max_mole_frac = *std::max_element(std::begin(molefrac), std::end(molefrac));
+    if (max_mole_frac != 1.0) {
+        std::cout << "The value for B_2 is incorrect when not pure!" << std::endl;
+    }
+    decltype(molefrac[0] * T) B2 = 0.0;
+    for (auto i = 0; i < rhovec.size(); ++i) {
+        auto dalphar_drhoi__constTrhoj = derivrhoi([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec, i);
+        B2 += molefrac[i] * dalphar_drhoi__constTrhoj;
+    }
+    
+    return B2;
 }
 
 /***
@@ -106,7 +133,7 @@ template <> void setval<std::valarray<std::valarray<double>>, std::size_t, doubl
 /***
 * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations
 *
-* Requires the use of multicomplex derivatives to calculate second partial derivatives
+* Requires the use of autodiff derivatives to calculate second partial derivatives
 */
 template<typename Model, typename TType, typename RhoType>
 auto build_Psir_Hessian_autodiff(const Model& model, const TType T, const RhoType& rho) {
