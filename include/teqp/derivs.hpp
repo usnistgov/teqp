@@ -97,17 +97,9 @@ typename ContainerType::value_type get_Ar01(const Model& model, const TType T, c
 
 template <typename Model, typename TType, typename ContainerType>
 typename ContainerType::value_type get_B2vir(const Model& model, const TType T, const ContainerType& molefrac) {
-    auto rhovec = 0.0*molefrac;
-    double max_mole_frac = *std::max_element(std::begin(molefrac), std::end(molefrac));
-    if (max_mole_frac != 1.0) {
-        std::cout << "The value for B_2 is incorrect when not pure!" << std::endl;
-    }
-    decltype(molefrac[0] * T) B2 = 0.0;
-    for (auto i = 0; i < rhovec.size(); ++i) {
-        auto dalphar_drhoi__constTrhoj = derivrhoi([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec, i);
-        B2 += molefrac[i] * dalphar_drhoi__constTrhoj;
-    }
-    
+    double h = 1e-100;
+    // B_2 = lim_rho\to 0 dalphar/drho|T,z
+    auto B2 = model.alphar(T, std::complex<double>(0, h), molefrac).imag()/h;
     return B2;
 }
 

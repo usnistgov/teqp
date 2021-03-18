@@ -84,11 +84,18 @@ public:
     {
         RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
         auto molefrac = rhovec / rhotot_;
+        return alphar(T, rhotot_, molefrac);
+    }
+
+    template<typename TType, typename RhoType, typename MoleFracType>
+    auto alphar(TType T,
+        const RhoType rho,
+        const MoleFracType& molefrac) const
+    {
         auto Tred = redfunc.get_Tr(molefrac);
         auto rhored = redfunc.get_rhor(molefrac);
-        auto delta = rhotot_ / rhored;
+        auto delta = rho / rhored;
         auto tau = Tred / T;
-        using resulttype = decltype(T*rhovec[0]);
         return corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
     }
 };
