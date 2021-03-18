@@ -82,8 +82,15 @@ public:
     {
         RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rho), std::end(rho), (decltype(rho[0]))0.0);
         auto molefrac = rho / rhotot_;
-        auto Psiminus = -log(1.0 - b(molefrac) * rhotot_);
-        auto Psiplus = rhotot_;
+        return alphar(T, rho, molefrac);
+    }
+    template<typename TType, typename RhoType, typename MoleFracType>
+    auto alphar(TType T,
+        const RhoType& rho,
+        const MoleFracType &molefrac) const
+    {
+        auto Psiminus = -log(1.0 - b(molefrac) * rhotot);
+        auto Psiplus = rhotot;
         return Psiminus - a(T, molefrac) / (R * T) * Psiplus;
     }
 };
