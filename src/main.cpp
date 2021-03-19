@@ -39,8 +39,18 @@ void test_vdW() {
     double B2 = get_B2vir(vdW, T, molefrac);
     double B2exact = b-a/(R*T);
 
-    auto Bn = get_Bnvir(vdW, 8, T, molefrac);
-    std::valarray<double> Bnexact = {0, b - a/(R*T), b*b, 2*b*b*b, 6*b*b*b*b, 24*b*b*b*b*b, 120*std::pow(b,6), 720*std::pow(b,7), 5040*pow(b,8) };
+    auto Nvir = 8;
+    auto Bn = get_Bnvir(vdW, Nvir, T, molefrac);
+    // Exact solutions for virial coefficients for van der Waals 
+    auto get_vdW_exacts = [a,b,R,T](int additional){ 
+        std::vector<double> o = {0, b - a / (R * T)};
+        for (auto i = 0; i < additional; ++i) {
+            auto factorial = [](int N){return tgamma(N + 1);};
+            o.push_back(factorial(i+1)*pow(b,i+2));
+        }
+        return std::valarray<double>(&(o[0]), o.size());
+    };
+    std::valarray<double> Bnexact = get_vdW_exacts(Nvir-1);
     std::valarray<double> errrr = Bnexact - std::valarray<double>(&(Bn[0]), Bn.size());
 
     int rr = 0;
