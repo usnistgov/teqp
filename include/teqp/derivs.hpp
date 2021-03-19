@@ -110,6 +110,14 @@ typename ContainerType::value_type get_B2vir(const Model& model, const TType T, 
     return B2;
 }
 
+template <typename Model, typename TType, typename ContainerType>
+auto get_Bnvir(const Model& model, int Nderiv, const TType T, const ContainerType& molefrac) {
+    // B_n = lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
+    using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
+    fcn_t f = [&model, &T, &molefrac](const MultiComplex<double>& rho_) -> MultiComplex<double> { return model.alphar(T, rho_, molefrac); };
+    return diff_mcx1(f, 0.0, Nderiv, true /* and_val */);
+}
+
 /***
 * \brief Calculate the residual entropy (s^+ = -sr/R) from derivatives of alphar
 */

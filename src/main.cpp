@@ -34,6 +34,17 @@ void test_vdW() {
     std::cout << std::chrono::duration<double>(t31 - t21).count() << " from isochoric" << std::endl;
     auto err = pfromderiv / pp - 1.0;
     std::cout << "Error (fractional): " << err << std::endl;
+
+    std::valarray<double> molefrac = {1.0};
+    double B2 = get_B2vir(vdW, T, molefrac);
+    double B2exact = b-a/(R*T);
+
+    auto Bn = get_Bnvir(vdW, 8, T, molefrac);
+    std::valarray<double> Bnexact = {0, b - a/(R*T), b*b, 2*b*b*b, 6*b*b*b*b, 24*b*b*b*b*b, 120*std::pow(b,6), 720*std::pow(b,7), 5040*pow(b,8) };
+    std::valarray<double> errrr = Bnexact - std::valarray<double>(&(Bn[0]), Bn.size());
+
+    int rr = 0;
+
 }
 
 void test_vdwMix() {
@@ -52,7 +63,8 @@ void test_vdwMix() {
     auto fPsir = [&vdW](const auto& T, const auto& rhovec) {
         using container = decltype(rhovec);
         auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-        return vdW.alphar(T, rhovec)*vdW.R*T*rhotot_;
+        auto molefrac = rhovec/rhotot_;
+        return vdW.alphar(T, rhotot_, molefrac)*vdW.R*T*rhotot_;
     };
     auto Psir = fPsir(T, rhovec);
     auto dPsirdrho0 = rhovec[0]*derivrhoi(fPsir, T, rhovec, 0);
