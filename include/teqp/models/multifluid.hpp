@@ -88,8 +88,8 @@ public:
     }
 
     template<typename TType, typename RhoType, typename MoleFracType>
-    auto alphar(TType T,
-        const RhoType rho,
+    auto alphar(const TType &T,
+        const RhoType &rho,
         const MoleFracType& molefrac) const
     {
         auto Tred = redfunc.get_Tr(molefrac);
@@ -271,9 +271,11 @@ public:
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         switch (type) {
         case (types::GaussianExponential):
-            return (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+            return (n * exp(t*log(tau) + d*log(delta)-c*pow(delta, l)-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+            //return (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
         case (types::GERG2004):
-            return (n * pow(tau, t) * pow(delta, d) * exp(-eta * (delta - epsilon).square() - beta * (delta - gamma))).sum();
+            return (n * exp(t*log(tau) + d*log(delta) -eta * (delta - epsilon).square() - beta * (delta - gamma))).sum(); 
+            //return (n * pow(tau, t) * pow(delta, d) * exp(-eta * (delta - epsilon).square() - beta * (delta - gamma))).sum();
         case (types::NoDeparture):
             return 0.0*(tau*delta);
         default:
@@ -358,6 +360,43 @@ auto get_departure_function_matrix(const std::string& coolprop_root, const nlohm
     return funcs;
 }
 
+/// From Ulrich Deiters
+template <typename T>                             // arbitrary integer power
+T powi(const T& x, int n) {
+    if (n < 0)
+        return powi(static_cast<T>(1) / x, -n);
+    else if (n == 0)
+        return static_cast<T>(1);                       // x^0 = 1 even for x == 0
+    else {
+        T y(x), xpwr(x);
+        n--;
+        while (n > 0) {
+            if (n % 2 == 1) {
+                y = y*xpwr;
+                n--;
+            }
+            xpwr = xpwr*xpwr;
+            n /= 2;
+        }
+        return y;
+    }
+}
+
+template<typename T>
+auto powIV(const T& x, const Eigen::ArrayXd& e) {
+    Eigen::Array<T, Eigen::Dynamic, 1> o(e.size());
+    for (auto i = 0; i < e.size(); ++i) {
+        auto ei = e[i];
+        if (ei == static_cast<int>(ei)) {
+            o[i] = powi(x, ei);
+        }
+        else{
+            o[i] = pow(x, ei);
+        }
+    }
+    return o;
+}
+
 template<typename T>
 auto pow(const std::complex<T> &x, const Eigen::ArrayXd& e) {
     Eigen::Array<std::complex<T>, Eigen::Dynamic, 1> o(e.size());
@@ -413,13 +452,14 @@ public:
         using NumType = std::remove_const<decltype(tau* delta)>::type; 
         NumType o;
         switch (type) {
-            case types::GaussianExponential:
-                o = (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
-                break;
+            case types::GaussianExponential:{
+                o = (n*exp(t*log(tau) + d*log(delta) - c*powIV(delta, l) - eta*(delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+                //o = (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+                break;}
             case types::GaussianExponentialNonAnalytic:
                 {
                 // All the "normal" terms
-                auto o1 = (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum(); 
+                auto o1 = (n * exp(t * log(tau) + d * log(delta) - c * powIV(delta, l) - eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
                 
                 // The non-analytic terms
                 auto square = [](auto x) { return x * x; };
