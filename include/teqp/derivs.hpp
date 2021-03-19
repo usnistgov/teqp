@@ -84,9 +84,15 @@ typename ContainerType::value_type get_Ar10(const Model& model, const TType T, c
     return -T*derivT([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec);
 }
 
+template <typename Model, typename TType, typename RhoType, typename MoleFracType>
+auto get_Ar01(const Model& model, const TType &T, const RhoType &rho, const MoleFracType& molefrac) {
+    double h = 1e-100;
+    auto der = model.alphar(T, std::complex<double>(rho, h), molefrac).imag() / h;
+    return der*rho;
+}
+
 template <typename Model, typename TType, typename ContainerType>
 typename ContainerType::value_type get_Ar01(const Model& model, const TType T, const ContainerType& rhovec) {
-
     auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
     decltype(rhovec[0] * T) Ar01 = 0.0;
     for (auto i = 0; i < rhovec.size(); ++i) {
