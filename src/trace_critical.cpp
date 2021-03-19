@@ -21,13 +21,15 @@ void trace() {
         T += dT;
         int rr = 0;
         auto z0 = rhovec[0] / rhovec.sum();
-        //std::cout << z0 <<  "," << rhovec[0] << "," << T << "," << get_splus(vdW, T, rhovec) << std::endl;
+        std::cout << z0 <<  "," << rhovec[0] << "," << T << "," << get_splus(vdW, T, rhovec) << std::endl;
         if (z0 < 0) {
             break;
         }
     }
     auto tic1 = std::chrono::steady_clock::now();
+    std::cout << T << " " << rhovec[1] << std::endl;
     std::cout << std::chrono::duration<double>(tic1 - tic0).count() << " s to trace" << std::endl;
+
     int rr = 0;
 }
 int main() {   

@@ -52,7 +52,7 @@ auto NewtonRaphson(Callable f, const Inputs &args, double tol) {
             auto dri = std::max(1e-3*x[i], 1e-8);
             auto argsplus = x;
             argsplus[i] += dri;
-            J.col(i) = (f(argsplus) - r0)/dri; // Forward centered diff to avoid negative composition possibility
+            J.col(i) = (f(argsplus) - r0)/dri; // Forward diff to avoid negative concentration possibility
         }
         Eigen::ArrayXd v = J.colPivHouseholderQr().solve(-r0.matrix());
         x += v;
@@ -186,6 +186,18 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, st
     }
 }
 
+class Timer {
+private:
+    int N;
+    decltype(std::chrono::steady_clock::now()) tic;
+public:
+    Timer(int N) : N(N), tic(std::chrono::steady_clock::now()){}
+    ~Timer() {
+        auto elap = std::chrono::duration<double>(std::chrono::steady_clock::now()-tic).count();
+        std::cout << elap/N*1e6 << " us/call" << std::endl;
+    }
+};
+
 int main(){
    
     //test_dummy();
@@ -195,6 +207,64 @@ int main(){
     auto BIPcollection = nlohmann::json::parse(
         std::ifstream(coolprop_root + "/dev/mixtures/mixture_binary_pairs.json")
     );
+
+{
+    auto model = build_multifluid_model({ "methane", "ethane" }, coolprop_root, BIPcollection);
+    std::valarray<double> rhovec = { 1.0, 2.0 };
+    double T = 300;
+    {
+        const std::valarray<double> molefrac = { rhovec[0]/rhovec.sum(), rhovec[1]/rhovec.sum() };
+        const double rho = rhovec.sum();
+        volatile double T = 300.0;
+        constexpr int N = 10000;
+        volatile double alphar;
+        double rrrr = get_Ar01(model, T, rho, molefrac);
+        double rrrr2 = get_Ar02(model, T, rho, molefrac);
+        {
+            Timer t(N);
+            for (auto i = 0; i < N; ++i){
+                alphar = model.alphar(T, rho, molefrac);
+            }
+            std::cout << alphar << std::endl;
+        }
+        {
+            Timer t(N);
+            for (auto i = 0; i < N; ++i) {
+                alphar = get_Ar01(model, T, rho, molefrac);
+            }
+            std::cout << alphar << std::endl;
+        }
+        {
+            Timer t(N);
+            for (auto i = 0; i < N; ++i) {
+                alphar = get_Ar01mcx(model, T, rho, molefrac);
+            }
+            std::cout << alphar << std::endl;
+        }
+        {
+            Timer t(N);
+            for (auto i = 0; i < N; ++i) {
+                alphar = get_Ar02(model, T, rho, molefrac);
+            }
+            std::cout << alphar << std::endl;
+        }
+    }
+
+    auto alphar = model.alphar(T, rhovec);
+    auto Ar01 = get_Ar01(model, T, rhovec);
+    auto Ar10 = get_Ar10(model, T, rhovec);
+    auto splus = get_splus(model, T, rhovec);
+
+    std::valarray<double> molefrac = { 1.0/3.0, 2.0/3.0 };
+    auto B2 = get_B2vir(model, T, molefrac);
+
+    auto dilrho = 0.00000000001 * molefrac;
+    auto B2other = get_Ar01(model, T, dilrho)/dilrho.sum();
+
+    auto Ar01dil = get_Ar01(model, T, rhovec*0.0);
+    
+    int ttt =0 ;
+}
 
     std::vector<std::vector<std::string>> pairs = { 
         { "CarbonDioxide", "R1234YF" }, { "CarbonDioxide","R1234ZE(E)" }, { "ETHYLENE","R1243ZF" }, 
@@ -216,18 +286,6 @@ int main(){
             trace_arclength(pp, model.value(), i);
         }
     }
-
-    /*auto model = build_multifluid_model({ "methane", "ethane" });
-    std::valarray<double> rhovec = { 1.0, 2.0 };
-    double T = 300;
-    auto alphar = model.alphar(T, rhovec);
-    double h = 1e-100;
-    auto alpharcom = model.alphar(std::complex<double>(T, h), rhovec).imag()/h;
-    MultiComplex<double> Th{{T, h}};
-    auto alpharcom2 = model.alphar(Th, rhovec).complex().imag()/h;*/
-
-    //autodiff::dual varT;
-    //auto dalphardT = derivative([&model, &rhovec](auto &T){return model.alphar(T, rhovec); }, wrt(varT), at(varT));
 
     return EXIT_SUCCESS;
 }

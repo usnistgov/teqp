@@ -55,33 +55,16 @@ typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const C
     return f(T, rhocom).imag() / h;
 }
 
-/***
-* \brief Calculate the Psir=ar*rho
-*/
-template <typename TType, typename ContainerType, typename Model>
-typename ContainerType::value_type get_Psir(const Model& model, const TType T, const ContainerType& rhovec) {
-    using container = decltype(rhovec);
-    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-    return model.alphar(T, rhovec)*model.R*T*rhotot_;
-}
-
-/***
-* \brief Calculate the residual pressure from derivatives of alphar
-*/
-template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_pr(const Model& model, const TType T, const ContainerType& rhovec)
-{
-    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-    decltype(rhovec[0]*T) pr = 0.0;
-    for (auto i = 0; i < rhovec.size(); ++i) {
-        pr += rhovec[i]*derivrhoi([&model](const auto& T, const auto& rhovec){ return model.alphar(T, rhovec); }, T, rhovec, i);
-    }
-    return pr*rhotot_*model.R*T;
-}
-
 template <typename Model, typename TType, typename ContainerType>
 typename ContainerType::value_type get_Ar10(const Model& model, const TType T, const ContainerType& rhovec){
-    return -T*derivT([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec);
+    auto rhotot = rhovec.sum();
+    auto molefrac = rhovec / rhotot;
+    return -T*derivT([&model, &rhotot, &molefrac](const auto& T, const auto& rhovec) { return model.alphar(T, rhotot, molefrac); }, T, rhovec);
+}
+
+template <typename Model, typename TType, typename RhoType, typename ContainerType>
+typename ContainerType::value_type get_Ar10(const Model& model, const TType T, const RhoType &rho, const ContainerType& molefrac) {
+    return -T * derivT([&model, &rho, &molefrac](const auto& T, const auto& rhovec) { return model.alphar(T, rho, molefrac); }, T, rhovec);
 }
 
 template <typename Model, typename TType, typename RhoType, typename MoleFracType>
@@ -89,6 +72,24 @@ auto get_Ar01(const Model& model, const TType &T, const RhoType &rho, const Mole
     double h = 1e-100;
     auto der = model.alphar(T, std::complex<double>(rho, h), molefrac).imag() / h;
     return der*rho;
+}
+
+template <typename Model, typename TType, typename RhoType, typename MoleFracType>
+auto get_Ar01mcx(const Model& model, const TType& T, const RhoType& rho, const MoleFracType& molefrac) {
+    using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
+    bool and_val = true;
+    fcn_t f = [&model, &T, &molefrac](const MultiComplex<double>& rho_) -> MultiComplex<double> { return model.alphar(T, rho_, molefrac); };
+    auto ders = diff_mcx1(f, rho, 1, and_val);
+    return ders[1] * rho;
+}
+
+template <typename Model, typename TType, typename RhoType, typename MoleFracType>
+auto get_Ar02(const Model& model, const TType& T, const RhoType& rho, const MoleFracType& molefrac) {
+    using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
+    bool and_val = true;
+    fcn_t f = [&model, &T, &molefrac](const MultiComplex<double>& rho_) -> MultiComplex<double> { return model.alphar(T, rho_, molefrac); };
+    auto ders = diff_mcx1(f, rho, 2, and_val);
+    return ders[2]*rho*rho;
 }
 
 template <typename Model, typename TType, typename ContainerType>
@@ -114,7 +115,28 @@ typename ContainerType::value_type get_B2vir(const Model& model, const TType T, 
 */
 template <typename Model, typename TType, typename ContainerType>
 typename ContainerType::value_type get_splus(const Model& model, const TType T, const ContainerType& rhovec){
-    return model.alphar(T, rhovec) - get_Ar10(model, T, rhovec);
+    auto rhotot = rhovec.sum();
+    auto molefrac = rhovec/rhotot;
+    return model.alphar(T, rhotot, molefrac) - get_Ar10(model, T, rhovec);
+}
+
+/***
+* \brief Calculate Psir=ar*rho
+*/
+template <typename TType, typename ContainerType, typename Model>
+typename ContainerType::value_type get_Psir(const Model& model, const TType T, const ContainerType& rhovec) {
+    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+    return model.alphar(T, rhotot_, rhovec / rhotot_) * model.R * T * rhotot_;
+}
+
+/***
+* \brief Calculate the residual pressure from derivatives of alphar
+*/
+template <typename Model, typename TType, typename ContainerType>
+typename ContainerType::value_type get_pr(const Model& model, const TType T, const ContainerType& rhovec)
+{
+    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+    return get_Ar01(model, T, rhotot_, rhovec / rhotot_) * rhotot_ * model.R * T;
 }
 
 // Generic setting functions to handle Eigen types and STL types with the same interface
@@ -134,7 +156,7 @@ template <> void setval<std::valarray<std::valarray<double>>, std::size_t, doubl
 * Requires the use of autodiff derivatives to calculate second partial derivatives
 */
 template<typename Model, typename TType, typename RhoType>
-auto build_Psir_Hessian_autodiff(const Model& model, const TType T, const RhoType& rho) {
+auto build_Psir_Hessian_autodiff(const Model& model, const TType &T, const RhoType& rho) {
     // Double derivatives in each component's concentration
     // N^N matrix (symmetric)
 
@@ -142,8 +164,9 @@ auto build_Psir_Hessian_autodiff(const Model& model, const TType T, const RhoTyp
     VectorXdual2nd g;
     VectorXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
     auto hfunc = [&model, &T](const VectorXdual2nd& rho_) {
-        auto rhotot_ = std::accumulate(std::begin(rho_), std::end(rho_), (decltype(rho_[0]))0.0);
-        return eval(model.alphar(T, rho_) * model.R * T * rhotot_);
+        auto rhotot_ = rho_.sum();
+        auto molefrac = rho_ / rhotot_;
+        return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
     };
     return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g); // evaluate the function value u, its gradient, and its Hessian matrix H
 }
@@ -154,19 +177,18 @@ auto build_Psir_Hessian_autodiff(const Model& model, const TType T, const RhoTyp
 * Requires the use of multicomplex derivatives to calculate second partial derivatives
 */
 template<typename Model, typename TType, typename RhoType>
-auto build_Psir_Hessian_mcx(const Model& model, const TType T, const RhoType& rho) {
+auto build_Psir_Hessian_mcx(const Model& model, const TType &T, const RhoType& rho) {
     // Double derivatives in each component's concentration
     // N^N matrix (symmetric)
 
     // Lambda function for getting Psir with multicomplex concentrations
     auto func = [&model, &T](const std::vector<MultiComplex<double>>& rhovec) {
-        auto N = rhovec.size();
-        std::valarray<MultiComplex<double>> xs(N); for (auto i = 0; i < N; ++i) { xs[i] = rhovec[i]; }
+        std::valarray<MultiComplex<double>> xs(&(rhovec[0]), rhovec.size());
         return get_Psir(model, T, xs);
     };
     // The set of values around which the pertubations will happen
     const std::size_t N = rho.size();
-    std::vector<double> xs(N); for(auto i = 0; i < N; ++i){ xs[i] = rho[i]; }
+    std::vector<double> xs(std::begin(rho), std::end(rho));
 
     Eigen::MatrixXd H(N, N);
     

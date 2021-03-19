@@ -12,9 +12,8 @@ public:
 
     const double R = 1.380649e-23*6.02214076e23; ///< Exact value, given by k_B*N_A
 
-    template<typename TType, typename RhoType>
-    auto alphar(const TType T, const RhoType& rho) const {
-        auto rhotot = std::accumulate(std::begin(rho), std::end(rho), (RhoType::value_type)0.0);
+    template<typename TType, typename RhoType, typename VecType>
+    auto alphar(const TType T, const RhoType& rhotot, const VecType &molefrac) const {
         auto Psiminus = -log(1.0 - b * rhotot);
         auto Psiplus = rhotot;
         return Psiminus - a / (R * T) * Psiplus;
@@ -75,22 +74,13 @@ public:
 
     const NumType R = get_R_gas<double>();
 
-    template<typename TType, typename RhoType>
-    auto alphar(TType T,
-        const RhoType& rho,
-        const std::optional<typename RhoType::value_type> rhotot = std::nullopt) const
-    {
-        RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rho), std::end(rho), (decltype(rho[0]))0.0);
-        auto molefrac = rho / rhotot_;
-        return alphar(T, rho, molefrac);
-    }
     template<typename TType, typename RhoType, typename MoleFracType>
-    auto alphar(TType T,
+    auto alphar(const TType &T,
         const RhoType& rho,
         const MoleFracType &molefrac) const
     {
-        auto Psiminus = -log(1.0 - b(molefrac) * rhotot);
-        auto Psiplus = rhotot;
+        auto Psiminus = -log(1.0 - b(molefrac) * rho);
+        auto Psiplus = rho;
         return Psiminus - a(T, molefrac) / (R * T) * Psiplus;
     }
 };
