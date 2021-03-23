@@ -132,6 +132,7 @@ auto get_derivs(const Model& model, const TType T, const RhoType& rhovec) {
     auto derivs = derivatives(wrapper, wrt(varsigma, varsigma, varsigma, varsigma), at(varsigma));
     auto psir_derivs = std::valarray<double>(&derivs[0], derivs.size());
 #else
+    using namespace mcx;
     // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
     std::valarray<MultiComplex<double>> v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
     std::valarray<MultiComplex<double>> rhovecmcx(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecmcx[i] = rhovec[i]; }

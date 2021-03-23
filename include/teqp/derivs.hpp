@@ -33,8 +33,8 @@ typename ContainerType::value_type derivT(const FuncType& f, TType T, const Cont
 */
 template <typename TType, typename ContainerType, typename FuncType>
 typename ContainerType::value_type derivTmcx(const FuncType& f, TType T, const ContainerType& rho) {
-    using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
-    fcn_t wrapper = [&rho, &f](const MultiComplex<TType>& T_) {return f(T_, rho); };
+    using fcn_t = std::function<mcx::MultiComplex<double>(const mcx::MultiComplex<double>&)>;
+    fcn_t wrapper = [&rho, &f](const mcx::MultiComplex<TType>& T_) {return f(T_, rho); };
     auto ders = diff_mcx1(wrapper, T, 1);
     return ders[0];
 }
@@ -113,6 +113,7 @@ typename ContainerType::value_type get_B2vir(const Model& model, const TType T, 
 template <typename Model, typename TType, typename ContainerType>
 auto get_Bnvir(const Model& model, int Nderiv, const TType T, const ContainerType& molefrac) {
     // B_n = lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
+    using namespace mcx;
     using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
     fcn_t f = [&model, &T, &molefrac](const MultiComplex<double>& rho_) -> MultiComplex<double> { return model.alphar(T, rho_, molefrac); };
     return diff_mcx1(f, 0.0, Nderiv, true /* and_val */);
@@ -147,16 +148,7 @@ typename ContainerType::value_type get_pr(const Model& model, const TType T, con
     return get_Ar01(model, T, rhotot_, rhovec / rhotot_) * rhotot_ * model.R * T;
 }
 
-// Generic setting functions to handle Eigen types and STL types with the same interface
-template<typename MatrixLike, typename Integer, typename ValType>
-void setval(MatrixLike &m, Integer i, Integer j, const ValType val) {
-    m(i,j) = val;
-}
 
-// Partial specialization for valarray "matrix"
-template <> void setval<std::valarray<std::valarray<double>>, std::size_t, double>(std::valarray<std::valarray<double>>& m, std::size_t i, std::size_t j, const double val) {
-    m[i][j] = val;
-}
 
 /***
 * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations
@@ -188,27 +180,14 @@ template<typename Model, typename TType, typename RhoType>
 auto build_Psir_Hessian_mcx(const Model& model, const TType &T, const RhoType& rho) {
     // Double derivatives in each component's concentration
     // N^N matrix (symmetric)
+    using namespace mcx;
 
     // Lambda function for getting Psir with multicomplex concentrations
-    auto func = [&model, &T](const std::vector<MultiComplex<double>>& rhovec) {
-        std::valarray<MultiComplex<double>> xs(&(rhovec[0]), rhovec.size());
-        return get_Psir(model, T, xs);
+    using fcn_t = std::function< MultiComplex<double>(const std::valarray<MultiComplex<double>>&)>;
+    fcn_t func = [&model, &T](const std::valarray<MultiComplex<double>>& rhovec) -> MultiComplex<double> {
+        return get_Psir(model, T, rhovec);
     };
-    // The set of values around which the pertubations will happen
-    const std::size_t N = rho.size();
-    std::vector<double> xs(std::begin(rho), std::end(rho));
-
-    Eigen::MatrixXd H(N, N);
-    
-    for (std::size_t i = 0; i < rho.size(); ++i) {
-        for (std::size_t j = i; j < rho.size(); ++j) {
-            std::vector<int> order = { 0, 0 };
-            order[i] += 1;
-            order[j] += 1;
-            auto val = diff_mcxN<double>(func, xs, order);
-            setval(H,i,j,val);
-            setval(H,j,i,val);
-        }
-    }
+    using mattype = Eigen::ArrayXXd;
+    auto H = get_Hessian<mattype, fcn_t, std::valarray<double>, HessianMethods::Multiple>(func, rho);
     return H;
 }
