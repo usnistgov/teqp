@@ -66,7 +66,7 @@ void test_autodiff(Model model) {
 
     // Multicomplex derivatives
     for (int i = 0; i < Nrep; ++i) {
-        volatile auto diffs = diff_mcx1<double>([&model, &rho, &molefrac](auto& T) {return model.alphar(T, rho, molefrac); }, T, 1, true)[1];
+        volatile auto diffs = mcx::diff_mcx1<double>([&model, &rho, &molefrac](auto& T) {return model.alphar(T, rho, molefrac); }, T, 1, true)[1];
         v3 = diffs;
     }
     auto tic3 = std::chrono::steady_clock::now();
