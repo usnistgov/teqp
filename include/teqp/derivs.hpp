@@ -3,6 +3,7 @@
 #include <optional>
 #include <complex>
 #include <tuple>
+#include <map>
 
 #include "MultiComplex/MultiComplex.hpp"
 
@@ -110,13 +111,27 @@ typename ContainerType::value_type get_B2vir(const Model& model, const TType T, 
     return B2;
 }
 
+/*
+ B_n = \frac{1}{(n-2)!} lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
+*/
+
 template <typename Model, typename TType, typename ContainerType>
 auto get_Bnvir(const Model& model, int Nderiv, const TType T, const ContainerType& molefrac) {
-    // B_n = lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
+    
     using namespace mcx;
     using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
     fcn_t f = [&model, &T, &molefrac](const MultiComplex<double>& rho_) -> MultiComplex<double> { return model.alphar(T, rho_, molefrac); };
-    return diff_mcx1(f, 0.0, Nderiv, true /* and_val */);
+    std::map<int, TType> o;
+    auto dalphardrhon = diff_mcx1(f, 0.0, Nderiv+1, true /* and_val */);
+    for (int n = 2; n < Nderiv+1; ++n) {
+        o[n] = dalphardrhon[n-1];
+        // 0!=1, 1!=1, so only n>3 terms need factorial correction
+        if (n > 3) {
+            auto factorial = [](int N) {return tgamma(N + 1); };
+            o[n] /= factorial(n-2);
+        }
+    }
+    return o;
 }
 
 /***
