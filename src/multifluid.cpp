@@ -1,4 +1,4 @@
-//#define USE_AUTODIFF
+#define USE_AUTODIFF
 
 #include "teqp/core.hpp"
 #include "teqp/models/multifluid.hpp"
@@ -182,7 +182,7 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, st
             break;
         }
         last_drhodt = c*drhodt;
-        write_line();
+        //write_line();
     }
 }
 

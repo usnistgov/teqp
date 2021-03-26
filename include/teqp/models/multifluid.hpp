@@ -93,8 +93,8 @@ public:
         const RhoType &rho,
         const MoleFracType& molefrac) const
     {
-        auto Tred = redfunc.get_Tr(molefrac);
-        auto rhored = redfunc.get_rhor(molefrac);
+        auto Tred = forceeval(redfunc.get_Tr(molefrac));
+        auto rhored = forceeval(redfunc.get_rhor(molefrac));
         auto delta = forceeval(rho / rhored);
         auto tau = forceeval(Tred / T);
         auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
