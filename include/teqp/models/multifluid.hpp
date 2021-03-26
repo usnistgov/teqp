@@ -5,10 +5,11 @@
 #include <fstream>
 #include <string>
 #include <cmath>
+#include "MultiComplex/MultiComplex.hpp"
 
 // See https://eigen.tuxfamily.org/dox/TopicCustomizing_CustomScalar.html
 namespace Eigen {
-    template<typename TN> struct NumTraits<MultiComplex<TN>> : NumTraits<double> // permits to get the epsilon, dummy_precision, lowest, highest functions
+    template<typename TN> struct NumTraits<mcx::MultiComplex<TN>> : NumTraits<double> // permits to get the epsilon, dummy_precision, lowest, highest functions
     {
         enum {
             IsComplex = 1,
@@ -32,7 +33,7 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = std::remove_const<decltype(tau* delta* molefracs[0])>::type; // Type promotion, without the const-ness
+        using resulttype = std::remove_const<decltype(forceeval(tau* delta* molefracs[0]))>::type; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
@@ -53,7 +54,7 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = std::remove_const<decltype(tau* delta* molefracs[0])>::type; // Type promotion, without the const-ness
+        using resulttype = std::remove_const<decltype(forceeval(tau* delta* molefracs[0]))>::type; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
@@ -94,9 +95,10 @@ public:
     {
         auto Tred = redfunc.get_Tr(molefrac);
         auto rhored = redfunc.get_rhor(molefrac);
-        auto delta = rho / rhored;
-        auto tau = Tred / T;
-        return corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
+        auto delta = forceeval(rho / rhored);
+        auto tau = forceeval(Tred / T);
+        auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
+        return val;
     }
 };
 
@@ -271,13 +273,11 @@ public:
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         switch (type) {
         case (types::GaussianExponential):
-            return (n * exp(t*log(tau) + d*log(delta)-c*pow(delta, l)-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
-            //return (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+            return forceeval((n * exp(t*log(tau) + d*log(delta)-c*pow(delta, l)-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum());
         case (types::GERG2004):
-            return (n * exp(t*log(tau) + d*log(delta) -eta * (delta - epsilon).square() - beta * (delta - gamma))).sum(); 
-            //return (n * pow(tau, t) * pow(delta, d) * exp(-eta * (delta - epsilon).square() - beta * (delta - gamma))).sum();
+            return forceeval((n * exp(t*log(tau) + d*log(delta) -eta * (delta - epsilon).square() - beta * (delta - gamma))).sum()); 
         case (types::NoDeparture):
-            return 0.0*(tau*delta);
+            return forceeval(0.0*(tau*delta));
         default:
             throw - 1;
         }
@@ -363,10 +363,17 @@ auto get_departure_function_matrix(const std::string& coolprop_root, const nlohm
 /// From Ulrich Deiters
 template <typename T>                             // arbitrary integer power
 T powi(const T& x, int n) {
-    if (n < 0)
-        return powi(static_cast<T>(1) / x, -n);
+    if (n < 0){
+        using namespace autodiff::detail;
+        if constexpr (isDual<T> || isExpr<T> || isNumber<T>) {
+            return eval(powi(1.0/x, -n));
+        }
+        else {
+            return powi(static_cast<T>(1.0) / x, -n);
+        }
+    }
     else if (n == 0)
-        return static_cast<T>(1);                       // x^0 = 1 even for x == 0
+        return static_cast<T>(1.0);                       // x^0 = 1 even for x == 0
     else {
         T y(x), xpwr(x);
         n--;
@@ -387,11 +394,16 @@ auto powIV(const T& x, const Eigen::ArrayXd& e) {
     Eigen::Array<T, Eigen::Dynamic, 1> o(e.size());
     for (auto i = 0; i < e.size(); ++i) {
         auto ei = e[i];
-        if (ei == static_cast<int>(ei)) {
-            o[i] = powi(x, ei);
-        }
-        else{
+        if constexpr (autodiff::detail::isDual<T>) {
             o[i] = pow(x, ei);
+        }
+        else {
+            if (ei == static_cast<int>(ei)) {
+                o[i] = powi(x, ei);
+            }
+            else {
+                o[i] = pow(x, ei);
+            }
         }
     }
     return o;
@@ -407,8 +419,8 @@ auto pow(const std::complex<T> &x, const Eigen::ArrayXd& e) {
 }
 
 template<typename T>
-auto pow(const MultiComplex<T> &x, const Eigen::ArrayXd& e) {
-    Eigen::Array<MultiComplex<T>, Eigen::Dynamic, 1> o(e.size());
+auto pow(const mcx::MultiComplex<T> &x, const Eigen::ArrayXd& e) {
+    Eigen::Array<mcx::MultiComplex<T>, Eigen::Dynamic, 1> o(e.size());
     for (auto i = 0; i < e.size(); ++i) {
         o[i] = pow(x, e[i]);
     }
@@ -449,12 +461,9 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        using NumType = std::remove_const<decltype(tau* delta)>::type; 
-        NumType o;
         switch (type) {
             case types::GaussianExponential:{
-                o = (n*exp(t*log(tau) + d*log(delta) - c*powIV(delta, l) - eta*(delta - epsilon).square() - beta * (tau - gamma).square())).sum();
-                //o = (n * pow(tau, t) * pow(delta, d) * exp(-c * pow(delta, l)) * exp(-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+                return forceeval((n*exp(t*log(tau) + d*log(delta) - c*powIV(delta, l) - eta*(delta - epsilon).square() - beta * (tau - gamma).square())).sum());
                 break;}
             case types::GaussianExponentialNonAnalytic:
                 {
@@ -464,20 +473,19 @@ public:
                 // The non-analytic terms
                 auto square = [](auto x) { return x * x; };
                 auto delta_min1_sq = square(delta-1.0);
-                Eigen::Array<NumType, Eigen::Dynamic, 1> Psi = exp(-na_C*delta_min1_sq -na_D*square(tau-1.0));
+                auto Psi = (exp(-na_C*delta_min1_sq -na_D*square(tau-1.0))).eval();
                 const Eigen::ArrayXd k = 1.0/(2.0*na_beta);
-                Eigen::Array<NumType, Eigen::Dynamic, 1> theta = (1.0-tau) + na_A*pow(delta_min1_sq, k);
-                Eigen::Array<NumType, Eigen::Dynamic, 1> Delta = theta.square() + na_B*pow(delta_min1_sq, na_a);
+                auto theta = ((1.0-tau) + na_A*pow(delta_min1_sq, k)).eval();
+                auto Delta = (theta.square() + na_B*pow(delta_min1_sq, na_a)).eval();
 
-                auto o2 = (na_n*pow(Delta, na_b)*delta*Psi).sum();
+                auto o2 = (na_n*pow(Delta, na_b)*delta*Psi).eval().sum();
                 
-                o = o1 + o2;
+                return forceeval(o1 + o2);
                 break;
                 }
             default:
                 throw -1;
         }
-        return o;
     }
 };
 

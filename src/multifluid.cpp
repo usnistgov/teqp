@@ -1,10 +1,9 @@
+//#define USE_AUTODIFF
+
 #include "teqp/core.hpp"
 #include "teqp/models/multifluid.hpp"
 
 #include <optional>
-
-//#include "autodiff/forward.hpp"
-//#include "autodiff/reverse.hpp"
 
 auto build_multifluid_model(const std::vector<std::string>& components, const std::string &coolprop_root, const nlohmann::json &BIPcollection) {
     auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(coolprop_root, components);
@@ -117,6 +116,7 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, st
                 T = x[0]; rhovec[0] = x[1]; rhovec[1] = x[2];
             }
             catch (std::exception& e) {
+                throw;
                 std::cout << e.what() << std::endl;
             }
         }
@@ -198,15 +198,42 @@ public:
     }
 };
 
+void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json &BIPcollection) {
+    std::vector<std::vector<std::string>> pairs = { 
+        { "CarbonDioxide", "R1234YF" }, { "CarbonDioxide","R1234ZE(E)" }, { "ETHYLENE","R1243ZF" }, 
+        { "R1234YF","R1234ZE(E)" }, { "R134A","R1234YF" }, { "R23","R1234YF" }, 
+        { "R32","R1123" }, { "R32","R1234YF" }, { "R32","R1234ZE(E)" }
+    };
+    for (auto &pp : pairs) {
+        using ModelType = decltype(build_multifluid_model(pp, coolprop_root, BIPcollection));
+        std::optional<ModelType> model{std::nullopt};
+        try {
+            model.emplace(build_multifluid_model(pp, coolprop_root, BIPcollection));
+        }
+        catch (std::exception &e) {
+            std::cout << e.what() << std::endl;
+            std::cout << pp[0] << "&" << pp[1] << std::endl;
+            continue;
+        }
+        for (int i : {0, 1}){
+            trace_arclength(pp, model.value(), i);
+        }
+    }
+}
+
 int main(){
    
-    //test_dummy();
-    //trace(); 
     std::string coolprop_root = "C:/Users/ihb/Code/CoolProp";
     coolprop_root = "../mycp";
     auto BIPcollection = nlohmann::json::parse(
         std::ifstream(coolprop_root + "/dev/mixtures/mixture_binary_pairs.json")
     );
+
+    // Critical curves
+    {
+        Timer t(1);
+        trace_critical_loci(coolprop_root, BIPcollection);
+    }
 
 {
     auto model = build_multifluid_model({ "methane", "ethane" }, coolprop_root, BIPcollection);
@@ -232,14 +259,21 @@ int main(){
             for (auto i = 0; i < N; ++i) {
                 alphar = get_Ar01(model, T, rho, molefrac);
             }
-            std::cout << alphar << std::endl;
+            std::cout << alphar << "; 1st CSD" << std::endl;
+        }
+        {
+            Timer t(N);
+            for (auto i = 0; i < N; ++i) {
+                alphar = get_Ar01ad(model, T, rho, molefrac);
+            }
+            std::cout << alphar << "; 1st autodiff::autodiff" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
                 alphar = get_Ar01mcx(model, T, rho, molefrac);
             }
-            std::cout << alphar << std::endl;
+            std::cout << alphar << "; 1st MCX" << std::endl;
         }
         {
             Timer t(N);
@@ -265,27 +299,5 @@ int main(){
     
     int ttt =0 ;
 }
-
-    std::vector<std::vector<std::string>> pairs = { 
-        { "CarbonDioxide", "R1234YF" }, { "CarbonDioxide","R1234ZE(E)" }, { "ETHYLENE","R1243ZF" }, 
-        { "R1234YF","R1234ZE(E)" }, { "R134A","R1234YF" }, { "R23","R1234YF" }, 
-        { "R32","R1123" }, { "R32","R1234YF" }, { "R32","R1234ZE(E)" }
-    };
-    for (auto &pp : pairs) {
-        using ModelType = decltype(build_multifluid_model(pp, coolprop_root, BIPcollection));
-        std::optional<ModelType> model{std::nullopt};
-        try {
-             model.emplace(build_multifluid_model(pp, coolprop_root, BIPcollection));
-        }
-        catch (std::exception &e) {
-            std::cout << e.what() << std::endl;
-            std::cout << pp[0] << "&" << pp[1] << std::endl;
-            continue;
-        }
-        for (int i : {0, 1}){
-            trace_arclength(pp, model.value(), i);
-        }
-    }
-
     return EXIT_SUCCESS;
 }

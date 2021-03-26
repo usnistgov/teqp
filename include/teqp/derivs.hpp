@@ -12,6 +12,18 @@
 #include <autodiff/forward/dual/eigen.hpp>
 using namespace autodiff;
 
+template<typename T>
+auto forceeval(T&& expr)
+{
+    using namespace autodiff::detail;
+    if constexpr (isDual<T> || isExpr<T> || isNumber<T>) {
+        return eval(expr);
+    }
+    else {
+        return expr;
+    }
+}
+
 template <typename TType, typename ContainerType, typename FuncType>
 typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
 caller(const FuncType& f, TType T, const ContainerType& rho) {
@@ -35,7 +47,7 @@ typename ContainerType::value_type derivT(const FuncType& f, TType T, const Cont
 template <typename TType, typename ContainerType, typename FuncType>
 typename ContainerType::value_type derivTmcx(const FuncType& f, TType T, const ContainerType& rho) {
     using fcn_t = std::function<mcx::MultiComplex<double>(const mcx::MultiComplex<double>&)>;
-    fcn_t wrapper = [&rho, &f](const mcx::MultiComplex<TType>& T_) {return f(T_, rho); };
+    fcn_t wrapper = [&rho, &f](const auto& T_) {return f(T_, rho); };
     auto ders = diff_mcx1(wrapper, T, 1);
     return ders[0];
 }
@@ -77,18 +89,26 @@ auto get_Ar01(const Model& model, const TType &T, const RhoType &rho, const Mole
 
 template <typename Model, typename TType, typename RhoType, typename MoleFracType>
 auto get_Ar01mcx(const Model& model, const TType& T, const RhoType& rho, const MoleFracType& molefrac) {
-    using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
+    using fcn_t = std::function<mcx::MultiComplex<double>(const mcx::MultiComplex<double>&)>;
     bool and_val = true;
-    fcn_t f = [&model, &T, &molefrac](const MultiComplex<double>& rho_) -> MultiComplex<double> { return model.alphar(T, rho_, molefrac); };
+    fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
     auto ders = diff_mcx1(f, rho, 1, and_val);
     return ders[1] * rho;
 }
 
 template <typename Model, typename TType, typename RhoType, typename MoleFracType>
+auto get_Ar01ad(const Model& model, const TType& T, const RhoType& rho, const MoleFracType& molefrac) {
+    autodiff::dual rhodual = rho;
+    auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
+    auto der = derivative(f, wrt(rhodual), at(rhodual));
+    return der * rho;
+}
+
+template <typename Model, typename TType, typename RhoType, typename MoleFracType>
 auto get_Ar02(const Model& model, const TType& T, const RhoType& rho, const MoleFracType& molefrac) {
-    using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
+    using fcn_t = std::function<mcx::MultiComplex<double>(const mcx::MultiComplex<double>&)>;
     bool and_val = true;
-    fcn_t f = [&model, &T, &molefrac](const MultiComplex<double>& rho_) -> MultiComplex<double> { return model.alphar(T, rho_, molefrac); };
+    fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
     auto ders = diff_mcx1(f, rho, 2, and_val);
     return ders[2]*rho*rho;
 }
@@ -106,13 +126,19 @@ typename ContainerType::value_type get_Ar01(const Model& model, const TType T, c
 template <typename Model, typename TType, typename ContainerType>
 typename ContainerType::value_type get_B2vir(const Model& model, const TType T, const ContainerType& molefrac) {
     double h = 1e-100;
-    // B_2 = lim_rho\to 0 dalphar/drho|T,z
-    auto B2 = model.alphar(T, std::complex<double>(0, h), molefrac).imag()/h;
+    // B_2 = dalphar/drho|T,z at rho=0
+    auto B2 = model.alphar(T, std::complex<double>(0.0, h), molefrac).imag()/h;
     return B2;
 }
 
 /*
- B_n = \frac{1}{(n-2)!} lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
+* \f$
+* B_n = \frac{1}{(n-2)!} lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
+* \f$
+* \param model The model providing the alphar function
+* \param Nderiv The maximum virial coefficient to return; e.g. 5: B_2, B_3, ..., B_5
+* \param T Temperature
+* \param molefrac The mole fractions
 */
 
 template <typename Model, typename TType, typename ContainerType>
@@ -120,7 +146,7 @@ auto get_Bnvir(const Model& model, int Nderiv, const TType T, const ContainerTyp
     
     using namespace mcx;
     using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
-    fcn_t f = [&model, &T, &molefrac](const MultiComplex<double>& rho_) -> MultiComplex<double> { return model.alphar(T, rho_, molefrac); };
+    fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
     std::map<int, TType> o;
     auto dalphardrhon = diff_mcx1(f, 0.0, Nderiv+1, true /* and_val */);
     for (int n = 2; n < Nderiv+1; ++n) {
@@ -180,7 +206,7 @@ auto build_Psir_Hessian_autodiff(const Model& model, const TType &T, const RhoTy
     VectorXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
     auto hfunc = [&model, &T](const VectorXdual2nd& rho_) {
         auto rhotot_ = rho_.sum();
-        auto molefrac = rho_ / rhotot_;
+        auto molefrac = (rho_ / rhotot_).eval();
         return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
     };
     return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g); // evaluate the function value u, its gradient, and its Hessian matrix H
@@ -199,7 +225,7 @@ auto build_Psir_Hessian_mcx(const Model& model, const TType &T, const RhoType& r
 
     // Lambda function for getting Psir with multicomplex concentrations
     using fcn_t = std::function< MultiComplex<double>(const std::valarray<MultiComplex<double>>&)>;
-    fcn_t func = [&model, &T](const std::valarray<MultiComplex<double>>& rhovec) -> MultiComplex<double> {
+    fcn_t func = [&model, &T](const auto& rhovec) {
         return get_Psir(model, T, rhovec);
     };
     using mattype = Eigen::ArrayXXd;

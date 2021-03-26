@@ -13,10 +13,11 @@ public:
     const double R = 1.380649e-23*6.02214076e23; ///< Exact value, given by k_B*N_A
 
     template<typename TType, typename RhoType, typename VecType>
-    auto alphar(const TType T, const RhoType& rhotot, const VecType &molefrac) const {
+    auto alphar(const TType &T, const RhoType& rhotot, const VecType &molefrac) const {
         auto Psiminus = -log(1.0 - b * rhotot);
         auto Psiplus = rhotot;
-        return Psiminus - a / (R * T) * Psiplus;
+        auto val = Psiminus - a / (R * T) * Psiplus;
+        return forceeval(val);
     }
 
     double p(double T, double v) {
@@ -81,6 +82,8 @@ public:
     {
         auto Psiminus = -log(1.0 - b(molefrac) * rho);
         auto Psiplus = rho;
-        return Psiminus - a(T, molefrac) / (R * T) * Psiplus;
+        auto val = Psiminus - a(T, molefrac) / (R * T) * Psiplus;
+        //std::string something = val;
+        return forceeval(val);
     }
 };
