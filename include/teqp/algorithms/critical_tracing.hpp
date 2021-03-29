@@ -189,18 +189,19 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
     auto sigma2 = 2e-5 * rhovec.sum(); // This is the perturbation along the second eigenvector
 
     auto v1 = std::valarray<double>(&ei.v1[0], ei.v1.size());
-    auto rhovec_plus = rhovec + v1 * sigma2;
-    auto rhovec_minus = rhovec - v1 * sigma2;
+    decltype(v1) rhovec_plus = rhovec + v1 * sigma2;
+    decltype(v1) rhovec_minus = rhovec - v1 * sigma2;
     std::string stepping_desc = "";
     auto deriv_sigma2 = all_derivs.tot;
-    if (all(rhovec_minus > 0) && all(rhovec_plus > 0)) {
+    auto eval = [](const auto &ex){ return std::valarray<bool>(ex); };
+    if (all(eval(rhovec_minus > 0)) && all(eval(rhovec_plus > 0))) {
         // Conventional centered derivative
         auto plus_sigma2 = get_derivs(model, T, rhovec_plus);
         auto minus_sigma2 = get_derivs(model, T, rhovec_minus);
         deriv_sigma2 = (plus_sigma2.tot - minus_sigma2.tot) / (2.0 * sigma2);
         stepping_desc = "conventional centered";
     }
-    else if (any(rhovec_minus < 0)) {
+    else if (any(eval(rhovec_minus < 0))) {
         // Forward derivative in the direction of v1
         auto plus_sigma2 = get_derivs(model, T, rhovec_plus);
         auto rhovec_2plus = rhovec + 2 * v1 * sigma2;
@@ -208,7 +209,7 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
         deriv_sigma2 = (-3 * derivs + 4 * plus_sigma2.tot - plus2_sigma2.tot) / (2.0 * sigma2);
         stepping_desc = "forward";
     }
-    else if (any(rhovec_minus > 0)) {
+    else if (any(eval(rhovec_minus > 0))) {
         // Negative derivative in the direction of v1
         auto minus_sigma2 = get_derivs(model, T, rhovec_minus);
         auto rhovec_2minus = rhovec - 2 * v1 * sigma2;
