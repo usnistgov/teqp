@@ -33,7 +33,7 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = std::remove_const<decltype(forceeval(tau* delta* molefracs[0]))>::type; // Type promotion, without the const-ness
+        using resulttype = typename std::remove_const<decltype(forceeval(tau* delta* molefracs[0]))>::type; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
@@ -54,7 +54,7 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = std::remove_const<decltype(forceeval(tau* delta* molefracs[0]))>::type; // Type promotion, without the const-ness
+        using resulttype = typename std::remove_const<decltype(forceeval(tau* delta* molefracs[0]))>::type; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
@@ -83,7 +83,7 @@ public:
         const RhoType& rhovec,
         const std::optional<typename RhoType::value_type> rhotot = std::nullopt) const
     {
-        RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+        typename RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
         auto molefrac = rhovec / rhotot_;
         return alphar(T, rhotot_, molefrac);
     }
@@ -145,12 +145,12 @@ public:
     auto Y(const MoleFractions& z, const Eigen::ArrayXd& Yc, const Eigen::MatrixXd& beta, const Eigen::MatrixXd& Yij) const {
 
         auto N = z.size();
-        MoleFractions::value_type sum1 = 0.0;
+        typename MoleFractions::value_type sum1 = 0.0;
         for (auto i = 0; i < N; ++i) {
             sum1 = sum1 + square(z[i]) * Yc[i];
         }
         
-        MoleFractions::value_type sum2 = 0.0;
+        typename MoleFractions::value_type sum2 = 0.0;
         for (auto i = 0; i < N-1; ++i){
             for (auto j = i+1; j < N; ++j) {
                 sum2 = sum2 + 2.0*z[i]*z[j]*(z[i] + z[j])/(square(beta(i, j))*z[i] + z[j])*Yij(i, j);

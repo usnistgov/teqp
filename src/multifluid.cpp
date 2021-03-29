@@ -136,11 +136,13 @@ void trace_arclength(std::vector<std::string> fluids, const ModelType &model, st
         auto dTdt = 1.0 / norm(drhodT);
         auto drhodt = drhodT * dTdt;
 
+        auto eval = [](const auto& ex){ return std::valarray<bool>(ex); };
+
         // Flip the sign if the tracing wants to go backwards, or if the first step would take you to negative concentrations
-        if (iter == 0 && any(rhovec + c*drhodt*dt < 0)) {
+        if (iter == 0 && any(eval((rhovec + c*drhodt*dt) < 0))) {
             c *= -1;
         }
-        else if (iter > 0 && dot(c*drhodt, last_drhodt) < 0){
+        else if (iter > 0 && dot(std::valarray<double>(c*drhodt), last_drhodt) < 0){
             c *= -1;
         }
 
@@ -292,10 +294,11 @@ int main(){
     std::valarray<double> molefrac = { 1.0/3.0, 2.0/3.0 };
     auto B2 = get_B2vir(model, T, molefrac);
 
-    auto dilrho = 0.00000000001 * molefrac;
+    std::valarray<double> dilrho = 0.00000000001*molefrac;
     auto B2other = get_Ar01(model, T, dilrho)/dilrho.sum();
 
-    auto Ar01dil = get_Ar01(model, T, rhovec*0.0);
+    std::valarray<double> zerorho = 0.0*rhovec;
+    auto Ar01dil = get_Ar01(model, T, zerorho);
     
     int ttt =0 ;
 }
