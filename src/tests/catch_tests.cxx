@@ -46,10 +46,11 @@ TEST_CASE("Check virial coefficients for vdW", "[virial]")
     auto T = 300.0;
     std::valarray<double> molefrac = { 1.0 };
 
-    auto Nvir = 8;
+    constexpr int Nvir = 8;
 
     // Numerical solutions from alphar
-    auto Bn = get_Bnvir(vdW, Nvir, T, molefrac);
+    auto Bn = get_Bnvir<Nvir, ADBackends::autodiff>(vdW, T, molefrac);
+    auto Bnmcx = get_Bnvir<Nvir, ADBackends::multicomplex>(vdW, T, molefrac);
 
     // Exact solutions for virial coefficients for van der Waals 
     auto get_vdW_exacts = [a, b, R, T](int Nmax) {
@@ -116,8 +117,8 @@ TEST_CASE("Check p three ways for vdW", "[virial][p]")
     auto pfromderiv = rho*model.R*T + get_pr(model, T, rhovec);
 
     // Numerical solution from virial expansion
-    auto Nvir = 8;
-    auto Bn = get_Bnvir(model, 8, T, molefrac);
+    constexpr int Nvir = 8;
+    auto Bn = get_Bnvir<Nvir>(model, T, molefrac);
     auto Z = 1.0;
     for (auto i = 2; i <= Nvir; ++i){
         Z += Bn[i]*pow(rho, i-1);

@@ -143,16 +143,33 @@ typename ContainerType::value_type get_B2vir(const Model& model, const TType T, 
 * \param molefrac The mole fractions
 */
 
-template <typename Model, typename TType, typename ContainerType>
-auto get_Bnvir(const Model& model, int Nderiv, const TType T, const ContainerType& molefrac) {
-    
-    using namespace mcx;
-    using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
-    fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
+template <int Nderiv, ADBackends be = ADBackends::autodiff, typename Model, typename TType, typename ContainerType>
+auto get_Bnvir(const Model& model, const TType T, const ContainerType& molefrac) 
+{
+    std::map<int, double> dnalphardrhon;
+    if constexpr(be == ADBackends::multicomplex){
+        using namespace mcx;
+        using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
+        fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
+        auto derivs = diff_mcx1(f, 0.0, Nderiv+1, true /* and_val */);
+        for (auto n = 1; n <= Nderiv; ++n){
+            dnalphardrhon[n] = derivs[n];
+        }
+    }
+    else if constexpr(be == ADBackends::autodiff){
+        autodiff::HigherOrderDual<Nderiv+1, double> rhodual = 0.0;
+        auto f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
+        auto derivs = derivatives(f, wrt(rhodual), at(rhodual));
+        for (auto n = 1; n <= Nderiv; ++n){
+             dnalphardrhon[n] = derivs[n];
+        }
+    }
+    else{
+        static_assert("algorithmic differentiation backend is invalid");
+    }
     std::map<int, TType> o;
-    auto dalphardrhon = diff_mcx1(f, 0.0, Nderiv+1, true /* and_val */);
     for (int n = 2; n < Nderiv+1; ++n) {
-        o[n] = dalphardrhon[n-1];
+        o[n] = dnalphardrhon[n-1];
         // 0!=1, 1!=1, so only n>3 terms need factorial correction
         if (n > 3) {
             auto factorial = [](int N) {return tgamma(N + 1); };
