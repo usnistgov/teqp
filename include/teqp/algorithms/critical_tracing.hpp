@@ -29,7 +29,7 @@ auto eigen_problem(const Model& model, const TType T, const RhoType& rhovec) {
     EigenData ed;
 
     auto N = rhovec.size();
-    auto mask = (rhovec != 0);
+    std::valarray<bool> mask = (rhovec != 0);
 
     // Build the Hessian for the residual part;
 #if defined(USE_AUTODIFF)
