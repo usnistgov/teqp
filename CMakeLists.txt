@@ -35,12 +35,11 @@ if (MSVC)
 endif()
 target_link_libraries(multifluid autodiff)
 
-add_executable(test_autodiff "${CMAKE_CURRENT_SOURCE_DIR}/src/test_autodiff.cpp")
-if (MSVC)
-    target_sources(test_autodiff PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
-endif()
-target_link_libraries(test_autodiff autodiff)
-
+# add_executable(test_autodiff "${CMAKE_CURRENT_SOURCE_DIR}/src/test_autodiff.cpp")
+# if (MSVC)
+#     target_sources(test_autodiff PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+# endif()
+# target_link_libraries(test_autodiff autodiff)
 
 add_executable(catch_tests "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/catch_tests.cxx")
 if (MSVC)
