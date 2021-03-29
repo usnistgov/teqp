@@ -12,23 +12,6 @@
 #include <autodiff/forward/dual/eigen.hpp>
 using namespace autodiff;
 
-auto build_simple() {
-    // Argon + Xenon
-    std::valarray<double> Tc_K = { 150.687, 289.733 };
-    std::valarray<double> pc_Pa = { 4863000.0, 5842000.0 };
-    auto R = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
-    int i = 0;
-    double ai = 27.0 / 64.0 * pow(R * Tc_K[i], 2) / pc_Pa[i];
-    double bi = 1.0 / 8.0 * R * Tc_K[i] / pc_Pa[i];
-    return vdWEOS1(ai, bi);
-}
-auto build_vdW() {
-    // Argon + Xenon
-    std::valarray<double> Tc_K = { 150.687, 289.733 };
-    std::valarray<double> pc_Pa = { 4863000.0, 5842000.0 };
-    return vdWEOS(Tc_K, pc_Pa);
-}
-
 template<typename Model>
 void test_autodiff(Model model) {
     
@@ -78,17 +61,6 @@ void test_autodiff(Model model) {
 
     std::cout << v1 << "," << v2 << "," << v3 << std::endl;
 
-    // Test evaluation of Hessian of Psir
-    dual2nd u; // the output scalar u = f(x), evaluated together with Hessian below
-    VectorXdual2nd g;
-    VectorXdual2nd rhovecc(2); rhovecc << rhovec[0], rhovec[1];
-    auto hfunc = [&model, &T](const VectorXdual2nd& rho_) {
-        auto rhotot_ = rho_.sum();
-        auto molefrac = rho_/rhotot_;
-        return eval(model.alphar(T, rhotot_, molefrac)*model.R*T*rhotot_);
-    };
-    Eigen::MatrixXd H = autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g); // evaluate the function value u, its gradient, and its Hessian matrix H
-    std::cout << H << std::endl;
     std::cout << build_Psir_Hessian_mcx(model, T, rhovec) << std::endl; 
     std::cout << build_Psir_Hessian_autodiff(model, T, rhovec) << std::endl;
 

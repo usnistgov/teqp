@@ -209,7 +209,7 @@ auto build_Psir_Hessian_autodiff(const Model& model, const TType &T, const RhoTy
         auto molefrac = (rho_ / rhotot_).eval();
         return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
     };
-    return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g); // evaluate the function value u, its gradient, and its Hessian matrix H
+    return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g).eval(); // evaluate the function value u, its gradient, and its Hessian matrix H
 }
 
 /***

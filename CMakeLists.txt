@@ -40,3 +40,10 @@ if (MSVC)
     target_sources(test_autodiff PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
 target_link_libraries(test_autodiff autodiff)
+
+
+add_executable(catch_tests "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/catch_tests.cxx")
+if (MSVC)
+    target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+endif()
+target_link_libraries(catch_tests autodiff)

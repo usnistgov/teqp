@@ -1,0 +1,22 @@
+name: build and run Catch tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: checkout submodules
+      run: git submodule update --init --recursive
+    - name: mkdir
+      run: mkdir build && cd build
+    - name: cmake config
+      run: cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
+    - name: cmake make
+      run: cmake --build build
+    # run tests
+    - name: run Catch tests
+      run: build/catch_tests
