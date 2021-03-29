@@ -41,7 +41,7 @@ protected:
 
     template<typename TType, typename CompType>
     auto a(TType T, const CompType& molefracs) const {
-        CompType::value_type a_ = 0.0;
+        typename CompType::value_type a_ = 0.0;
         auto ai = this->ai;
         for (auto i = 0; i < molefracs.size(); ++i) {
             for (auto j = 0; j < molefracs.size(); ++j) {
@@ -54,7 +54,7 @@ protected:
 
     template<typename CompType>
     auto b(const CompType& molefracs) const {
-        CompType::value_type b_ = 0.0;
+        typename CompType::value_type b_ = 0.0;
         for (auto i = 0; i < molefracs.size(); ++i) {
             b_ = b_ + molefracs[i] * bi[i];
         }
@@ -83,7 +83,6 @@ public:
         auto Psiminus = -log(1.0 - b(molefrac) * rho);
         auto Psiplus = rho;
         auto val = Psiminus - a(T, molefrac) / (R * T) * Psiplus;
-        //std::string something = val;
         return forceeval(val);
     }
 };
