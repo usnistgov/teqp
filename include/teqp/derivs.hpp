@@ -77,7 +77,9 @@ typename ContainerType::value_type get_Ar10(const Model& model, const TType T, c
 
 template <typename Model, typename TType, typename RhoType, typename ContainerType>
 typename ContainerType::value_type get_Ar10(const Model& model, const TType T, const RhoType &rho, const ContainerType& molefrac) {
-    return -T * derivT([&model, &rho, &molefrac](const auto& T, const auto& rhovec) { return model.alphar(T, rho, molefrac); }, T, rhovec);
+    double h = 1e-100;
+    return f(std::complex<TType>(T, h), rho).imag() / h;
+    return -T*model.alphar(std::complex<TType>(T, h), rho, molefrac); // Complex step derivative
 }
 
 template <typename Model, typename TType, typename RhoType, typename MoleFracType>
