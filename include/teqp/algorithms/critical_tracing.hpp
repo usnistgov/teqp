@@ -138,7 +138,7 @@ auto get_derivs(const Model& model, const TType T, const RhoType& rhovec) {
     std::valarray<MultiComplex<double>> rhovecmcx(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecmcx[i] = rhovec[i]; }
     using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
     fcn_t wrapper = [&rhovecmcx, &v0, &T, &model](const MultiComplex<double>& sigma_1) {
-        auto rhovecused = rhovecmcx + sigma_1 * v0;
+        std::valarray<MultiComplex<double>> rhovecused = rhovecmcx + sigma_1 * v0;
         return get_Psir(model, T, rhovecused);
     };
     auto psir_derivs_ = diff_mcx1(wrapper, 0.0, 4, true);
