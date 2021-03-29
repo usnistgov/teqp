@@ -192,7 +192,7 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
     auto rhovec_plus = rhovec + v1 * sigma2;
     auto rhovec_minus = rhovec - v1 * sigma2;
     std::string stepping_desc = "";
-    auto deriv_sigma2 = 0.0 * all_derivs.tot;
+    auto deriv_sigma2 = all_derivs.tot;
     if (all(rhovec_minus > 0) && all(rhovec_plus > 0)) {
         // Conventional centered derivative
         auto plus_sigma2 = get_derivs(model, T, rhovec_plus);
