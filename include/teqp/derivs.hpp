@@ -59,7 +59,7 @@ typename ContainerType::value_type derivTmcx(const FuncType& f, TType T, const C
 template <typename TType, typename ContainerType, typename FuncType, typename Integer>
 typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const ContainerType& rho, Integer i) {
     double h = 1e-100;
-    using comtype = std::complex<ContainerType::value_type>;
+    using comtype = std::complex<typename ContainerType::value_type>;
     std::valarray<comtype> rhocom(rho.size());
     for (auto j = 0; j < rho.size(); ++j) {
         rhocom[j] = comtype(rho[j], 0.0);
