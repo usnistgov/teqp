@@ -58,13 +58,6 @@ void test_autodiff(Model model) {
     std::cout << std::chrono::duration<double>(tic1 - tic0).count()/Nrep*1e6 << " us (autodiff)" << std::endl;
     std::cout << std::chrono::duration<double>(tic2 - tic1).count()/Nrep*1e6 << " us (CSD)" << std::endl;
     std::cout << std::chrono::duration<double>(tic3 - tic2).count()/Nrep*1e6 << " us (MCX)" << std::endl;
-
-    std::cout << v1 << "," << v2 << "," << v3 << std::endl;
-
-    std::cout << build_Psir_Hessian_mcx(model, T, rhovec) << std::endl; 
-    std::cout << build_Psir_Hessian_autodiff(model, T, rhovec) << std::endl;
-
-    auto ffff = 0;
 }
 
 int main() {
