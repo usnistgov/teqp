@@ -82,28 +82,28 @@ typename ContainerType::value_type get_Ar10(const Model& model, const TType T, c
     return -T*model.alphar(std::complex<TType>(T, h), rho, molefrac); // Complex step derivative
 }
 
-template <typename Model, typename TType, typename RhoType, typename MoleFracType>
+enum class ADBackends { autodiff, multicomplex, complex_step } ;
+
+template <ADBackends be = ADBackends::autodiff, typename Model, typename TType, typename RhoType, typename MoleFracType>
 auto get_Ar01(const Model& model, const TType &T, const RhoType &rho, const MoleFracType& molefrac) {
-    double h = 1e-100;
-    auto der = model.alphar(T, std::complex<double>(rho, h), molefrac).imag() / h;
-    return der*rho;
-}
-
-template <typename Model, typename TType, typename RhoType, typename MoleFracType>
-auto get_Ar01mcx(const Model& model, const TType& T, const RhoType& rho, const MoleFracType& molefrac) {
-    using fcn_t = std::function<mcx::MultiComplex<double>(const mcx::MultiComplex<double>&)>;
-    bool and_val = true;
-    fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
-    auto ders = diff_mcx1(f, rho, 1, and_val);
-    return ders[1] * rho;
-}
-
-template <typename Model, typename TType, typename RhoType, typename MoleFracType>
-auto get_Ar01ad(const Model& model, const TType& T, const RhoType& rho, const MoleFracType& molefrac) {
-    autodiff::dual rhodual = rho;
-    auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
-    auto der = derivative(f, wrt(rhodual), at(rhodual));
-    return der * rho;
+    if constexpr(be == ADBackends::complex_step){
+        double h = 1e-100;
+        auto der = model.alphar(T, std::complex<double>(rho, h), molefrac).imag() / h;
+        return der*rho;
+    }
+    else if constexpr(be == ADBackends::multicomplex){
+        using fcn_t = std::function<mcx::MultiComplex<double>(const mcx::MultiComplex<double>&)>;
+        bool and_val = true;
+        fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
+        auto ders = diff_mcx1(f, rho, 1, and_val);
+        return ders[1] * rho;
+    }
+    else if constexpr(be == ADBackends::autodiff){
+        autodiff::dual rhodual = rho;
+        auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
+        auto der = derivative(f, wrt(rhodual), at(rhodual));
+        return der * rho;
+    }
 }
 
 template <typename Model, typename TType, typename RhoType, typename MoleFracType>

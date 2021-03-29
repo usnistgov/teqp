@@ -259,21 +259,21 @@ int main(){
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = get_Ar01(model, T, rho, molefrac);
+                alphar = get_Ar01<ADBackends::complex_step>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st CSD" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = get_Ar01ad(model, T, rho, molefrac);
+                alphar = get_Ar01<ADBackends::autodiff>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st autodiff::autodiff" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = get_Ar01mcx(model, T, rho, molefrac);
+                alphar = get_Ar01<ADBackends::multicomplex>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st MCX" << std::endl;
         }
