@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fstream>
+
 #include <Eigen/Dense>
 #include "teqp/algorithms/rootfinding.hpp"
 
@@ -268,7 +270,7 @@ auto critical_polish_molefrac(const ModelType &model, const double T, const VecT
 }
 
 template<typename ModelType, typename VecType>
-void trace_critical_arclength_binary(const ModelType& model, VecType rhovec0, double T0, const std::string &filename) {
+void trace_critical_arclength_binary(const ModelType& model, double T0, const VecType &rhovec0, const std::string &filename) {
 
     double t = 0.0, dt = 100;
     std::valarray<double> last_drhodt;
@@ -292,7 +294,9 @@ void trace_critical_arclength_binary(const ModelType& model, VecType rhovec0, do
             std::cout << sout;
         };
         if (iter == 0) {
-            write_line();
+            if (!filename.empty()){
+                write_line();
+            }
         }
 
         auto drhodT = get_drhovec_dT_crit(model, T, rhovec);
@@ -332,6 +336,8 @@ void trace_critical_arclength_binary(const ModelType& model, VecType rhovec0, do
             break;
         }
         last_drhodt = c * drhodt;
-        write_line();
+        if (!filename.empty()) {
+            write_line();
+        }
     }
 }

@@ -129,3 +129,20 @@ TEST_CASE("Check p three ways for vdW", "[virial][p]")
     CHECK(std::abs(pfromderiv - pexact)/pexact < 1e-15);
     CHECK(std::abs(pvir - pexact)/pexact < 1e-8);
 }
+
+TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
+{
+    // Argon + Xenon
+    std::valarray<double> Tc_K = { 150.687, 289.733 };
+    std::valarray<double> pc_Pa = { 4863000.0, 5842000.0 };
+    vdWEOS<double> vdW(Tc_K, pc_Pa);
+    auto Zc = 3.0/8.0;
+    auto rhoc0 = pc_Pa[0] / (vdW.R * Tc_K[0]) / Zc;
+    double T0 = Tc_K[0];
+    std::valarray<double> rhovec0 = { rhoc0, 0.0 };
+
+    auto tic0 = std::chrono::steady_clock::now();
+    std::string filename = "";
+    trace_critical_arclength_binary(vdW, T0, rhovec0, filename);
+    auto tic1 = std::chrono::steady_clock::now();
+}

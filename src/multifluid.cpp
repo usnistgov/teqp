@@ -57,7 +57,7 @@ void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json 
                 rhoc0 = rhovec.sum();
             }
             std::string filename = pp[0] + "_" + pp[1] + ".csv";
-            trace_critical_arclength_binary(model, rhovec, T0, filename);
+            trace_critical_arclength_binary(model, T0, rhovec, filename);
         }
     }
 }
