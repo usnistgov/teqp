@@ -591,6 +591,23 @@ auto get_EOSs(const std::string& coolprop_root, const std::vector<std::string>& 
     return EOSs;
 }
 
+auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const nlohmann::json& BIPcollection) {
+    auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(coolprop_root, components);
+    auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, components);
+    auto funcs = get_departure_function_matrix(coolprop_root, BIPcollection, components);
+    auto EOSs = get_EOSs(coolprop_root, components);
+    auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, components);
+
+    auto redfunc = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
+
+    return MultiFluid(
+        std::move(redfunc),
+        std::move(CorrespondingStatesContribution(std::move(EOSs))),
+        std::move(DepartureContribution(std::move(F), std::move(funcs)))
+    );
+}
+
+
 class DummyEOS {
 public:
     template<typename TType, typename RhoType> auto alphar(TType tau, const RhoType& delta) const { return tau * delta; }

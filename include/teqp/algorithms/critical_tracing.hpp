@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Eigen/Dense>
+#include "teqp/algorithms/rootfinding.hpp"
 
 /***
 * \brief Simple wrapper to sort the eigenvalues(and associated eigenvectors) in increasing order
@@ -243,4 +244,94 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
     //            print("drhovec_dT", drhovec_dT)
 
     return std::valarray<double>(&drhovec_dT(0), drhovec_dT.size());
+}
+
+template<typename ModelType, typename VecType>
+auto critical_polish_molefrac(const ModelType &model, const double T, const VecType &rhovec, const double z0) {
+    auto polish_x_resid = [&model, &z0](const auto& x) {
+        auto T = x[0];
+        std::valarray<double> rhovec = { x[1], x[2] };
+        auto z0new = rhovec[0] / rhovec.sum();
+        auto derivs = get_derivs(model, T, rhovec);
+        // First two are residuals on critical point, third is residual on composition
+        return (Eigen::ArrayXd(3) << derivs.tot[2], derivs.tot[3], z0new - z0).finished();
+    };
+    Eigen::ArrayXd x0(3); x0 << T, rhovec[0], rhovec[1];
+    auto r0 = polish_x_resid(x0);
+    auto x = NewtonRaphson(polish_x_resid, x0, 1e-10);
+    auto r = polish_x_resid(x);
+    Eigen::ArrayXd change = x0 - x;
+    if (!std::isfinite(T) || !std::isfinite(x[1]) || !std::isfinite(x[2])) {
+        throw std::invalid_argument("Something not finite; aborting polishing");
+    }
+    return std::make_tuple(x[0], x.tail(x.size()-1).eval());
+}
+
+template<typename ModelType, typename VecType>
+void trace_critical_arclength_binary(const ModelType& model, VecType rhovec0, double T0, const std::string &filename) {
+
+    double t = 0.0, dt = 100;
+    std::valarray<double> last_drhodt;
+    VecType rhovec = rhovec0;
+    double T = T0;
+
+    auto dot = [](const auto& v1, const auto& v2) { return (v1 * v2).sum(); };
+    auto norm = [](const auto& v) { return sqrt((v * v).sum()); };
+    std::ofstream ofs(filename);
+    double c = 1.0;
+    ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c" << std::endl;
+    for (auto iter = 0; iter < 1000; ++iter) {
+        auto rhotot = rhovec.sum();
+        auto z0 = rhovec[0] / rhotot;
+
+        auto write_line = [&rhovec, &rhotot, &z0, &model, &T, &c, &ofs]() {
+            std::stringstream out;
+            out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R * T + get_pr(model, T, rhovec) << "," << c << std::endl;
+            std::string sout(out.str());
+            ofs << sout;
+            std::cout << sout;
+        };
+        if (iter == 0) {
+            write_line();
+        }
+
+        auto drhodT = get_drhovec_dT_crit(model, T, rhovec);
+        auto dTdt = 1.0 / norm(drhodT);
+        auto drhodt = drhodT * dTdt;
+
+        auto eval = [](const auto& ex) { return std::valarray<bool>(ex); };
+
+        // Flip the sign if the tracing wants to go backwards, or if the first step would take you to negative concentrations
+        if (iter == 0 && any(eval((rhovec + c * drhodt * dt) < 0))) {
+            c *= -1;
+        }
+        else if (iter > 0 && dot(std::valarray<double>(c * drhodt), last_drhodt) < 0) {
+            c *= -1;
+        }
+
+        rhovec += c * drhodt * dt;
+        T += c * dTdt * dt;
+
+        z0 = rhovec[0] / rhovec.sum();
+        if (z0 < 0 || z0 > 1) {
+            break;
+        }
+
+        try {
+            auto [Tnew, rhovecnew] = critical_polish_molefrac(model, T, rhovec, z0);
+            T = Tnew; rhovec = VecType(&(rhovecnew[0]), rhovecnew.size());
+        }
+        catch (std::exception& e) {
+            std::cout << e.what() << std::endl;
+        }
+
+        rhotot = rhovec.sum();
+        z0 = rhovec[0] / rhotot;
+
+        if (z0 < 0 || z0 > 1) {
+            break;
+        }
+        last_drhodt = c * drhodt;
+        write_line();
+    }
 }
