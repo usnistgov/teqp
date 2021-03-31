@@ -98,7 +98,7 @@ public:
         auto delta = forceeval(rho / rhored);
         auto tau = forceeval(Tred / T);
         auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
-        return val;
+        return forceeval(val);
     }
 };
 
@@ -366,7 +366,7 @@ T powi(const T& x, int n) {
     if (n < 0){
         using namespace autodiff::detail;
         if constexpr (isDual<T> || isExpr<T> || isNumber<T>) {
-            return eval(powi(1.0/x, -n));
+            return eval(powi(eval(1.0/x), -n));
         }
         else {
             return powi(static_cast<T>(1.0) / x, -n);
@@ -395,7 +395,12 @@ auto powIV(const T& x, const Eigen::ArrayXd& e) {
     for (auto i = 0; i < e.size(); ++i) {
         auto ei = e[i];
         if constexpr (autodiff::detail::isDual<T>) {
-            o[i] = pow(x, ei);
+            if (ei == static_cast<int>(ei)) {
+                o[i] = powi(x, ei);
+            }
+            else {
+                o[i] = pow(x, ei);
+            }
         }
         else {
             if (ei == static_cast<int>(ei)) {
@@ -606,6 +611,21 @@ auto build_multifluid_model(const std::vector<std::string>& components, const st
         std::move(DepartureContribution(std::move(F), std::move(funcs)))
     );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class DummyEOS {
