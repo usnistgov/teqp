@@ -38,7 +38,7 @@ void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json 
             const auto &model = optmodel.value();
             auto rhoc0 = 1.0 / model.redfunc.vc[i];
             auto T0 = model.redfunc.Tc[i];
-            std::valarray<double> rhovec(2); rhovec[i] = { rhoc0 }; rhovec[1L - i] = 0.0;
+            Eigen::ArrayXd rhovec(2); rhovec[i] = { rhoc0 }; rhovec[1L - i] = 0.0;
             // Non-analytic terms make it impossible to initialize AT the pure components
             if (pp[0] == "CarbonDioxide" || pp[1] == "CarbonDioxide") {
                 if (i == 0) {
@@ -70,18 +70,24 @@ int main(){
         std::ifstream(coolprop_root + "/dev/mixtures/mixture_binary_pairs.json")
     );
 
-    // Critical curves
-    {
-        Timer t(1);
-        trace_critical_loci(coolprop_root, BIPcollection);
-    }
+    //// Critical curves
+    //{
+    //    Timer t(1);
+    //    trace_critical_loci(coolprop_root, BIPcollection);
+    //}
 
 {
     auto model = build_multifluid_model({ "methane", "ethane" }, coolprop_root, BIPcollection);
-    std::valarray<double> rhovec = { 1.0, 2.0 };
+    Eigen::ArrayXd rhovec(2); rhovec << 1.0, 2.0 ;
     double T = 300;
     {
-        const std::valarray<double> molefrac = { rhovec[0]/rhovec.sum(), rhovec[1]/rhovec.sum() };
+        const auto molefrac = (Eigen::ArrayXd(2) << rhovec[0]/rhovec.sum(), rhovec[1]/rhovec.sum()).finished();
+
+        auto B12 = get_B12vir(model, T, molefrac);
+    
+        using id = IsochoricDerivatives<decltype(model)>;
+        auto mu = id::get_chempot_autodiff(model, T, rhovec);
+
         const double rho = rhovec.sum();
         volatile double T = 300.0;
         constexpr int N = 10000;
@@ -93,7 +99,7 @@ int main(){
             for (auto i = 0; i < N; ++i){
                 alphar = model.alphar(T, rho, molefrac);
             }
-            std::cout << alphar << std::endl;
+            std::cout << alphar << " function call" << std::endl;
         }
         {
             Timer t(N);
@@ -121,25 +127,40 @@ int main(){
             for (auto i = 0; i < N; ++i) {
                 alphar = get_Ar02(model, T, rho, molefrac);
             }
-            std::cout << alphar << std::endl;
+            std::cout << alphar << "; 2nd autodiff" << std::endl;
+        }
+        {
+            Timer t(N);
+            for (auto i = 0; i < N; ++i) {
+                auto o = get_Bnvir<3, ADBackends::autodiff>(model, T, molefrac)[3];
+            }
+            std::cout << alphar << "; 3 derivs" << std::endl;
+        }
+        {
+            Timer t(N);
+            for (auto i = 0; i < N; ++i) {
+                auto o = get_Bnvir<4, ADBackends::autodiff>(model, T, molefrac)[4];
+            }
+            std::cout << alphar << "; 4 derivs" << std::endl;
+        }
+        {
+            Timer t(N);
+            for (auto i = 0; i < N; ++i) {
+                auto o = get_Bnvir<5, ADBackends::autodiff>(model, T, molefrac)[5];
+            }
+            std::cout << alphar << "; 5 derivs" << std::endl;
         }
     }
+
+    const auto molefrac = (Eigen::ArrayXd(2) << 1.0 / 3.0, 2.0 / 3.0 ).finished();
 
     auto alphar = model.alphar(T, rhovec);
     auto Ar01 = get_Ar01(model, T, rhovec);
     auto Ar10 = get_Ar10(model, T, rhovec);
+    auto Ar02 = get_Ar02(model, T, rhovec.sum(), molefrac);
     auto splus = get_splus(model, T, rhovec);
-
-    std::valarray<double> molefrac = { 1.0/3.0, 2.0/3.0 };
-    auto B2 = get_B2vir(model, T, molefrac);
-
-    std::valarray<double> dilrho = 0.00000000001*molefrac;
-    auto B2other = get_Ar01(model, T, dilrho)/dilrho.sum();
-
-    std::valarray<double> zerorho = 0.0*rhovec;
-    auto Ar01dil = get_Ar01(model, T, zerorho);
     
-    int ttt =0 ;
+    int ttt = 0;
 }
     return EXIT_SUCCESS;
 }

@@ -179,7 +179,7 @@ auto get_Bnvir(const Model& model, const TType &T, const ContainerType& molefrac
 }
 
 template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_B12vir(const Model& model, const TType T, const ContainerType& molefrac) {
+auto get_B12vir(const Model& model, const TType T, const ContainerType& molefrac) {
     
     auto B2 = get_B2vir(model, T, molefrac); // Overall B2 for mixture
     auto B20 = get_B2vir(model, T, std::valarray<double>({ 1,0 })); // Pure first component with index 0
@@ -200,15 +200,6 @@ typename ContainerType::value_type get_splus(const Model& model, const TType T, 
 }
 
 /***
-* \brief Calculate Psir=ar*rho
-*/
-template <typename TType, typename ContainerType, typename Model>
-typename ContainerType::value_type get_Psir(const Model& model, const TType T, const ContainerType& rhovec) {
-    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-    return model.alphar(T, rhotot_, rhovec / rhotot_) * model.R * T * rhotot_;
-}
-
-/***
 * \brief Calculate the residual pressure from derivatives of alphar
 */
 template <typename Model, typename TType, typename ContainerType>
@@ -218,46 +209,97 @@ typename ContainerType::value_type get_pr(const Model& model, const TType T, con
     return get_Ar01(model, T, rhotot_, rhovec / rhotot_) * rhotot_ * model.R * T;
 }
 
+template<typename Model, typename Scalar=double, typename VectorType = Eigen::ArrayXd>
+struct IsochoricDerivatives{
 
+    /***
+    * \brief Calculate Psir=ar*rho
+    */
+    static auto get_Psir(const Model& model, const Scalar &T, const VectorType& rhovec) {
+        auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+        return model.alphar(T, rhotot_, rhovec / rhotot_) * model.R * T * rhotot_;
+    }
 
-/***
-* \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations
-*
-* Requires the use of autodiff derivatives to calculate second partial derivatives
-*/
-template<typename Model, typename TType, typename RhoType>
-auto build_Psir_Hessian_autodiff(const Model& model, const TType &T, const RhoType& rho) {
-    // Double derivatives in each component's concentration
-    // N^N matrix (symmetric)
+    /***
+    * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations
+    *
+    * Requires the use of autodiff derivatives to calculate second partial derivatives
+    */
+    static auto build_Psir_Hessian_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+        // Double derivatives in each component's concentration
+        // N^N matrix (symmetric)
 
-    dual2nd u; // the output scalar u = f(x), evaluated together with Hessian below
-    VectorXdual2nd g;
-    VectorXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
-    auto hfunc = [&model, &T](const VectorXdual2nd& rho_) {
-        auto rhotot_ = rho_.sum();
-        auto molefrac = (rho_ / rhotot_).eval();
-        return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
-    };
-    return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g).eval(); // evaluate the function value u, its gradient, and its Hessian matrix H
-}
+        dual2nd u; // the output scalar u = f(x), evaluated together with Hessian below
+        VectorXdual2nd g;
+        VectorXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto hfunc = [&model, &T](const VectorXdual2nd& rho_) {
+            auto rhotot_ = rho_.sum();
+            auto molefrac = (rho_ / rhotot_).eval();
+            return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
+        };
+        return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g).eval(); // evaluate the function value u, its gradient, and its Hessian matrix H
+    }
 
-/***
-* \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations
-* 
-* Requires the use of multicomplex derivatives to calculate second partial derivatives
-*/
-template<typename Model, typename TType, typename RhoType>
-auto build_Psir_Hessian_mcx(const Model& model, const TType &T, const RhoType& rho) {
-    // Double derivatives in each component's concentration
-    // N^N matrix (symmetric)
-    using namespace mcx;
+    /***
+    * \brief Calculate the Hessian of Psi = a*rho w.r.t. the molar concentrations
+    *
+    * Uses autodiff derivatives to calculate second partial derivatives
+    */
+    static auto build_Psi_Hessian_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+        auto H = build_Psir_Hessian_autodiff(model, T, rho);
+        for (auto i = 0; i < 2; ++i) {
+            H(i, i) += model.R * T / rho[i];
+        }
+        return H;
+    }
 
-    // Lambda function for getting Psir with multicomplex concentrations
-    using fcn_t = std::function< MultiComplex<double>(const std::valarray<MultiComplex<double>>&)>;
-    fcn_t func = [&model, &T](const auto& rhovec) {
-        return get_Psir(model, T, rhovec);
-    };
-    using mattype = Eigen::ArrayXXd;
-    auto H = get_Hessian<mattype, fcn_t, std::valarray<double>, HessianMethods::Multiple>(func, rho);
-    return H;
-}
+    /***
+    * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations (residual contribution only)
+    *
+    * Requires the use of multicomplex derivatives to calculate second partial derivatives
+    */
+    static auto build_Psir_Hessian_mcx(const Model& model, const Scalar& T, const VectorType& rho) {
+        // Double derivatives in each component's concentration
+        // N^N matrix (symmetric)
+        using namespace mcx;
+
+        // Lambda function for getting Psir with multicomplex concentrations
+        using fcn_t = std::function< MultiComplex<double>(const Eigen::ArrayX<MultiComplex<double>>&)>;
+        fcn_t func = [&model, &T](const auto& rhovec) {
+            auto rhotot_ = rhovec.sum();
+            auto molefrac = (rhovec / rhotot_).eval();
+            return model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_;
+        };
+        using mattype = Eigen::ArrayXXd;
+        auto H = get_Hessian<mattype, fcn_t, VectorType, HessianMethods::Multiple>(func, rho);
+        return H;
+    }
+
+    /***
+    * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
+    *
+    * Uses autodiff to calculate second partial derivatives
+    */
+    static auto build_Psir_gradient_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+        VectorXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto psirfunc = [&model, &T](const VectorXdual2nd& rho_) {
+            auto rhotot_ = rho_.sum();
+            auto molefrac = (rho_ / rhotot_).eval();
+            return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
+        };
+        auto val = autodiff::gradient(psirfunc, wrt(rhovecc), at(rhovecc)).eval(); // evaluate the gradient
+        return val;
+    }
+
+    /***
+    * \brief Calculate the chemical potential of each component
+    *
+    * Uses autodiff derivatives to calculate second partial derivatives
+    * See Eq. 9 of https://doi.org/10.1002/aic.16730
+    * \note: Some contributions to the ideal gas part are missing (reference state and cp0), but are not relevant to phase equilibria
+    */
+    static auto get_chempot_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+        typename VectorType::value_type rhotot = rho.sum();
+        return (build_Psir_gradient_autodiff(model, T, rho).array() + model.R*T*(1.0 + log(rho / rhotot))).eval();
+    }
+};

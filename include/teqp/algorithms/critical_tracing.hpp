@@ -32,13 +32,15 @@ auto eigen_problem(const Model& model, const TType T, const RhoType& rhovec) {
     EigenData ed;
 
     auto N = rhovec.size();
-    std::valarray<bool> mask = (rhovec != 0);
+    Eigen::ArrayX<bool> mask = (rhovec != 0).eval();
+
+    using id = IsochoricDerivatives<decltype(model)>;
 
     // Build the Hessian for the residual part;
 #if defined(USE_AUTODIFF)
-    auto H = build_Psir_Hessian_autodiff(model, T, rhovec);
+    auto H = id::build_Psir_Hessian_autodiff(model, T, rhovec);
 #else
-    auto H = build_Psir_Hessian_mcx(model, T, rhovec);
+    auto H = id::build_Psir_Hessian_mcx(model, T, rhovec);
 #endif
     // ... and add ideal-gas terms to H
     for (auto i = 0; i < N; ++i) {
@@ -100,7 +102,7 @@ auto eigen_problem(const Model& model, const TType T, const RhoType& rhovec) {
 }
 
 struct psi1derivs {
-    std::valarray<double> psir, psi0, tot;
+    Eigen::ArrayXd psir, psi0, tot;
     EigenData ei;
 };
 
@@ -112,7 +114,7 @@ auto get_derivs(const Model& model, const TType T, const RhoType& rhovec) {
     auto ei = eigen_problem(model, T, rhovec);
 
     // Ideal-gas contributions of psi0 w.r.t. sigma_1, in the same form as the residual part
-    std::valarray<double> psi0_derivs(0.0, 5);
+    Eigen::ArrayXd psi0_derivs(5); psi0_derivs.setZero();
     psi0_derivs[0] = -1; // Placeholder, not needed
     psi0_derivs[1] = -1; // Placeholder, not needed
     for (auto i = 0; i < rhovec.size(); ++i) {
@@ -129,23 +131,28 @@ auto get_derivs(const Model& model, const TType T, const RhoType& rhovec) {
     VectorXdual4th rhovecad(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecad[i] = rhovec[i]; }
     dual4th varsigma{0.0};
     auto wrapper = [&rhovecad, &v0, &T, &model](const auto &sigma_1) {
-        auto rhovecused = rhovecad + sigma_1*v0;
-        return get_Psir(model, T, rhovecused);
+        auto rhovecused = (rhovecad + sigma_1*v0).eval();
+        auto rhotot = rhovecused.sum();
+        auto molefrac = (rhovecused / rhotot).eval();
+        return eval(model.alphar(T, rhotot, molefrac) * model.R * T * rhotot);
     };
-    auto derivs = derivatives(wrapper, wrt(varsigma, varsigma, varsigma, varsigma), at(varsigma));
-    auto psir_derivs = std::valarray<double>(&derivs[0], derivs.size());
+    auto psir_derivs_ = derivatives(wrapper, wrt(varsigma), at(varsigma));
+    RhoType psir_derivs; psir_derivs.resize(5);
+    for (auto i = 0; i < 5; ++i){ psir_derivs[i] = psir_derivs_[i]; }
+    
 #else
     using namespace mcx;
     // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
-    std::valarray<MultiComplex<double>> v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
-    std::valarray<MultiComplex<double>> rhovecmcx(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecmcx[i] = rhovec[i]; }
+    Eigen::Vector<MultiComplex<double>,Eigen::Dynamic> v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
+    Eigen::Vector<MultiComplex<double>,Eigen::Dynamic> rhovecmcx(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecmcx[i] = rhovec[i]; }
     using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
     fcn_t wrapper = [&rhovecmcx, &v0, &T, &model](const MultiComplex<double>& sigma_1) {
-        std::valarray<MultiComplex<double>> rhovecused = rhovecmcx + sigma_1 * v0;
-        return get_Psir(model, T, rhovecused);
+        Eigen::Vector<MultiComplex<double>, Eigen::Dynamic> rhovecused = rhovecmcx + sigma_1 * v0;
+        auto rhotot = rhovecused.sum();
+        auto molefrac = rhovecused/rhotot;
+        return model.alphar(T, rhotot, molefrac)*model.R*T*rhotot;
     };
-    auto psir_derivs_ = diff_mcx1(wrapper, 0.0, 4, true);
-    auto psir_derivs = std::valarray<double>(&psir_derivs_[0], psir_derivs_.size());
+    RhoType psir_derivs = diff_mcx1(wrapper, 0.0, 4, true);
 #endif
 
     // As a sanity check, the minimum eigenvalue of the Hessian constructed based on the molar concentrations
@@ -170,7 +177,7 @@ bool all(const Iterable& foo) {
 template <typename Iterable>
 bool any(const Iterable& foo) {
     return std::any_of(std::begin(foo), std::end(foo), [](const auto x) { return x; });
-}
+}   
 
 template<typename Model, typename TType, typename RhoType>
 auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhovec) {
@@ -191,12 +198,11 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
 
     auto sigma2 = 2e-5 * rhovec.sum(); // This is the perturbation along the second eigenvector
 
-    auto v1 = std::valarray<double>(&ei.v1[0], ei.v1.size());
-    decltype(v1) rhovec_plus = rhovec + v1 * sigma2;
-    decltype(v1) rhovec_minus = rhovec - v1 * sigma2;
+    auto rhovec_plus = (rhovec + ei.v1 * sigma2).eval();
+    auto rhovec_minus = (rhovec - ei.v1 * sigma2).eval();
     std::string stepping_desc = "";
     auto deriv_sigma2 = all_derivs.tot;
-    auto eval = [](const auto &ex){ return std::valarray<bool>(ex); };
+    auto eval = [](const auto &ex){ return ex.eval(); };
     if (all(eval(rhovec_minus > 0)) && all(eval(rhovec_plus > 0))) {
         // Conventional centered derivative
         auto plus_sigma2 = get_derivs(model, T, rhovec_plus);
@@ -207,7 +213,7 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
     else if (any(eval(rhovec_minus < 0))) {
         // Forward derivative in the direction of v1
         auto plus_sigma2 = get_derivs(model, T, rhovec_plus);
-        auto rhovec_2plus = rhovec + 2 * v1 * sigma2;
+        auto rhovec_2plus = (rhovec + 2 * ei.v1 * sigma2).eval();
         auto plus2_sigma2 = get_derivs(model, T, rhovec_2plus);
         deriv_sigma2 = (-3 * derivs + 4 * plus_sigma2.tot - plus2_sigma2.tot) / (2.0 * sigma2);
         stepping_desc = "forward";
@@ -215,7 +221,7 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
     else if (any(eval(rhovec_minus > 0))) {
         // Negative derivative in the direction of v1
         auto minus_sigma2 = get_derivs(model, T, rhovec_minus);
-        auto rhovec_2minus = rhovec - 2 * v1 * sigma2;
+        auto rhovec_2minus = (rhovec - 2 * ei.v1 * sigma2).eval();
         auto minus2_sigma2 = get_derivs(model, T, rhovec_2minus);
         deriv_sigma2 = (-3 * derivs + 4 * minus_sigma2.tot - minus2_sigma2.tot) / (-2.0 * sigma2);
         stepping_desc = "backwards";
@@ -245,14 +251,14 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
     //            print("RHS", RHS)
     //            print("drhovec_dT", drhovec_dT)
 
-    return std::valarray<double>(&drhovec_dT(0), drhovec_dT.size());
+    return drhovec_dT;
 }
 
 template<typename ModelType, typename VecType>
 auto critical_polish_molefrac(const ModelType &model, const double T, const VecType &rhovec, const double z0) {
     auto polish_x_resid = [&model, &z0](const auto& x) {
         auto T = x[0];
-        std::valarray<double> rhovec = { x[1], x[2] };
+        Eigen::ArrayXd rhovec(2); rhovec << x[1], x[2] ;
         auto z0new = rhovec[0] / rhovec.sum();
         auto derivs = get_derivs(model, T, rhovec);
         // First two are residuals on critical point, third is residual on composition
@@ -266,14 +272,15 @@ auto critical_polish_molefrac(const ModelType &model, const double T, const VecT
     if (!std::isfinite(T) || !std::isfinite(x[1]) || !std::isfinite(x[2])) {
         throw std::invalid_argument("Something not finite; aborting polishing");
     }
-    return std::make_tuple(x[0], x.tail(x.size()-1).eval());
+    Eigen::ArrayXd rho = x.tail(x.size() - 1);
+    return std::make_tuple(x[0], rho);
 }
 
 template<typename ModelType, typename VecType>
 void trace_critical_arclength_binary(const ModelType& model, double T0, const VecType &rhovec0, const std::string &filename) {
 
     double t = 0.0, dt = 100;
-    std::valarray<double> last_drhodt;
+    VecType last_drhodt;
     VecType rhovec = rhovec0;
     double T = T0;
 
@@ -299,17 +306,17 @@ void trace_critical_arclength_binary(const ModelType& model, double T0, const Ve
             }
         }
 
-        auto drhodT = get_drhovec_dT_crit(model, T, rhovec);
+        auto drhodT = get_drhovec_dT_crit(model, T, rhovec).array().eval();
         auto dTdt = 1.0 / norm(drhodT);
         auto drhodt = drhodT * dTdt;
 
-        auto eval = [](const auto& ex) { return std::valarray<bool>(ex); };
-
         // Flip the sign if the tracing wants to go backwards, or if the first step would take you to negative concentrations
-        if (iter == 0 && any(eval((rhovec + c * drhodt * dt) < 0))) {
+        Eigen::ArrayXd step = rhovec + c*drhodt*dt;
+        auto negativestepvals = (step < 0).eval();
+        if (iter == 0 && negativestepvals.all()) {
             c *= -1;
         }
-        else if (iter > 0 && dot(std::valarray<double>(c * drhodt), last_drhodt) < 0) {
+        else if (iter > 0 && dot((c * drhodt).eval(), last_drhodt) < 0) {
             c *= -1;
         }
 
@@ -323,7 +330,7 @@ void trace_critical_arclength_binary(const ModelType& model, double T0, const Ve
 
         try {
             auto [Tnew, rhovecnew] = critical_polish_molefrac(model, T, rhovec, z0);
-            T = Tnew; rhovec = VecType(&(rhovecnew[0]), rhovecnew.size());
+            T = Tnew; rhovec = rhovecnew;
         }
         catch (std::exception& e) {
             std::cout << e.what() << std::endl;

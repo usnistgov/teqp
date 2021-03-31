@@ -84,12 +84,14 @@ TEST_CASE("Check virial coefficients for vdW", "[virial]")
 
 TEST_CASE("Check Hessian of Psir", "[virial]")
 {
+    
     double T = 298.15;
     double rho = 3.0;
-    const std::valarray<double> rhovec = { rho / 2, rho / 2 };
+    const Eigen::Array2d rhovec = { rho / 2, rho / 2 };
     auto get_worst_error = [&T, &rhovec](const auto &model){ 
-        auto H1 = build_Psir_Hessian_autodiff(model, T, rhovec);
-        auto H2 = build_Psir_Hessian_mcx(model, T, rhovec);
+        using id = IsochoricDerivatives <decltype(model)>;
+        auto H1 = id::build_Psir_Hessian_autodiff(model, T, rhovec);
+        auto H2 = id::build_Psir_Hessian_mcx(model, T, rhovec);
         auto err = (H1.array() - H2).abs().maxCoeff();
         CAPTURE(err);
         CHECK(err < 1e-15);
@@ -139,7 +141,7 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
     auto Zc = 3.0/8.0;
     auto rhoc0 = pc_Pa[0] / (vdW.R * Tc_K[0]) / Zc;
     double T0 = Tc_K[0];
-    std::valarray<double> rhovec0 = { rhoc0, 0.0 };
+    Eigen::ArrayXd rhovec0(2); rhovec0 << rhoc0, 0.0 ;
 
     auto tic0 = std::chrono::steady_clock::now();
     std::string filename = "";
@@ -152,4 +154,27 @@ TEST_CASE("TEST B12", "") {
     const double T = 298.15;
     const std::valarray<double> molefrac = { 1/3, 2/3 };
     auto B12 = get_B12vir(model, T, molefrac);
+}
+
+TEST_CASE("Test psir gradient", "") {
+    const auto model = build_vdW();
+    const double T = 298.15;
+
+    using id = IsochoricDerivatives<decltype(model)>;
+    const Eigen::Array2d rhovec = { 1, 2 };
+    const Eigen::Array2d molefrac = { 1 / 3, 2 / 3 };
+    auto psirfunc2 = [&model](const auto& T, const auto& rho_) {
+        auto rhotot_ = rho_.sum();
+        auto molefrac = (rho_ / rhotot_);
+        return model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_;
+    };
+    auto chk0 = derivrhoi(psirfunc2, T, rhovec, 0);
+    auto chk1 = derivrhoi(psirfunc2, T, rhovec, 1);
+    auto grad = id::build_Psir_gradient_autodiff(model, T, rhovec);
+    auto err0 = std::abs((chk0 - grad[0])/chk0);
+    auto err1 = std::abs((chk1 - grad[1])/chk1);
+    CAPTURE(err0);
+    CAPTURE(err1);
+    CHECK(err0 < 1e-12);
+    CHECK(err1 < 1e-12);
 }
