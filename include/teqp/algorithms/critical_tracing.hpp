@@ -152,7 +152,9 @@ auto get_derivs(const Model& model, const TType T, const RhoType& rhovec) {
         auto molefrac = rhovecused/rhotot;
         return model.alphar(T, rhotot, molefrac)*model.R*T*rhotot;
     };
-    RhoType psir_derivs = diff_mcx1(wrapper, 0.0, 4, true);
+    auto psir_derivs_ = diff_mcx1(wrapper, 0.0, 4, true);
+    RhoType psir_derivs; psir_derivs.resize(5);
+    for (auto i = 0; i < 5; ++i) { psir_derivs[i] = psir_derivs_[i]; }
 #endif
 
     // As a sanity check, the minimum eigenvalue of the Hessian constructed based on the molar concentrations
