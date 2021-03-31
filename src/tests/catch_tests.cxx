@@ -43,7 +43,7 @@ TEST_CASE("Check virial coefficients for vdW", "[virial]")
     double ba = Omega_b / Omega_a / Tcrit / R;
     double a = b / ba;
 
-    auto T = 300.0;
+    double T = 300.0;
     std::valarray<double> molefrac = { 1.0 };
 
     constexpr int Nvir = 8;
