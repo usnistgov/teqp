@@ -146,3 +146,10 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
     trace_critical_arclength_binary(vdW, T0, rhovec0, filename);
     auto tic1 = std::chrono::steady_clock::now();
 }
+
+TEST_CASE("TEST B12", "") {
+    const auto model = build_vdW();
+    const double T = 298.15;
+    const std::valarray<double> molefrac = { 1/3, 2/3 };
+    auto B12 = get_B12vir(model, T, molefrac);
+}

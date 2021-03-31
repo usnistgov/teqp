@@ -179,6 +179,17 @@ auto get_Bnvir(const Model& model, const TType T, const ContainerType& molefrac)
     return o;
 }
 
+template <typename Model, typename TType, typename ContainerType>
+typename ContainerType::value_type get_B12vir(const Model& model, const TType T, const ContainerType& molefrac) {
+    
+    auto B2 = get_B2vir(model, T, molefrac); // Overall B2 for mixture
+    auto B20 = get_B2vir(model, T, std::valarray<double>({ 1,0 })); // Pure first component with index 0
+    auto B21 = get_B2vir(model, T, std::valarray<double>({ 0,1 })); // Pure second component with index 1
+    auto z0 = molefrac[0];
+    auto B12 = (B2 - z0*z0*B20 - (1-z0)*(1-z0)*B21)/(2*z0*(1-z0));
+    return B12;
+}
+
 /***
 * \brief Calculate the residual entropy (s^+ = -sr/R) from derivatives of alphar
 */
