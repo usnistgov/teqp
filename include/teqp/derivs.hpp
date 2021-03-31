@@ -143,7 +143,7 @@ typename ContainerType::value_type get_B2vir(const Model& model, const TType T, 
 */
 
 template <int Nderiv, ADBackends be = ADBackends::autodiff, typename Model, typename TType, typename ContainerType>
-auto get_Bnvir(const Model& model, const TType T, const ContainerType& molefrac) 
+auto get_Bnvir(const Model& model, const TType &T, const ContainerType& molefrac) 
 {
     std::map<int, double> dnalphardrhon;
     if constexpr(be == ADBackends::multicomplex){
