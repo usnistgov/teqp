@@ -108,10 +108,9 @@ auto get_Ar01(const Model& model, const TType &T, const RhoType &rho, const Mole
 
 template <typename Model, typename TType, typename RhoType, typename MoleFracType>
 auto get_Ar02(const Model& model, const TType& T, const RhoType& rho, const MoleFracType& molefrac) {
-    using fcn_t = std::function<mcx::MultiComplex<double>(const mcx::MultiComplex<double>&)>;
-    bool and_val = true;
-    fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
-    auto ders = diff_mcx1(f, rho, 2, and_val);
+    autodiff::dual2nd rhodual = rho;
+    auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
+    auto ders = derivatives(f, wrt(rhodual), at(rhodual));
     return ders[2]*rho*rho;
 }
 
