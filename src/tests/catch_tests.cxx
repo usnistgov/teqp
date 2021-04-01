@@ -44,13 +44,14 @@ TEST_CASE("Check virial coefficients for vdW", "[virial]")
     double a = b / ba;
 
     double T = 300.0;
-    std::valarray<double> molefrac = { 1.0 };
+    Eigen::ArrayXd molefrac(1); molefrac = 1.0;
 
     constexpr int Nvir = 8;
 
     // Numerical solutions from alphar
-    auto Bn = get_Bnvir<Nvir, ADBackends::autodiff>(vdW, T, molefrac);
-    auto Bnmcx = get_Bnvir<Nvir, ADBackends::multicomplex>(vdW, T, molefrac);
+    using vd = VirialDerivatives<decltype(vdW)>;
+    auto Bn = vd::get_Bnvir<Nvir, ADBackends::autodiff>(vdW, T, molefrac);
+    auto Bnmcx = vd::get_Bnvir<Nvir, ADBackends::multicomplex>(vdW, T, molefrac);
 
     // Exact solutions for virial coefficients for van der Waals 
     auto get_vdW_exacts = [a, b, R, T](int Nmax) {
@@ -63,7 +64,7 @@ TEST_CASE("Check virial coefficients for vdW", "[virial]")
     auto Bnexact = get_vdW_exacts(Nvir);
 
     // This one with complex step derivatives as another check
-    double B2 = get_B2vir(vdW, T, molefrac);
+    double B2 = vd::get_B2vir(vdW, T, molefrac);
     double B2exact = b - a / (R * T);
     CHECK(std::abs(B2exact-Bnexact[2]) < 1e-15);
     CHECK(std::abs(B2-Bnexact[2]) < 1e-15);
@@ -122,7 +123,8 @@ TEST_CASE("Check p three ways for vdW", "[virial][p]")
 
     // Numerical solution from virial expansion
     constexpr int Nvir = 8;
-    auto Bn = get_Bnvir<Nvir>(model, T, molefrac);
+    using vd = VirialDerivatives<decltype(model)>;
+    auto Bn = vd::get_Bnvir<Nvir>(model, T, molefrac);
     auto Z = 1.0;
     for (auto i = 2; i <= Nvir; ++i){
         Z += Bn[i]*pow(rho, i-1);
@@ -154,8 +156,9 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
 TEST_CASE("TEST B12", "") {
     const auto model = build_vdW();
     const double T = 298.15;
-    const std::valarray<double> molefrac = { 1/3, 2/3 };
-    auto B12 = get_B12vir(model, T, molefrac);
+    const auto molefrac = (Eigen::ArrayXd(2) <<  1/3, 2/3).finished();
+    using vd = VirialDerivatives<decltype(model)>;
+    auto B12 = vd::get_B12vir(model, T, molefrac);
 }
 
 TEST_CASE("Test psir gradient", "") {

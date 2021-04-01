@@ -62,10 +62,14 @@ typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const C
     return f(T, rhocom).imag() / h;
 }
 
+
+
+
+
 template <typename Model, typename TType, typename RhoType, typename ContainerType>
 typename ContainerType::value_type get_Ar10(const Model& model, const TType T, const RhoType &rho, const ContainerType& molefrac) {
     double h = 1e-100;
-    return -T*model.alphar(std::complex<TType>(T, h), rho, molefrac); // Complex step derivative
+    return -T*model.alphar(std::complex<TType>(T, h), rho, molefrac).imag()/h; // Complex step derivative
 }
 
 enum class ADBackends { autodiff, multicomplex, complex_step } ;
@@ -101,71 +105,75 @@ auto get_Ar02(const Model& model, const TType& T, const RhoType& rho, const Mole
 }
 
 
+template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
+struct VirialDerivatives {
 
-template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_B2vir(const Model& model, const TType T, const ContainerType& molefrac) {
-    double h = 1e-100;
-    // B_2 = dalphar/drho|T,z at rho=0
-    auto B2 = model.alphar(T, std::complex<double>(0.0, h), molefrac).imag()/h;
-    return B2;
-}
+    static auto get_B2vir(const Model& model, const Scalar &T, const VectorType& molefrac) {
+        double h = 1e-100;
+        // B_2 = dalphar/drho|T,z at rho=0
+        auto B2 = model.alphar(T, std::complex<double>(0.0, h), molefrac).imag()/h;
+        return B2;
+    }
 
-/*
-* \f$
-* B_n = \frac{1}{(n-2)!} lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
-* \f$
-* \param model The model providing the alphar function
-* \param Nderiv The maximum virial coefficient to return; e.g. 5: B_2, B_3, ..., B_5
-* \param T Temperature
-* \param molefrac The mole fractions
-*/
+    /**
+    * \f$
+    * B_n = \frac{1}{(n-2)!} lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
+    * \f$
+    * \param model The model providing the alphar function
+    * \param Nderiv The maximum virial coefficient to return; e.g. 5: B_2, B_3, ..., B_5
+    * \param T Temperature
+    * \param molefrac The mole fractions
+    */
 
-template <int Nderiv, ADBackends be = ADBackends::autodiff, typename Model, typename TType, typename ContainerType>
-auto get_Bnvir(const Model& model, const TType &T, const ContainerType& molefrac) 
-{
-    std::map<int, double> dnalphardrhon;
-    if constexpr(be == ADBackends::multicomplex){
-        using namespace mcx;
-        using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
-        fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
-        auto derivs = diff_mcx1(f, 0.0, Nderiv+1, true /* and_val */);
-        for (auto n = 1; n <= Nderiv; ++n){
-            dnalphardrhon[n] = derivs[n];
+    template <int Nderiv, ADBackends be = ADBackends::autodiff>
+    static auto get_Bnvir(const Model& model, const Scalar &T, const VectorType& molefrac) 
+    {
+        std::map<int, double> dnalphardrhon;
+        if constexpr(be == ADBackends::multicomplex){
+            using namespace mcx;
+            using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
+            fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
+            auto derivs = diff_mcx1(f, 0.0, Nderiv+1, true /* and_val */);
+            for (auto n = 1; n <= Nderiv; ++n){
+                dnalphardrhon[n] = derivs[n];
+            }
         }
-    }
-    else if constexpr(be == ADBackends::autodiff){
-        autodiff::HigherOrderDual<Nderiv+1, double> rhodual = 0.0;
-        auto f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
-        auto derivs = derivatives(f, wrt(rhodual), at(rhodual));
-        for (auto n = 1; n <= Nderiv; ++n){
-             dnalphardrhon[n] = derivs[n];
+        else if constexpr(be == ADBackends::autodiff){
+            autodiff::HigherOrderDual<Nderiv+1, double> rhodual = 0.0;
+            auto f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
+            auto derivs = derivatives(f, wrt(rhodual), at(rhodual));
+            for (auto n = 1; n <= Nderiv; ++n){
+                 dnalphardrhon[n] = derivs[n];
+            }
         }
-    }
-    else{
-        static_assert("algorithmic differentiation backend is invalid");
-    }
-    std::map<int, TType> o;
-    for (int n = 2; n < Nderiv+1; ++n) {
-        o[n] = dnalphardrhon[n-1];
-        // 0!=1, 1!=1, so only n>3 terms need factorial correction
-        if (n > 3) {
-            auto factorial = [](int N) {return tgamma(N + 1); };
-            o[n] /= factorial(n-2);
+        else{
+            static_assert("algorithmic differentiation backend is invalid");
         }
+        std::map<int, Scalar> o;
+        for (int n = 2; n < Nderiv+1; ++n) {
+            o[n] = dnalphardrhon[n-1];
+            // 0!=1, 1!=1, so only n>3 terms need factorial correction
+            if (n > 3) {
+                auto factorial = [](int N) {return tgamma(N + 1); };
+                o[n] /= factorial(n-2);
+            }
+        }
+        return o;
     }
-    return o;
-}
 
-template <typename Model, typename TType, typename ContainerType>
-auto get_B12vir(const Model& model, const TType T, const ContainerType& molefrac) {
+    static auto get_B12vir(const Model& model, const Scalar &T, const VectorType& molefrac) {
     
-    auto B2 = get_B2vir(model, T, molefrac); // Overall B2 for mixture
-    auto B20 = get_B2vir(model, T, std::valarray<double>({ 1,0 })); // Pure first component with index 0
-    auto B21 = get_B2vir(model, T, std::valarray<double>({ 0,1 })); // Pure second component with index 1
-    auto z0 = molefrac[0];
-    auto B12 = (B2 - z0*z0*B20 - (1-z0)*(1-z0)*B21)/(2*z0*(1-z0));
-    return B12;
-}
+        auto B2 = get_B2vir(model, T, molefrac); // Overall B2 for mixture
+        const auto xpure0 = (Eigen::ArrayXd(2) << 1,0).finished();
+        const auto xpure1 = (Eigen::ArrayXd(2) << 0,1).finished();
+        auto B20 = get_B2vir(model, T, xpure0); // Pure first component with index 0
+        auto B21 = get_B2vir(model, T, xpure1); // Pure second component with index 1
+        auto z0 = molefrac[0];
+        auto B12 = (B2 - z0*z0*B20 - (1-z0)*(1-z0)*B21)/(2*z0*(1-z0));
+        return B12;
+    }
+};
+
 
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
 struct IsochoricDerivatives{
@@ -185,7 +193,7 @@ struct IsochoricDerivatives{
     static auto get_pr(const Model& model, const Scalar &T, const VectorType& rhovec)
     {
         auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-        return get_Ar01(model, T, rhotot_, rhovec / rhotot_) * rhotot_ * model.R * T;
+        return ::get_Ar01(model, T, rhotot_, rhovec / rhotot_) * rhotot_ * model.R * T;
     }
 
     static auto get_Ar00(const Model& model, const Scalar& T, const VectorType& rhovec) {

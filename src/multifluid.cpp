@@ -83,13 +83,14 @@ int main(){
     {
         const auto molefrac = (Eigen::ArrayXd(2) << rhovec[0]/rhovec.sum(), rhovec[1]/rhovec.sum()).finished();
 
-        auto B12 = get_B12vir(model, T, molefrac);
+        using vd = VirialDerivatives<decltype(model)>;
+        auto B12 = vd::get_B12vir(model, T, molefrac);
     
         using id = IsochoricDerivatives<decltype(model)>;
         auto mu = id::get_chempot_autodiff(model, T, rhovec);
 
         const double rho = rhovec.sum();
-        volatile double T = 300.0;
+        double T = 300.0;
         constexpr int N = 10000;
         volatile double alphar;
         double rrrr = get_Ar01(model, T, rho, molefrac);
@@ -132,21 +133,21 @@ int main(){
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                auto o = get_Bnvir<3, ADBackends::autodiff>(model, T, molefrac)[3];
+                auto o = vd::get_Bnvir<3, ADBackends::autodiff>(model, T, molefrac)[3];
             }
             std::cout << alphar << "; 3 derivs" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                auto o = get_Bnvir<4, ADBackends::autodiff>(model, T, molefrac)[4];
+                auto o = vd::get_Bnvir<4, ADBackends::autodiff>(model, T, molefrac)[4];
             }
             std::cout << alphar << "; 4 derivs" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                auto o = get_Bnvir<5, ADBackends::autodiff>(model, T, molefrac)[5];
+                auto o = vd::get_Bnvir<5, ADBackends::autodiff>(model, T, molefrac)[5];
             }
             std::cout << alphar << "; 5 derivs" << std::endl;
         }
