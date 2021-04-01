@@ -110,13 +110,15 @@ TEST_CASE("Check p three ways for vdW", "[virial][p]")
     auto model = build_simple();
     const double T = 298.15;
     const double rho = 3000.0;
-    const std::valarray<double> rhovec = { rho / 2, rho / 2 }, molefrac = {0.5, 0.5};
+    const auto rhovec = (Eigen::ArrayXd(2) << rho / 2, rho / 2).finished();
+    const auto molefrac = rhovec/rhovec.sum();
 
     // Exact solution from EOS
     auto pexact = model.p(T, 1/rho);
     
     // Numerical solution from alphar
-    auto pfromderiv = rho*model.R*T + get_pr(model, T, rhovec);
+    using id = IsochoricDerivatives<decltype(model)>;
+    auto pfromderiv = rho*model.R*T + id::get_pr(model, T, rhovec);
 
     // Numerical solution from virial expansion
     constexpr int Nvir = 8;

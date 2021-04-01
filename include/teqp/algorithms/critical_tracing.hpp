@@ -297,7 +297,8 @@ void trace_critical_arclength_binary(const ModelType& model, double T0, const Ve
 
         auto write_line = [&rhovec, &rhotot, &z0, &model, &T, &c, &ofs]() {
             std::stringstream out;
-            out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R * T + get_pr(model, T, rhovec) << "," << c << std::endl;
+            using id = IsochoricDerivatives<decltype(model)>;
+            out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R * T + id::get_pr(model, T, rhovec) << "," << c << std::endl;
             std::string sout(out.str());
             ofs << sout;
             std::cout << sout;

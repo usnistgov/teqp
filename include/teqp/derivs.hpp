@@ -65,7 +65,6 @@ typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const C
 template <typename Model, typename TType, typename RhoType, typename ContainerType>
 typename ContainerType::value_type get_Ar10(const Model& model, const TType T, const RhoType &rho, const ContainerType& molefrac) {
     double h = 1e-100;
-    return f(std::complex<TType>(T, h), rho).imag() / h;
     return -T*model.alphar(std::complex<TType>(T, h), rho, molefrac); // Complex step derivative
 }
 
@@ -101,15 +100,7 @@ auto get_Ar02(const Model& model, const TType& T, const RhoType& rho, const Mole
     return ders[2]*rho*rho;
 }
 
-template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_Ar01(const Model& model, const TType T, const ContainerType& rhovec) {
-    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-    decltype(rhovec[0] * T) Ar01 = 0.0;
-    for (auto i = 0; i < rhovec.size(); ++i) {
-        Ar01 += rhovec[i] * derivrhoi([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec, i);
-    }
-    return Ar01;
-}
+
 
 template <typename Model, typename TType, typename ContainerType>
 typename ContainerType::value_type get_B2vir(const Model& model, const TType T, const ContainerType& molefrac) {
@@ -207,6 +198,15 @@ struct IsochoricDerivatives{
         auto rhotot = rhovec.sum();
         auto molefrac = rhovec / rhotot;
         return -T * derivT([&model, &rhotot, &molefrac](const auto& T, const auto& rhovec) { return model.alphar(T, rhotot, molefrac); }, T, rhovec);
+    }
+
+    static auto get_Ar01(const Model& model, const Scalar &T, const VectorType& rhovec) {
+        auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+        decltype(rhovec[0] * T) Ar01 = 0.0;
+        for (auto i = 0; i < rhovec.size(); ++i) {
+            Ar01 += rhovec[i] * derivrhoi([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec, i);
+        }
+        return Ar01;
     }
 
     /***

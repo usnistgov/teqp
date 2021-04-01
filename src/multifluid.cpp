@@ -154,11 +154,13 @@ int main(){
 
     const auto molefrac = (Eigen::ArrayXd(2) << 1.0 / 3.0, 2.0 / 3.0 ).finished();
 
-    auto alphar = model.alphar(T, rhovec);
-    auto Ar01 = get_Ar01(model, T, rhovec);
-    auto Ar10 = get_Ar10(model, T, rhovec);
-    auto Ar02 = get_Ar02(model, T, rhovec.sum(), molefrac);
-    auto splus = get_splus(model, T, rhovec);
+    auto rho = rhovec.sum();
+    auto alphar = model.alphar(T, rho, rhovec);
+    auto Ar01 = get_Ar01(model, T, rho, molefrac);
+    auto Ar10 = get_Ar10(model, T, rho, molefrac);
+    auto Ar02 = get_Ar02(model, T, rho, molefrac);
+    using id = IsochoricDerivatives<decltype(model)>;
+    auto splus = id::get_splus(model, T, rhovec);
     
     int ttt = 0;
 }
