@@ -7,3 +7,6 @@
 [submodule "externals/autodiff"]
 	path = externals/autodiff
 	url = https://github.com/allanleal/autodiff
+[submodule "externals/pybind11"]
+	path = externals/pybind11
+	url = https://github.com/pybind/pybind11.git

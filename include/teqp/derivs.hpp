@@ -24,12 +24,6 @@ auto forceeval(T&& expr)
     }
 }
 
-template <typename TType, typename ContainerType, typename FuncType>
-typename std::enable_if<is_container<ContainerType>::value, typename ContainerType::value_type>::type
-caller(const FuncType& f, TType T, const ContainerType& rho) {
-    return f(T, rho);
-}
-
 /***
 * \brief Given a function, use complex step derivatives to calculate the derivative with 
 * respect to the first variable which here is temperature
@@ -66,13 +60,6 @@ typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const C
     }
     rhocom[i] = comtype(rho[i], h);
     return f(T, rhocom).imag() / h;
-}
-
-template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_Ar10(const Model& model, const TType T, const ContainerType& rhovec){
-    auto rhotot = rhovec.sum();
-    auto molefrac = rhovec / rhotot;
-    return -T*derivT([&model, &rhotot, &molefrac](const auto& T, const auto& rhovec) { return model.alphar(T, rhotot, molefrac); }, T, rhovec);
 }
 
 template <typename Model, typename TType, typename RhoType, typename ContainerType>
@@ -189,28 +176,38 @@ auto get_B12vir(const Model& model, const TType T, const ContainerType& molefrac
     return B12;
 }
 
-/***
-* \brief Calculate the residual entropy (s^+ = -sr/R) from derivatives of alphar
-*/
-template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_splus(const Model& model, const TType T, const ContainerType& rhovec){
-    auto rhotot = rhovec.sum();
-    auto molefrac = rhovec/rhotot;
-    return model.alphar(T, rhotot, molefrac) - get_Ar10(model, T, rhovec);
-}
-
-/***
-* \brief Calculate the residual pressure from derivatives of alphar
-*/
-template <typename Model, typename TType, typename ContainerType>
-typename ContainerType::value_type get_pr(const Model& model, const TType T, const ContainerType& rhovec)
-{
-    auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-    return get_Ar01(model, T, rhotot_, rhovec / rhotot_) * rhotot_ * model.R * T;
-}
-
-template<typename Model, typename Scalar=double, typename VectorType = Eigen::ArrayXd>
+template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
 struct IsochoricDerivatives{
+
+    /***
+    * \brief Calculate the residual entropy (s^+ = -sr/R) from derivatives of alphar
+    */
+    static auto get_splus(const Model& model, const Scalar &T, const VectorType& rhovec) {
+        auto rhotot = rhovec.sum();
+        auto molefrac = rhovec / rhotot;
+        return model.alphar(T, rhotot, molefrac) - get_Ar10(model, T, rhovec);
+    }
+
+    /***
+    * \brief Calculate the residual pressure from derivatives of alphar
+    */
+    static auto get_pr(const Model& model, const Scalar &T, const VectorType& rhovec)
+    {
+        auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
+        return get_Ar01(model, T, rhotot_, rhovec / rhotot_) * rhotot_ * model.R * T;
+    }
+
+    static auto get_Ar00(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = rhovec.sum();
+        auto molefrac = rhovec / rhotot;
+        return model.alphar(T, rhotot, molefrac);
+    }
+
+    static auto get_Ar10(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = rhovec.sum();
+        auto molefrac = rhovec / rhotot;
+        return -T * derivT([&model, &rhotot, &molefrac](const auto& T, const auto& rhovec) { return model.alphar(T, rhotot, molefrac); }, T, rhovec);
+    }
 
     /***
     * \brief Calculate Psir=ar*rho

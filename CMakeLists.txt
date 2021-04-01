@@ -19,6 +19,13 @@ set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
+if (NOT TEQP_NO_PYTHON)
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11" "pybind11")
+  pybind11_add_module(teqp "${CMAKE_CURRENT_SOURCE_DIR}/interface/pybind11_wrapper.cpp")
+  target_link_libraries(teqp PRIVATE autodiff)
+  #attach_includes(teqp)
+endif()
+
 ### TARGETS
 add_executable(main "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 target_link_libraries(main autodiff)
