@@ -6,8 +6,7 @@
 /** 
 To add:
 1. Other cubic EOS (PR, SRK)
-2. PC SAFT
-3. LKP (Stefan Herrig's thesis)
+2. LKP (Stefan Herrig's thesis)
 */
 
 /* A (very) simple implementation of the van der Waals EOS*/

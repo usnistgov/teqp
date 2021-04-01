@@ -5,6 +5,7 @@
 #include <pybind11/eigen.h>
 
 #include "teqp/core.hpp"
+#include "teqp/models/pcsaft.hpp"
 
 namespace py = pybind11;
 
@@ -45,6 +46,10 @@ void init_teqp(py::module& m) {
         ;
     add_derivatives<vdWEOS1>(m);
 
+    py::class_<PCSAFTMixture>(m, "PCSAFTEOS")
+        .def(py::init<const std::vector<std::string> &>(), py::arg("names"))
+        ;
+    add_derivatives<PCSAFTMixture>(m);
 
     // for timing testing
     m.def("mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });

@@ -54,7 +54,7 @@ template <typename TType, typename ContainerType, typename FuncType, typename In
 typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const ContainerType& rho, Integer i) {
     double h = 1e-100;
     using comtype = std::complex<typename ContainerType::value_type>;
-    std::valarray<comtype> rhocom(rho.size());
+    Eigen::ArrayX<comtype> rhocom(rho.size());
     for (auto j = 0; j < rho.size(); ++j) {
         rhocom[j] = comtype(rho[j], 0.0);
     }
@@ -204,7 +204,7 @@ struct IsochoricDerivatives{
 
     static auto get_Ar10(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot = rhovec.sum();
-        auto molefrac = rhovec / rhotot;
+        auto molefrac = (rhovec / rhotot).eval();
         return -T * derivT([&model, &rhotot, &molefrac](const auto& T, const auto& rhovec) { return model.alphar(T, rhotot, molefrac); }, T, rhovec);
     }
 
@@ -212,7 +212,12 @@ struct IsochoricDerivatives{
         auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
         decltype(rhovec[0] * T) Ar01 = 0.0;
         for (auto i = 0; i < rhovec.size(); ++i) {
-            Ar01 += rhovec[i] * derivrhoi([&model](const auto& T, const auto& rhovec) { return model.alphar(T, rhovec); }, T, rhovec, i);
+            auto Ar00 = [&model](const auto &T, const auto&rhovec) {
+                auto rhotot = rhovec.sum();
+                auto molefrac = rhovec / rhotot;
+                return model.alphar(T, rhotot, molefrac);
+            };
+            Ar01 += rhovec[i] * derivrhoi(Ar00, T, rhovec, i);
         }
         return Ar01;
     }

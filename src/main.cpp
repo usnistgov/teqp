@@ -7,6 +7,7 @@
 
 #include "teqp/derivs.hpp"
 #include "teqp/models/eos.hpp"
+#include "teqp/models/pcsaft.hpp"
 
 void test_vdwMix() {
     // Argon + Xenon
@@ -43,5 +44,20 @@ void test_vdwMix() {
 
 int main(){
     test_vdwMix();
+
+    std::vector<std::string> names = { "Methane", "Ethane" };
+    
+    PCSAFTMixture mix(names);
+    mix.print_info();
+    using id = IsochoricDerivatives<decltype(mix)>;
+    double T = 300;
+    const auto rhovec = (Eigen::ArrayXd(2) << 1.0, 2.0).finished();
+    const auto molefrac = (rhovec/rhovec.sum()).eval();
+    const double rho = rhovec.sum();
+    double a00csd = get_Ar01<ADBackends::complex_step>(mix, T, rho, molefrac);
+    double a00cx = get_Ar01<ADBackends::multicomplex>(mix, T, rho, molefrac);
+    double a00ad = get_Ar01<ADBackends::autodiff>(mix, T, rho, molefrac);
+    double a00iso = id::get_Ar01(mix, T, rhovec);
+
     return EXIT_SUCCESS;
 }
