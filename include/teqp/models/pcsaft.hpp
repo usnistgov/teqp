@@ -150,11 +150,7 @@ Sum up the coefficient-wise product of three array-like objects that can each ha
 template<typename VecType1, typename VecType2, typename VecType3>
 auto sumproduct(const VecType1& v1, const VecType2& v2, const VecType3& v3) {
     using ResultType = decltype(forceeval(v1[0] * v2[0] * v3[0]));
-    ResultType summer = 0.0;
-    for (auto i = 0; i < v1.size(); ++i) {
-        summer = summer + v1[i] * v2[i] * v3[i];
-    }
-    return summer;
+    return (v1.cast<ResultType>() * v2.cast<ResultType>() * v3.cast<ResultType>()).sum();
 }
 
 /// Parameters for model evaluation
