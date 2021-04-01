@@ -133,16 +133,15 @@ auto get_I2(const Eta& eta, MbarType mbar) {
 PCSAFTLibrary library;
 
 /**
-Sum up the coefficient-wise product of two array-like objects that can each have different container types and value types
+Sum up three array-like objects that can each have different container types and value types
 */
-template<typename VecType1, typename VecType2>
-auto sumproduct(const VecType1& v1, const VecType2& v2) {
-    using ResultType = decltype(forceeval(v1[0] * v2[0]));
-    ResultType summer = 0.0;
+template<typename VecType1, typename NType>
+auto powvec(const VecType1& v1, NType n) {
+    auto o = v1;
     for (auto i = 0; i < v1.size(); ++i) {
-        summer += v1[i] * v2[i];
+        o[i] = pow(v1[i], n);
     }
-    return summer;
+    return o;
 }
 
 /**
@@ -156,18 +155,6 @@ auto sumproduct(const VecType1& v1, const VecType2& v2, const VecType3& v3) {
         summer = summer + v1[i] * v2[i] * v3[i];
     }
     return summer;
-}
-
-/**
-Sum up three array-like objects that can each have different container types and value types
-*/
-template<typename VecType1, typename NType>
-auto powvec(const VecType1& v1, NType n) {
-    auto o = v1;
-    for (auto i = 0; i < v1.size(); ++i) {
-        o[i] = pow(v1[i], n);
-    }
-    return o;
 }
 
 /// Parameters for model evaluation
@@ -220,11 +207,11 @@ public:
     template<typename VecType>
     auto max_rhoN(double T, const VecType& mole_fractions) {
         auto N = mole_fractions.size();
-        std::vector<decltype(T)> d(N);
+        Eigen::ArrayX<decltype(T)> d(N);
         for (auto i = 0; i < N; ++i) {
             d[i] = sigma_Angstrom[i] * (1.0 - 0.12 * exp(-3.0 * epsilon_over_k[i] / T));
         }
-        return 6 * 0.74 / PI / sumproduct(mole_fractions, m, powvec(d, 3));
+        return 6 * 0.74 / PI / (mole_fractions*m*powvec(d, 3)).sum();
     }
     const double R = get_R_gas<double>();
 
@@ -261,7 +248,7 @@ public:
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
             Eigen::ArrayX<TTYPE> dn = c.d.pow(n);
-            TRHOType xmdn = forceeval(sumproduct(mole_fractions, m, dn));
+            TRHOType xmdn = forceeval((mole_fractions*m*dn).sum());
             double pi6 = (MY_PI / 6.0);
             zeta[n] = pi6*rho_A3*xmdn;
         }
@@ -272,10 +259,9 @@ public:
         auto [I1, etadI1deta] = get_I1(eta, c.mbar);
         auto [I2, etadI2deta] = get_I2(eta, c.mbar);
 
-        std::vector<TRHOType> lngii_hs(mole_fractions.size());
+        Eigen::ArrayX<TRHOType> lngii_hs(mole_fractions.size());
         for (std::size_t i = 0; i < lngii_hs.size(); ++i) {
-            TRHOType RHS = log(gij_HS(zeta, c.d, i, i));
-            std::swap(lngii_hs[i], RHS);
+            lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
         }
         auto alphar_hc = c.mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
         auto alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * c.mbar * C1(eta, c.mbar) * I2 * c.m2_epsilon2_sigma3_bar;
