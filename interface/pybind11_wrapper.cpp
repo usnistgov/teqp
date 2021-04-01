@@ -45,6 +45,11 @@ void init_teqp(py::module& m) {
         ;
     add_derivatives<vdWEOS1>(m);
 
+
+    // for timing testing
+    m.def("mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
+    m.def("myadder", [](const double& c, const double& d) { return c+d; });
+
 }
 
 PYBIND11_MODULE(teqp, m) {

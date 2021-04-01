@@ -1,7 +1,7 @@
 #pragma once
 
-#include "teqp/core.hpp"
 #include <optional>
+#include "teqp/constants.hpp"
 
 /** 
 To add:
