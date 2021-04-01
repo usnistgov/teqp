@@ -149,19 +149,18 @@ Sum up the coefficient-wise product of three array-like objects that can each ha
 */
 template<typename VecType1, typename VecType2, typename VecType3>
 auto sumproduct(const VecType1& v1, const VecType2& v2, const VecType3& v3) {
-    using ResultType = decltype(forceeval(v1[0] * v2[0] * v3[0]));
-    return (v1.cast<ResultType>() * v2.cast<ResultType>() * v3.cast<ResultType>()).sum();
+    using ResultType = std::common_type_t<decltype(v1[0]), decltype(v2[0]), decltype(v3[0])>;
+    return forceeval((v1.cast<ResultType>() * v2.cast<ResultType>() * v3.cast<ResultType>()).sum());
 }
 
 /// Parameters for model evaluation
-template<typename NumType, typename MbarType, typename ProductType>
+template<typename NumType, typename ProductType>
 class SAFTCalc {
 public:
     // Just temperature dependent things
     Eigen::ArrayX<NumType> d;
 
     // These things also have composition dependence
-    MbarType mbar;
     ProductType m2_epsilon_sigma3_bar, ///< Eq. A. 12
                 m2_epsilon2_sigma3_bar; ///< Eq. A. 13
 };
@@ -216,10 +215,9 @@ public:
 
         std::size_t N = m.size();
 
-        using TRHOType = std::decay_t<decltype(forceeval(rhomolar*T*mole_fractions[0]))>;
-        using MbarType = std::decay_t<decltype(forceeval(m[0]*mole_fractions[0]))>;
+        using TRHOType = std::common_type_t<decltype(T), decltype(mole_fractions[0]), decltype(m[0])>;
 
-        SAFTCalc<TTYPE, MbarType, TRHOType> c;
+        SAFTCalc<TTYPE, TRHOType> c;
         c.m2_epsilon_sigma3_bar = 0;
         c.m2_epsilon2_sigma3_bar = 0;
         c.d = sigma_Angstrom*(1.0 - 0.12*exp(-3.0*epsilon_over_k/T)); // [A]
@@ -232,35 +230,37 @@ public:
                 c.m2_epsilon2_sigma3_bar = c.m2_epsilon2_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * pow(eij_over_k / T, 2) * pow(sigma_ij, 3);
             }
         }
-        c.mbar = (mole_fractions*m).sum();
+        auto mbar = (mole_fractions*m).sum();
 
         /// Convert from molar density to number density in molecules/Angstrom^3
         RhoType rho_A3 = rhomolar * N_A * 1e-30; //[molecules (not moles)/A^3]
 
         constexpr double MY_PI = EIGEN_PI;
+        double pi6 = (MY_PI / 6.0);
 
         /// Evaluate the components of zeta
-        std::vector<TRHOType> zeta(4);
+        using ta = std::common_type_t<decltype(pi6), decltype(m[0]), decltype(c.d[0]), decltype(rho_A3)>;
+        std::vector<ta> zeta(4);
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
             Eigen::ArrayX<TTYPE> dn = c.d.pow(n);
             TRHOType xmdn = forceeval((mole_fractions*m*dn).sum());
-            double pi6 = (MY_PI / 6.0);
-            zeta[n] = pi6*rho_A3*xmdn;
+            zeta[n] = forceeval(pi6*rho_A3*xmdn);
         }
 
         /// Packing fraction is the 4-th value in zeta, at index 3
-        auto eta = zeta[3];
+        const auto &eta = zeta[3];
         
-        auto [I1, etadI1deta] = get_I1(eta, c.mbar);
-        auto [I2, etadI2deta] = get_I2(eta, c.mbar);
+        auto [I1, etadI1deta] = get_I1(eta, mbar);
+        auto [I2, etadI2deta] = get_I2(eta, mbar);
 
-        Eigen::ArrayX<TRHOType> lngii_hs(mole_fractions.size());
+        using tt = std::common_type_t<decltype(zeta[0]), decltype(c.d[0])>;
+        Eigen::ArrayX<tt> lngii_hs(mole_fractions.size());
         for (std::size_t i = 0; i < lngii_hs.size(); ++i) {
             lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
         }
-        auto alphar_hc = c.mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
-        auto alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * c.mbar * C1(eta, c.mbar) * I2 * c.m2_epsilon2_sigma3_bar;
+        auto alphar_hc = mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
+        auto alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar;
         return alphar_hc + alphar_disp;
     }
 };

@@ -18,7 +18,7 @@ void add_virials(py::module& m) {
 
 template<typename Model>
 void add_derivatives(py::module &m) {
-    using id = IsochoricDerivatives<Model, double, std::valarray<double>>;
+    using id = IsochoricDerivatives<Model, double, Eigen::Array<double,Eigen::Dynamic,1> >;
     m.def("get_Ar00", &id::get_Ar00, py::arg("model"), py::arg("T"), py::arg("rho")); 
     m.def("get_Ar10", &id::get_Ar10, py::arg("model"), py::arg("T"), py::arg("rho"));
     m.def("get_Psir", &id::get_Psir, py::arg("model"), py::arg("T"), py::arg("rho"));

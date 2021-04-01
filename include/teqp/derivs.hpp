@@ -192,13 +192,16 @@ struct IsochoricDerivatives{
     */
     static auto get_pr(const Model& model, const Scalar &T, const VectorType& rhovec)
     {
-        auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-        return ::get_Ar01(model, T, rhotot_, rhovec / rhotot_) * rhotot_ * model.R * T;
+        auto rhotot_ = rhovec.sum();
+        auto molefrac = (rhovec / rhotot_).eval();
+        auto h = 1e-100;
+        auto Ar01 = model.alphar(T, std::complex<double>(rhotot_, h), molefrac).imag() / h * rhotot_;
+        return Ar01*rhotot_*model.R*T;
     }
 
     static auto get_Ar00(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot = rhovec.sum();
-        auto molefrac = rhovec / rhotot;
+        auto molefrac = (rhovec / rhotot).eval();
         return model.alphar(T, rhotot, molefrac);
     }
 
@@ -240,9 +243,9 @@ struct IsochoricDerivatives{
         // N^N matrix (symmetric)
 
         dual2nd u; // the output scalar u = f(x), evaluated together with Hessian below
-        VectorXdual2nd g;
-        VectorXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
-        auto hfunc = [&model, &T](const VectorXdual2nd& rho_) {
+        ArrayXdual2nd g;
+        ArrayXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto hfunc = [&model, &T](const ArrayXdual2nd& rho_) {
             auto rhotot_ = rho_.sum();
             auto molefrac = (rho_ / rhotot_).eval();
             return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
@@ -291,8 +294,8 @@ struct IsochoricDerivatives{
     * Uses autodiff to calculate second partial derivatives
     */
     static auto build_Psir_gradient_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
-        VectorXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
-        auto psirfunc = [&model, &T](const VectorXdual2nd& rho_) {
+        ArrayXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto psirfunc = [&model, &T](const ArrayXdual2nd& rho_) {
             auto rhotot_ = rho_.sum();
             auto molefrac = (rho_ / rhotot_).eval();
             return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);

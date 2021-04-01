@@ -20,10 +20,9 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
 if (NOT TEQP_NO_PYTHON)
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11" "pybind11")
-  pybind11_add_module(teqp "${CMAKE_CURRENT_SOURCE_DIR}/interface/pybind11_wrapper.cpp")
-  target_link_libraries(teqp PRIVATE autodiff)
-  #attach_includes(teqp)
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11" "pybind11")
+    pybind11_add_module(teqp "${CMAKE_CURRENT_SOURCE_DIR}/interface/pybind11_wrapper.cpp")
+    target_link_libraries(teqp PRIVATE autodiff)
 endif()
 
 ### TARGETS
