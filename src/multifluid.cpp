@@ -62,30 +62,17 @@ void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json 
     }
 }
 
-int main(){
-   
-    std::string coolprop_root = "C:/Users/ihb/Code/CoolProp";
-    coolprop_root = "../mycp";
-    auto BIPcollection = nlohmann::json::parse(
-        std::ifstream(coolprop_root + "/dev/mixtures/mixture_binary_pairs.json")
-    );
-
-    //// Critical curves
-    //{
-    //    Timer t(1);
-    //    trace_critical_loci(coolprop_root, BIPcollection);
-    //}
-
-{
+template<typename J>
+void time_calls(const std::string &coolprop_root, const J &BIPcollection) {
     auto model = build_multifluid_model({ "methane", "ethane" }, coolprop_root, BIPcollection);
-    Eigen::ArrayXd rhovec(2); rhovec << 1.0, 2.0 ;
+    Eigen::ArrayXd rhovec(2); rhovec << 1.0, 2.0;
     double T = 300;
     {
-        const auto molefrac = (Eigen::ArrayXd(2) << rhovec[0]/rhovec.sum(), rhovec[1]/rhovec.sum()).finished();
+        const auto molefrac = (Eigen::ArrayXd(2) << rhovec[0] / rhovec.sum(), rhovec[1] / rhovec.sum()).finished();
 
         using vd = VirialDerivatives<decltype(model)>;
         auto B12 = vd::get_B12vir(model, T, molefrac);
-    
+
         using id = IsochoricDerivatives<decltype(model)>;
         auto mu = id::get_chempot_autodiff(model, T, rhovec);
 
@@ -93,11 +80,12 @@ int main(){
         double T = 300.0;
         constexpr int N = 10000;
         volatile double alphar;
-        double rrrr = get_Ar01(model, T, rho, molefrac);
-        double rrrr2 = get_Ar02(model, T, rho, molefrac);
+        using tdx = TDXDerivatives<decltype(model)>;
+        double rrrr = tdx::get_Ar01(model, T, rho, molefrac);
+        double rrrr2 = tdx::get_Ar02(model, T, rho, molefrac);
         {
             Timer t(N);
-            for (auto i = 0; i < N; ++i){
+            for (auto i = 0; i < N; ++i) {
                 alphar = model.alphar(T, rho, molefrac);
             }
             std::cout << alphar << " function call" << std::endl;
@@ -105,28 +93,28 @@ int main(){
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = get_Ar01<ADBackends::complex_step>(model, T, rho, molefrac);
+                alphar = tdx::get_Ar01<ADBackends::complex_step>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st CSD" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = get_Ar01<ADBackends::autodiff>(model, T, rho, molefrac);
+                alphar = tdx::get_Ar01<ADBackends::autodiff>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st autodiff::autodiff" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = get_Ar01<ADBackends::multicomplex>(model, T, rho, molefrac);
+                alphar = tdx::get_Ar01<ADBackends::multicomplex>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st MCX" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = get_Ar02(model, T, rho, molefrac);
+                alphar = tdx::get_Ar02(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 2nd autodiff" << std::endl;
         }
@@ -152,14 +140,40 @@ int main(){
             std::cout << alphar << "; 5 derivs" << std::endl;
         }
     }
+}
 
-    const auto molefrac = (Eigen::ArrayXd(2) << 1.0 / 3.0, 2.0 / 3.0 ).finished();
+int main(){
+   
+    std::string coolprop_root = "C:/Users/ihb/Code/CoolProp";
+    coolprop_root = "../mycp";
+    auto BIPcollection = nlohmann::json::parse(
+        std::ifstream(coolprop_root + "/dev/mixtures/mixture_binary_pairs.json")
+    );
 
+    //// Critical curves
+    //{
+    //    Timer t(1);
+    //    trace_critical_loci(coolprop_root, BIPcollection);
+    //}
+
+    //time_calls(coolprop_root, BIPcollection);
+
+{
+    auto model = build_multifluid_model({ "methane", "ethane" }, coolprop_root, BIPcollection);
+    Eigen::ArrayXd rhovec(2); rhovec << 1.0, 2.0;
+    double T = 300;
+    const auto molefrac = rhovec/rhovec.sum();
+
+    using tdx = TDXDerivatives<decltype(model)>;
+    const auto b = ADBackends::autodiff;
     auto rho = rhovec.sum();
     auto alphar = model.alphar(T, rho, rhovec);
-    auto Ar01 = get_Ar01(model, T, rho, molefrac);
-    auto Ar10 = get_Ar10(model, T, rho, molefrac);
-    auto Ar02 = get_Ar02(model, T, rho, molefrac);
+    auto Ar01 = tdx::get_Ar01<b>(model, T, rho, molefrac);
+    auto Ar10 = tdx::get_Ar10(model, T, rho, molefrac);
+    auto Ar02 = tdx::get_Ar02(model, T, rho, molefrac);
+    auto Ar11 = tdx::get_Ar11<b>(model, T, rho, molefrac);
+    auto Ar11mcx = tdx::get_Ar11<ADBackends::multicomplex>(model, T, rho, molefrac);
+    auto Ar20 = tdx::get_Ar20(model, T, rho, molefrac);
     using id = IsochoricDerivatives<decltype(model)>;
     auto splus = id::get_splus(model, T, rhovec);
     

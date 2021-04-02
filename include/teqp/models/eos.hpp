@@ -55,7 +55,7 @@ protected:
                 a_ = a_ + molefracs[i] * molefracs[j] * aij;
             }
         }
-        return a_;
+        return forceeval(a_);
     }
 
     template<typename CompType>
@@ -64,7 +64,7 @@ protected:
         for (auto i = 0; i < molefracs.size(); ++i) {
             b_ = b_ + molefracs[i] * bi[i];
         }
-        return b_;
+        return forceeval(b_);
     }
 
 public:

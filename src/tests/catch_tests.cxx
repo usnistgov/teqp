@@ -2,6 +2,7 @@
 #include "catch/catch.hpp"
 
 #include "teqp/core.hpp"
+#include "teqp/models/pcsaft.hpp"
 
 auto build_vdW_argon() {
     double Omega_b = 1.0 / 8, Omega_a = 27.0 / 64;
@@ -80,6 +81,27 @@ TEST_CASE("Check virial coefficients for vdW", "[virial]")
         CAPTURE(i);
         CAPTURE(relerr);
         CHECK(relerr < 1e-15);
+    }
+}
+
+TEST_CASE("Check neff", "[virial]")
+{
+    double T = 298.15;
+    double rho = 3.0;
+    const Eigen::Array2d molefrac = { 0.5, 0.5 };
+    auto f = [&T, &rho, &molefrac](const auto& model) {
+        auto neff = TDXDerivatives<decltype(model)>::get_neff(model, T, rho, molefrac);
+        CAPTURE(neff);
+        CHECK(neff > 0);
+        CHECK(neff < 100);
+    };
+    // This quantity is undefined for the van der Waals EOS because Ar20 is always 0
+    //SECTION("vdW") {
+    //    f(build_simple());
+    //}
+    SECTION("PCSAFT") {
+        std::vector<std::string> names = { "Methane", "Ethane" };
+        f(PCSAFTMixture(names));
     }
 }
 

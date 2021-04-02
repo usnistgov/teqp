@@ -13,9 +13,12 @@ template<typename Model>
 void add_TDx_derivatives(py::module& m) {
     using id = TDXDerivatives<Model, double, Eigen::Array<double, Eigen::Dynamic, 1> >;
     //m.def("get_Ar00", &id::get_Ar00, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    m.def("get_Ar10", &id::get_Ar10, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar10", &id::get_Ar10<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
     m.def("get_Ar01", &id::get_Ar01<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    m.def("get_Ar02", &id::get_Ar02, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar11", &id::get_Ar11<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar02", &id::get_Ar02<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar20", &id::get_Ar20<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_neff", &id::get_neff<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
 }
 
 template<typename Model>

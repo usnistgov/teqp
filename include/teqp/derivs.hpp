@@ -67,9 +67,28 @@ enum class ADBackends { autodiff, multicomplex, complex_step };
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
 struct TDXDerivatives {
 
+    template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar10(const Model& model, const Scalar &T, const Scalar &rho, const VectorType& molefrac) {
-        double h = 1e-100;
-        return -T*model.alphar(std::complex<Scalar>(T, h), rho, molefrac).imag()/h; // Complex step derivative
+        if constexpr (be == ADBackends::complex_step) {
+            double h = 1e-100;
+            return -T * model.alphar(std::complex<Scalar>(T, h), rho, molefrac).imag() / h; // Complex step derivative
+        }
+        else if constexpr (be == ADBackends::multicomplex) {
+            using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
+            bool and_val = true;
+            fcn_t f = [&model, &rho, &molefrac](const auto& Trecip_) { return model.alphar(1.0/Trecip_, rho, molefrac); };
+            auto ders = diff_mcx1(f, 1.0/T, 1, and_val);
+            return (1.0/T)*ders[1];
+        }
+        else if constexpr (be == ADBackends::autodiff) {
+            autodiff::dual Trecipdual = 1.0/T;
+            auto f = [&model, &rho, &molefrac](const auto& Trecip_) { return eval(model.alphar(eval(1.0/Trecip_), rho, molefrac)); };
+            auto der = derivative(f, wrt(Trecipdual), at(Trecipdual));
+            return (1.0/T)*der;
+        }
+        else {
+            static_assert("algorithmic differentiation backend is invalid in get_Ar10");
+        }
     }
 
     template<ADBackends be = ADBackends::autodiff>
@@ -77,28 +96,85 @@ struct TDXDerivatives {
         if constexpr(be == ADBackends::complex_step){
             double h = 1e-100;
             auto der = model.alphar(T, std::complex<Scalar>(rho, h), molefrac).imag() / h;
-            return der*rho;
+            return rho*der;
         }
         else if constexpr(be == ADBackends::multicomplex){
             using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
             bool and_val = true;
             fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
             auto ders = diff_mcx1(f, rho, 1, and_val);
-            return ders[1] * rho;
+            return rho*ders[1];
         }
         else if constexpr(be == ADBackends::autodiff){
             autodiff::dual rhodual = rho;
             auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
             auto der = derivative(f, wrt(rhodual), at(rhodual));
-            return der * rho;
+            return rho*der;
+        }
+        else {
+            static_assert("algorithmic differentiation backend is invalid in get_Ar01");
         }
     }
 
+    template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar02(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        autodiff::dual2nd rhodual = rho;
-        auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
-        auto ders = derivatives(f, wrt(rhodual), at(rhodual));
-        return ders[2]*rho*rho;
+        if constexpr (be == ADBackends::autodiff) {
+            autodiff::dual2nd rhodual = rho;
+            auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
+            auto ders = derivatives(f, wrt(rhodual), at(rhodual));
+            return rho*rho*ders[2];
+        }
+        else {
+            static_assert("algorithmic differentiation backend is invalid in get_Ar02");
+        }
+    }
+
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar20(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        if constexpr (be == ADBackends::autodiff) {
+            autodiff::dual2nd Trecipdual = 1/T;
+            auto f = [&model, &rho, &molefrac](const auto& Trecip) { return eval(model.alphar(eval(1/Trecip), rho, molefrac)); };
+            auto ders = derivatives(f, wrt(Trecipdual), at(Trecipdual));
+            return (1/T)*(1/T)*ders[2];
+        }
+        else {
+            static_assert("algorithmic differentiation backend is invalid in get_Ar20");
+        }
+    }
+
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar11(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+
+        if constexpr (be == ADBackends::multicomplex) {
+            using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
+            const fcn_t func = [&model, &molefrac](const auto& zs) {
+                auto rhomolar = zs[0], Trecip = zs[1];
+                return model.alphar(1.0/Trecip, rhomolar, molefrac);
+            };
+            std::vector<double> xs = { rho, 1.0/T};
+            std::vector<int> order = { 1, 1 };
+            auto der = mcx::diff_mcxN(func, xs, order);
+            return (1.0/T)*rho*der;
+        }
+        else if constexpr (be == ADBackends::autodiff) {
+            //static_assert("bug in autodiff, can't use autodiff for cross derivative");
+            autodiff::dual2nd rhodual = rho, Trecipdual=1/T;
+            auto f = [&model, &molefrac](const auto& Trecip, const auto&rho_) { return eval(model.alphar(eval(1/Trecip), rho_, molefrac)); };
+            //auto der = derivative(f, wrt(Trecipdual, rhodual), at(Trecipdual, rhodual)); // d^2alphar/drhod(1/T) // This should work, but gives instead 1,0 derivative
+            auto [u01, u10, u11] = derivatives(f, wrt(Trecipdual, rhodual), at(Trecipdual, rhodual)); // d^2alphar/drhod(1/T)
+            return (1.0/T)*rho*u11;
+        }
+        else {
+            static_assert("algorithmic differentiation backend is invalid in get_Ar11");
+        }
+    }
+
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_neff(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        auto Ar01 = get_Ar01<be>(model, T, rho, molefrac);
+        auto Ar11 = get_Ar11<be>(model, T, rho, molefrac);
+        auto Ar20 = get_Ar20(model, T, rho, molefrac);
+        return -3*(Ar01-Ar11)/Ar20;
     }
 };
 

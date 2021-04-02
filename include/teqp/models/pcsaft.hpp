@@ -261,6 +261,6 @@ public:
         }
         auto alphar_hc = mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
         auto alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar;
-        return alphar_hc + alphar_disp;
+        return forceeval(alphar_hc + alphar_disp);
     }
 };
