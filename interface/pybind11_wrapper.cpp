@@ -10,6 +10,15 @@
 namespace py = pybind11;
 
 template<typename Model>
+void add_TDx_derivatives(py::module& m) {
+    using id = TDXDerivatives<Model, double, Eigen::Array<double, Eigen::Dynamic, 1> >;
+    //m.def("get_Ar00", &id::get_Ar00, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar10", &id::get_Ar10, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar01", &id::get_Ar01<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar02", &id::get_Ar02, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+}
+
+template<typename Model>
 void add_virials(py::module& m) {
     using vd = VirialDerivatives<Model>;
     m.def("get_B2vir", &vd::get_B2vir, py::arg("model"), py::arg("T"), py::arg("molefrac"));
@@ -30,6 +39,7 @@ void add_derivatives(py::module &m) {
     m.def("build_Psir_gradient_autodiff", &id::build_Psir_gradient_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
 
     add_virials<Model>(m);
+    add_TDx_derivatives<Model>(m);
 }
 
 
