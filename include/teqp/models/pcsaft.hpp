@@ -32,6 +32,7 @@ public:
             return it->second;
         }
         else {
+            throw std::invalid_argument("Bad name:" + name);
         }
     }
 };
@@ -149,8 +150,8 @@ Sum up the coefficient-wise product of three array-like objects that can each ha
 */
 template<typename VecType1, typename VecType2, typename VecType3>
 auto sumproduct(const VecType1& v1, const VecType2& v2, const VecType3& v3) {
-    using ResultType = std::common_type_t<decltype(v1[0]), decltype(v2[0]), decltype(v3[0])>;
-    return forceeval((v1.cast<ResultType>() * v2.cast<ResultType>() * v3.cast<ResultType>()).sum());
+    using ResultType = typename std::common_type_t<decltype(v1[0]), decltype(v2[0]), decltype(v3[0])>;
+    return forceeval((v1.template cast<ResultType>() * v2.template cast<ResultType>() * v3.template cast<ResultType>()).sum());
 }
 
 /// Parameters for model evaluation
@@ -206,7 +207,7 @@ public:
         for (auto i = 0; i < N; ++i) {
             d[i] = sigma_Angstrom[i] * (1.0 - 0.12 * exp(-3.0 * epsilon_over_k[i] / T));
         }
-        return 6 * 0.74 / PI / (mole_fractions*m*powvec(d, 3)).sum();
+        return 6 * 0.74 / EIGEN_PI / (mole_fractions*m*powvec(d, 3)).sum();
     }
     const double R = get_R_gas<double>();
 
