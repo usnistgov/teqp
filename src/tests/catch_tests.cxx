@@ -128,7 +128,7 @@ TEST_CASE("Check Hessian of Psir", "[virial]")
     }
 }
 
-TEST_CASE("Check p three ways for vdW", "[virial][p]")
+TEST_CASE("Check p four ways for vdW", "[virial][p]")
 {
     auto model = build_simple();
     const double T = 298.15;
@@ -142,6 +142,8 @@ TEST_CASE("Check p three ways for vdW", "[virial][p]")
     // Numerical solution from alphar
     using id = IsochoricDerivatives<decltype(model)>;
     auto pfromderiv = rho*model.R*T + id::get_pr(model, T, rhovec);
+    using tdx = TDXDerivatives<decltype(model)>;
+    auto p_ar0n = rho*model.R*T*(1 + tdx::get_Ar0n<3>(model, T, rho, molefrac)[1]);
 
     // Numerical solution from virial expansion
     constexpr int Nvir = 8;
@@ -156,6 +158,28 @@ TEST_CASE("Check p three ways for vdW", "[virial][p]")
 
     CHECK(std::abs(pfromderiv - pexact)/pexact < 1e-15);
     CHECK(std::abs(pvir - pexact)/pexact < 1e-8);
+    CHECK(std::abs(p_ar0n - pexact) / pexact < 1e-8);
+}
+
+TEST_CASE("Check 0n derivatives", "[virial][p]")
+{
+    std::vector<std::string> names = { "Methane", "Ethane" };
+    auto model = PCSAFTMixture(names);
+
+    const double T = 100.0;
+    const double rho = 126.1856883066021; 
+    const auto rhovec = (Eigen::ArrayXd(2) << rho, 0).finished();
+    const auto molefrac = rhovec / rhovec.sum();
+
+    using tdx = TDXDerivatives<decltype(model)>;
+    auto Ar02 = tdx::get_Ar02(model, T, rho, molefrac);
+    auto Ar02n = tdx::get_Ar0n<2>(model, T, rho, molefrac)[2];
+    CHECK(std::abs(Ar02 - Ar02n) < 1e-13);
+
+    auto Ar01 = tdx::get_Ar01(model, T, rho, molefrac);
+    auto Ar01n = tdx::get_Ar0n<4>(model, T, rho, molefrac)[1];
+    CHECK(std::abs(Ar01 - Ar01n) < 1e-13);
+
 }
 
 TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")

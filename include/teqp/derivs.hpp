@@ -129,6 +129,23 @@ struct TDXDerivatives {
         }
     }
 
+    template<int Nderiv, ADBackends be = ADBackends::autodiff>
+    static auto get_Ar0n(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        std::map<int, double> o;
+        if constexpr (be == ADBackends::autodiff) {
+            autodiff::HigherOrderDual<Nderiv, double> rhodual = rho;
+            auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
+            auto ders = derivatives(f, wrt(rhodual), at(rhodual));
+            for (auto n = 1; n <= Nderiv; ++n) {
+                o[n] = pow(rho, n)*ders[n];
+            }
+            return o;
+        }
+        else {
+            static_assert("algorithmic differentiation backend is invalid in get_Ar0n");
+        }
+    }
+
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar20(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         if constexpr (be == ADBackends::autodiff) {

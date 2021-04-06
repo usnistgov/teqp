@@ -18,6 +18,10 @@ void add_TDx_derivatives(py::module& m) {
     m.def("get_Ar11", &id::get_Ar11<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
     m.def("get_Ar02", &id::get_Ar02<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
     m.def("get_Ar20", &id::get_Ar20<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar03n", &id::get_Ar0n<3, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar04n", &id::get_Ar0n<4, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar05n", &id::get_Ar0n<5, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    m.def("get_Ar06n", &id::get_Ar0n<6, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
     m.def("get_neff", &id::get_neff<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
 }
 
