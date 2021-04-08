@@ -242,4 +242,6 @@ TEST_CASE("Test pure VLE", "") {
     auto rhovec1 = rhovec + v;
     auto r1 = resid.call(rhovec1);
     CHECK((r0.cwiseAbs() > r1.cwiseAbs()).eval().all());
+
+    do_pure_VLE(resid, T, 22834.056386882046, 1025.106554560764);
 }
