@@ -3,6 +3,7 @@
 
 #include "teqp/core.hpp"
 #include "teqp/models/pcsaft.hpp"
+#include "teqp/algorithms/VLE.hpp"
 
 auto build_vdW_argon() {
     double Omega_b = 1.0 / 8, Omega_a = 27.0 / 64;
@@ -228,4 +229,17 @@ TEST_CASE("Test psir gradient", "") {
     CAPTURE(err1);
     CHECK(err0 < 1e-12);
     CHECK(err1 < 1e-12);
+}
+
+TEST_CASE("Test pure VLE", "") {
+    const auto model = build_vdW_argon();
+    double T = 100.0;
+    auto resid = IsothermPureVLEResiduals(model, T);
+    auto rhovec = (Eigen::ArrayXd(2) << 22834.056386882046, 1025.106554560764).finished();
+    auto r0 = resid.call(rhovec);
+    auto J = resid.Jacobian(rhovec);
+    auto v = J.matrix().colPivHouseholderQr().solve(-r0.matrix()).array().eval();
+    auto rhovec1 = rhovec + v;
+    auto r1 = resid.call(rhovec1);
+    CHECK((r0.cwiseAbs() > r1.cwiseAbs()).eval().all());
 }
