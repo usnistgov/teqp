@@ -33,7 +33,7 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = typename std::remove_const<decltype(forceeval(tau* delta* molefracs[0]))>::type; // Type promotion, without the const-ness
+        using resulttype = std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
@@ -54,7 +54,7 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = typename std::remove_const<decltype(forceeval(tau* delta* molefracs[0]))>::type; // Type promotion, without the const-ness
+        using resulttype = std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
@@ -106,7 +106,6 @@ public:
 class MultiFluidReducingFunction {
 private:
     Eigen::MatrixXd betaT, gammaT, betaV, gammaV, YT, Yv;
-    
 
     template <typename Num>
     auto cube(Num x) const {
@@ -287,7 +286,7 @@ public:
 auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components) {
 
     // Allocate the matrix with default models
-    std::vector<std::vector<MultiFluidDepartureFunction>> funcs(2); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
+    std::vector<std::vector<MultiFluidDepartureFunction>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
 
     auto depcollection = nlohmann::json::parse(std::ifstream(coolprop_root + "/dev/mixtures/mixture_departure_functions.json"));
 
