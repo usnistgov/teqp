@@ -34,13 +34,13 @@ public:
         const TYPE &T = m_T;
         const TYPE R = m_model.R;
         
-        auto derL = tdx::get_Ar0n<2>(m_model, T, rhomolarL, molefracs);
+        auto derL = tdx::template get_Ar0n<2>(m_model, T, rhomolarL, molefracs);
         auto pL = rhomolarL*R*T*(1+derL[1]);
         auto dpLdrho = R*T*(1 + 2*derL[1] + derL[2]);
         auto hatmurL = id::build_Psir_gradient_autodiff(m_model, T, rhovecL)[0] + R*T*log(rhomolarL);
         auto dhatmurLdrho = id::build_Psir_Hessian_autodiff(m_model, T, rhovecL)(0,0) + R*T/rhomolarL;
 
-        auto derV = tdx::get_Ar0n<2>(m_model, T, rhomolarV, molefracs);
+        auto derV = tdx::template get_Ar0n<2>(m_model, T, rhomolarV, molefracs);
         auto pV = rhomolarV*R*T*(1 + derV[1]);
         auto dpVdrho = R*T*(1 + 2*derV[1] + derV[2]);
         auto hatmurV = id::build_Psir_gradient_autodiff(m_model, T, rhovecV)[0] + R*T*log(rhomolarV);
