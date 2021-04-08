@@ -146,9 +146,7 @@ int main(){
    
     std::string coolprop_root = "C:/Users/ihb/Code/CoolProp";
     coolprop_root = "../mycp";
-    auto BIPcollection = nlohmann::json::parse(
-        std::ifstream(coolprop_root + "/dev/mixtures/mixture_binary_pairs.json")
-    );
+    auto BIPcollection = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
 
     //// Critical curves
     //{
