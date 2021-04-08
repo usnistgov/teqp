@@ -176,7 +176,7 @@ private:
     std::vector<std::string> names;
     double k_ij; ///< binary interaction parameter
 public:
-    PCSAFTMixture(const std::vector<std::string> names) : names(names)
+    PCSAFTMixture(const std::vector<std::string> &names) : names(names)
     {
         m.resize(names.size());
         mminus1.resize(names.size());
@@ -191,9 +191,30 @@ public:
             epsilon_over_k[i] = coeff.epsilon_over_k;
             i++;
         }
-
         k_ij = 0;
     };
+    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs) 
+    {
+        m.resize(coeffs.size());
+        mminus1.resize(coeffs.size());
+        sigma_Angstrom.resize(coeffs.size());
+        epsilon_over_k.resize(coeffs.size());
+        names.resize(coeffs.size());
+        auto i = 0;
+        for (const auto &coeff : coeffs) {
+            m[i] = coeff.m;
+            mminus1[i] = m[i] - 1;
+            sigma_Angstrom[i] = coeff.sigma_Angstrom;
+            epsilon_over_k[i] = coeff.epsilon_over_k;
+            names[i] = coeff.name;
+            i++;
+        }
+        k_ij = 0;
+    };
+    auto get_m(){ return m; }
+    auto get_sigma_Angstrom() { return sigma_Angstrom; }
+    auto get_epsilon_over_k_K() { return epsilon_over_k; }
+
     void print_info() {
         std::cout << "i m sigma / A e/kB / K \n  ++++++++++++++" << std::endl;
         for (auto i = 0; i < m.size(); ++i) {
@@ -207,7 +228,7 @@ public:
         for (auto i = 0; i < N; ++i) {
             d[i] = sigma_Angstrom[i] * (1.0 - 0.12 * exp(-3.0 * epsilon_over_k[i] / T));
         }
-        return 6 * 0.74 / EIGEN_PI / (mole_fractions*m*powvec(d, 3)).sum();
+        return 6 * 0.74 / EIGEN_PI / (mole_fractions*m*powvec(d, 3)).sum()*1e30; // particles/m^3
     }
     const double R = get_R_gas<double>();
 
