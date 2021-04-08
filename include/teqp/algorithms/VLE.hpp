@@ -63,11 +63,11 @@ public:
 };
 
 template<typename Residual, typename Scalar>
-auto do_pure_VLE(Residual &resid, Scalar T, Scalar rhoL, Scalar rhoV) {
+auto do_pure_VLE_T(Residual &resid, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
     auto rhovec = (Eigen::ArrayXd(2) << rhoL, rhoV).finished();
     auto r0 = resid.call(rhovec);
     auto J = resid.Jacobian(rhovec);
-    for (int iter = 0; iter < 100; ++iter){
+    for (int iter = 0; iter < maxiter; ++iter){
         if (iter > 0) {
             r0 = resid.call(rhovec);
             J = resid.Jacobian(rhovec); 
@@ -76,11 +76,12 @@ auto do_pure_VLE(Residual &resid, Scalar T, Scalar rhoL, Scalar rhoV) {
         auto rhovecnew = (rhovec + v).eval();
         
         // If the solution has stopped improving, stop. The change in rhovec is equal to v in infinite precision, but 
-        // not when finite precision is involved, so use the minimum non-denormal float as the determination of whether
+        // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
         // the values are done changing
         if (((rhovecnew - rhovec).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
             break;
         }
         rhovec += v;
     }
+    return std::make_tuple(rhovec[0], rhovec[1]);
 }
