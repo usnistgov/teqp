@@ -185,7 +185,7 @@ bool any(const Iterable& foo) {
 template<typename Model, typename TType, typename RhoType>
 auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhovec) {
 
-    // The derivatives of total Psi w.r.t.sigma_1(mcx for residual, analytic for ideal)
+    // The derivatives of total Psi w.r.t.sigma_1 (numerical for residual, analytic for ideal)
     // Returns a tuple, with residual, ideal, total dicts with of number of derivatives, value of derivative
     auto all_derivs = get_derivs(model, T, rhovec);
     auto derivs = all_derivs.tot;
@@ -213,7 +213,7 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
         deriv_sigma2 = (plus_sigma2.tot - minus_sigma2.tot) / (2.0 * sigma2);
         stepping_desc = "conventional centered";
     }
-    else if (any(eval(rhovec_minus < 0))) {
+    else if (all(eval(rhovec_plus > 0))) {
         // Forward derivative in the direction of v1
         auto plus_sigma2 = get_derivs(model, T, rhovec_plus);
         auto rhovec_2plus = (rhovec + 2 * ei.v1 * sigma2).eval();
@@ -221,7 +221,7 @@ auto get_drhovec_dT_crit(const Model& model, const TType T, const RhoType& rhove
         deriv_sigma2 = (-3 * derivs + 4 * plus_sigma2.tot - plus2_sigma2.tot) / (2.0 * sigma2);
         stepping_desc = "forward";
     }
-    else if (any(eval(rhovec_minus > 0))) {
+    else if (all(eval(rhovec_minus > 0))) {
         // Negative derivative in the direction of v1
         auto minus_sigma2 = get_derivs(model, T, rhovec_minus);
         auto rhovec_2minus = (rhovec - 2 * ei.v1 * sigma2).eval();

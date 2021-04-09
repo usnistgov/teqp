@@ -26,7 +26,10 @@ def trace():
     T0 = Tcvec[i]
     z = np.array([0, 0]); z[i] = 1
     rho0 = z*rhocvec[i]
+    tic = timeit.default_timer()
     curveJSON = teqp.trace_critical_arclength_binary(model, T0, rho0, "")
+    toc = timeit.default_timer()
+    print(toc-tic)
     df = pandas.DataFrame(curveJSON)
     df['z0 / mole frac.'] = df['rho0 / mol/m^3']/(df['rho0 / mol/m^3']+df['rho1 / mol/m^3'])
     print(df['z0 / mole frac.'])
