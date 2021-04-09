@@ -1,3 +1,7 @@
+#define USE_AUTODIFF
+
+#include "pybind11_json/pybind11_json.hpp"
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
@@ -19,10 +23,6 @@ void add_TDx_derivatives(py::module& m) {
     m.def("get_Ar11", &id::get_Ar11<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
     m.def("get_Ar02", &id::get_Ar02<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
     m.def("get_Ar20", &id::get_Ar20<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    m.def("get_Ar03n", &id::get_Ar0n<3, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    m.def("get_Ar04n", &id::get_Ar0n<4, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    m.def("get_Ar05n", &id::get_Ar0n<5, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    m.def("get_Ar06n", &id::get_Ar0n<6, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
     m.def("get_neff", &id::get_neff<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg("molefrac"));
 }
 
@@ -49,6 +49,8 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     add_virials<Model>(m);
     add_TDx_derivatives<Model>(m);
 
+    m.def("trace_critical_arclength_binary", &trace_critical_arclength_binary<Model,Eigen::ArrayXd>);
+
     cls.def("get_Ar01", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar01(m, T, rhovec); });
     cls.def("get_Ar10", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar10(m, T, rhovec); });
     using tdx = TDXDerivatives<Model, double, Eigen::Array<double, Eigen::Dynamic, 1> >;
@@ -58,6 +60,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_Ar04n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<4>(m, T, rho, molefrac); });
     cls.def("get_Ar05n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<5>(m, T, rho, molefrac); });
     cls.def("get_Ar06n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<6>(m, T, rho, molefrac); });
+    cls.def("get_neff", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_neff(m, T, rho, molefrac); });
 }
 
 void init_teqp(py::module& m) {
@@ -97,7 +100,10 @@ void init_teqp(py::module& m) {
     m.def("build_multifluid_model", &build_multifluid_model);
     using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"",""},"",""));
     using idMF = IsochoricDerivatives<MultiFluid, double, Eigen::Array<double, Eigen::Dynamic, 1> >;
-    auto wMF = py::class_<MultiFluid>(m, "MultiFluid");
+    auto wMF = py::class_<MultiFluid>(m, "MultiFluid")
+        .def("get_Tcvec", [](const MultiFluid& c) { return c.redfunc.Tc; })
+        .def("get_vcvec", [](const MultiFluid& c) { return c.redfunc.vc; })
+        ;
     add_derivatives<MultiFluid>(m, wMF);
 
     // for timing testing

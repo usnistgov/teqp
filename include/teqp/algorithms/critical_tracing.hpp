@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include "nlohmann/json.hpp"
 
 #include <Eigen/Dense>
 #include "teqp/algorithms/rootfinding.hpp"
@@ -127,8 +128,8 @@ auto get_derivs(const Model& model, const TType T, const RhoType& rhovec) {
 
 #if defined(USE_AUTODIFF)
     // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
-    VectorXdual4th v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
-    VectorXdual4th rhovecad(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecad[i] = rhovec[i]; }
+    ArrayXdual4th v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
+    ArrayXdual4th rhovecad(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecad[i] = rhovec[i]; }
     dual4th varsigma{0.0};
     auto wrapper = [&rhovecad, &v0, &T, &model](const auto &sigma_1) {
         auto rhovecused = (rhovecad + sigma_1*v0).eval();
@@ -279,7 +280,7 @@ auto critical_polish_molefrac(const ModelType &model, const double T, const VecT
 }
 
 template<typename ModelType, typename VecType>
-void trace_critical_arclength_binary(const ModelType& model, double T0, const VecType &rhovec0, const std::string &filename) {
+auto trace_critical_arclength_binary(const ModelType& model, double T0, const VecType &rhovec0, const std::string &filename) {
 
     double t = 0.0, dt = 100;
     VecType last_drhodt;
@@ -288,7 +289,10 @@ void trace_critical_arclength_binary(const ModelType& model, double T0, const Ve
 
     auto dot = [](const auto& v1, const auto& v2) { return (v1 * v2).sum(); };
     auto norm = [](const auto& v) { return sqrt((v * v).sum()); };
-    std::ofstream ofs(filename);
+
+    auto JSONdata = nlohmann::json::array();
+    std::ofstream ofs = (filename.empty()) ? std::ofstream() : std::ofstream(filename);
+    
     double c = 1.0;
     ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c" << std::endl;
     for (auto iter = 0; iter < 1000; ++iter) {
@@ -300,8 +304,10 @@ void trace_critical_arclength_binary(const ModelType& model, double T0, const Ve
             using id = IsochoricDerivatives<decltype(model)>;
             out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R * T + id::get_pr(model, T, rhovec) << "," << c << std::endl;
             std::string sout(out.str());
-            ofs << sout;
             std::cout << sout;
+            if (ofs.is_open()) {
+                ofs << sout;
+            }
         };
         if (iter == 0) {
             if (!filename.empty()){
@@ -311,7 +317,7 @@ void trace_critical_arclength_binary(const ModelType& model, double T0, const Ve
 
         auto drhodT = get_drhovec_dT_crit(model, T, rhovec).array().eval();
         auto dTdt = 1.0 / norm(drhodT);
-        auto drhodt = drhodT * dTdt;
+        auto drhodt = (drhodT * dTdt).eval();
 
         // Flip the sign if the tracing wants to go backwards, or if the first step would yield any negative concentrations
 
@@ -351,5 +357,15 @@ void trace_critical_arclength_binary(const ModelType& model, double T0, const Ve
         if (!filename.empty()) {
             write_line();
         }
+        using id = IsochoricDerivatives<decltype(model)>;
+        nlohmann::json point = { 
+            {"t", t},
+            {"T / K", T},
+            {"rho0 / mol/m^3", rhovec[0]},
+            {"rho1 / mol/m^3", rhovec[1]},
+            {"p / Pa", rhotot*model.R*T + id::get_pr(model, T, rhovec)},
+        };
+        JSONdata.push_back(point);
     }
+    return JSONdata;
 }

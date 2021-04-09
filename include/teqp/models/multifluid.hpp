@@ -1,6 +1,7 @@
 #pragma once
 
-#include "json.hpp"
+#include "nlohmann/json.hpp"
+
 #include <Eigen/Dense>
 #include <fstream>
 #include <string>

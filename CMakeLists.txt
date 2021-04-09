@@ -23,6 +23,7 @@ set(TEQP_NO_PYTHON false)
 if (NOT TEQP_NO_PYTHON)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11" "pybind11")
     pybind11_add_module(teqp "${CMAKE_CURRENT_SOURCE_DIR}/interface/pybind11_wrapper.cpp")
+    target_include_directories(teqp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11_json/include")
     target_link_libraries(teqp PRIVATE autodiff)
 endif()
 
