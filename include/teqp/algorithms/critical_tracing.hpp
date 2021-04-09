@@ -313,13 +313,15 @@ void trace_critical_arclength_binary(const ModelType& model, double T0, const Ve
         auto dTdt = 1.0 / norm(drhodT);
         auto drhodt = drhodT * dTdt;
 
-        // Flip the sign if the tracing wants to go backwards, or if the first step would take you to negative concentrations
-        Eigen::ArrayXd step = rhovec + c*drhodt*dt;
-        auto negativestepvals = (step < 0).eval();
-        if (iter == 0 && negativestepvals.all()) {
+        // Flip the sign if the tracing wants to go backwards, or if the first step would yield any negative concentrations
+
+        VecType this_drhodt = (c * drhodt).eval(); 
+        VecType step = rhovec + this_drhodt*dt;
+        Eigen::ArrayX<bool> negativestepvals = (step < 0).eval();
+        if (iter == 0 && negativestepvals.any()) {
             c *= -1;
         }
-        else if (iter > 0 && dot((c * drhodt).eval(), last_drhodt) < 0) {
+        else if (iter > 0 && dot(this_drhodt, last_drhodt) < 0) {
             c *= -1;
         }
 
