@@ -39,6 +39,9 @@ void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json 
             auto rhoc0 = 1.0 / model.redfunc.vc[i];
             auto T0 = model.redfunc.Tc[i];
             Eigen::ArrayXd rhovec(2); rhovec[i] = { rhoc0 }; rhovec[1L - i] = 0.0;
+
+            using ct = CriticalTracing<ModelType>;
+
             // Non-analytic terms make it impossible to initialize AT the pure components
             if (pp[0] == "CarbonDioxide" || pp[1] == "CarbonDioxide") {
                 if (i == 0) {
@@ -52,12 +55,12 @@ void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json 
                 double zi = rhovec[i] / rhovec.sum();
                 double T = zi * model.redfunc.Tc[i] + (1 - zi) * model.redfunc.Tc[1L - i];
                 double z0 = (i == 0) ? zi : 1-zi;
-                auto [Tnew, rhonew] = critical_polish_molefrac(model, T, rhovec, z0);
+                auto [Tnew, rhonew] = ct::critical_polish_molefrac(model, T, rhovec, z0);
                 T0 = Tnew;
                 rhoc0 = rhovec.sum();
             }
             std::string filename = pp[0] + "_" + pp[1] + ".csv";
-            trace_critical_arclength_binary(model, T0, rhovec, filename);
+            ct::trace_critical_arclength_binary(model, T0, rhovec, filename);
         }
     }
 }
@@ -148,11 +151,11 @@ int main(){
     coolprop_root = "../mycp";
     auto BIPcollection = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
 
-    //// Critical curves
-    //{
-    //    Timer t(1);
-    //    trace_critical_loci(coolprop_root, BIPcollection);
-    //}
+    // Critical curves
+    {
+        Timer t(1);
+        trace_critical_loci(coolprop_root, BIPcollection);
+    }
 
     //time_calls(coolprop_root, BIPcollection);
 

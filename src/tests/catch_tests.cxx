@@ -196,7 +196,8 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
 
     auto tic0 = std::chrono::steady_clock::now();
     std::string filename = "";
-    trace_critical_arclength_binary(vdW, T0, rhovec0, filename);
+    using ct = CriticalTracing<decltype(vdW), double, Eigen::ArrayXd>;
+    ct::trace_critical_arclength_binary(vdW, T0, rhovec0, filename);
     auto tic1 = std::chrono::steady_clock::now();
 }
 
