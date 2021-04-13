@@ -67,6 +67,10 @@ enum class ADBackends { autodiff, multicomplex, complex_step };
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
 struct TDXDerivatives {
 
+    static auto get_Ar00(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        return model.alphar(T, rho, molefrac);
+    }
+
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar10(const Model& model, const Scalar &T, const Scalar &rho, const VectorType& molefrac) {
         if constexpr (be == ADBackends::complex_step) {
@@ -169,12 +173,11 @@ struct TDXDerivatives {
                 return model.alphar(1.0/Trecip, rhomolar, molefrac);
             };
             std::vector<double> xs = { rho, 1.0/T};
-            std::vector<int> order = { 1, 1 };
+            std::vector<int> order = { 1, 1};
             auto der = mcx::diff_mcxN(func, xs, order);
             return (1.0/T)*rho*der;
         }
         else if constexpr (be == ADBackends::autodiff) {
-            //static_assert("bug in autodiff, can't use autodiff for cross derivative");
             autodiff::dual2nd rhodual = rho, Trecipdual=1/T;
             auto f = [&model, &molefrac](const auto& Trecip, const auto&rho_) { return eval(model.alphar(eval(1/Trecip), rho_, molefrac)); };
             //auto der = derivative(f, wrt(Trecipdual, rhodual), at(Trecipdual, rhodual)); // d^2alphar/drhod(1/T) // This should work, but gives instead 1,0 derivative
@@ -183,6 +186,32 @@ struct TDXDerivatives {
         }
         else {
             static_assert("algorithmic differentiation backend is invalid in get_Ar11");
+        }
+    }
+
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar12(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+
+        if constexpr (be == ADBackends::multicomplex) {
+            using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
+            const fcn_t func = [&model, &molefrac](const auto& zs) {
+                auto rhomolar = zs[0], Trecip = zs[1];
+                return model.alphar(1.0 / Trecip, rhomolar, molefrac);
+            };
+            std::vector<double> xs = { rho, 1.0/T };
+            std::vector<int> order = { 1, 2 };
+            auto der = mcx::diff_mcxN(func, xs, order);
+            return (1.0/T)*rho*rho*der;
+        }
+        else if constexpr (be == ADBackends::autodiff) {
+            //static_assert("bug in autodiff, can't use autodiff for cross derivative");
+            autodiff::dual3rd rhodual = rho, Trecipdual = 1 / T;
+            auto f = [&model, &molefrac](const auto& Trecip, const auto& rho_) { return eval(model.alphar(eval(1 / Trecip), rho_, molefrac)); };
+            auto ders = derivatives(f, wrt(Trecipdual, rhodual, rhodual), at(Trecipdual, rhodual));
+            return (1.0/T)*rho*rho*ders.back();
+        }
+        else {
+            static_assert("algorithmic differentiation backend is invalid in get_Ar12");
         }
     }
 
@@ -199,9 +228,9 @@ template<typename Model, typename Scalar = double, typename VectorType = Eigen::
 struct VirialDerivatives {
 
     static auto get_B2vir(const Model& model, const Scalar &T, const VectorType& molefrac) {
-        double h = 1e-100;
+        Scalar h = 1e-100;
         // B_2 = dalphar/drho|T,z at rho=0
-        auto B2 = model.alphar(T, std::complex<double>(0.0, h), molefrac).imag()/h;
+        auto B2 = model.alphar(T, std::complex<Scalar>(0.0, h), molefrac).imag()/h;
         return B2;
     }
 
