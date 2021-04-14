@@ -107,12 +107,12 @@ auto extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar
     using tdx = TDXDerivatives<Model>;
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     auto R = model.R;
-    auto ders = tdx::get_Ar0n<4>(model, Tc, rhoc, z);
+    auto ders = tdx::template get_Ar0n<4>(model, Tc, rhoc, z);
     auto dpdrho = R*Tc*(1 + 2 * ders[1] + ders[2]); // Should be zero
     auto d2pdrho2 = R*Tc/rhoc*(2 * ders[1] + 4 * ders[2] + ders[3]); // Should be zero
     auto d3pdrho3 = R*Tc/(rhoc*rhoc)*(6 * ders[2] + 6 * ders[3] + ders[4]);
-    auto Ar11 = tdx::get_Ar11(model, Tc, rhoc, z);
-    auto Ar12 = tdx::get_Ar12(model, Tc, rhoc, z);
+    auto Ar11 = tdx::template get_Ar11(model, Tc, rhoc, z);
+    auto Ar12 = tdx::template get_Ar12(model, Tc, rhoc, z);
     auto d2pdrhodT = R * (1 + 2 * ders[1] + ders[2] - 2 * Ar11 - Ar12);
     auto Brho = sqrt(6*d2pdrhodT*Tc/d3pdrho3);
 
