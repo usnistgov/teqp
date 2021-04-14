@@ -1,6 +1,13 @@
 #pragma once
 
 #include <optional>
+#include "teqp/constants.hpp"
+
+/** 
+To add:
+1. Other cubic EOS (PR, SRK)
+2. LKP (Stefan Herrig's thesis)
+*/
 
 /* A (very) simple implementation of the van der Waals EOS*/
 class vdWEOS1 {
@@ -11,12 +18,12 @@ public:
 
     const double R = 1.380649e-23*6.02214076e23; ///< Exact value, given by k_B*N_A
 
-    template<typename TType, typename RhoType>
-    auto alphar(const TType T, const RhoType& rho) const {
-        auto rhotot = std::accumulate(std::begin(rho), std::end(rho), (RhoType::value_type)0.0);
+    template<typename TType, typename RhoType, typename VecType>
+    auto alphar(const TType &T, const RhoType& rhotot, const VecType &molefrac) const {
         auto Psiminus = -log(1.0 - b * rhotot);
         auto Psiplus = rhotot;
-        return Psiminus - a / (R * T) * Psiplus;
+        auto val = Psiminus - a / (R * T) * Psiplus;
+        return forceeval(val);
     }
 
     double p(double T, double v) {
@@ -40,7 +47,7 @@ protected:
 
     template<typename TType, typename CompType>
     auto a(TType T, const CompType& molefracs) const {
-        CompType::value_type a_ = 0.0;
+        typename CompType::value_type a_ = 0.0;
         auto ai = this->ai;
         for (auto i = 0; i < molefracs.size(); ++i) {
             for (auto j = 0; j < molefracs.size(); ++j) {
@@ -48,16 +55,16 @@ protected:
                 a_ = a_ + molefracs[i] * molefracs[j] * aij;
             }
         }
-        return a_;
+        return forceeval(a_);
     }
 
     template<typename CompType>
     auto b(const CompType& molefracs) const {
-        CompType::value_type b_ = 0.0;
+        typename CompType::value_type b_ = 0.0;
         for (auto i = 0; i < molefracs.size(); ++i) {
             b_ = b_ + molefracs[i] * bi[i];
         }
-        return b_;
+        return forceeval(b_);
     }
 
 public:
@@ -74,15 +81,14 @@ public:
 
     const NumType R = get_R_gas<double>();
 
-    template<typename TType, typename RhoType>
-    auto alphar(TType T,
+    template<typename TType, typename RhoType, typename MoleFracType>
+    auto alphar(const TType &T,
         const RhoType& rho,
-        const std::optional<typename RhoType::value_type> rhotot = std::nullopt) const
+        const MoleFracType &molefrac) const
     {
-        RhoType::value_type rhotot_ = (rhotot.has_value()) ? rhotot.value() : std::accumulate(std::begin(rho), std::end(rho), (decltype(rho[0]))0.0);
-        auto molefrac = rho / rhotot_;
-        auto Psiminus = -log(1.0 - b(molefrac) * rhotot_);
-        auto Psiplus = rhotot_;
-        return Psiminus - a(T, molefrac) / (R * T) * Psiplus;
+        auto Psiminus = -log(1.0 - b(molefrac) * rho);
+        auto Psiplus = rho;
+        auto val = Psiminus - a(T, molefrac) / (R * T) * Psiplus;
+        return forceeval(val);
     }
 };
