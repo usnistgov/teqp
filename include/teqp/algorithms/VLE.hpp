@@ -13,10 +13,15 @@ private:
     TYPE m_T;
     EigenMatrix J;
     EigenArray y;
+    
 public:
     std::size_t icall = 0;
+    double Rr, R0;
 
-    IsothermPureVLEResiduals(const Model& model, TYPE T) : m_model(model), m_T(T) {};
+    IsothermPureVLEResiduals(const Model& model, TYPE T) : m_model(model), m_T(T) {
+        Rr = m_model.R;
+        R0 = m_model.R;
+    };
 
     const auto& get_errors() { return y; };
 
@@ -33,22 +38,23 @@ public:
 
         const TYPE &T = m_T;
         const TYPE R = m_model.R;
+        double R0_over_Rr = R0 / Rr;
         
         auto derL = tdx::template get_Ar0n<2>(m_model, T, rhomolarL, molefracs);
-        auto pL = rhomolarL*R*T*(1+derL[1]);
-        auto dpLdrho = R*T*(1 + 2*derL[1] + derL[2]);
-        auto hatmurL = id::build_Psir_gradient_autodiff(m_model, T, rhovecL)[0] + R*T*log(rhomolarL);
-        auto dhatmurLdrho = id::build_Psir_Hessian_autodiff(m_model, T, rhovecL)(0,0) + R*T/rhomolarL;
+        auto pRTL = rhomolarL*(R0_over_Rr + derL[1]); // p/(R*T)
+        auto dpRTLdrhoL = R0_over_Rr + 2*derL[1] + derL[2];
+        auto hatmurL = derL[1] + derL[0] + R0_over_Rr*log(rhomolarL);
+        auto dhatmurLdrho = (2*derL[1] + derL[2])/rhomolarL + R0_over_Rr/rhomolarL;
 
         auto derV = tdx::template get_Ar0n<2>(m_model, T, rhomolarV, molefracs);
-        auto pV = rhomolarV*R*T*(1 + derV[1]);
-        auto dpVdrho = R*T*(1 + 2*derV[1] + derV[2]);
-        auto hatmurV = id::build_Psir_gradient_autodiff(m_model, T, rhovecV)[0] + R*T*log(rhomolarV);
-        auto dhatmurVdrho = id::build_Psir_Hessian_autodiff(m_model, T, rhovecV)(0,0) + R*T/rhomolarV;
+        auto pRTV = rhomolarV*(R0_over_Rr + derV[1]); // p/(R*T)
+        auto dpRTVdrhoV = R0_over_Rr + 2*derV[1] + derV[2];
+        auto hatmurV = derV[1] + derV[0] + R0_over_Rr *log(rhomolarV);
+        auto dhatmurVdrho = (2*derV[1] + derV[2])/rhomolarV + R0_over_Rr/rhomolarV;
 
-        y(0) = pL - pV;
-        J(0, 0) = dpLdrho;
-        J(0, 1) = -dpVdrho;
+        y(0) = pRTL - pRTV;
+        J(0, 0) = dpRTLdrhoL;
+        J(0, 1) = -dpRTVdrhoV;
 
         y(1) = hatmurL - hatmurV;
         J(1, 0) = dhatmurLdrho;
@@ -60,10 +66,19 @@ public:
     auto Jacobian(const EigenArray& rhovec){
         return J;
     }
+    //auto numJacobian(const EigenArray& rhovec) {
+    //    EigenArray plus0 = rhovec, plus1 = rhovec;
+    //    double dr = 1e-6 * rhovec[0];
+    //    plus0[0] += dr; plus1[1] += dr;
+    //    EigenMatrix J;
+    //    J.col(0) = (call(plus0) - call(rhovec))/dr;
+    //    J.col(1) = (call(plus1) - call(rhovec))/dr;
+    //    return J;
+    //}
 };
 
 template<typename Residual, typename Scalar>
-auto do_pure_VLE_T(Residual &resid, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
+auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
     auto rhovec = (Eigen::ArrayXd(2) << rhoL, rhoV).finished();
     auto r0 = resid.call(rhovec);
     auto J = resid.Jacobian(rhovec);
@@ -81,7 +96,31 @@ auto do_pure_VLE_T(Residual &resid, Scalar T, Scalar rhoL, Scalar rhoV, int maxi
         if (((rhovecnew - rhovec).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
             break;
         }
-        rhovec += v;
+        rhovec = rhovecnew;
     }
-    return std::make_tuple(rhovec[0], rhovec[1]);
+    return (Eigen::ArrayXd(2) << rhovec[0], rhovec[1]).finished();
+}
+
+template<typename Model, typename Scalar>
+auto extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar rhoc, const Scalar T) {
+    
+    using tdx = TDXDerivatives<Model>;
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    auto R = model.R;
+    auto ders = tdx::get_Ar0n<4>(model, Tc, rhoc, z);
+    auto dpdrho = R*Tc*(1 + 2 * ders[1] + ders[2]); // Should be zero
+    auto d2pdrho2 = R*Tc/rhoc*(2 * ders[1] + 4 * ders[2] + ders[3]); // Should be zero
+    auto d3pdrho3 = R*Tc/(rhoc*rhoc)*(6 * ders[2] + 6 * ders[3] + ders[4]);
+    auto Ar11 = tdx::get_Ar11(model, Tc, rhoc, z);
+    auto Ar12 = tdx::get_Ar12(model, Tc, rhoc, z);
+    auto d2pdrhodT = R * (1 + 2 * ders[1] + ders[2] - 2 * Ar11 - Ar12);
+    auto Brho = sqrt(6*d2pdrhodT*Tc/d3pdrho3);
+
+    auto drhohat_dT = Brho / Tc;
+    auto dT = T - Tc;
+
+    auto drhohat = dT * drhohat_dT;
+    auto rholiq = -drhohat/sqrt(1 - T/Tc) + rhoc;
+    auto rhovap = drhohat/sqrt(1 - T/Tc) + rhoc;
+    return (Eigen::ArrayXd(2) << rholiq, rhovap).finished();
 }

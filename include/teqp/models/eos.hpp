@@ -45,6 +45,20 @@ protected:
     template<typename TType, typename IndexType>
     auto get_bi(TType T, IndexType i) const { return bi[i]; }
 
+    
+
+public:
+    vdWEOS(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa)
+    {
+        ai.resize(Tc_K.size());
+        bi.resize(Tc_K.size());
+        for (auto i = 0; i < Tc_K.size(); ++i) {
+            ai[i] = 27.0 / 64.0 * pow(R * Tc_K[i], 2) / pc_Pa[i];
+            bi[i] = 1.0 / 8.0 * R * Tc_K[i] / pc_Pa[i];
+        }
+        k = std::valarray<std::valarray<NumType>>(std::valarray<NumType>(0.0, Tc_K.size()), Tc_K.size());
+    }; 
+    
     template<typename TType, typename CompType>
     auto a(TType T, const CompType& molefracs) const {
         typename CompType::value_type a_ = 0.0;
@@ -66,18 +80,6 @@ protected:
         }
         return forceeval(b_);
     }
-
-public:
-    vdWEOS(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa)
-    {
-        ai.resize(Tc_K.size());
-        bi.resize(Tc_K.size());
-        for (auto i = 0; i < Tc_K.size(); ++i) {
-            ai[i] = 27.0 / 64.0 * pow(R * Tc_K[i], 2) / pc_Pa[i];
-            bi[i] = 1.0 / 8.0 * R * Tc_K[i] / pc_Pa[i];
-        }
-        k = std::valarray<std::valarray<NumType>>(std::valarray<NumType>(0.0, Tc_K.size()), Tc_K.size());
-    };
 
     const NumType R = get_R_gas<double>();
 

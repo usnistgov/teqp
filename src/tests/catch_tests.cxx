@@ -3,6 +3,7 @@
 
 #include "teqp/core.hpp"
 #include "teqp/models/pcsaft.hpp"
+#include "teqp/models/cubicsuperancillary.hpp"
 #include "teqp/algorithms/VLE.hpp"
 
 auto build_vdW_argon() {
@@ -232,6 +233,39 @@ TEST_CASE("Test psir gradient", "") {
     CHECK(err1 < 1e-12);
 }
 
+TEST_CASE("Test extrapolate from critical point", "") {
+    std::valarray<double> Tc_K = { 150.687};
+    std::valarray<double> pc_Pa = { 4863000.0};
+    vdWEOS<double> model(Tc_K, pc_Pa);
+    const auto Zc = 3.0 / 8.0;
+    auto stepper = [&model, &pc_Pa, &Tc_K, &Zc](double step) {
+        auto rhoc_molm3 = pc_Pa[0] / (model.R * Tc_K[0]) / Zc;
+        auto T = Tc_K[0] - step; 
+        auto rhovec = extrapolate_from_critical(model, Tc_K[0], rhoc_molm3, T);
+        auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+
+        auto b = model.b(z), a = model.a(T, z), R = model.R;
+        auto Ttilde = R*T*b/a;
+        using namespace CubicSuperAncillary;
+        auto SArhoL = supercubic(VDW_CODE, RHOL_CODE, Ttilde) / b;
+        auto SArhoV = supercubic(VDW_CODE, RHOV_CODE, Ttilde) / b;
+
+        auto resid = IsothermPureVLEResiduals(model, T);
+        auto rhosoln = do_pure_VLE_T(resid, rhovec[0], rhovec[1], 20);
+        auto r0 = resid.call(rhosoln);
+
+        auto errrhoL = SArhoL - rhosoln[0], errrhoV = SArhoV - rhosoln[1];
+        if (std::abs(errrhoL)/SArhoL > 1e-10) { 
+            throw std::range_error("rhoL error > 1e-10"); }
+        if (std::abs(errrhoV)/SArhoV > 1e-10) { 
+            throw std::range_error("rhoV error > 1e-10"); }
+    };
+    CHECK_NOTHROW(stepper(0.01));
+    CHECK_NOTHROW(stepper(0.1));
+    CHECK_NOTHROW(stepper(1.0));
+    CHECK_NOTHROW(stepper(10.0));
+}
+
 TEST_CASE("Test pure VLE", "") {
     const auto model = build_vdW_argon();
     double T = 100.0;
@@ -244,5 +278,31 @@ TEST_CASE("Test pure VLE", "") {
     auto r1 = resid.call(rhovec1);
     CHECK((r0.cwiseAbs() > r1.cwiseAbs()).eval().all());
 
-    do_pure_VLE_T(resid, T, 22834.056386882046, 1025.106554560764, 20);
+    auto rhosoln = do_pure_VLE_T(resid, 22834.056386882046, 1025.106554560764, 20);
+    auto rsoln = resid.call(rhosoln); 
+    CHECK((rsoln.cwiseAbs() <  1e-8).all());
+}
+
+TEST_CASE("Test pure VLE with non-unity R0/Rr", "") {
+    const auto model = build_vdW_argon();
+    double T = 100.0;
+
+    auto residnormal = IsothermPureVLEResiduals(model, T);
+    auto soln0 = do_pure_VLE_T(residnormal, 22834.056386882046, 1025.106554560764, 20);
+    auto r0 = residnormal.call(soln0);
+
+    double Omega_b = 1.0 / 8, Omega_a = 27.0 / 64;
+    double Tcrit = 150.687, pcrit = 4863000.0; // Argon
+    double Rr = 7.9144;
+    double b = Omega_b * Rr * Tcrit / pcrit;
+    double ba = Omega_b / Omega_a / Tcrit / Rr; // b/a
+    double a = b / ba;
+    auto vdW = vdWEOS1(a, b);
+
+    auto residspecial = IsothermPureVLEResiduals(vdW, T);
+    residspecial.Rr = Rr;
+    auto solnspecial = do_pure_VLE_T(residspecial, 22834.056386882046, 1025.106554560764, 20);
+    auto r1 = residspecial.call(solnspecial);
+
+    auto rr = 0;
 }
