@@ -17,6 +17,8 @@ jobs:
       run: cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
     - name: cmake make
       run: cmake --build build --target catch_tests
+    - name: build multifluid
+      run: cmake --build build --target multifluid
     # run tests
     - name: run Catch tests
       run: build/catch_tests
