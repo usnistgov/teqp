@@ -54,17 +54,17 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     //cls.def("get_Ar10", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar10(m, T, rhovec); });
     using tdx = TDXDerivatives<Model, double, Eigen::Array<double, Eigen::Dynamic, 1> >;
     cls.def("get_Ar00", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar00(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar01", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar01<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar10", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar10<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar11", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar11<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar12", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar12<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar01", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar01<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar10", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar10<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar11", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar11<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar12", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar12<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
 
-    cls.def("get_Ar01n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<1>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar02n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<2>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar03n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<3>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar04n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<4>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar05n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<5>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
-    cls.def("get_Ar06n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_Ar0n<6>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar01n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar0n<1>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar02n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar0n<2>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar03n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar0n<3>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar04n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar0n<4>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar05n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar0n<5>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_Ar06n", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::template get_Ar0n<6>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
     cls.def("get_neff", [](const Model& m, const double T, const double rho, const Eigen::ArrayXd& molefrac) { return tdx::get_neff(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
 }
 

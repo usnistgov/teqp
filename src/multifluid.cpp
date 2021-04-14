@@ -124,21 +124,21 @@ void time_calls(const std::string &coolprop_root, const J &BIPcollection) {
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                auto o = vd::get_Bnvir<3, ADBackends::autodiff>(model, T, molefrac)[3];
+                auto o = vd::template get_Bnvir<3, ADBackends::autodiff>(model, T, molefrac)[3];
             }
             std::cout << alphar << "; 3 derivs" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                auto o = vd::get_Bnvir<4, ADBackends::autodiff>(model, T, molefrac)[4];
+                auto o = vd::template get_Bnvir<4, ADBackends::autodiff>(model, T, molefrac)[4];
             }
             std::cout << alphar << "; 4 derivs" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                auto o = vd::get_Bnvir<5, ADBackends::autodiff>(model, T, molefrac)[5];
+                auto o = vd::template get_Bnvir<5, ADBackends::autodiff>(model, T, molefrac)[5];
             }
             std::cout << alphar << "; 5 derivs" << std::endl;
         }
