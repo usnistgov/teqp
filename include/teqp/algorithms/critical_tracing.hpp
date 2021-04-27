@@ -51,10 +51,7 @@ struct CriticalTracing {
             }
         }
 
-        int nonzero_count = 0;
-        for (auto& m : mask) {
-            nonzero_count += (m == 1);
-        }
+        int nonzero_count = mask.count();
         auto zero_count = N - nonzero_count;
 
         if (zero_count == 0) {

@@ -6,6 +6,8 @@
 #include <fstream>
 #include <string>
 #include <cmath>
+#include <optional>
+#include "teqp/types.hpp"
 #include "MultiComplex/MultiComplex.hpp"
 
 // See https://eigen.tuxfamily.org/dox/TopicCustomizing_CustomScalar.html
@@ -75,7 +77,7 @@ public:
     const CorrespondingTerm corr;
     const DepartureTerm dep;
 
-    const double R = get_R_gas<double>();
+    const double R = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
 
     MultiFluid(ReducingFunction&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep) : redfunc(redfunc), corr(corr), dep(dep) {};
 

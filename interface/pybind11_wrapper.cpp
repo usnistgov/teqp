@@ -13,6 +13,7 @@
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/multifluid.hpp"
+#include "teqp/algorithms/VLE.hpp"
 
 namespace py = pybind11;
 
@@ -49,6 +50,9 @@ void add_derivatives(py::module &m, Wrapper &cls) {
 
     using ct = CriticalTracing<Model, double, Eigen::Array<double, Eigen::Dynamic, 1>>;
     m.def("trace_critical_arclength_binary", &ct::trace_critical_arclength_binary);
+
+    m.def("extrapolate_from_critical", &extrapolate_from_critical<Model, double>);
+    m.def("pure_VLE_T", &pure_VLE_T<Model, double>);
 
     //cls.def("get_Ar01", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar01(m, T, rhovec); });
     //cls.def("get_Ar10", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar10(m, T, rhovec); });

@@ -102,6 +102,11 @@ auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
 }
 
 template<typename Model, typename Scalar>
+auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
+    return do_pure_VLE_T(IsothermPureVLEResiduals(model, T), rhoL, rhoV, maxiter);
+}
+
+template<typename Model, typename Scalar>
 auto extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar rhoc, const Scalar T) {
     
     using tdx = TDXDerivatives<Model>;

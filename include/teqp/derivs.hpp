@@ -12,18 +12,6 @@
 #include <autodiff/forward/dual/eigen.hpp>
 using namespace autodiff;
 
-template<typename T>
-auto forceeval(T&& expr)
-{
-    using namespace autodiff::detail;
-    if constexpr (isDual<T> || isExpr<T> || isNumber<T>) {
-        return eval(expr);
-    }
-    else {
-        return expr;
-    }
-}
-
 /***
 * \brief Given a function, use complex step derivatives to calculate the derivative with 
 * respect to the first variable which here is temperature
@@ -91,7 +79,7 @@ struct TDXDerivatives {
             return (1.0/T)*der;
         }
         else {
-            static_assert("algorithmic differentiation backend is invalid in get_Ar10");
+            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar10");
         }
     }
 
@@ -116,7 +104,7 @@ struct TDXDerivatives {
             return rho*der;
         }
         else {
-            static_assert("algorithmic differentiation backend is invalid in get_Ar01");
+            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar01");
         }
     }
 
@@ -129,7 +117,7 @@ struct TDXDerivatives {
             return rho*rho*ders[2];
         }
         else {
-            static_assert("algorithmic differentiation backend is invalid in get_Ar02");
+            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar02");
         }
     }
 
@@ -141,25 +129,25 @@ struct TDXDerivatives {
             auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
             auto ders = derivatives(f, wrt(rhodual), at(rhodual));
             for (auto n = 0; n <= Nderiv; ++n) {
-                o[n] = pow(rho, n)*ders[n];
+                o[n] = pow(rho, n) * ders[n];
             }
             return o;
         }
         else {
-            static_assert("algorithmic differentiation backend is invalid in get_Ar0n");
+            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar0n");
         }
     }
 
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar20(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         if constexpr (be == ADBackends::autodiff) {
-            autodiff::dual2nd Trecipdual = 1/T;
-            auto f = [&model, &rho, &molefrac](const auto& Trecip) { return eval(model.alphar(eval(1/Trecip), rho, molefrac)); };
+            autodiff::dual2nd Trecipdual = 1 / T;
+            auto f = [&model, &rho, &molefrac](const auto& Trecip) { return eval(model.alphar(eval(1 / Trecip), rho, molefrac)); };
             auto ders = derivatives(f, wrt(Trecipdual), at(Trecipdual));
-            return (1/T)*(1/T)*ders[2];
+            return (1 / T) * (1 / T) * ders[2];
         }
         else {
-            static_assert("algorithmic differentiation backend is invalid in get_Ar20");
+            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar20");
         }
     }
 
@@ -170,22 +158,22 @@ struct TDXDerivatives {
             using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
             const fcn_t func = [&model, &molefrac](const auto& zs) {
                 auto rhomolar = zs[0], Trecip = zs[1];
-                return model.alphar(1.0/Trecip, rhomolar, molefrac);
+                return model.alphar(1.0 / Trecip, rhomolar, molefrac);
             };
-            std::vector<double> xs = { rho, 1.0/T};
-            std::vector<int> order = { 1, 1};
+            std::vector<double> xs = { rho, 1.0 / T };
+            std::vector<int> order = { 1, 1 };
             auto der = mcx::diff_mcxN(func, xs, order);
-            return (1.0/T)*rho*der;
+            return (1.0 / T) * rho * der;
         }
         else if constexpr (be == ADBackends::autodiff) {
-            autodiff::dual2nd rhodual = rho, Trecipdual=1/T;
-            auto f = [&model, &molefrac](const auto& Trecip, const auto&rho_) { return eval(model.alphar(eval(1/Trecip), rho_, molefrac)); };
+            autodiff::dual2nd rhodual = rho, Trecipdual = 1 / T;
+            auto f = [&model, &molefrac](const autodiff::dual2nd& Trecip, const autodiff::dual2nd& rho_) { return eval(model.alphar(eval(1 / Trecip), rho_, molefrac)); };
             //auto der = derivative(f, wrt(Trecipdual, rhodual), at(Trecipdual, rhodual)); // d^2alphar/drhod(1/T) // This should work, but gives instead 1,0 derivative
             auto [u01, u10, u11] = derivatives(f, wrt(Trecipdual, rhodual), at(Trecipdual, rhodual)); // d^2alphar/drhod(1/T)
-            return (1.0/T)*rho*u11;
+            return (1.0 / T) * rho * u11;
         }
         else {
-            static_assert("algorithmic differentiation backend is invalid in get_Ar11");
+            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar11");
         }
     }
 
@@ -198,20 +186,63 @@ struct TDXDerivatives {
                 auto rhomolar = zs[0], Trecip = zs[1];
                 return model.alphar(1.0 / Trecip, rhomolar, molefrac);
             };
-            std::vector<double> xs = { rho, 1.0/T };
+            std::vector<double> xs = { rho, 1.0 / T };
             std::vector<int> order = { 1, 2 };
             auto der = mcx::diff_mcxN(func, xs, order);
-            return (1.0/T)*rho*rho*der;
+            return (1.0 / T) * rho * rho * der;
         }
         else if constexpr (be == ADBackends::autodiff) {
             //static_assert("bug in autodiff, can't use autodiff for cross derivative");
             autodiff::dual3rd rhodual = rho, Trecipdual = 1 / T;
             auto f = [&model, &molefrac](const auto& Trecip, const auto& rho_) { return eval(model.alphar(eval(1 / Trecip), rho_, molefrac)); };
             auto ders = derivatives(f, wrt(Trecipdual, rhodual, rhodual), at(Trecipdual, rhodual));
-            return (1.0/T)*rho*rho*ders.back();
+            return (1.0 / T) * rho * rho * ders.back();
         }
         else {
-            static_assert("algorithmic differentiation backend is invalid in get_Ar12");
+            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar12");
+        }
+    }
+
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar(const int itau, const int idelta, const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        if (itau == 0) {
+            if (idelta == 0) {
+                return get_Ar00(model, T, rho, molefrac);
+            }
+            //else if (idelta == 1) {
+            //    return get_Ar01(model, T, rho, molefrac);
+            //}
+            //else if (idelta == 2) {
+            //    return get_Ar02(model, T, rho, molefrac);
+            //}
+            else {
+                throw std::invalid_argument("Invalid value for idelta");
+            }
+        }
+        else if (itau == 1){
+            if (idelta == 0) {
+                return get_Ar10(model, T, rho, molefrac);
+            }
+            //else if (idelta == 1) {
+            //    return get_Ar11(model, T, rho, molefrac);
+            //}
+            /*else if (idelta == 2) {
+                return get_Ar12(model, T, rho, molefrac);
+            }*/
+            else {
+                throw std::invalid_argument("Invalid value for idelta");
+            }
+        }
+        else if (itau == 2) {
+            if (idelta == 0) {
+                return get_Ar20(model, T, rho, molefrac);
+            }
+            else {
+                throw std::invalid_argument("Invalid value for idelta");
+            }
+        }
+        else {
+            throw std::invalid_argument("Invalid value for idelta");
         }
     }
 
@@ -219,7 +250,7 @@ struct TDXDerivatives {
     static auto get_neff(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         auto Ar01 = get_Ar01<be>(model, T, rho, molefrac);
         auto Ar11 = get_Ar11<be>(model, T, rho, molefrac);
-        auto Ar20 = get_Ar20(model, T, rho, molefrac);
+        auto Ar20 = get_Ar20<be>(model, T, rho, molefrac);
         return -3*(Ar01-Ar11)/Ar20;
     }
 };
@@ -266,7 +297,7 @@ struct VirialDerivatives {
             }
         }
         else{
-            static_assert("algorithmic differentiation backend is invalid");
+            static_assert(false, "algorithmic differentiation backend is invalid");
         }
         std::map<int, Scalar> o;
         for (int n = 2; n < Nderiv+1; ++n) {
