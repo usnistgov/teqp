@@ -79,8 +79,9 @@ struct TDXDerivatives {
             return (1.0/T)*der;
         }
         else {
-            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar10");
+            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar10");
         }
+        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar10");
     }
 
     template<ADBackends be = ADBackends::autodiff>
@@ -104,8 +105,9 @@ struct TDXDerivatives {
             return rho*der;
         }
         else {
-            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar01");
+            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar01");
         }
+        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar01");
     }
 
     template<ADBackends be = ADBackends::autodiff>
@@ -117,8 +119,9 @@ struct TDXDerivatives {
             return rho*rho*ders[2];
         }
         else {
-            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar02");
+            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar02");
         }
+        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar02");
     }
 
     template<int Nderiv, ADBackends be = ADBackends::autodiff>
@@ -134,8 +137,9 @@ struct TDXDerivatives {
             return o;
         }
         else {
-            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar0n");
+            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar0n");
         }
+        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar0n");
     }
 
     template<ADBackends be = ADBackends::autodiff>
@@ -147,8 +151,9 @@ struct TDXDerivatives {
             return (1 / T) * (1 / T) * ders[2];
         }
         else {
-            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar20");
+            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar20");
         }
+        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar20");
     }
 
     template<ADBackends be = ADBackends::autodiff>
@@ -173,8 +178,9 @@ struct TDXDerivatives {
             return (1.0 / T) * rho * u11;
         }
         else {
-            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar11");
+            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar11");
         }
+        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar11");
     }
 
     template<ADBackends be = ADBackends::autodiff>
@@ -199,8 +205,9 @@ struct TDXDerivatives {
             return (1.0 / T) * rho * rho * ders.back();
         }
         else {
-            static_assert(false, "algorithmic differentiation backend is invalid in get_Ar12");
+            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar12");
         }
+        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar12");
     }
 
     template<ADBackends be = ADBackends::autodiff>
@@ -297,8 +304,10 @@ struct VirialDerivatives {
             }
         }
         else{
-            static_assert(false, "algorithmic differentiation backend is invalid");
+            //static_assert(false, "algorithmic differentiation backend is invalid");
+            throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Bnvir");
         }
+        
         std::map<int, Scalar> o;
         for (int n = 2; n < Nderiv+1; ++n) {
             o[n] = dnalphardrhon[n-1];
