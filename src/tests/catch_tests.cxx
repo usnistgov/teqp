@@ -4,6 +4,7 @@
 #include "teqp/core.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/cubicsuperancillary.hpp"
+#include "teqp/models/CPA.hpp"
 #include "teqp/algorithms/VLE.hpp"
 
 auto build_vdW_argon() {
@@ -305,4 +306,30 @@ TEST_CASE("Test pure VLE with non-unity R0/Rr", "") {
     auto r1 = residspecial.call(solnspecial);
 
     auto rr = 0;
+}
+
+TEST_CASE("Test water", "") {
+    std::valarray<double> a0 = {0.12277}, bi = {0.000014515}, c1 = {0.67359}, Tc = {647.096}, 
+                          molefrac = {1.0};
+    CPACubic cub(cubic_flag::SRK, a0, bi, c1, Tc);
+    double T = 400, rhomolar = 100;
+    
+    auto R = 8.3144598;
+    auto z = (Eigen::ArrayXd(1) << 1).finished();
+
+    using tdx = TDXDerivatives<decltype(cub)>;
+    auto alphar = cub.alphar(T, rhomolar, molefrac);
+    double p_noassoc = T*rhomolar*R*(1+tdx::get_Ar01(cub, T, rhomolar, z));
+    CAPTURE(p_noassoc);
+
+    std::vector<association_classes> schemes = { association_classes::a4C };
+    std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
+    CPAAssociation cpaa(cub, schemes, epsAB, betaAB);
+
+    CPA cpa(cub, cpaa);
+    using tdc = TDXDerivatives<decltype(cpa)>;
+    double p_withassoc = T*rhomolar*R*(1 + tdc::get_Ar01(cpa, T, rhomolar, z));
+    CAPTURE(p_withassoc);
+
+    REQUIRE(p_withassoc == 3.14);
 }
