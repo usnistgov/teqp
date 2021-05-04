@@ -328,7 +328,8 @@ TEST_CASE("Test water", "") {
 
     CPA cpa(cub, cpaa);
     using tdc = TDXDerivatives<decltype(cpa)>;
-    double p_withassoc = T*rhomolar*R*(1 + tdc::get_Ar01(cpa, T, rhomolar, z));
+    auto Ar01 = tdc::get_Ar01(cpa, T, rhomolar, z);
+    double p_withassoc = T*rhomolar*R*(1 + Ar01);
     CAPTURE(p_withassoc);
 
     REQUIRE(p_withassoc == 3.14);

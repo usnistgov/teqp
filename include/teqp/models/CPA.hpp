@@ -39,7 +39,7 @@ auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_c
     double R_gas = 8.3144598;
 
     // Calculate the association strength between site Ai and Bi for a pure compent
-    auto DeltaAiBj = forceeval(g_vm_ref*exp(epsABi /(T*R_gas) - 1.0)*b_cubic* betaABi);
+    auto DeltaAiBj = forceeval(g_vm_ref*(exp(epsABi /(T*R_gas)) - 1.0)*b_cubic* betaABi);
 
     return DeltaAiBj;
 };
@@ -59,7 +59,7 @@ auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double
     XA.setOnes();
 
     // Get the association strength between the associating sites
-    auto dist = radial_dist::CS;
+    auto dist = radial_dist::KG; // TODO: pass this in
     auto DeltaAiBj = get_DeltaAB_pure(dist, epsABi, betaABi, b_cubic, T, rhomolar, molefrac);
 
     if (scheme == association_classes::a1A) { // Acids
@@ -152,11 +152,11 @@ class CPAAssociation {
 private:
     const Cubic& cubic;
     const std::vector<association_classes> classes;
-    const std::vector<double> N_sites;
+    const std::vector<int> N_sites;
     const std::valarray<double> epsABi, betaABi;
 
     auto get_N_sites(const std::vector<association_classes> &classes) {
-        std::vector<double> N_sites_out;
+        std::vector<int> N_sites_out;
         auto get_N = [](auto cl) {
             switch (cl) {
             case association_classes::a1A: return 1;
@@ -190,10 +190,10 @@ public:
         for (auto xi : molefrac){ // loop over all components
             auto XAi = XA.col(i);
             alpha_r_asso += forceeval(xi * (log(XAi) - XAi / 2).sum());
-            alpha_r_asso += xi*N_sites[i]/2;
+            alpha_r_asso += xi*static_cast<double>(N_sites[i])/2;
             i++;
         }
-        return alpha_r_asso;
+        return forceeval(alpha_r_asso);
     }
 };
 
@@ -215,8 +215,8 @@ public:
         auto alpha_r_cubic = cubic.alphar(T, rhomolar, molefrac);
 
         // Calculate the contribution to alphar from association
-        auto alpha_r_assoc = assoc.alphar(T, rhomolar, molefrac);
+        auto alpha_r_assoc = assoc.alphar(T, rhomolar, molefrac); 
 
-        return alpha_r_cubic + alpha_r_assoc;
+        return forceeval(alpha_r_cubic + alpha_r_assoc);
     }
 };
