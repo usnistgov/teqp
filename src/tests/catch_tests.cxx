@@ -339,7 +339,7 @@ TEST_CASE("Test water w/ factory", "") {
    using namespace CPA;
    nlohmann::json water = {
         {"a0i / Pa m^6/mol^2",0.12277 }, {"bi / m^3/mol", 0.000014515}, {"c1", 0.67359}, {"Tc / K", 647.096},
-        {"epsABi / J/mol", 16655.0}, {"betaABi",0.0692}, {"class","4C"}
+        {"epsABi / J/mol", 16655.0}, {"betaABi", 0.0692}, {"class","4C"}
    };
    nlohmann::json j = {
        {"cubic","SRK"},
