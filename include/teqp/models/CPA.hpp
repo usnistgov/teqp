@@ -1,9 +1,23 @@
 #pragma once
 
+namespace CPA {
+
 template<typename X> auto POW2(X x) { return x * x; };
 template<typename X> auto POW3(X x) { return x * POW2(x); };
 
 enum class association_classes {not_set, a1A, a2B, a3B, a4C, not_associating};
+
+auto get_association_classes(const std::string& s) {
+    if (s == "1A") { return association_classes::a1A; }
+    else if (s == "2B") { return association_classes::a2B; }
+    else if (s == "2B") { return association_classes::a2B; }
+    else if (s == "3B") { return association_classes::a3B; }
+    else if (s == "4C") { return association_classes::a4C; }
+    else {
+        throw std::invalid_argument("bad association flag:" + s);
+    }
+}
+
 enum class radial_dist { CS, KG, OT };
 
 /// Function that calculates the association binding strength between site A of molecule i and site B on molecule j
@@ -97,6 +111,13 @@ auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double
 };
 
 enum class cubic_flag {not_set, PR, SRK};
+auto get_cubic_flag(const std::string& s) {
+    if (s == "PR") { return cubic_flag::PR; }
+    else if (s == "SRK") { return cubic_flag::SRK; }
+    else {
+        throw std::invalid_argument("bad cubic flag:" + s);
+    }
+}
 
 class CPACubic {
 private:
@@ -106,7 +127,7 @@ private:
     std::valarray<std::valarray<double>> k_ij;
 
 public:
-    CPACubic(cubic_flag flag, const std::valarray<double> a0, const std::valarray<double> bi, const std::valarray<double> c1, const std::valarray<double> Tc) : a0(a0), bi(bi), c1(c1), Tc(Tc) {
+    CPACubic(cubic_flag flag, const std::valarray<double> &a0, const std::valarray<double> &bi, const std::valarray<double> &c1, const std::valarray<double> &Tc) : a0(a0), bi(bi), c1(c1), Tc(Tc) {
         switch (flag) {
         case cubic_flag::PR:
         { delta_1 = 1 + sqrt(2); delta_2 = 1 - sqrt(2); break; }
@@ -150,7 +171,7 @@ public:
 template<typename Cubic>
 class CPAAssociation {
 private:
-    const Cubic& cubic;
+    const Cubic cubic;
     const std::vector<association_classes> classes;
     const std::vector<int> N_sites;
     const std::valarray<double> epsABi, betaABi;
@@ -173,7 +194,7 @@ private:
     }
 
 public:
-    CPAAssociation(const Cubic &cubic, const std::vector<association_classes>& classes, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi) 
+    CPAAssociation(const Cubic &&cubic, const std::vector<association_classes>& classes, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi) 
         : cubic(cubic), classes(classes), epsABi(epsABi), betaABi(betaABi), N_sites(get_N_sites(classes)) {};
 
     template<typename TType, typename RhoType, typename VecType>
@@ -200,10 +221,10 @@ public:
 template <typename Cubic, typename Assoc>
 class CPA {
 public:
-    Cubic cubic;
-    Assoc assoc;
+    const Cubic cubic;
+    const Assoc assoc;
 
-    CPA(Cubic cubic, Assoc assoc) : cubic(cubic), assoc(assoc) {
+    CPA(Cubic &&cubic, Assoc &&assoc) : cubic(cubic), assoc(assoc) {
     }
 
     /// Residual dimensionless Helmholtz energy from the SRK or PR core and contribution due to association
@@ -220,3 +241,37 @@ public:
         return forceeval(alpha_r_cubic + alpha_r_assoc);
     }
 };
+
+/// A factory function to return an instantiated CPA instance given
+/// the JSON representation of the model
+auto CPAfactory(const nlohmann::json &j){
+    auto build_cubic = [](const auto& j) {
+        auto N = j["pures"].size();
+        std::valarray<double> a0i(N), bi(N), c1(N), Tc(N);
+        std::size_t i = 0;
+        for (auto p : j["pures"]) {
+            a0i[i] = p["a0i / Pa m^6/mol^2"];
+            bi[i] = p["bi / m^3/mol"];
+            c1[i] = p["c1"];
+            Tc[i] = p["Tc / K"];
+            i++;
+        }
+        return CPACubic(get_cubic_flag(j["cubic"]), a0i, bi, c1, Tc);
+    };
+	auto build_assoc = [](const auto &&cubic, const auto& j) {
+        auto N = j["pures"].size();
+        std::vector<association_classes> classes;
+        std::valarray<double> epsABi(N), betaABi(N);
+        std::size_t i = 0;
+        for (auto p : j["pures"]) {
+            epsABi[i] = p["epsABi / J/mol"];
+            betaABi[i] = p["betaABi"];
+            classes.push_back(get_association_classes(p["class"]));
+            i++;
+        }
+        return CPAAssociation(std::move(cubic), classes, epsABi, betaABi);
+    };
+	return CPA(build_cubic(j), build_assoc(build_cubic(j), j));
+}
+
+}; /* namespace CPA */

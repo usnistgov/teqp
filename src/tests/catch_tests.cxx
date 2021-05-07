@@ -311,7 +311,7 @@ TEST_CASE("Test pure VLE with non-unity R0/Rr", "") {
 TEST_CASE("Test water", "") {
     std::valarray<double> a0 = {0.12277}, bi = {0.000014515}, c1 = {0.67359}, Tc = {647.096}, 
                           molefrac = {1.0};
-    CPACubic cub(cubic_flag::SRK, a0, bi, c1, Tc);
+    CPA::CPACubic cub(CPA::cubic_flag::SRK, a0, bi, c1, Tc);
     double T = 400, rhomolar = 100;
     
     auto R = 8.3144598;
@@ -322,15 +322,37 @@ TEST_CASE("Test water", "") {
     double p_noassoc = T*rhomolar*R*(1+tdx::get_Ar01(cub, T, rhomolar, z));
     CAPTURE(p_noassoc);
 
-    std::vector<association_classes> schemes = { association_classes::a4C };
+    std::vector<CPA::association_classes> schemes = { CPA::association_classes::a4C };
     std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
-    CPAAssociation cpaa(cub, schemes, epsAB, betaAB);
+    CPA::CPAAssociation cpaa(std::move(cub), schemes, epsAB, betaAB);
 
-    CPA cpa(cub, cpaa);
+    CPA::CPA cpa(std::move(cub), std::move(cpaa));
     using tdc = TDXDerivatives<decltype(cpa)>;
     auto Ar01 = tdc::get_Ar01(cpa, T, rhomolar, z);
     double p_withassoc = T*rhomolar*R*(1 + Ar01);
     CAPTURE(p_withassoc);
 
     REQUIRE(p_withassoc == 3.14);
+}
+
+TEST_CASE("Test water w/ factory", "") {
+   using namespace CPA;
+   nlohmann::json water = {
+        {"a0i / Pa m^6/mol^2",0.12277 }, {"bi / m^3/mol", 0.000014515}, {"c1", 0.67359}, {"Tc / K", 647.096},
+        {"epsABi / J/mol", 16655.0}, {"betaABi",0.0692}, {"class","4C"}
+   };
+   nlohmann::json j = {
+       {"cubic","SRK"},
+       {"pures", {water}}
+   };
+   auto cpa = CPAfactory(j);
+
+   double T = 400, rhomolar = 100, R = 8.3144598;
+   auto z = (Eigen::ArrayXd(1) << 1).finished();
+   using tdc = TDXDerivatives<decltype(cpa)>;
+   auto Ar01 = tdc::get_Ar01(cpa, T, rhomolar, z);
+   double p_withassoc = T * rhomolar * R * (1 + Ar01);
+   CAPTURE(p_withassoc);
+
+   REQUIRE(p_withassoc == 3.14);
 }
