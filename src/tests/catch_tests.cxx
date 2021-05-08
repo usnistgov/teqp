@@ -326,7 +326,7 @@ TEST_CASE("Test water", "") {
     std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
     CPA::CPAAssociation cpaa(std::move(cub), schemes, epsAB, betaAB);
 
-    CPA::CPA cpa(std::move(cub), std::move(cpaa));
+    CPA::CPAEOS cpa(std::move(cub), std::move(cpaa));
     using tdc = TDXDerivatives<decltype(cpa)>;
     auto Ar01 = tdc::get_Ar01(cpa, T, rhomolar, z);
     double p_withassoc = T*rhomolar*R*(1 + Ar01);
