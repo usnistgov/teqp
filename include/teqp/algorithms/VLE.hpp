@@ -103,7 +103,8 @@ auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
 
 template<typename Model, typename Scalar>
 auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
-    return do_pure_VLE_T(IsothermPureVLEResiduals(model, T), rhoL, rhoV, maxiter);
+    auto res = IsothermPureVLEResiduals(model, T);
+    return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
 }
 
 template<typename Model, typename Scalar>
