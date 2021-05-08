@@ -22,7 +22,7 @@ enum class radial_dist { CS, KG, OT };
 
 /// Function that calculates the association binding strength between site A of molecule i and site B on molecule j
 template<typename BType, typename TType, typename RhoType, typename VecType>
-auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_cubic, TType T, RhoType rhomolar, const VecType& molefrac) {
+auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_cubic, TType RT, RhoType rhomolar, const VecType& molefrac) {
 
     using eta_type = std::common_type_t<decltype(rhomolar), decltype(b_cubic)>;
     eta_type eta;
@@ -50,31 +50,31 @@ auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_c
             throw std::invalid_argument("Bad radial_dist");
         }
     }
-    double R_gas = 8.3144598;
 
     // Calculate the association strength between site Ai and Bi for a pure compent
-    auto DeltaAiBj = forceeval(g_vm_ref*(exp(epsABi /(T*R_gas)) - 1.0)*b_cubic* betaABi);
+    auto DeltaAiBj = forceeval(g_vm_ref*(exp(epsABi/RT) - 1.0)*b_cubic* betaABi);
 
     return DeltaAiBj;
 };
 
 /// Routine that calculates the fractions of sites Ai not bound to other active sites for pure fluids
-/// Some association schemes are explicitly solvable for self - associating compounds, see Huang and Radosz, Ind.Eng.Chem.Res., 29 (11), 1990
+/// Some association schemes are explicitly solvable for self-associating compounds, see Huang and Radosz, Ind. Eng. Chem. Res., 29 (11), 1990
 /// So far implemented association schemes : 1A, 2B, 3B, 4C (see Kontogeorgis et al., Ind. Eng. Chem. Res. 2006, 45, 4855 - 4868)
 /// 
 
 template<typename BType, typename TType, typename RhoType, typename VecType>
-auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double betaABi, const BType b_cubic, const TType T, const RhoType rhomolar, const VecType& molefrac) {
+auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double betaABi, const BType b_cubic, const TType RT, const RhoType rhomolar, const VecType& molefrac) {
 
     // Matrix XA(A, j) that contains all of the fractions of sites A not bonded to other active sites for each molecule i
     // Start values for the iteration(set all sites to non - bonded, = 1)
-    Eigen::Array<RhoType, Eigen::Dynamic, Eigen::Dynamic> XA;  // A maximum of 4 association sites(A, B, C, D)
+    using result_type = std::common_type_t<decltype(RT), decltype(rhomolar), decltype(molefrac[0])>;
+    Eigen::Array<result_type, Eigen::Dynamic, Eigen::Dynamic> XA;  // A maximum of 4 association sites(A, B, C, D)
     XA.resize(N_sites, 1);
     XA.setOnes();
 
     // Get the association strength between the associating sites
     auto dist = radial_dist::KG; // TODO: pass this in
-    auto DeltaAiBj = get_DeltaAB_pure(dist, epsABi, betaABi, b_cubic, T, rhomolar, molefrac);
+    auto DeltaAiBj = get_DeltaAB_pure(dist, epsABi, betaABi, b_cubic, RT, rhomolar, molefrac);
 
     if (scheme == association_classes::a1A) { // Acids
         // Only one association site "A"  (OH - group with C = O - group)
@@ -88,8 +88,8 @@ auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double
     else if (scheme == association_classes::a3B) { // Glycols
         // Three association sites "A", "B", "C"
         XA(0, 0) = forceeval((-(1.0 - rhomolar * DeltaAiBj) + sqrt(POW2(1.0 + rhomolar * DeltaAiBj) + 4.0 * rhomolar * DeltaAiBj)) / (4.0 * rhomolar * DeltaAiBj));
-        XA(1, 0) = XA(0, 0);         // XB = XA
-        XA(2, 0) = 2 * XA(0, 0) - 1; // XC = 2XA - 1
+        XA(1, 0) = XA(0, 0);           // XB = XA
+        XA(2, 0) = 2.0*XA(0, 0) - 1.0; // XC = 2XA - 1
     }
     else if (scheme == association_classes::a4C) { // Water
         // Four association sites "A", "B", "C", "D"
@@ -141,7 +141,7 @@ public:
 
     template<typename TType>
     auto get_ai(TType T, int i) const {
-        return a0[i] * POW2(1 + c1[i]*(1 - sqrt(T / Tc[i])));
+        return a0[i] * POW2(1.0 + c1[i]*(1.0 - sqrt(T / Tc[i])));
     }
 
     template<typename TType, typename VecType>
@@ -160,11 +160,10 @@ public:
         return std::make_tuple(asummer, bsummer);
     }
 
-    template<typename TType, typename RhoType, typename VecType>
-    auto alphar(const TType T, const RhoType rhomolar, const VecType& molefrac) const {
+    template<typename TType, typename RhoType, typename VecType, typename RType>
+    auto alphar(const TType T, const RhoType rhomolar, const VecType& molefrac, const RType& R_gas) const {
         auto [a_cubic, b_cubic] = get_ab(T, molefrac);
-        auto R_gas = 8.3144598;
-        return forceeval(-log(1 - b_cubic * rhomolar) - a_cubic / R_gas / T * log((delta_1 * b_cubic * rhomolar + 1) / (delta_2 * b_cubic * rhomolar + 1)) / b_cubic / (delta_1 - delta_2));
+        return forceeval(-log(1.0 - b_cubic * rhomolar) - a_cubic / R_gas / T * log((delta_1*b_cubic*rhomolar + 1.0) / (delta_2*b_cubic*rhomolar + 1.0)) / b_cubic / (delta_1 - delta_2));
     }
 };
 
@@ -197,13 +196,14 @@ public:
     CPAAssociation(const Cubic &&cubic, const std::vector<association_classes>& classes, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi) 
         : cubic(cubic), classes(classes), epsABi(epsABi), betaABi(betaABi), N_sites(get_N_sites(classes)) {};
 
-    template<typename TType, typename RhoType, typename VecType>
-    auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
+    template<typename TType, typename RhoType, typename VecType, typename RType>
+    auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac, const RType &R_gas) const {
         // Calculate a and b of the mixture
         auto [a_cubic, b_cubic] = cubic.get_ab(T, molefrac);
 
         // Calculate the fraction of sites not bonded with other active sites
-        auto XA = XA_calc_pure(N_sites[0], classes[0], epsABi[0], betaABi[0], b_cubic, T, rhomolar, molefrac);
+        auto RT = forceeval(R_gas * T); // R times T
+        auto XA = XA_calc_pure(N_sites[0], classes[0], epsABi[0], betaABi[0], b_cubic, RT, rhomolar, molefrac);
 
         using return_type = std::common_type_t<decltype(T), decltype(rhomolar), decltype(molefrac[0])>;
         return_type alpha_r_asso = 0.0;
@@ -219,12 +219,14 @@ public:
 };
 
 template <typename Cubic, typename Assoc>
-class CPA {
+class CPAEOS {
 public:
     const Cubic cubic;
     const Assoc assoc;
 
-    CPA(Cubic &&cubic, Assoc &&assoc) : cubic(cubic), assoc(assoc) {
+    const double R = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
+
+    CPAEOS(Cubic &&cubic, Assoc &&assoc) : cubic(cubic), assoc(assoc) {
     }
 
     /// Residual dimensionless Helmholtz energy from the SRK or PR core and contribution due to association
@@ -233,10 +235,10 @@ public:
     auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
 
         // Calculate the contribution to alphar from the conventional cubic EOS
-        auto alpha_r_cubic = cubic.alphar(T, rhomolar, molefrac);
+        auto alpha_r_cubic = cubic.alphar(T, rhomolar, molefrac, R);
 
         // Calculate the contribution to alphar from association
-        auto alpha_r_assoc = assoc.alphar(T, rhomolar, molefrac); 
+        auto alpha_r_assoc = assoc.alphar(T, rhomolar, molefrac, R);
 
         return forceeval(alpha_r_cubic + alpha_r_assoc);
     }
@@ -271,7 +273,7 @@ auto CPAfactory(const nlohmann::json &j){
         }
         return CPAAssociation(std::move(cubic), classes, epsABi, betaABi);
     };
-	return CPA(build_cubic(j), build_assoc(build_cubic(j), j));
+	return CPAEOS(build_cubic(j), build_assoc(build_cubic(j), j));
 }
 
 }; /* namespace CPA */
