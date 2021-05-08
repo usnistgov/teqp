@@ -19,6 +19,8 @@ jobs:
       run: cmake --build build --target catch_tests
     - name: build multifluid
       run: cmake --build build --target multifluid
+    - name: build teqp
+      run: cmake --build build --target teqp
     # run tests
     - name: run Catch tests
       run: build/catch_tests

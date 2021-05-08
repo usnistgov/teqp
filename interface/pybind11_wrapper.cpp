@@ -1,5 +1,6 @@
 #define USE_AUTODIFF
 
+#include "nlohmann/json.hpp"
 #include "pybind11_json/pybind11_json.hpp"
 
 #include <pybind11/pybind11.h>
@@ -12,6 +13,7 @@
 
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/models/pcsaft.hpp"
+#include "teqp/models/CPA.hpp"
 #include "teqp/models/multifluid.hpp"
 #include "teqp/algorithms/VLE.hpp"
 
@@ -96,12 +98,17 @@ void init_teqp(py::module& m) {
     // Multifluid model
     m.def("build_multifluid_model", &build_multifluid_model);
     using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"",""},"",""));
-    using idMF = IsochoricDerivatives<MultiFluid, double, Eigen::Array<double, Eigen::Dynamic, 1> >;
     auto wMF = py::class_<MultiFluid>(m, "MultiFluid")
         .def("get_Tcvec", [](const MultiFluid& c) { return c.redfunc.Tc; })
         .def("get_vcvec", [](const MultiFluid& c) { return c.redfunc.vc; })
         ;
     add_derivatives<MultiFluid>(m, wMF);
+
+    // CPA model
+    using CPAEOS_ = decltype(CPA::CPAfactory(nlohmann::json()));
+    m.def("CPAfactory", &CPA::CPAfactory);
+    auto wCPA = py::class_<CPAEOS_>(m, "CPAEOS");
+    add_derivatives<CPAEOS_>(m, wCPA);
 
     // Some functions for timing overhead of interface
     m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
