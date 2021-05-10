@@ -20,7 +20,7 @@ template<typename T>
 auto forceeval(T&& expr)
 {
     using namespace autodiff::detail;
-    if constexpr (isDual<T> || isExpr<T> || isNumber<T>) {
+    if constexpr (isDual<T> || isExpr<T>) {
         return eval(expr);
     }
     else {
