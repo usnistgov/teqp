@@ -237,6 +237,10 @@ public:
 
         std::size_t N = m.size();
 
+        if (mole_fractions.size() != N) {
+            throw std::invalid_argument("Length of mole_fractions (" + std::to_string(mole_fractions.size()) + ") is not the length of components (" + std::to_string(N) + ")");
+        }
+
         using TRHOType = std::common_type_t<decltype(T), decltype(mole_fractions[0]), decltype(m[0])>;
 
         SAFTCalc<TTYPE, TRHOType> c;
@@ -265,7 +269,7 @@ public:
         std::vector<ta> zeta(4);
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
-            Eigen::ArrayX<TTYPE> dn = c.d.pow(n);
+            auto dn = c.d.pow(n).eval();
             TRHOType xmdn = forceeval((mole_fractions*m*dn).sum());
             zeta[n] = forceeval(pi6*rho_A3*xmdn);
         }
