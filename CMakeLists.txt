@@ -27,30 +27,31 @@ if (NOT TEQP_NO_PYTHON)
     target_link_libraries(teqp PRIVATE autodiff)
 endif()
 
-### TARGETS
-add_executable(main "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
-target_link_libraries(main autodiff)
-
-add_executable(multifluid "${CMAKE_CURRENT_SOURCE_DIR}/src/multifluid.cpp")
-if (MSVC)
-    target_sources(multifluid PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
-endif()
-target_link_libraries(multifluid autodiff)
-
-add_executable(multifluid_crit "${CMAKE_CURRENT_SOURCE_DIR}/src/multifluid_crit.cpp")
-if (MSVC)
-    target_sources(multifluid_crit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
-endif()
-target_link_libraries(multifluid_crit autodiff)
-
-# add_executable(test_autodiff "${CMAKE_CURRENT_SOURCE_DIR}/src/test_autodiff.cpp")
-# if (MSVC)
-#     target_sources(test_autodiff PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
-# endif()
-# target_link_libraries(test_autodiff autodiff)
-
 add_executable(catch_tests "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/catch_tests.cxx")
 if (MSVC)
     target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
 target_link_libraries(catch_tests autodiff)
+
+
+### TARGETS from src folder
+set(TEQP_SNIPPETS true)
+if (TEQP_SNIPPETS)
+
+  # Collect all the snippets
+  file(GLOB_RECURSE snippets "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+
+  message(STATUS "snippets found = ${snippets}")
+  foreach (snippet ${snippets})
+
+    get_filename_component(snippet_name ${snippet} NAME)
+    get_filename_component(snippet_exe ${snippet} NAME_WE)
+    message(STATUS "snippet_name = ${snippet_name}")
+
+    add_executable(${snippet_exe} ${snippet})
+    if (MSVC)
+	    target_sources(${snippet_exe} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+	endif()
+	target_link_libraries(${snippet_exe} autodiff)
+  endforeach()
+endif()
