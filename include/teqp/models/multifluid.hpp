@@ -365,17 +365,17 @@ auto get_departure_function_matrix(const std::string& coolprop_root, const nlohm
 /// From Ulrich Deiters
 template <typename T>                             // arbitrary integer power
 T powi(const T& x, int n) {
-    if (n < 0){
+    if (n == 0)
+        return static_cast<T>(1.0);                       // x^0 = 1 even for x == 0
+    else if (n < 0){
         using namespace autodiff::detail;
-        if constexpr (isDual<T> || isExpr<T> || isNumber<T>) {
+        if constexpr (isDual<T> || isExpr<T>) {
             return eval(powi(eval(1.0/x), -n));
         }
         else {
             return powi(static_cast<T>(1.0) / x, -n);
         }
     }
-    else if (n == 0)
-        return static_cast<T>(1.0);                       // x^0 = 1 even for x == 0
     else {
         T y(x), xpwr(x);
         n--;
@@ -392,29 +392,22 @@ T powi(const T& x, int n) {
 }
 
 template<typename T>
-auto powIV(const T& x, const Eigen::ArrayXd& e) {
-    Eigen::Array<T, Eigen::Dynamic, 1> o(e.size());
+inline auto powIVi(const T& x, const Eigen::ArrayXi& e) {
+    //return e.binaryExpr(e.cast<T>(), [&x](const auto&& a_, const auto& e_) {return static_cast<T>(powi(x, a_)); });
+    static Eigen::Array<T, Eigen::Dynamic, 1> o;
+    o.resize(e.size());
     for (auto i = 0; i < e.size(); ++i) {
-        auto ei = e[i];
-        if constexpr (autodiff::detail::isDual<T>) {
-            if (ei == static_cast<int>(ei)) {
-                o[i] = powi(x, ei);
-            }
-            else {
-                o[i] = pow(x, ei);
-            }
-        }
-        else {
-            if (ei == static_cast<int>(ei)) {
-                o[i] = powi(x, ei);
-            }
-            else {
-                o[i] = pow(x, ei);
-            }
-        }
+        o[i] = powi(x, e[i]);
     }
     return o;
+    //return e.cast<T>().unaryExpr([&x](const auto& e_) {return powi(x, e_); }).eval();
 }
+
+//template<typename T>
+//auto powIV(const T& x, const Eigen::ArrayXd& e) {
+//    Eigen::Array<T, Eigen::Dynamic, 1> o = e.cast<T>();
+//    return o.unaryExpr([&x](const auto& e_) {return powi(x, e_); } ).eval();
+//}
 
 template<typename T>
 auto pow(const std::complex<T> &x, const Eigen::ArrayXd& e) {
@@ -434,6 +427,25 @@ auto pow(const mcx::MultiComplex<T> &x, const Eigen::ArrayXd& e) {
     return o;
 }
 
+template<class T>
+struct PowIUnaryFunctor {
+    const T m_base;
+    PowIUnaryFunctor(T base) : m_base(base) {};
+    typedef T result_type;
+    result_type operator()(const int& e) const{
+        switch (e) {
+        case 0:
+            return 1.0;
+        case 1:
+            return m_base;
+        case 2:
+            return m_base * m_base;
+        default:
+            return powi(m_base, e);
+        }
+    }
+};
+
 class MultiFluidEOS {
 public:
     enum class types { NOTSETTYPE, GERG2004, GaussianExponential, GaussianExponentialNonAnalytic };
@@ -441,6 +453,7 @@ private:
     types type = types::NOTSETTYPE;
 public:
     Eigen::ArrayXd n, t, d, c, l, eta, beta, gamma, epsilon;
+    Eigen::ArrayXi l_i;
 
     Eigen::ArrayXd na_A, na_B, na_C, na_D, na_a, na_b, na_beta, na_n;
 
@@ -469,13 +482,15 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         switch (type) {
-            case types::GaussianExponential:{
-                return forceeval((n*exp(t*log(tau) + d*log(delta) - c*powIV(delta, l) - eta*(delta - epsilon).square() - beta * (tau - gamma).square())).sum());
-                break;}
+            case types::GaussianExponential:{                
+                return forceeval((n * exp(t * log(tau) + d * log(delta) - c * powIVi(delta, l_i) - eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum());
+                //return forceeval((n*exp(t*log(tau) + d*log(delta) - c*l_i.unaryViewExpr(PowIUnaryFunctor(delta)) - eta*(delta - epsilon).square() - beta*(tau - gamma).square())).sum());
+                break;
+            }
             case types::GaussianExponentialNonAnalytic:
                 {
                 // All the "normal" terms
-                auto o1 = (n * exp(t * log(tau) + d * log(delta) - c * powIV(delta, l) - eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
+                auto o1 = (n * exp(t * log(tau) + d * log(delta) - c * powIVi(delta, l_i) - eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum();
                 
                 // The non-analytic terms
                 auto square = [](auto x) { return x * x; };
@@ -586,6 +601,11 @@ auto get_EOS(const std::string& coolprop_root, const std::string& name)
         eos.l.segment(offset, N) = l;
 
         offset += N;
+    }
+    eos.l_i = eos.l.cast<int>();
+    
+    if (((eos.l_i.cast<double>() - eos.l).cwiseAbs() > 0.0).any()) {
+        throw std::invalid_argument("Non-integer entry in l found");
     }
     return eos;
 }
