@@ -58,7 +58,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_Ar04n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<4>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar05n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<5>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar06n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<6>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_neff", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::get_neff(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac"));
+    cls.def("get_neff", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::get_neff(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
 }
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
