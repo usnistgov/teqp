@@ -26,7 +26,8 @@ void test_vdwMix() {
         using container = decltype(rhovec);
         auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
         auto molefrac = rhovec/rhotot_;
-        return vdW.alphar(T, rhotot_, molefrac)*vdW.R*T*rhotot_;
+        auto R = forceeval(vdW.R(molefrac));
+        return vdW.alphar(T, rhotot_, molefrac)*R*T*rhotot_;
     };
     auto Psir = fPsir(T, rhovec);
     auto dPsirdrho0 = rhovec[0]*derivrhoi(fPsir, T, rhovec, 0);

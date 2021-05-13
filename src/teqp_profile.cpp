@@ -52,8 +52,8 @@ int main() {
     int N = 100000;
 
     auto f_alphar = [&x1, &x2, &c](auto& model) { return model.alphar(x1, x2, c); };
-    auto alphar = mc.caller(1, f_alphar);
-    //auto meta = mc.caller(1, [&x1, &x2, &c](auto& model) { return model.get_meta(); });
+    //auto alphar = mc.caller(1, f_alphar);
+    //auto meta = mc.caller(1, [&x1, &x2, &c](auto& model) { return model.get_meta(); })
 
     auto m = mc.get_ref<MFType>(4);
     m.alphar(x2, x2, c);
@@ -69,7 +69,7 @@ int main() {
         for (auto j = 0; j < N; ++j) {
             x1 += j * 1e-10;
             //auto f_Ar01 = [&x1, &x2, &c](auto& model) { using tdx = TDXDerivatives<decltype(model), decltype(x1), decltype(c)>;  return tdx::get_Ar02(model, x1, x2, c); };
-            auto v = mc.caller(4, [&x1, &x2, &c](auto& model) { using tdx = TDXDerivatives<decltype(model), decltype(x1), decltype(c)>;  return tdx::get_Ar00(model, x1, x2, c); });
+            auto v = mc.caller(4, [&x1, &x2, &c](auto& model) { using tdx = TDXDerivatives<decltype(model), decltype(x1), decltype(c)>;  return tdx::get_Ar0n<3>(model, x1, x2, c); });
             //std::cout << v << std::endl;
         }
     }

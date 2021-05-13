@@ -17,18 +17,21 @@ private:
 public:
     vdWEOS1(double a, double b) : a(a), b(b) {};
 
-    const double R = 1.380649e-23*6.02214076e23; ///< Exact value, given by k_B*N_A
+    const double Ru = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
+
+    template<class VecType>
+    auto R(const VecType& molefrac) const { return Ru; }
 
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType &T, const RhoType& rhotot, const VecType &molefrac) const {
         auto Psiminus = -log(1.0 - b * rhotot);
         auto Psiplus = rhotot;
-        auto val = Psiminus - a / (R * T) * Psiplus;
+        auto val = Psiminus - a / (R(molefrac) * T) * Psiplus;
         return forceeval(val);
     }
 
     double p(double T, double v) {
-        return R*T/(v - b) - a/(v*v);
+        return Ru*T/(v - b) - a/(v*v);
     }
 };
 
@@ -54,8 +57,8 @@ public:
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
         for (auto i = 0; i < Tc_K.size(); ++i) {
-            ai[i] = 27.0 / 64.0 * pow(R * Tc_K[i], 2) / pc_Pa[i];
-            bi[i] = 1.0 / 8.0 * R * Tc_K[i] / pc_Pa[i];
+            ai[i] = 27.0 / 64.0 * pow(Ru * Tc_K[i], 2) / pc_Pa[i];
+            bi[i] = 1.0 / 8.0 * Ru * Tc_K[i] / pc_Pa[i];
         }
         k = std::valarray<std::valarray<NumType>>(std::valarray<NumType>(0.0, Tc_K.size()), Tc_K.size());
     }; 
@@ -82,7 +85,12 @@ public:
         return forceeval(b_);
     }
 
-    const NumType R = get_R_gas<double>();
+    const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
+
+    template<class VecType>
+    auto R(const VecType& molefrac) const {
+        return Ru;
+    }
 
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType &T,
@@ -91,7 +99,7 @@ public:
     {
         auto Psiminus = -log(1.0 - b(molefrac) * rho);
         auto Psiplus = rho;
-        auto val = Psiminus - a(T, molefrac) / (R * T) * Psiplus;
+        auto val = Psiminus - a(T, molefrac) / (Ru * T) * Psiplus;
         return forceeval(val);
     }
 };

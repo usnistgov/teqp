@@ -144,9 +144,9 @@ TEST_CASE("Check p four ways for vdW", "[virial][p]")
     
     // Numerical solution from alphar
     using id = IsochoricDerivatives<decltype(model)>;
-    auto pfromderiv = rho*model.R*T + id::get_pr(model, T, rhovec);
+    auto pfromderiv = rho*model.R(molefrac)*T + id::get_pr(model, T, rhovec);
     using tdx = TDXDerivatives<decltype(model)>;
-    auto p_ar0n = rho*model.R*T*(1 + tdx::get_Ar0n<3>(model, T, rho, molefrac)[1]);
+    auto p_ar0n = rho*model.R(molefrac) *T*(1 + tdx::get_Ar0n<3>(model, T, rho, molefrac)[1]);
 
     // Numerical solution from virial expansion
     constexpr int Nvir = 8;
@@ -155,9 +155,9 @@ TEST_CASE("Check p four ways for vdW", "[virial][p]")
     auto Z = 1.0;
     for (auto i = 2; i <= Nvir; ++i){
         Z += Bn[i]*pow(rho, i-1);
-        auto pvir = Z * rho * model.R * T;
+        auto pvir = Z * rho * model.R(molefrac) * T;
     }
-    auto pvir = Z*rho*model.R*T;
+    auto pvir = Z*rho*model.R(molefrac) *T;
 
     CHECK(std::abs(pfromderiv - pexact)/pexact < 1e-15);
     CHECK(std::abs(pvir - pexact)/pexact < 1e-8);
@@ -190,9 +190,10 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
     // Argon + Xenon
     std::valarray<double> Tc_K = { 150.687, 289.733 };
     std::valarray<double> pc_Pa = { 4863000.0, 5842000.0 };
+    std::valarray<double> molefrac = { 1.0 };
     vdWEOS<double> vdW(Tc_K, pc_Pa);
     auto Zc = 3.0/8.0;
-    auto rhoc0 = pc_Pa[0] / (vdW.R * Tc_K[0]) / Zc;
+    auto rhoc0 = pc_Pa[0] / (vdW.R(molefrac) * Tc_K[0]) / Zc;
     double T0 = Tc_K[0];
     Eigen::ArrayXd rhovec0(2); rhovec0 << rhoc0, 0.0 ;
 
@@ -221,7 +222,7 @@ TEST_CASE("Test psir gradient", "") {
     auto psirfunc2 = [&model](const auto& T, const auto& rho_) {
         auto rhotot_ = rho_.sum();
         auto molefrac = (rho_ / rhotot_);
-        return model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_;
+        return model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_;
     };
     auto chk0 = derivrhoi(psirfunc2, T, rhovec, 0);
     auto chk1 = derivrhoi(psirfunc2, T, rhovec, 1);
@@ -237,15 +238,16 @@ TEST_CASE("Test psir gradient", "") {
 TEST_CASE("Test extrapolate from critical point", "") {
     std::valarray<double> Tc_K = { 150.687};
     std::valarray<double> pc_Pa = { 4863000.0};
+    std::valarray<double> molefrac = { 1.0 };
     vdWEOS<double> model(Tc_K, pc_Pa);
     const auto Zc = 3.0 / 8.0;
-    auto stepper = [&model, &pc_Pa, &Tc_K, &Zc](double step) {
-        auto rhoc_molm3 = pc_Pa[0] / (model.R * Tc_K[0]) / Zc;
+    auto stepper = [&](double step) {
+        auto rhoc_molm3 = pc_Pa[0] / (model.R(molefrac) * Tc_K[0]) / Zc;
         auto T = Tc_K[0] - step; 
         auto rhovec = extrapolate_from_critical(model, Tc_K[0], rhoc_molm3, T);
         auto z = (Eigen::ArrayXd(1) << 1.0).finished();
 
-        auto b = model.b(z), a = model.a(T, z), R = model.R;
+        auto b = model.b(z), a = model.a(T, z), R = model.R(molefrac);
         auto Ttilde = R*T*b/a;
         using namespace CubicSuperAncillary;
         auto SArhoL = supercubic(VDW_CODE, RHOL_CODE, Ttilde) / b;
@@ -311,10 +313,10 @@ TEST_CASE("Test pure VLE with non-unity R0/Rr", "") {
 TEST_CASE("Test water", "") {
     std::valarray<double> a0 = {0.12277}, bi = {0.000014515}, c1 = {0.67359}, Tc = {647.096}, 
                           molefrac = {1.0};
-    CPA::CPACubic cub(CPA::cubic_flag::SRK, a0, bi, c1, Tc);
+    auto R = 8.3144598; 
+    CPA::CPACubic cub(CPA::cubic_flag::SRK, a0, bi, c1, Tc, R);
     double T = 400, rhomolar = 100;
     
-    auto R = 8.3144598;
     auto z = (Eigen::ArrayXd(1) << 1).finished();
 
     using tdx = TDXDerivatives<decltype(cub)>;
@@ -324,7 +326,7 @@ TEST_CASE("Test water", "") {
 
     std::vector<CPA::association_classes> schemes = { CPA::association_classes::a4C };
     std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
-    CPA::CPAAssociation cpaa(std::move(cub), schemes, epsAB, betaAB);
+    CPA::CPAAssociation cpaa(std::move(cub), schemes, epsAB, betaAB, R);
 
     CPA::CPAEOS cpa(std::move(cub), std::move(cpaa));
     using tdc = TDXDerivatives<decltype(cpa)>;
@@ -343,7 +345,8 @@ TEST_CASE("Test water w/ factory", "") {
    };
    nlohmann::json j = {
        {"cubic","SRK"},
-       {"pures", {water}}
+       {"pures", {water}},
+       {"R_gas / J/mol/K", 8.3144598}
    };
    auto cpa = CPAfactory(j);
 

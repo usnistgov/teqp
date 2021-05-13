@@ -125,9 +125,10 @@ private:
     std::valarray<double> a0, bi, c1, Tc;
     double delta_1, delta_2;
     std::valarray<std::valarray<double>> k_ij;
+    double R_gas;
 
 public:
-    CPACubic(cubic_flag flag, const std::valarray<double> &a0, const std::valarray<double> &bi, const std::valarray<double> &c1, const std::valarray<double> &Tc) : a0(a0), bi(bi), c1(c1), Tc(Tc) {
+    CPACubic(cubic_flag flag, const std::valarray<double> &a0, const std::valarray<double> &bi, const std::valarray<double> &c1, const std::valarray<double> &Tc, double R_gas) : a0(a0), bi(bi), c1(c1), Tc(Tc), R_gas(R_gas) {
         switch (flag) {
         case cubic_flag::PR:
         { delta_1 = 1 + sqrt(2); delta_2 = 1 - sqrt(2); break; }
@@ -138,6 +139,9 @@ public:
         }
         k_ij.resize(Tc.size()); for (auto i = 0; i < k_ij.size(); ++i) { k_ij[i].resize(Tc.size()); }
     };
+
+    template<typename VecType>
+    auto R(const VecType& molefrac) const { return R_gas; }
 
     template<typename TType>
     auto get_ai(TType T, int i) const {
@@ -160,10 +164,13 @@ public:
         return std::make_tuple(asummer, bsummer);
     }
 
-    template<typename TType, typename RhoType, typename VecType, typename RType>
-    auto alphar(const TType T, const RhoType rhomolar, const VecType& molefrac, const RType& R_gas) const {
+    template<typename TType, typename RhoType, typename VecType>
+    auto alphar(const TType T, const RhoType rhomolar, const VecType& molefrac) const {
         auto [a_cubic, b_cubic] = get_ab(T, molefrac);
-        return forceeval(-log(1.0 - b_cubic * rhomolar) - a_cubic / R_gas / T * log((delta_1*b_cubic*rhomolar + 1.0) / (delta_2*b_cubic*rhomolar + 1.0)) / b_cubic / (delta_1 - delta_2));
+        return forceeval(
+            -log(1.0 - b_cubic * rhomolar) // repulsive part
+            -a_cubic/R_gas/T*log((delta_1*b_cubic*rhomolar + 1.0) / (delta_2*b_cubic*rhomolar + 1.0)) / b_cubic / (delta_1 - delta_2) // attractive part
+        );
     }
 };
 
@@ -174,6 +181,7 @@ private:
     const std::vector<association_classes> classes;
     const std::vector<int> N_sites;
     const std::valarray<double> epsABi, betaABi;
+    const double R_gas;
 
     auto get_N_sites(const std::vector<association_classes> &classes) {
         std::vector<int> N_sites_out;
@@ -193,11 +201,11 @@ private:
     }
 
 public:
-    CPAAssociation(const Cubic &&cubic, const std::vector<association_classes>& classes, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi) 
-        : cubic(cubic), classes(classes), epsABi(epsABi), betaABi(betaABi), N_sites(get_N_sites(classes)) {};
+    CPAAssociation(const Cubic &&cubic, const std::vector<association_classes>& classes, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi, double R_gas) 
+        : cubic(cubic), classes(classes), epsABi(epsABi), betaABi(betaABi), N_sites(get_N_sites(classes)), R_gas(R_gas) {};
 
-    template<typename TType, typename RhoType, typename VecType, typename RType>
-    auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac, const RType &R_gas) const {
+    template<typename TType, typename RhoType, typename VecType>
+    auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
         // Calculate a and b of the mixture
         auto [a_cubic, b_cubic] = cubic.get_ab(T, molefrac);
 
@@ -224,7 +232,10 @@ public:
     const Cubic cubic;
     const Assoc assoc;
 
-    const double R = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
+    template<class VecType>
+    auto R(const VecType& molefrac) const {
+        return cubic.R(molefrac);
+    }
 
     CPAEOS(Cubic &&cubic, Assoc &&assoc) : cubic(cubic), assoc(assoc) {
     }
@@ -235,10 +246,10 @@ public:
     auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
 
         // Calculate the contribution to alphar from the conventional cubic EOS
-        auto alpha_r_cubic = cubic.alphar(T, rhomolar, molefrac, R);
+        auto alpha_r_cubic = cubic.alphar(T, rhomolar, molefrac);
 
         // Calculate the contribution to alphar from association
-        auto alpha_r_assoc = assoc.alphar(T, rhomolar, molefrac, R);
+        auto alpha_r_assoc = assoc.alphar(T, rhomolar, molefrac);
 
         return forceeval(alpha_r_cubic + alpha_r_assoc);
     }
@@ -258,7 +269,7 @@ auto CPAfactory(const nlohmann::json &j){
             Tc[i] = p["Tc / K"];
             i++;
         }
-        return CPACubic(get_cubic_flag(j["cubic"]), a0i, bi, c1, Tc);
+        return CPACubic(get_cubic_flag(j["cubic"]), a0i, bi, c1, Tc, j["R_gas / J/mol/K"]);
     };
 	auto build_assoc = [](const auto &&cubic, const auto& j) {
         auto N = j["pures"].size();
@@ -271,7 +282,7 @@ auto CPAfactory(const nlohmann::json &j){
             classes.push_back(get_association_classes(p["class"]));
             i++;
         }
-        return CPAAssociation(std::move(cubic), classes, epsABi, betaABi);
+        return CPAAssociation(std::move(cubic), classes, epsABi, betaABi, j["R_gas / J/mol/K"]);
     };
 	return CPAEOS(build_cubic(j), build_assoc(build_cubic(j), j));
 }

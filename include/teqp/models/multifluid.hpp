@@ -77,7 +77,10 @@ public:
     const CorrespondingTerm corr;
     const DepartureTerm dep;
 
-    const double R = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
+    template<class VecType>
+    auto R(const VecType& molefrac) const {
+        return get_R_gas<decltype(molefrac[0])>();
+    }
 
     MultiFluid(ReducingFunction&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep) : redfunc(redfunc), corr(corr), dep(dep) {};
 

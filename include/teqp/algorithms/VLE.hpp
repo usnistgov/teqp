@@ -19,8 +19,9 @@ public:
     double Rr, R0;
 
     IsothermPureVLEResiduals(const Model& model, TYPE T) : m_model(model), m_T(T) {
-        Rr = m_model.R;
-        R0 = m_model.R;
+        std::valarray<double> molefrac = { 1.0 };
+        Rr = m_model.R(molefrac);
+        R0 = m_model.R(molefrac);
     };
 
     const auto& get_errors() { return y; };
@@ -37,7 +38,7 @@ public:
         using tdx = TDXDerivatives<Model,TYPE,EigenArray1>;
 
         const TYPE &T = m_T;
-        const TYPE R = m_model.R;
+        const TYPE R = m_model.R(molefracs);
         double R0_over_Rr = R0 / Rr;
         
         auto derL = tdx::template get_Ar0n<2>(m_model, T, rhomolarL, molefracs);
@@ -112,7 +113,7 @@ auto extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar
     
     using tdx = TDXDerivatives<Model>;
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
-    auto R = model.R;
+    auto R = model.R(z);
     auto ders = tdx::template get_Ar0n<4>(model, Tc, rhoc, z);
     auto dpdrho = R*Tc*(1 + 2 * ders[1] + ders[2]); // Should be zero
     auto d2pdrho2 = R*Tc/rhoc*(2 * ders[1] + 4 * ders[2] + ders[3]); // Should be zero

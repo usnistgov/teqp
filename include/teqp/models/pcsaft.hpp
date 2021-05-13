@@ -230,7 +230,10 @@ public:
         }
         return 6 * 0.74 / EIGEN_PI / (mole_fractions*m*powvec(d, 3)).sum()*1e30; // particles/m^3
     }
-    const double R = get_R_gas<double>();
+    template<class VecType>
+    auto R(const VecType& molefrac) const {
+        return get_R_gas<decltype(molefrac[0])>();
+    }
 
     template<typename TTYPE, typename RhoType, typename VecType>
     auto alphar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {

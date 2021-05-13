@@ -47,7 +47,7 @@ struct CriticalTracing {
         // ... and add ideal-gas terms to H
         for (auto i = 0; i < N; ++i) {
             if (mask[i]) {
-                H(i, i) += model.R * T / rhovec[i];
+                H(i, i) += model.R(rhovec/rhovec.sum()) * T / rhovec[i];
             }
         }
 
@@ -106,7 +106,8 @@ struct CriticalTracing {
     };
 
     static auto get_derivs(const Model& model, const Scalar T, const VecType& rhovec) {
-        auto R = model.R;
+        auto molefrac = rhovec / rhovec.sum();
+        auto R = model.R(molefrac);
 
         // Solve the complete eigenvalue problem
         auto ei = eigen_problem(model, T, rhovec);
@@ -132,7 +133,7 @@ struct CriticalTracing {
             auto rhovecused = (rhovecad + sigma_1 * v0).eval();
             auto rhotot = rhovecused.sum();
             auto molefrac = (rhovecused / rhotot).eval();
-            return eval(model.alphar(T, rhotot, molefrac) * model.R * T * rhotot);
+            return eval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
         };
         auto psir_derivs_ = derivatives(wrapper, wrt(varsigma), at(varsigma));
         VecType psir_derivs; psir_derivs.resize(5);
@@ -148,7 +149,7 @@ struct CriticalTracing {
             Eigen::Vector<MultiComplex<double>, Eigen::Dynamic> rhovecused = rhovecmcx + sigma_1 * v0;
             auto rhotot = rhovecused.sum();
             auto molefrac = rhovecused / rhotot;
-            return model.alphar(T, rhotot, molefrac) * model.R * T * rhotot;
+            return model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot;
         };
         auto psir_derivs_ = diff_mcx1(wrapper, 0.0, 4, true);
         VecType psir_derivs; psir_derivs.resize(5);
@@ -296,7 +297,7 @@ struct CriticalTracing {
             auto write_line = [&rhovec, &rhotot, &z0, &model, &T, &c, &ofs]() {
                 std::stringstream out;
                 using id = IsochoricDerivatives<decltype(model)>;
-                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R * T + id::get_pr(model, T, rhovec) << "," << c << std::endl;
+                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec/rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << std::endl;
                 std::string sout(out.str());
                 std::cout << sout;
                 if (ofs.is_open()) {
@@ -352,7 +353,7 @@ struct CriticalTracing {
                 write_line();
             }
             using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-            double p = rhotot * model.R * T + id::get_pr(model, T, rhovec);
+            double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
             double splus = id::get_splus(model, T, rhovec);
             nlohmann::json point = {
                 {"t", t},

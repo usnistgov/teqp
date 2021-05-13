@@ -355,7 +355,7 @@ struct IsochoricDerivatives{
         auto molefrac = (rhovec / rhotot_).eval();
         auto h = 1e-100;
         auto Ar01 = model.alphar(T, std::complex<double>(rhotot_, h), molefrac).imag() / h * rhotot_;
-        return Ar01*rhotot_*model.R*T;
+        return Ar01*rhotot_*model.R(molefrac)*T;
     }
 
     static auto get_Ar00(const Model& model, const Scalar& T, const VectorType& rhovec) {
@@ -388,8 +388,9 @@ struct IsochoricDerivatives{
     * \brief Calculate Psir=ar*rho
     */
     static auto get_Psir(const Model& model, const Scalar &T, const VectorType& rhovec) {
-        auto rhotot_ = std::accumulate(std::begin(rhovec), std::end(rhovec), (decltype(rhovec[0]))0.0);
-        return model.alphar(T, rhotot_, rhovec / rhotot_) * model.R * T * rhotot_;
+        auto rhotot_ = rhovec.sum();
+        auto molefrac = rhovec / rhotot_;
+        return model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_;
     }
 
     /***
@@ -407,7 +408,7 @@ struct IsochoricDerivatives{
         auto hfunc = [&model, &T](const ArrayXdual2nd& rho_) {
             auto rhotot_ = rho_.sum();
             auto molefrac = (rho_ / rhotot_).eval();
-            return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
+            return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
         };
         return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g).eval(); // evaluate the function value u, its gradient, and its Hessian matrix H
     }
@@ -418,9 +419,11 @@ struct IsochoricDerivatives{
     * Uses autodiff derivatives to calculate second partial derivatives
     */
     static auto build_Psi_Hessian_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+        auto rhotot_ = rho_.sum();
+        auto molefrac = (rho_ / rhotot_).eval();
         auto H = build_Psir_Hessian_autodiff(model, T, rho);
         for (auto i = 0; i < 2; ++i) {
-            H(i, i) += model.R * T / rho[i];
+            H(i, i) += model.R(molefrac) * T / rho[i];
         }
         return H;
     }
@@ -440,7 +443,7 @@ struct IsochoricDerivatives{
         fcn_t func = [&model, &T](const auto& rhovec) {
             auto rhotot_ = rhovec.sum();
             auto molefrac = (rhovec / rhotot_).eval();
-            return model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_;
+            return model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_;
         };
         using mattype = Eigen::ArrayXXd;
         auto H = get_Hessian<mattype, fcn_t, VectorType, HessianMethods::Multiple>(func, rho);
@@ -457,7 +460,7 @@ struct IsochoricDerivatives{
         auto psirfunc = [&model, &T](const ArrayXdual2nd& rho_) {
             auto rhotot_ = rho_.sum();
             auto molefrac = (rho_ / rhotot_).eval();
-            return eval(model.alphar(T, rhotot_, molefrac) * model.R * T * rhotot_);
+            return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
         };
         auto val = autodiff::gradient(psirfunc, wrt(rhovecc), at(rhovecc)).eval(); // evaluate the gradient
         return val;
@@ -472,6 +475,7 @@ struct IsochoricDerivatives{
     */
     static auto get_chempot_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
         typename VectorType::value_type rhotot = rho.sum();
-        return (build_Psir_gradient_autodiff(model, T, rho).array() + model.R*T*(1.0 + log(rho / rhotot))).eval();
+        auto molefrac = (rho / rhotot).eval();
+        return (build_Psir_gradient_autodiff(model, T, rho).array() + model.R(molefrac)*T*(1.0 + log(rho / rhotot))).eval();
     }
 };
