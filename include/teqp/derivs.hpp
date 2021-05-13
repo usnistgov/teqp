@@ -420,7 +420,7 @@ struct IsochoricDerivatives{
     */
     static auto build_Psi_Hessian_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
         auto rhotot_ = rho.sum();
-        auto molefrac = (rho_ / rhotot_).eval();
+        auto molefrac = (rho / rhotot_).eval();
         auto H = build_Psir_Hessian_autodiff(model, T, rho);
         for (auto i = 0; i < 2; ++i) {
             H(i, i) += model.R(molefrac) * T / rho[i];
