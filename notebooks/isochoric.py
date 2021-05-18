@@ -87,46 +87,18 @@ def get_drhovecdx(*, i, model, T, rhovec):
     dpdxL = 1.0/get_dxdp(rhovec=rhovecL, drhovecdp=drhovecdpL)
     return np.array((drhovecdpL*dpdxL[i]).tolist()+(drhovecdpV*dpdxL[i]).tolist())
 
-def traceT(model, T, rhovec0):
+def traceT(model, T, rhovec0, *, kwargs={}):
     R = model.get_R(np.array([0.0, 1.0]))
-
-    # rhovec = rhovec0.copy()
-    # x = 0; dx = 1e-3
-    # o = []
-    # tic = timeit.default_timer()
-    # while x < 0.5:
-    #     pr = teqp.get_pr(model, T, rhovec[0:2])
-    #     molefrac = rhovec[0:2]/rhovec[0:2].sum()
-    #     p = pr + R*T*rhovec[0:2].sum()
-    #     f1 = get_drhovecdx(i=0, model=model, T=T, rhovec=rhovec)
-    #     ypred = rhovec + dx*f1
-    #     f2 = get_drhovecdx(i=0, model=model, T=T, rhovec=ypred)
-    #     favg = (f1+f2)/2.0
-    #     increment = dx*favg
-    #     x += dx
-    #     rhovec += increment
-    #     o.append(dict(x=x, p=p, y=rhovec[2]/rhovec[2:4].sum()))
-    # toc = timeit.default_timer()
-    # print(toc-tic, 'seconds with python+teqp tracing')
-    # df = pandas.DataFrame(o)
-    # plt.plot(df.x, df.p, 'k.', ms=1)
-    # plt.plot(df.y, df.p, 'k.', ms=1)
-
     def rhovecprime(x, rhovec):
         return get_drhovecdx(i=0, model=model, T=T, rhovec=rhovec)
-
     tic = timeit.default_timer()
-    sol = solve_ivp(rhovecprime, [0.0, 1.0], y0=rhovec0, method='RK45')
+    sol = solve_ivp(rhovecprime, [0.0, 1.0], y0=rhovec0, method='RK45',dense_output=True, t_eval = np.linspace(0,1,1000), rtol=1e-8)
     p = [teqp.get_pr(model, T, sol.y[0:2,j]) + R*T*sol.y[0:2,j].sum() for j in range(len(sol.t))]
     toc = timeit.default_timer()
     print(toc-tic)
-    print(sol.nfev)
-    plt.plot(sol.t, p, 'r')
-
-    plt.ylim(0.00019e6, 0.026e6)
-    plt.gca().set(xlabel='$x_1$ / mole frac.', ylabel='$p$ / Pa')
-    plt.tight_layout(pad=0.2)
-    plt.show()
+    y = sol.y[2,:]/(sol.y[2,:]+sol.y[3,:])
+    plt.plot(sol.t, p, 'r',**kwargs)
+    plt.plot(y, p, 'g',**kwargs)
 
 def main():
     T = 300
@@ -174,14 +146,27 @@ def main():
     rhovec = np.array([0, rhoL, 0, rhoV])
 
     # Initial slopes of dpdx1 and dpdy1
-    drhodp_liq, drhodp_vap = get_drhovecdp_sat(model, T, rhovec[0:2], rhovec[2::])
-    dpdxL = 1.0/get_dxdp(rhovec=rhovec[0:2], drhovecdp=drhodp_liq)
-    dpdxV = 1.0/get_dxdp(rhovec=rhovec[2::], drhovecdp=drhodp_vap)
-    xx = np.linspace(0, 0.4)
-    plt.plot(xx, xx*dpdxL[0]+AS.p(), dashes=[2, 2])
-    plt.plot(xx, xx*dpdxV[0]+AS.p(), dashes=[2, 2])
+    for m in [model]:
+        drhodp_liq, drhodp_vap = get_drhovecdp_sat(m, T, rhovec[0:2], rhovec[2::])
+        dpdxL = 1.0/get_dxdp(rhovec=rhovec[0:2], drhovecdp=drhodp_liq)
+        dpdxV = 1.0/get_dxdp(rhovec=rhovec[2::], drhovecdp=drhodp_vap)
+        xx = np.linspace(0, 0.4)
+        plt.plot(xx, xx*dpdxL[0]+AS.p(), dashes=[2, 2])
+        plt.plot(xx, xx*dpdxV[0]+AS.p(), dashes=[2, 2])
 
-    traceT(model, T, rhovec)
+    traceT(model, T, rhovec.copy())
+
+    for f in np.linspace(0.9, 1.1, 100):
+        modeltweak = teqp.build_BIPmodified(model, {'betaT': 1.0, 'gammaT': 1.001633952*f, 'betaV': 1.0, 'gammaV': 1.006268954})
+        try:
+            traceT(modeltweak, T, rhovec.copy(), kwargs=dict(lw=0.5, dashes=[3,1,1,1]))
+        except:
+            pass
+
+    plt.ylim(0.00019e6, 0.026e6)
+    plt.gca().set(xlabel='$x_1$ / mole frac.', ylabel='$p$ / Pa')
+    plt.tight_layout(pad=0.2)
+    plt.show()
 
 
 if __name__ == '__main__':

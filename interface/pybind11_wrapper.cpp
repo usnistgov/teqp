@@ -106,6 +106,11 @@ void init_teqp(py::module& m) {
         ;
     add_derivatives<MultiFluid>(m, wMF);
 
+    m.def("build_BIPmodified", &build_BIPmodified<MultiFluid>);
+    using RedType = std::decay_t<decltype(MultiFluid::redfunc)>; using BIPmod = MultiFluidReducingFunctionAdapter<RedType, MultiFluid>;
+    auto wMFBIP = py::class_<BIPmod>(m, "MultiFluidBIP");
+    add_derivatives<BIPmod>(m, wMFBIP);
+
     // CPA model
     using CPAEOS_ = decltype(CPA::CPAfactory(nlohmann::json()));
     m.def("CPAfactory", &CPA::CPAfactory);
