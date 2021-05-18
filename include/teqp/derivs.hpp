@@ -453,7 +453,7 @@ struct IsochoricDerivatives{
     /***
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
     *
-    * Uses autodiff to calculate second partial derivatives
+    * Uses autodiff to calculate derivatives
     */
     static auto build_Psir_gradient_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
         ArrayXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
@@ -469,13 +469,43 @@ struct IsochoricDerivatives{
     /***
     * \brief Calculate the chemical potential of each component
     *
-    * Uses autodiff derivatives to calculate second partial derivatives
-    * See Eq. 9 of https://doi.org/10.1002/aic.16730
+    * Uses autodiff to calculate derivatives
+    * See Eq. 5 of https://doi.org/10.1002/aic.16730, but the rho in the denominator should be a rhoref (taken to be 1)
     * \note: Some contributions to the ideal gas part are missing (reference state and cp0), but are not relevant to phase equilibria
     */
-    static auto get_chempot_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+    static auto get_chempotVLE_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
         typename VectorType::value_type rhotot = rho.sum();
         auto molefrac = (rho / rhotot).eval();
-        return (build_Psir_gradient_autodiff(model, T, rho).array() + model.R(molefrac)*T*(1.0 + log(rho / rhotot))).eval();
+        auto rhorefideal = 1.0;
+        return (build_Psir_gradient_autodiff(model, T, rho).array() + model.R(molefrac)*T*(rhorefideal + log(rho / rhorefideal))).eval();
+    }
+
+    static auto build_d2PsirdTdrhoi_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+        VectorType deriv(rho.size());
+        // d^2psir/dTdrho_i
+        for (auto i = 0; i < rho.size(); ++i) {
+            auto psirfunc = [&model, &rho, i](const auto& T, const auto& rhoi) {
+                ArrayXdual2nd rhovecc(rho.size()); for (auto j = 0; j < rho.size(); ++j) { rhovecc[j] = rho[j]; }
+                rhovecc[i] = rhoi;
+                auto rhotot_ = rhovecc.sum();
+                auto molefrac = (rhovecc / rhotot_).eval();
+                return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
+            };
+            dual2nd Tdual = T, rhoidual = rho[i];
+            auto [u00, u10, u11] = derivatives(psirfunc, wrt(Tdual, rhoidual), at(Tdual, rhoidual));
+            deriv[i] = u11;
+        }
+        return deriv;
+    }
+
+    /***
+    * \brief Calculate the temperature derivative of the chemical potential of each component
+    * \note: Some contributions to the ideal gas part are missing (reference state and cp0), but are not relevant to phase equilibria
+    */
+    static auto get_dchempotdT_autodiff(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = rhovec.sum();
+        auto molefrac = (rhovec / rhotot).eval();
+        auto rhorefideal = 1.0;
+        return build_d2PsirdTdrhoi_autodiff(model, T, rhovec) + model.R(molefrac)*(rhorefideal + log(rhovec/rhorefideal));
     }
 };

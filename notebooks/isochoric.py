@@ -92,7 +92,7 @@ def traceT(model, T, rhovec0, *, kwargs={}):
     def rhovecprime(x, rhovec):
         return get_drhovecdx(i=0, model=model, T=T, rhovec=rhovec)
     tic = timeit.default_timer()
-    sol = solve_ivp(rhovecprime, [0.0, 1.0], y0=rhovec0, method='RK45',dense_output=True, t_eval = np.linspace(0,1,1000), rtol=1e-8)
+    sol = solve_ivp(rhovecprime, [0.0, 0.5], y0=rhovec0, method='RK45',dense_output=True, t_eval = np.linspace(0,0.49,1000), rtol=1e-8)
     p = [teqp.get_pr(model, T, sol.y[0:2,j]) + R*T*sol.y[0:2,j].sum() for j in range(len(sol.t))]
     toc = timeit.default_timer()
     print(toc-tic)
@@ -100,9 +100,55 @@ def traceT(model, T, rhovec0, *, kwargs={}):
     plt.plot(sol.t, p, 'r',**kwargs)
     plt.plot(y, p, 'g',**kwargs)
 
-def main():
+def drhovecdT_oldschool(model,T, rhovec, fluids):
+    rhovecL = rhovec[0:2]
+    rhovecV = rhovec[2::]
+    tracer = vle.VLEIsolineTracer(vle.VLEIsolineTracer.imposed_variable.IMPOSED_T, 20000, 'HEOS', fluids)
+    def get_derivs(T, rhovec):
+        return tracer.get_derivs(T,rhovec)#vle.VLEIsolineTracer(vle.VLEIsolineTracer.imposed_variable.IMPOSED_T, 20000, 'HEOS', fluids).get_derivs(T, rhovec)
+    
+    derV = get_derivs(T, rhovecV)
+    derL = get_derivs(T, rhovecL)
+    # dT = 1e-3
+    # print(derL.dpdT__constrhovec(), (get_derivs(T+dT, rhovecV).p() - get_derivs(T-dT, rhovecV).p())/(2*dT))
+    AS = tracer.get_AbstractState_pointer()
+    R = AS.gas_constant()
+    # AS.set_mole_fractions(z)
+    z = rhovecL/rhovecL.sum()
+
+    rhoV = sum(rhovecV)
+    rhoL = sum(rhovecL)
+    DELTAs2 = np.array([derV.d2psir_dTdrhoi__constrhoj(i) - derL.d2psir_dTdrhoi__constrhoj(i) + R*np.log(rhovecV[i]/rhoV/(rhovecL[i]/rhoL)) for i in range(2)]) # Column vector
+    DELTAs = np.array([derV.d2psir_dTdrhoi__constrhoj(i) - derL.d2psir_dTdrhoi__constrhoj(i) + R*np.log(rhovecV[i]/rhovecL[i]) for i in range(2)]) # Column vector
+    DELTAbetarho = derV.dpdT__constrhovec() - derL.dpdT__constrhovec() # double
+    PSIL = derL.get_Hessian()
+    PSIV = derV.get_Hessian()
+    drhovecL_dT = (np.dot(DELTAs,rhovecV)-DELTAbetarho)/np.dot(np.dot(PSIL,rhovecV-rhovecL),z)*np.array(z)
+    drhovecV_dT = np.linalg.solve(PSIV, np.dot(PSIL,drhovecL_dT)-DELTAs)
+    return np.array(drhovecL_dT.tolist()+drhovecV_dT.tolist())
+
+def drhovecdT_isopleth(model, T, rhovec):
+    assert(len(rhovec)==4)
+    rhovecL = rhovec[0:2]
+    rhovecV = rhovec[2::]
+    Hliq = teqp.build_Psi_Hessian_autodiff(model, T, rhovecL)
+    Hvap = teqp.build_Psi_Hessian_autodiff(model, T, rhovecV)
+    rhoL = sum(rhovecL)
+    rhoV = sum(rhovecV)
+    xL = rhovecL/rhoL
+    xV = rhovecV/rhoV
+    R = 8.31446161815324
+    deltas = teqp.get_dchempotdT_autodiff(model, T, rhovecV) - teqp.get_dchempotdT_autodiff(model, T, rhovecL)
+    deltarho = rhovecV-rhovecL
+    dpdTV = R*rhoV*(1+model.get_Ar01(T, rhoV, xV)-model.get_Ar11(T, rhoV, xV))
+    dpdTL = R*rhoL*(1+model.get_Ar01(T, rhoL, xL)-model.get_Ar11(T, rhoL, xL))
+    deltabeta = dpdTV-dpdTL
+    drhovecdTL = (np.dot(deltas,rhovecV)-deltabeta)/np.dot(Hliq@deltarho, xL)*xL
+    drhovecdTV = np.linalg.solve(Hvap, Hliq@drhovecdTL-deltas)
+    return np.array(drhovecdTL.tolist()+drhovecdTV.tolist())
+
+def main(names):
     T = 300
-    names = ['n-Hexane', 'n-Octane']
 
     backend = 'HEOS'
     tracer = vle.VLEIsolineTracer(IMPOSED_T, T, backend, names)
@@ -168,6 +214,49 @@ def main():
     plt.tight_layout(pad=0.2)
     plt.show()
 
+def trace_isopleth(names):
+    AS = CP.AbstractState('HEOS', '&'.join(names))
+    AS.set_mole_fractions([0.25, 0.75])
+    AS.build_phase_envelope("")
+    PE = AS.get_phase_envelope_data()
+    print(dir(PE))
+
+    model = teqp.build_multifluid_model(names, '../mycp', '../mycp/dev/mixtures/mixture_binary_pairs.json')
+    i = 0
+    rhovec0 = np.array([
+        PE.rhomolar_liq[i]*PE.x[0][i], PE.rhomolar_liq[i]*PE.x[1][i], 
+        PE.rhomolar_vap[i]*PE.y[0][i], PE.rhomolar_vap[i]*PE.y[1][i]])
+    T = PE.T[0]
+    dT = 1e-2
+    R = model.get_R(np.array([1.0]))
+    rhovec = rhovec0.copy()
+    for i in range(10000):
+        xL0 = rhovec[0]/rhovec[0:2].sum()
+        molefrac = np.array([xL0, 1-xL0])
+        rhovecL = rhovec[0:2]
+        rhoL = rhovecL.sum()
+        rhovecV = rhovec[2::]
+        rhoV = rhovecV.sum()
+
+        # plt.plot(T, rhoL, 'o')
+        # plt.plot(T, rhoV, 'x')
+
+        vec1 = drhovecdT_isopleth(model, T, rhovec)
+        rhovec += vec1*dT
+        T += dT
+
+        rhovecL = rhovec[0:2]
+        rhoL = rhovecL.sum()
+        p = rhoL*R*T + teqp.get_pr(model, T, rhovecL)
+        print(T, xL0, rhoL)
+        plt.plot(T, p, 'x')
+
+    # plt.plot(PE.T, PE.rhomolar_vap)
+    # plt.plot(PE.T, PE.rhomolar_liq)
+    plt.plot(PE.T, PE.p)
+    plt.show()
 
 if __name__ == '__main__':
-    main()
+    names = ['n-Hexane', 'n-Octane']
+    # main(names)
+    trace_isopleth(names)
