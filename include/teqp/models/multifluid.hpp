@@ -678,10 +678,10 @@ auto build_BIPmodified(Model& model, const nlohmann::json& j) {
     auto red = model.redfunc;
     auto betaT = red.betaT;
     betaT(0, 1) = j["betaT"];
-    betaT(1, 0) = 1/j["betaT"];
+    betaT(1, 0) = 1/betaT(0, 1);
     auto betaV = red.betaV;
     betaV(0, 1) = j["betaV"];
-    betaV(1, 0) = 1/j["betaV"];
+    betaV(1, 0) = 1/betaV(0, 1);
     auto gammaT = red.gammaT, gammaV = red.gammaV;
     gammaT(0, 1) = j["gammaT"]; gammaT(1, 0) = gammaT(0, 1);
     gammaV(0, 1) = j["gammaV"]; gammaV(1, 0) = gammaV(0, 1);
