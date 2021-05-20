@@ -11,10 +11,12 @@
 
 #include "teqp/core.hpp"
 
-#include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/CPA.hpp"
+#include "teqp/models/eos.hpp"
 #include "teqp/models/multifluid.hpp"
+
+#include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/VLE.hpp"
 
 namespace py = pybind11;
