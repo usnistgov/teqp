@@ -219,7 +219,12 @@ public:
         using namespace nlohmann;
         auto i = 0;
         for (auto& c : components) {
-            auto j = json::parse(std::ifstream(coolprop_root + "/dev/fluids/" + c + ".json"));
+            std::string path = coolprop_root + "/dev/fluids/" + c + ".json";
+            std::ifstream ifs(path);
+            if (!ifs) {
+                throw std::invalid_argument("Load path is invalid: " + path);
+            }
+            auto j = json::parse(ifs);
             auto red = j["EOS"][0]["STATES"]["reducing"];
             double Tc_ = red["T"];
             double rhoc_ = red["rhomolar"];
