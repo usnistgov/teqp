@@ -101,7 +101,7 @@ void init_teqp(py::module& m) {
     add_derivatives<PCSAFTMixture>(m, wPCSAFT);
 
     // Multifluid model
-    m.def("build_multifluid_model", &build_multifluid_model);
+    m.def("build_multifluid_model", &build_multifluid_model, py::arg("components"), py::arg("coolprop_root"), py::arg("BIPcollectionpath"), py::arg("flags") = {});
     using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"",""},"",""));
     auto wMF = py::class_<MultiFluid>(m, "MultiFluid")
         .def("get_Tcvec", [](const MultiFluid& c) { return c.redfunc.Tc; })

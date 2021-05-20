@@ -166,7 +166,13 @@ public:
         return sum1 + sum2;
     }
 
-    static auto get_BIPdep(const nlohmann::json& collection, const std::vector<std::string>& components) {
+    static auto get_BIPdep(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
+
+        if (flags.contains("estimate")) {
+            return nlohmann::json({
+                {"betaT", 1.0}, {"gammaT", 1.0}, {"betaV", 1.0}, {"gammaV", 1.0}, {"F", 0.0} 
+            });
+        }
 
         // convert string to upper case
         auto toupper = [](const std::string s){ auto data = s; std::for_each(data.begin(), data.end(), [](char& c) { c = ::toupper(c); }); return data;};
@@ -185,8 +191,8 @@ public:
         }
         throw std::invalid_argument("Can't match this binary pair");
     }
-    static auto get_binary_interaction_double(const nlohmann::json& collection, const std::vector<std::string>& components) {
-        auto el = get_BIPdep(collection, components);
+    static auto get_binary_interaction_double(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
+        auto el = get_BIPdep(collection, components, flags);
 
         double betaT = el["betaT"], gammaT = el["gammaT"], betaV = el["betaV"], gammaV = el["gammaV"];
         // Backwards order of components, flip beta values
@@ -196,7 +202,7 @@ public:
         }
         return std::make_tuple(betaT, gammaT, betaV, gammaV);
     }
-    static auto get_BIP_matrices(const nlohmann::json& collection, const std::vector<std::string>& components) {
+    static auto get_BIP_matrices(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
         Eigen::MatrixXd betaT, gammaT, betaV, gammaV, YT, Yv;
         auto N = components.size();
         betaT.resize(N, N); betaT.setZero();
@@ -205,7 +211,7 @@ public:
         gammaV.resize(N, N); gammaV.setZero();
         for (auto i = 0; i < N; ++i) {
             for (auto j = i + 1; j < N; ++j) {
-                auto [betaT_, gammaT_, betaV_, gammaV_] = get_binary_interaction_double(collection, { components[i], components[j] });
+                auto [betaT_, gammaT_, betaV_, gammaV_] = get_binary_interaction_double(collection, { components[i], components[j] }, flags);
                 betaT(i, j) = betaT_;         betaT(j, i) = 1.0 / betaT(i, j);
                 gammaT(i, j) = gammaT_;       gammaT(j, i) = gammaT(i, j);
                 betaV(i, j) = betaV_;         betaV(j, i) = 1.0 / betaV(i, j);
@@ -234,13 +240,13 @@ public:
         }
         return std::make_tuple(Tc, vc);
     }
-    static auto get_F_matrix(const nlohmann::json& collection, const std::vector<std::string>& components) {
+    static auto get_F_matrix(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
         Eigen::MatrixXd F(components.size(), components.size());
         auto N = components.size();
         for (auto i = 0; i < N; ++i) {
             F(i, i) = 0.0;
             for (auto j = i + 1; j < N; ++j) {
-                auto el = get_BIPdep(collection, { components[i], components[j] });
+                auto el = get_BIPdep(collection, { components[i], components[j] }, flags);
                 if (el.empty()) {
                     F(i, j) = 0.0;
                     F(j, i) = 0.0;
@@ -295,7 +301,7 @@ public:
     }
 };
 
-auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components) {
+auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
 
     // Allocate the matrix with default models
     std::vector<std::vector<MultiFluidDepartureFunction>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
@@ -311,7 +317,7 @@ auto get_departure_function_matrix(const std::string& coolprop_root, const nlohm
 
     for (auto i = 0; i < funcs.size(); ++i) {
         for (auto j = i + 1; j < funcs.size(); ++j) {
-            auto BIP = MultiFluidReducingFunction::get_BIPdep(BIPcollection, { components[i], components[j] });
+            auto BIP = MultiFluidReducingFunction::get_BIPdep(BIPcollection, { components[i], components[j] }, flags);
             auto function = BIP["function"];
             if (!function.empty()) {
 
@@ -627,15 +633,18 @@ auto get_EOSs(const std::string& coolprop_root, const std::vector<std::string>& 
     return EOSs;
 }
 
-auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath) {
+auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags = {}) {
 
     const auto BIPcollection = nlohmann::json::parse(std::ifstream(BIPcollectionpath));
 
+    // Pure fluids
     auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(coolprop_root, components);
-    auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, components);
-    auto funcs = get_departure_function_matrix(coolprop_root, BIPcollection, components);
-    auto EOSs = get_EOSs(coolprop_root, components);
-    auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, components);
+    auto EOSs = get_EOSs(coolprop_root, components); 
+    
+    // Things related to the mixture
+    auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, components, flags);
+    auto funcs = get_departure_function_matrix(coolprop_root, BIPcollection, components, flags);
+    auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, components, flags);
 
     auto redfunc = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
 

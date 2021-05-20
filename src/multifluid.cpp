@@ -159,7 +159,10 @@ int main(){
     }*/
 
     //time_calls(coolprop_root, BIPcollection);
-
+    {
+        nlohmann::json flags = { {"estimate", true} };
+        auto model = build_multifluid_model({ "Ethane", "R1234ze(E)" }, coolprop_root, BIPcollection, flags);
+    }
 {
     auto model = build_multifluid_model({ "methane", "ethane" }, coolprop_root, BIPcollection);
     Eigen::ArrayXd rhovec(2); rhovec << 1.0, 2.0;
