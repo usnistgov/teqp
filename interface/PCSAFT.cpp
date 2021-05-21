@@ -1,6 +1,6 @@
 #include "pybind11_wrapper.hpp"
 
-#include "teqp/models/PCSAFT.hpp"
+#include "teqp/models/pcsaft.hpp"
 #include "teqp/derivs.hpp"
 
 void add_PCSAFT(py::module& m) {
