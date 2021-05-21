@@ -131,3 +131,80 @@ auto extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar
     auto rhovap = drhohat/sqrt(1 - T/Tc) + rhoc;
     return (Eigen::ArrayXd(2) << rholiq, rhovap).finished();
 }
+
+template<class A, class B>
+auto linsolve(const A &a, const B& b) {
+    return a.matrix().colPivHouseholderQr().solve(b.matrix()).array().eval();
+}
+
+template<class Model, class Scalar, class VecType>
+auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhovecL, const VecType& rhovecV) {
+    //tic = timeit.default_timer();
+    using id = IsochoricDerivatives<Model, Scalar, VecType>;
+    auto Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
+    auto Hvap = id::build_Psi_Hessian_autodiff(model, T, rhovecV).eval();
+    //Hvap[~np.isfinite(Hvap)] = 1e20;
+    //Hliq[~np.isfinite(Hliq)] = 1e20;
+
+    auto N = rhovecL.size();
+    Eigen::MatrixXd A = decltype(Hliq)::Zero(N, N);
+    auto b = decltype(Hliq)::Ones(N, 1);
+    decltype(Hliq) drhodp_liq, drhodp_vap;
+    assert(rhovecL.size() == rhovecV.size());
+    if ((rhovecL != 0).all() && (rhovecV != 0).all()) {
+        // Normal treatment for all concentrations not equal to zero
+        A(0, 0) = Hliq.row(0).dot(rhovecV.matrix());
+        A(0, 1) = Hliq.row(1).dot(rhovecV.matrix());
+        A(1, 0) = Hliq.row(0).dot(rhovecL.matrix());
+        A(1, 1) = Hliq.row(1).dot(rhovecL.matrix());
+
+        drhodp_liq = linsolve(A, b);
+        drhodp_vap = linsolve(Hvap, Hliq*drhodp_liq);
+    }
+    else{
+        // Special treatment for infinite dilution
+        auto murL = id::build_Psir_gradient_autodiff(model, T, rhovecL);
+        auto murV = id::build_Psir_gradient_autodiff(model, T, rhovecV);
+        auto RL = model.R(rhovecL / rhovecL.sum());
+        auto RV = model.R(rhovecV / rhovecV.sum());
+
+        // First, for the liquid part
+        for (auto i = 0; i < N; ++i) {
+            for (auto j = 0; j < N; ++j) {
+                if (rhovecL[j] == 0) {
+                    // Analysis is special if j is the index that is a zero concentration.If you are multiplying by the vector
+                    // of liquid concentrations, a different treatment than the case where you multiply by the vector
+                    // of vapor concentrations is required
+                    // ...
+                    // Initial values
+                    auto Aij = (Hliq.row(j).array().cwiseProduct(((i == 0) ? rhovecV : rhovecL).array().transpose())).eval(); // coefficient - wise product
+                    // A throwaway boolean for clarity
+                    bool is_liq = (i == 1);
+                    // Apply correction to the j term (RT if liquid, RT*phi for vapor)
+                    Aij[j] = (is_liq) ? RL*T : RL*T*exp(-(murV[j] - murL[j])/(RL*T));
+                    // Fill in entry
+                    A(i, j) = Aij.sum();
+                }
+                else{
+                    // Normal
+                    A(i, j) = Hliq.row(j).dot(((i==0) ? rhovecV : rhovecL).matrix());
+                }
+            }
+        }
+        drhodp_liq = linsolve(A, b);
+
+        // Then, for the vapor part, also requiring special treatment
+        // Left - multiplication of both sides of equation by diagonal matrix with liquid concentrations along diagonal, all others zero
+        auto diagrhovecL = rhovecL.matrix().asDiagonal();
+        auto PSIVstar = (diagrhovecL*Hvap).eval();
+        auto PSILstar = (diagrhovecL*Hliq).eval();
+        for (auto j = 0; j < N; ++j) {
+            if (rhovecL[j] == 0) {
+                PSILstar(j, j) = RL*T;
+                PSIVstar(j, j) = RV*T/exp(-(murV[j] - murL[j]) / (RV * T));
+            }
+        }
+        drhodp_vap = linsolve(PSIVstar, PSILstar*drhodp_liq);
+    }
+    return std::make_tuple(drhodp_liq, drhodp_vap);
+}

@@ -23,6 +23,9 @@ namespace py = pybind11;
 
 template<typename Model, typename Wrapper>
 void add_derivatives(py::module &m, Wrapper &cls) {
+
+    using RAX = Eigen::Ref<Eigen::ArrayXd>;
+
     using id = IsochoricDerivatives<Model, double, Eigen::Array<double,Eigen::Dynamic,1> >;
     m.def("get_Ar00", &id::get_Ar00, py::arg("model"), py::arg("T"), py::arg("rho"));
     m.def("get_Ar10", &id::get_Ar10, py::arg("model"), py::arg("T"), py::arg("rho"));
@@ -47,11 +50,12 @@ void add_derivatives(py::module &m, Wrapper &cls) {
 
     m.def("extrapolate_from_critical", &extrapolate_from_critical<Model, double>);
     m.def("pure_VLE_T", &pure_VLE_T<Model, double>);
+    m.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
 
     //cls.def("get_Ar01", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar01(m, T, rhovec); });
     //cls.def("get_Ar10", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar10(m, T, rhovec); });
     using tdx = TDXDerivatives<Model, double, Eigen::Array<double, Eigen::Dynamic, 1> >;
-    using RAX = Eigen::Ref<Eigen::ArrayXd>;
+    
     cls.def("get_R", [](const Model& m, const RAX molefrac) { return m.R(molefrac); }, py::arg("molefrac").noconvert());
     cls.def("get_Ar00", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::get_Ar00(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar01", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar01<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
