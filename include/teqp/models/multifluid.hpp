@@ -301,7 +301,7 @@ public:
     }
 };
 
-auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
+inline auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
 
     // Allocate the matrix with default models
     std::vector<std::vector<MultiFluidDepartureFunction>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
@@ -526,7 +526,7 @@ public:
     }
 };
 
-auto get_EOS(const std::string& coolprop_root, const std::string& name) 
+inline auto get_EOS(const std::string& coolprop_root, const std::string& name) 
 {
     using namespace nlohmann;
     auto j = json::parse(std::ifstream(coolprop_root + "/dev/fluids/" + name + ".json"));
@@ -625,7 +625,7 @@ auto get_EOS(const std::string& coolprop_root, const std::string& name)
     return eos;
 }
 
-auto get_EOSs(const std::string& coolprop_root, const std::vector<std::string>& names) {
+inline auto get_EOSs(const std::string& coolprop_root, const std::vector<std::string>& names) {
     std::vector<MultiFluidEOS> EOSs;
     for (auto& name : names) {
         EOSs.emplace_back(get_EOS(coolprop_root, name));
@@ -633,7 +633,7 @@ auto get_EOSs(const std::string& coolprop_root, const std::vector<std::string>& 
     return EOSs;
 }
 
-auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags = {}) {
+inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags = {}) {
 
     const auto BIPcollection = nlohmann::json::parse(std::ifstream(BIPcollectionpath));
 
@@ -721,7 +721,7 @@ public:
     template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return molefracs[0]; }
     template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return molefracs[0]; }
 };
-auto build_dummy_multifluid_model(const std::vector<std::string>& components) {
+inline auto build_dummy_multifluid_model(const std::vector<std::string>& components) {
     std::vector<DummyEOS> EOSs(2);
     std::vector<std::vector<DummyEOS>> funcs(2); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
     std::vector<std::vector<double>> F(2); for (auto i = 0; i < F.size(); ++i) { F[i].resize(F.size()); }
@@ -737,7 +737,7 @@ auto build_dummy_multifluid_model(const std::vector<std::string>& components) {
     auto redfunc = DummyReducingFunction();
     return MultiFluid(std::move(redfunc), std::move(CorrespondingStatesContribution(std::move(EOSs))), std::move(DepartureContribution(std::move(ff), std::move(funcs))));
 }
-void test_dummy() {
+inline void test_dummy() {
     auto model = build_dummy_multifluid_model({ "A", "B" });
     std::valarray<double> rhovec = { 1.0, 2.0 };
     auto alphar = model.alphar(300.0, rhovec);

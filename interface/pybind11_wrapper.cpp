@@ -1,130 +1,23 @@
-#define USE_AUTODIFF
-
-#include "nlohmann/json.hpp"
-#include "pybind11_json/pybind11_json.hpp"
-
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <pybind11/operators.h>
-#include <pybind11/functional.h>
-#include <pybind11/eigen.h>
-
-#include "teqp/core.hpp"
-
-#include "teqp/models/pcsaft.hpp"
-#include "teqp/models/CPA.hpp"
-#include "teqp/models/eos.hpp"
-#include "teqp/models/multifluid.hpp"
-
-#include "teqp/algorithms/critical_tracing.hpp"
-#include "teqp/algorithms/VLE.hpp"
+#include "pybind11_wrapper.hpp"
 
 namespace py = pybind11;
 
-template<typename Model, typename Wrapper>
-void add_derivatives(py::module &m, Wrapper &cls) {
-
-    using RAX = Eigen::Ref<Eigen::ArrayXd>;
-
-    using id = IsochoricDerivatives<Model, double, Eigen::Array<double,Eigen::Dynamic,1> >;
-    m.def("get_Ar00", &id::get_Ar00, py::arg("model"), py::arg("T"), py::arg("rho"));
-    m.def("get_Ar10", &id::get_Ar10, py::arg("model"), py::arg("T"), py::arg("rho"));
-    m.def("get_Psir", &id::get_Psir, py::arg("model"), py::arg("T"), py::arg("rho"));
-
-    m.def("get_pr", &id::get_pr, py::arg("model"), py::arg("T"), py::arg("rho"));
-    m.def("get_splus", &id::get_splus, py::arg("model"), py::arg("T"), py::arg("rho"));
-
-    m.def("build_Psir_Hessian_autodiff", &id::build_Psir_Hessian_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
-    m.def("build_Psi_Hessian_autodiff", &id::build_Psi_Hessian_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
-    m.def("build_Psir_gradient_autodiff", &id::build_Psir_gradient_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
-    m.def("build_d2PsirdTdrhoi_autodiff", &id::build_d2PsirdTdrhoi_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
-    m.def("get_chempotVLE_autodiff", &id::get_chempotVLE_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
-    m.def("get_dchempotdT_autodiff", &id::get_dchempotdT_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
-
-    using vd = VirialDerivatives<Model, double, Eigen::Array<double,Eigen::Dynamic,1>>;
-    m.def("get_B2vir", &vd::get_B2vir, py::arg("model"), py::arg("T"), py::arg("molefrac").noconvert());
-    m.def("get_B12vir", &vd::get_B12vir, py::arg("model"), py::arg("T"), py::arg("molefrac").noconvert());
-
-    using ct = CriticalTracing<Model, double, Eigen::Array<double, Eigen::Dynamic, 1>>;
-    m.def("trace_critical_arclength_binary", &ct::trace_critical_arclength_binary);
-
-    m.def("extrapolate_from_critical", &extrapolate_from_critical<Model, double>);
-    m.def("pure_VLE_T", &pure_VLE_T<Model, double>);
-    m.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
-
-    //cls.def("get_Ar01", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar01(m, T, rhovec); });
-    //cls.def("get_Ar10", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar10(m, T, rhovec); });
-    using tdx = TDXDerivatives<Model, double, Eigen::Array<double, Eigen::Dynamic, 1> >;
-    
-    cls.def("get_R", [](const Model& m, const RAX molefrac) { return m.R(molefrac); }, py::arg("molefrac").noconvert());
-    cls.def("get_Ar00", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::get_Ar00(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar01", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar01<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar10", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar10<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar11", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar11<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar12", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar12<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-
-    cls.def("get_Ar01n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<1>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar02n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<2>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar03n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<3>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar04n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<4>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar05n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<5>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_Ar06n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<6>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-    cls.def("get_neff",  [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::get_neff(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
-}
+// These are each in separate files to move the compilation into 
+// multiple compilation units so that multiple processors can be use
+// at the same time 
+void add_vdW(py::module &m);
+void add_PCSAFT(py::module& m);
+void add_CPA(py::module& m);
+void add_multifluid(py::module& m);
+void add_multifluid_mutant(py::module& m);
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {
-
-    using vdWEOSd = vdWEOS<double>;
-    auto wvdW = py::class_<vdWEOSd>(m, "vdWEOS")
-        .def(py::init<const std::valarray<double>&, const std::valarray<double>&>(),py::arg("Tcrit"), py::arg("pcrit"))
-        ;
-    add_derivatives<vdWEOSd>(m, wvdW);
-    
-    auto wvdW1 = py::class_<vdWEOS1>(m, "vdWEOS1")
-        .def(py::init<const double&, const double&>(), py::arg("a"), py::arg("b"))    
-        ;
-    add_derivatives<vdWEOS1>(m, wvdW1);
-
-    py::class_<SAFTCoeffs>(m, "SAFTCoeffs")
-        .def(py::init<>())
-        .def_readwrite("name", &SAFTCoeffs::name)
-        .def_readwrite("m", &SAFTCoeffs::m)
-        .def_readwrite("sigma_Angstrom", &SAFTCoeffs::sigma_Angstrom)
-        .def_readwrite("epsilon_over_k", &SAFTCoeffs::epsilon_over_k)
-        .def_readwrite("BibTeXKey", &SAFTCoeffs::BibTeXKey)
-        ;
-
-    auto wPCSAFT = py::class_<PCSAFTMixture>(m, "PCSAFTEOS")
-        .def(py::init<const std::vector<std::string> &>(), py::arg("names"))
-        .def(py::init<const std::vector<SAFTCoeffs> &>(), py::arg("coeffs"))
-        .def("print_info", &PCSAFTMixture::print_info)
-        .def("max_rhoN", &PCSAFTMixture::max_rhoN<Eigen::ArrayXd>)
-        .def("get_m", &PCSAFTMixture::get_m)
-        .def("get_sigma_Angstrom", &PCSAFTMixture::get_sigma_Angstrom)
-        .def("get_epsilon_over_k_K", &PCSAFTMixture::get_epsilon_over_k_K)
-        ;
-    add_derivatives<PCSAFTMixture>(m, wPCSAFT);
-
-    // Multifluid model
-    m.def("build_multifluid_model", &build_multifluid_model, py::arg("components"), py::arg("coolprop_root"), py::arg("BIPcollectionpath"), py::arg("flags") = nlohmann::json{});
-    using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"",""},"",""));
-    auto wMF = py::class_<MultiFluid>(m, "MultiFluid")
-        .def("get_Tcvec", [](const MultiFluid& c) { return c.redfunc.Tc; })
-        .def("get_vcvec", [](const MultiFluid& c) { return c.redfunc.vc; })
-        ;
-    add_derivatives<MultiFluid>(m, wMF);
-
-    m.def("build_BIPmodified", &build_BIPmodified<MultiFluid>);
-    using RedType = std::decay_t<decltype(MultiFluid::redfunc)>; using BIPmod = MultiFluidReducingFunctionAdapter<RedType, MultiFluid>;
-    auto wMFBIP = py::class_<BIPmod>(m, "MultiFluidBIP");
-    add_derivatives<BIPmod>(m, wMFBIP);
-
-    // CPA model
-    using CPAEOS_ = decltype(CPA::CPAfactory(nlohmann::json()));
-    m.def("CPAfactory", &CPA::CPAfactory);
-    auto wCPA = py::class_<CPAEOS_>(m, "CPAEOS");
-    add_derivatives<CPAEOS_>(m, wCPA);
+    add_vdW(m);
+    add_PCSAFT(m);
+    add_CPA(m);
+    add_multifluid(m);
+    add_multifluid_mutant(m);
 
     // Some functions for timing overhead of interface
     m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
@@ -132,7 +25,6 @@ void init_teqp(py::module& m) {
     using namespace pybind11::literals; // for "arg"_a
     m.def("___mysummerref", [](const double& c, const RAX x) { return c * x.sum(); }, "c"_a, "x"_a.noconvert());
     m.def("___myadder", [](const double& c, const double& d) { return c+d; });
-
 }
 
 PYBIND11_MODULE(teqp, m) {
