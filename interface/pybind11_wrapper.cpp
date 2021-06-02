@@ -2,9 +2,11 @@
 
 namespace py = pybind11;
 
-// These are each in separate files to move the compilation into 
-// multiple compilation units so that multiple processors can be use
-// at the same time 
+// The implementation of each prototype are in separate files to move the compilation into 
+// multiple compilation units so that multiple processors can be used
+// at the same time to carry out the compilation
+// 
+// This speeds up things a lot on linux, but not much in MSVC
 void add_vdW(py::module &m);
 void add_PCSAFT(py::module& m);
 void add_CPA(py::module& m);
