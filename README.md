@@ -13,20 +13,21 @@ Be aware: compiling takes a while in release mode (multiple minutes per file in 
 
 For example to build the critical line tracing example in visual studio, do:
 
+```
 mkdir build
 cd build
 cmake .. 
 cmake --build . --target multifluid_crit --config Release
 Release\multifluid_crit
-
+```
 On linux/OSX, similar:
-
+```
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --target multifluid_crit
 ./multifluid_crit
-
+```
 ### Random notes for future readers:
 
 * When building in WSL via VS Code, you might need to enable metadata to avoid pages of configure errors in cmake: https://github.com/microsoft/WSL/issues/4257
