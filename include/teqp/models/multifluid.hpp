@@ -42,6 +42,7 @@ public:
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
+            if (molefracs[i] == 0.0) { continue; }
             alphar = alphar + molefracs[i] * EOSs[i].alphar(tau, delta);
         }
         return alphar;
