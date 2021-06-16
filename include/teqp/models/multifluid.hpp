@@ -499,6 +499,9 @@ public:
     }
 };
 
+/**
+\f$ \alpha^ r = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 -\beta_i(\tau-\gamma_i)^2 }\f$
+*/
 class GaussianEOSTerm {
 public:
     Eigen::ArrayXd n, t, d, eta, beta, gamma, epsilon;
@@ -506,6 +509,35 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         return forceeval((n * exp(t * log(tau) + d * log(delta) - eta*(delta-epsilon).square() - beta*(tau-gamma).square())).sum());
+    }
+};
+
+
+/**
+\f$ \alpha^ r = \displaystyle\sum_i n_i \delta^ { d_i } \tau^ { t_i } \exp(-\delta^ { l_i } - \tau^ { m_i })\f$
+*/
+class Lemmon2005EOSTerm {
+public:
+    Eigen::ArrayXd n, t, d, l, m;
+    Eigen::ArrayXi l_i;
+
+    template<typename TauType, typename DeltaType>
+    auto alphar(const TauType& tau, const DeltaType& delta) const {
+        return forceeval((n * exp(t * log(tau) + d * log(delta) - powIVi(delta, l_i) - pow(tau, m))).sum());
+    }
+};
+
+/**
+\f$ \alpha^ r = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 + \frac{1}{\beta_i(\tau-\gamma_i)^2+b_i}\f$
+*/
+class GaoBEOSTerm {
+public:
+    Eigen::ArrayXd n, t, d, eta, beta, gamma, epsilon, b;
+
+    template<typename TauType, typename DeltaType>
+    auto alphar(const TauType& tau, const DeltaType& delta) const {
+        auto terms = n* exp(t * log(tau) + d * log(delta) - eta * (delta - epsilon).square() + 1.0 / (beta * (tau - gamma).square()+b) );
+        return forceeval(terms.sum());
     }
 };
 
@@ -527,7 +559,7 @@ public:
     }
 };
 
-using EOSTerms = EOSTermContainer<PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm>;
+using EOSTerms = EOSTermContainer<PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm>;
 
 inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& name)
 {
@@ -535,7 +567,7 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
     auto j = json::parse(std::ifstream(coolprop_root + "/dev/fluids/" + name + ".json"));
     auto alphar = j["EOS"][0]["alphar"];
 
-    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic" };
+    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005" };
 
     auto isallowed = [&](const auto& conventional_types, const std::string& name) {
         for (auto& a : conventional_types) { if (name == a) { return true; }; } return false;
@@ -598,6 +630,32 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
         return eos;
     };
 
+    auto build_Lemmon2005 = [&](auto term) {
+        std::size_t N = term["n"].size();
+
+        Lemmon2005EOSTerm eos;
+
+        auto eigorzero = [&term, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
+            if (!term[name].empty()) {
+                return toeig(term[name]);
+            }
+            else {
+                return Eigen::ArrayXd::Zero(N);
+            }
+        };
+        eos.n = eigorzero("n");
+        eos.t = eigorzero("t");
+        eos.d = eigorzero("d");
+        eos.m = eigorzero("m");
+        eos.l = eigorzero("l");
+        eos.l_i = eos.l.cast<int>();
+        if (((eos.l_i.cast<double>() - eos.l).cwiseAbs() > 0.0).any()) {
+            throw std::invalid_argument("Non-integer entry in l found");
+        }
+
+        return eos;
+    };
+
     auto build_gaussian = [&](auto term) {
         std::size_t N = term["n"].size();
 
@@ -619,6 +677,31 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
         eos.beta = eigorzero("beta");
         eos.gamma = eigorzero("gamma");
         eos.epsilon = eigorzero("epsilon");
+        return eos;
+    };
+
+    auto build_GaoB = [&](auto term) {
+        std::size_t N = term["n"].size();
+
+        GaoBEOSTerm eos;
+
+        auto eigorzero = [&term, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
+            if (!term[name].empty()) {
+                return toeig(term[name]);
+            }
+            else {
+                return Eigen::ArrayXd::Zero(N);
+            }
+        };
+
+        eos.n = eigorzero("n");
+        eos.t = eigorzero("t");
+        eos.d = eigorzero("d");
+        eos.eta = eigorzero("eta");
+        eos.beta = eigorzero("beta");
+        eos.gamma = eigorzero("gamma");
+        eos.epsilon = eigorzero("epsilon");
+        eos.b = eigorzero("b");
         return eos;
     };
 
@@ -649,6 +732,12 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
         }
         else if (type == "ResidualHelmholtzNonAnalytic") {
             container.add_term(build_na(term));
+        }
+        else if (type == "ResidualHelmholtzLemmon2005") {
+            container.add_term(build_Lemmon2005(term));
+        }
+        else if (type == "ResidualHelmholtzGaoB") {
+            container.add_term(build_GaoB(term));
         }
         else {
             throw std::invalid_argument("Bad term type, should not get here");
