@@ -8,6 +8,7 @@
 #include <cmath>
 #include <optional>
 #include <variant>
+#include <set>
 
 #include "teqp/types.hpp"
 #include "MultiComplex/MultiComplex.hpp"
@@ -584,6 +585,12 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
 
     auto toeig = [](const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); };    
 
+    auto all_same_length = [](const nlohmann::json& j, const std::vector<std::string>& ks) {
+        std::set<int> lengths; 
+        for (auto k : ks) { lengths.insert(j[k].size()); }
+        return lengths.size() == 1;
+    };
+
     EOSTerms container;
 
     auto build_power = [&](auto term) {
@@ -632,52 +639,34 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
     };
 
     auto build_Lemmon2005 = [&](auto term) {
-        std::size_t N = term["n"].size();
-
         Lemmon2005EOSTerm eos;
-
-        auto eigorzero = [&term, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
-            if (!term[name].empty()) {
-                return toeig(term[name]);
-            }
-            else {
-                return Eigen::ArrayXd::Zero(N);
-            }
-        };
-        eos.n = eigorzero("n");
-        eos.t = eigorzero("t");
-        eos.d = eigorzero("d");
-        eos.m = eigorzero("m");
-        eos.l = eigorzero("l");
+        eos.n = toeig(term["n"]);
+        eos.t = toeig(term["t"]);
+        eos.d = toeig(term["d"]);
+        eos.m = toeig(term["m"]);
+        eos.l = toeig(term["l"]);
         eos.l_i = eos.l.cast<int>();
+        if (!all_same_length(term, { "n","t","d","m","l" })) {
+            throw std::invalid_argument("Lengths are not all identical in Lemmon2005 term");
+        }
         if (((eos.l_i.cast<double>() - eos.l).cwiseAbs() > 0.0).any()) {
             throw std::invalid_argument("Non-integer entry in l found");
         }
-
         return eos;
     };
 
     auto build_gaussian = [&](auto term) {
-        std::size_t N = term["n"].size();
-
         GaussianEOSTerm eos;
-
-        auto eigorzero = [&term, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
-            if (!term[name].empty()) {
-                return toeig(term[name]);
-            }
-            else {
-                return Eigen::ArrayXd::Zero(N);
-            }
-        };
-
-        eos.n = eigorzero("n");
-        eos.t = eigorzero("t");
-        eos.d = eigorzero("d");
-        eos.eta = eigorzero("eta");
-        eos.beta = eigorzero("beta");
-        eos.gamma = eigorzero("gamma");
-        eos.epsilon = eigorzero("epsilon");
+        eos.n = toeig(term["n"]);
+        eos.t = toeig(term["t"]);
+        eos.d = toeig(term["d"]);
+        eos.eta = toeig(term["eta"]);
+        eos.beta = toeig(term["beta"]);
+        eos.gamma = toeig(term["gamma"]);
+        eos.epsilon = toeig(term["epsilon"]);
+        if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
+            throw std::invalid_argument("Lengths are not all identical in Gaussian term");
+        }
         return eos;
     };
 
@@ -691,23 +680,26 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
         eos.gamma = toeig(term["gamma"]);
         eos.epsilon = toeig(term["epsilon"]);
         eos.b = toeig(term["b"]);
+        if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon","b" })) {
+            throw std::invalid_argument("Lengths are not all identical in GaoB term");
+        }
         return eos;
     };
 
     /// lambda function for adding non-analytic terms
-    auto build_na = [&toeig](auto& term) {
-        auto eigorzero = [&term, &toeig](const std::string& name) -> Eigen::ArrayXd {
-            return toeig(term[name]);
-        };
+    auto build_na = [&](auto& term) {
         NonAnalyticEOSTerm eos;
-        eos.n = eigorzero("n");
-        eos.A = eigorzero("A");
-        eos.B = eigorzero("B");
-        eos.C = eigorzero("C");
-        eos.D = eigorzero("D");
-        eos.a = eigorzero("a");
-        eos.b = eigorzero("b");
-        eos.beta = eigorzero("beta");
+        eos.n = toeig(term["n"]);
+        eos.A = toeig(term["A"]);
+        eos.B = toeig(term["B"]);
+        eos.C = toeig(term["C"]);
+        eos.D = toeig(term["D"]);
+        eos.a = toeig(term["a"]);
+        eos.b = toeig(term["b"]);
+        eos.beta = toeig(term["beta"]);
+        if (!all_same_length(term, { "n","A","B","C","D","a","b","beta" })) {
+            throw std::invalid_argument("Lengths are not all identical in nonanalytic term");
+        }
         return eos;
     };
     
