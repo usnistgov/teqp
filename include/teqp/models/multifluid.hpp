@@ -681,27 +681,15 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
     };
 
     auto build_GaoB = [&](auto term) {
-        std::size_t N = term["n"].size();
-
         GaoBEOSTerm eos;
-
-        auto eigorzero = [&term, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
-            if (!term[name].empty()) {
-                return toeig(term[name]);
-            }
-            else {
-                return Eigen::ArrayXd::Zero(N);
-            }
-        };
-
-        eos.n = eigorzero("n");
-        eos.t = eigorzero("t");
-        eos.d = eigorzero("d");
-        eos.eta = eigorzero("eta");
-        eos.beta = eigorzero("beta");
-        eos.gamma = eigorzero("gamma");
-        eos.epsilon = eigorzero("epsilon");
-        eos.b = eigorzero("b");
+        eos.n = toeig(term["n"]);
+        eos.t = toeig(term["t"]);
+        eos.d = toeig(term["d"]);
+        eos.eta = -toeig(term["eta"]); // Watch out for this sign flip!!
+        eos.beta = toeig(term["beta"]);
+        eos.gamma = toeig(term["gamma"]);
+        eos.epsilon = toeig(term["epsilon"]);
+        eos.b = toeig(term["b"]);
         return eos;
     };
 
