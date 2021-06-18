@@ -476,7 +476,21 @@ public:
 };
 
 /**
-\f$ \alpha^ r = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 -\beta_i(\tau-\gamma_i)^2 }\f$
+\f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\gamma_i\delta^{l_i})\f$
+*/
+class ExponentialEOSTerm {
+public:
+    Eigen::ArrayXd n, t, d, g, l;
+    Eigen::ArrayXi l_i;
+
+    template<typename TauType, typename DeltaType>
+    auto alphar(const TauType& tau, const DeltaType& delta) const {
+        return forceeval((n*exp(t*log(tau) + d*log(delta) - g*powIVi(delta, l_i))).sum());
+    }
+};
+
+/**
+\f$ \alpha^r = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 -\beta_i(\tau-\gamma_i)^2 }\f$
 */
 class GaussianEOSTerm {
 public:
@@ -571,7 +585,7 @@ public:
     }
 };
 
-using EOSTerms = EOSTermContainer<PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm>;
+using EOSTerms = EOSTermContainer<PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm>;
 
 inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& name)
 {
@@ -579,7 +593,7 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
     auto j = json::parse(std::ifstream(coolprop_root + "/dev/fluids/" + name + ".json"));
     auto alphar = j["EOS"][0]["alphar"];
 
-    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005" };
+    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005", "ResidualHelmholtzExponential" };
 
     auto isallowed = [&](const auto& conventional_types, const std::string& name) {
         for (auto& a : conventional_types) { if (name == a) { return true; }; } return false;
@@ -680,6 +694,20 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
         return eos;
     };
 
+    auto build_exponential = [&](auto term) {
+        ExponentialEOSTerm eos;
+        eos.n = toeig(term["n"]);
+        eos.t = toeig(term["t"]);
+        eos.d = toeig(term["d"]);
+        eos.g = toeig(term["g"]);
+        eos.l = toeig(term["l"]);
+        eos.l_i = eos.l.cast<int>();
+        if (!all_same_length(term, { "n","t","d","g","l" })) {
+            throw std::invalid_argument("Lengths are not all identical in exponential term");
+        }
+        return eos;
+    };
+
     auto build_GaoB = [&](auto term) {
         GaoBEOSTerm eos;
         eos.n = toeig(term["n"]);
@@ -729,6 +757,9 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
         }
         else if (type == "ResidualHelmholtzGaoB") {
             container.add_term(build_GaoB(term));
+        }
+        else if (type == "ResidualHelmholtzExponential") {
+            container.add_term(build_exponential(term));
         }
         else {
             throw std::invalid_argument("Bad term type, should not get here");
