@@ -43,7 +43,6 @@ public:
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0; i < N; ++i) {
-            if (molefracs[i] == 0.0) { continue; }
             alphar = alphar + molefracs[i] * EOSs[i].alphar(tau, delta);
         }
         return alphar;
@@ -465,31 +464,6 @@ struct PowIUnaryFunctor {
     }
 };
 
-template<typename... Args>
-class EOSTermContainer {
-public:
-    using varEOSTerms = std::variant<Args...>;
-private:
-    std::vector<varEOSTerms> coll;
-public:
-
-    auto size() const { return coll.size(); }
-
-    template<typename Instance>
-    auto add_term(Instance&& instance) {
-        coll.emplace_back(std::move(instance));
-    }
-
-    template <class Tau, class Delta>
-    auto alphar(const Tau& tau, const Delta& delta) const {
-        std::common_type_t <Tau, Delta> ar = 0.0;
-        for (auto& term : coll) {
-            std::visit([&](auto& term) { ar = ar + term.alphar(tau, delta); }, term);
-        }
-        return ar;
-    }
-};
-
 class PowerEOSTerm {
 public:
     Eigen::ArrayXd n, t, d, c, l;
@@ -558,6 +532,42 @@ public:
         auto Delta = (theta.square() + B * pow(delta_min1_sq, a)).eval();
 
         return forceeval((n*pow(Delta, b) * delta * Psi).eval().sum());
+    }
+};
+
+
+
+template<typename... Args>
+class EOSTermContainer {
+public:
+    using varEOSTerms = std::variant<Args...>;
+private:
+    std::vector<varEOSTerms> coll;
+public:
+
+    auto size() const { return coll.size(); }
+
+    template<typename Instance>
+    auto add_term(Instance&& instance) {
+        coll.emplace_back(std::move(instance));
+    }
+
+    template <class Tau, class Delta>
+    auto alphar(const Tau& tau, const Delta& delta) const {
+        std::common_type_t <Tau, Delta> ar = 0.0;
+        for (const auto& term : coll) {
+            auto contrib = std::visit([&](auto& t) { return t.alphar(tau, delta); }, term);
+            if (std::holds_alternative<NonAnalyticEOSTerm>(term)) {
+                double dbl = getbaseval(abs(contrib));
+                if (std::isfinite(dbl)) {
+                    ar = ar + contrib;
+                }
+            }
+            else {
+                ar = ar + contrib;
+            }
+        }
+        return ar;
     }
 };
 

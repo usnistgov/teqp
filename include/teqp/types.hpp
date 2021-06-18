@@ -27,3 +27,15 @@ auto forceeval(T&& expr)
         return expr;
     }
 }
+
+template<typename T>
+auto getbaseval(T&& expr)
+{
+    using namespace autodiff::detail;
+    if constexpr (isDual<T> || isExpr<T>) {
+        return val(expr);
+    }
+    else {
+        return expr;
+    }
+}
