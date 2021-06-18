@@ -5,6 +5,7 @@
 #include <vector>
 #include <valarray>
 #include <set>
+#include <chrono>
 
 // Registration of types that are considered to be containers
 // See https://stackoverflow.com/a/12045843
@@ -56,4 +57,16 @@ auto all_same_length = [](const nlohmann::json& j, const std::vector<std::string
     std::set<int> lengths;
     for (auto k : ks) { lengths.insert(j[k].size()); }
     return lengths.size() == 1;
+};
+
+class Timer {
+private:
+    int N;
+    decltype(std::chrono::steady_clock::now()) tic;
+public:
+    Timer(int N) : N(N), tic(std::chrono::steady_clock::now()) {}
+    ~Timer() {
+        auto elap = std::chrono::duration<double>(std::chrono::steady_clock::now() - tic).count();
+        std::cout << elap / N * 1e6 << " us/call" << std::endl;
+    }
 };
