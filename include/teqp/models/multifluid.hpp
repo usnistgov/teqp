@@ -342,7 +342,7 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
     };
     auto build_GERG2004 = [&](const auto& term, auto &dep) {
         if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
-            throw std::invalid_argument("Lengths are not all identical in Gaussian term");
+            throw std::invalid_argument("Lengths are not all identical in GERG term");
         }
         auto Npower = term["Npower"];
         auto NGERG = term["n"].size()- Npower;
