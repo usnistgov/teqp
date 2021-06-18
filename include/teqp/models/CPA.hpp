@@ -1,5 +1,7 @@
 #pragma once
 
+#include "nlohmann/json.hpp"
+
 namespace CPA {
 
 template<typename X> auto POW2(X x) { return x * x; };
