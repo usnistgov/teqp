@@ -8,7 +8,6 @@
 #include <cmath>
 #include <optional>
 #include <variant>
-#include <set>
 
 #include "teqp/types.hpp"
 #include "MultiComplex/MultiComplex.hpp"
@@ -268,114 +267,137 @@ public:
     template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, vc, betaV, Yv); }
 };
 
-class MultiFluidDepartureFunction {
-public:
-    enum class types { NOTSETTYPE, GERG2004, GaussianExponential, NoDeparture };
-private:
-    types type = types::NOTSETTYPE;
-public:
-    Eigen::ArrayXd n, t, d, c, l, eta, beta, gamma, epsilon;
-
-    void set_type(const std::string& kind) {
-        if (kind == "GERG-2004" || kind == "GERG-2008") {
-            type = types::GERG2004;
-        }
-        else if (kind == "Gaussian+Exponential") {
-            type = types::GaussianExponential;
-        }
-        else if (kind == "none") {
-            type = types::NoDeparture;
-        }
-        else {
-            throw std::invalid_argument("Bad type:" + kind);
-        }
-    }
-
-    template<typename TauType, typename DeltaType>
-    auto alphar(const TauType& tau, const DeltaType& delta) const {
-        switch (type) {
-        case (types::GaussianExponential):
-            return forceeval((n * exp(t*log(tau) + d*log(delta)-c*pow(delta, l)-eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum());
-        case (types::GERG2004):
-            return forceeval((n * exp(t*log(tau) + d*log(delta) -eta * (delta - epsilon).square() - beta * (delta - gamma))).sum()); 
-        case (types::NoDeparture):
-            return forceeval(0.0*(tau*delta));
-        default:
-            throw - 1;
-        }
-    }
-};
-
 inline auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
 
     // Allocate the matrix with default models
-    std::vector<std::vector<MultiFluidDepartureFunction>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
+    std::vector<std::vector<DepartureTerms>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
 
+    // Load the collection of data on departure functions
     auto depcollection = nlohmann::json::parse(std::ifstream(coolprop_root + "/dev/mixtures/mixture_departure_functions.json"));
-
-    auto get_departure_function = [&depcollection](const std::string& Name) {
+    auto get_departure_json = [&depcollection](const std::string& Name) {
         for (auto& el : depcollection) {
             if (el["Name"] == Name) { return el; }
         }
         throw std::invalid_argument("Bad argument");
     };
 
+    auto build_power = [&](auto term) {
+        std::size_t N = term["n"].size();
+
+        PowerEOSTerm eos;
+
+        auto eigorzero = [&term, &N](const std::string& name) -> Eigen::ArrayXd {
+            if (!term[name].empty()) {
+                return toeig(term[name]);
+            }
+            else {
+                return Eigen::ArrayXd::Zero(N);
+            }
+        };
+
+
+        eos.n = eigorzero("n");
+        eos.t = eigorzero("t");
+        eos.d = eigorzero("d");
+
+        Eigen::ArrayXd c(N), l(N); c.setZero();
+        if (term["l"].empty()) {
+            // exponential part not included
+            l.setZero();
+        }
+        else {
+            l = toeig(term["l"]);
+            // l is included, use it to build c; c_i = 1 if l_i > 0, zero otherwise
+            for (auto i = 0; i < c.size(); ++i) {
+                if (l[i] > 0) {
+                    c[i] = 1.0;
+                }
+            }
+        }
+        eos.c = c;
+        eos.l = l;
+
+        eos.l_i = eos.l.cast<int>();
+
+        if (((eos.l_i.cast<double>() - eos.l).cwiseAbs() > 0.0).any()) {
+            throw std::invalid_argument("Non-integer entry in l found");
+        }
+
+        return eos;
+    };
+
+    auto build_gaussian = [&](auto &term) {
+        GaussianEOSTerm eos;
+        eos.n = toeig(term["n"]);
+        eos.t = toeig(term["t"]);
+        eos.d = toeig(term["d"]);
+        eos.eta = toeig(term["eta"]);
+        eos.beta = toeig(term["beta"]);
+        eos.gamma = toeig(term["gamma"]);
+        eos.epsilon = toeig(term["epsilon"]);
+        if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
+            throw std::invalid_argument("Lengths are not all identical in Gaussian term");
+        }
+        return eos;
+    };
+    auto build_GERG2004 = [&](const auto& term, auto &dep) {
+        if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
+            throw std::invalid_argument("Lengths are not all identical in Gaussian term");
+        }
+        auto Npower = term["Npower"];
+        auto NGERG = term["n"].size()- Npower;
+        
+        PowerEOSTerm eos;
+        eos.n = toeig(term["n"]).head(Npower);
+        eos.t = toeig(term["t"]).head(Npower);
+        eos.d = toeig(term["d"]).head(Npower);
+        if (term.contains("l")) {
+            eos.l = toeig(term["l"]).head(Npower);
+        }
+        else {
+            eos.l = 0.0 * eos.n;
+        }
+        eos.c = (eos.l > 0).cast<int>().cast<double>();
+        eos.l_i = eos.l.cast<int>();
+        dep.add_term(eos);
+
+        GERG2004EOSTerm e;
+        e.n = toeig(term["n"]).tail(NGERG);
+        e.t = toeig(term["t"]).tail(NGERG);
+        e.d = toeig(term["d"]).tail(NGERG);
+        e.eta = toeig(term["eta"]).tail(NGERG);
+        e.beta = toeig(term["beta"]).tail(NGERG);
+        e.gamma = toeig(term["gamma"]).tail(NGERG);
+        e.epsilon = toeig(term["epsilon"]).tail(NGERG);
+        dep.add_term(e);
+    };
+    auto get_function = [&](auto& funcname) {
+        auto j = get_departure_json(funcname); 
+        auto type = j["type"];
+        DepartureTerms dep;
+        if (type == "Exponential") {
+            dep.add_term(build_power(j));
+        }
+        else if(type == "GERG-2004" || type == "GERG-2008") {
+            build_GERG2004(j, dep);
+        }
+        else {
+            throw std::invalid_argument("Bad term type, should not get here");
+        }
+        return dep;
+    };
+
     for (auto i = 0; i < funcs.size(); ++i) {
         for (auto j = i + 1; j < funcs.size(); ++j) {
             auto BIP = MultiFluidReducingFunction::get_BIPdep(BIPcollection, { components[i], components[j] }, flags);
-            auto function = BIP["function"];
-            if (!function.empty()) {
-
-                auto info = get_departure_function(function);
-                auto N = info["n"].size();
-
-                auto toeig = [](const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); };
-                auto eigorempty = [&info, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
-                    if (!info[name].empty()) {
-                        return toeig(info[name]);
-                    }
-                    else {
-                        return Eigen::ArrayXd::Zero(N);
-                    }
-                };
-
-                MultiFluidDepartureFunction f;
-                f.set_type(info["type"]);
-                f.n = toeig(info["n"]);
-                f.t = toeig(info["t"]);
-                f.d = toeig(info["d"]);
-
-                f.eta = eigorempty("eta");
-                f.beta = eigorempty("beta");
-                f.gamma = eigorempty("gamma");
-                f.epsilon = eigorempty("epsilon");
-
-                Eigen::ArrayXd c(f.n.size()), l(f.n.size()); c.setZero();
-                if (info["l"].empty()) {
-                    // exponential part not included
-                    l.setZero();
-                }
-                else {
-                    l = toeig(info["l"]);
-                    // l is included, use it to build c; c_i = 1 if l_i > 0, zero otherwise
-                    for (auto i = 0; i < c.size(); ++i) {
-                        if (l[i] > 0) {
-                            c[i] = 1.0;
-                        }
-                    }
-                }
-
-                f.l = l;
-                f.c = c;
-                funcs[i][j] = f;
-                funcs[j][i] = f;
-                int rr = 0;
+            std::string funcname = BIP["function"];
+            if (!funcname.empty()) {
+                funcs[i][j] = get_function(funcname);
+                funcs[j][i] = get_function(funcname);
             }
             else {
-                MultiFluidDepartureFunction f;
-                f.set_type("none");
-                funcs[i][j] = f;
-                funcs[j][i] = f;
+                funcs[i][j].add_term(NullEOSTerm());
+                funcs[j][i].add_term(NullEOSTerm());
             }
         }
     }
@@ -447,25 +469,6 @@ auto pow(const mcx::MultiComplex<T> &x, const Eigen::ArrayXd& e) {
     return o;
 }
 
-template<class T>
-struct PowIUnaryFunctor {
-    const T m_base;
-    PowIUnaryFunctor(T base) : m_base(base) {};
-    typedef T result_type;
-    result_type operator()(const int& e) const{
-        switch (e) {
-        case 0:
-            return 1.0;
-        case 1:
-            return m_base;
-        case 2:
-            return m_base * m_base;
-        default:
-            return powi(m_base, e);
-        }
-    }
-};
-
 inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& name)
 {
     using namespace nlohmann;
@@ -486,14 +489,6 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
         }
     }
 
-    auto toeig = [](const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); };    
-
-    auto all_same_length = [](const nlohmann::json& j, const std::vector<std::string>& ks) {
-        std::set<int> lengths; 
-        for (auto k : ks) { lengths.insert(j[k].size()); }
-        return lengths.size() == 1;
-    };
-
     EOSTerms container;
 
     auto build_power = [&](auto term) {
@@ -501,7 +496,7 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
 
         PowerEOSTerm eos;
 
-        auto eigorzero = [&term, &toeig, &N](const std::string& name) -> Eigen::ArrayXd {
+        auto eigorzero = [&term, &N](const std::string& name) -> Eigen::ArrayXd {
             if (!term[name].empty()) {
                 return toeig(term[name]);
             }
