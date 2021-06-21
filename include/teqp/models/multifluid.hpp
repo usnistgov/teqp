@@ -390,7 +390,7 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
     for (auto i = 0; i < funcs.size(); ++i) {
         for (auto j = i + 1; j < funcs.size(); ++j) {
             auto BIP = MultiFluidReducingFunction::get_BIPdep(BIPcollection, { components[i], components[j] }, flags);
-            std::string funcname = BIP["function"];
+            std::string funcname = BIP.contains("function") ? BIP["function"] : "";
             if (!funcname.empty()) {
                 funcs[i][j] = get_function(funcname);
                 funcs[j][i] = get_function(funcname);
