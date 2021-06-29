@@ -1,5 +1,7 @@
 #include "pybind11_wrapper.hpp"
 
+#include "teqpversion.hpp"
+
 namespace py = pybind11;
 
 // The implementation of each prototype are in separate files to move the compilation into 
@@ -31,5 +33,6 @@ void init_teqp(py::module& m) {
 
 PYBIND11_MODULE(teqp, m) {
     m.doc() = "TEQP: Templated Equation of State Package";
+    m.attr("__version__") = TEQPVERSION;
     init_teqp(m);
 }

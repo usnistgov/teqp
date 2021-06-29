@@ -35,11 +35,8 @@ if (MSVC)
 endif()
 target_link_libraries(catch_tests autodiff)
 
-
 ### TARGETS from src folder
-set(TEQP_SNIPPETS true)
 if (TEQP_SNIPPETS)
-
   # Collect all the snippets
   file(GLOB_RECURSE snippets "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
@@ -56,4 +53,6 @@ if (TEQP_SNIPPETS)
 	endif()
 	target_link_libraries(${snippet_exe} autodiff)
   endforeach()
+else()
+  message(STATUS "No snippets will be compiled, pass -DTEQP_SNIPPETS=ON to build them")
 endif()

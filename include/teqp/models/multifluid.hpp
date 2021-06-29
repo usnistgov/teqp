@@ -771,16 +771,16 @@ auto build_multifluid_mutant(Model& model, const nlohmann::json& j) {
     auto newred = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
 
     if (j.contains("Fij") && j["Fij"] != 0.0) {
-        throw std::invalid_argument("Don't support Fij != 0 for now");
+        throw std::invalid_argument("We don't support Fij != 0 for now");
     }
     auto N = 2;
     // Allocate the matrix with default models
     Eigen::MatrixXd F(2, 2); F.setZero();
-    std::vector<std::vector<MultiFluidDepartureFunction>> funcs(N); 
+    std::vector<std::vector<DepartureTerms>> funcs(N);
     for (auto i = 0; i < funcs.size(); ++i) {
         funcs[i].resize(funcs.size());
         for (auto j = 0; j < N; ++j) {
-            funcs[i][j].set_type("none");
+            funcs[i][j].add_term(NullEOSTerm());
         }
     }
     auto newdep = DepartureContribution(std::move(F), std::move(funcs));
