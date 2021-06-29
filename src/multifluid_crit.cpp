@@ -6,18 +6,6 @@
 
 #include <optional>
 
-class Timer {
-private:
-   int N;
-   decltype(std::chrono::steady_clock::now()) tic;
-public:
-   Timer(int N) : N(N), tic(std::chrono::steady_clock::now()){}
-   ~Timer() {
-       auto elap = std::chrono::duration<double>(std::chrono::steady_clock::now()-tic).count();
-       std::cout << elap/N*1e6 << " us/call" << std::endl;
-   }
-};
-
 void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json &BIPcollection) {
    std::vector<std::vector<std::string>> pairs = { 
        { "CarbonDioxide", "R1234YF" }, { "CarbonDioxide","R1234ZE(E)" }, { "ETHYLENE","R1243ZF" }, 
