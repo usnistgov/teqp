@@ -1,0 +1,3 @@
+#!/bin/bash
+set -ex
+CXX=clang++ pip install git+git://github.com/ianhbell/teqp.git

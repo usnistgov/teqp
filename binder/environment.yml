@@ -1,0 +1,11 @@
+# This .yml file is used to specify the conda environment that should be loaded into the binder instance
+name: pymcx
+dependencies:
+  - python=3.9
+  - matplotlib
+  - scipy
+  - numpy
+  - jupyter
+  - notebook
+  - sympy
+  - pip
