@@ -95,6 +95,13 @@ struct CriticalTracing {
         else {
             throw std::invalid_argument("More than one non-zero concentration value found; not currently supported");
         }
+        // Align with the eigenvector of the component with the smallest density, and make that one positive
+        Eigen::Index ind;
+        rhovec.minCoeff(&ind);
+        if (ed.eigenvectorscols.col(ind).minCoeff() < 0) {
+            ed.eigenvectorscols *= -1.0;
+        }
+
         ed.v0 = ed.eigenvectorscols.col(0);
         ed.v1 = ed.eigenvectorscols.col(1);
         return ed;
