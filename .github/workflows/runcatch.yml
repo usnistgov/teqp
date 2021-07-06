@@ -14,7 +14,7 @@ jobs:
     - name: mkdir
       run: mkdir build && cd build
     - name: cmake config
-      run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release
+      run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=ON
     - name: cmake make
       run: cmake --build build --target catch_tests
     - name: build multifluid
