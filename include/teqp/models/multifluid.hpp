@@ -344,8 +344,8 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
         if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
             throw std::invalid_argument("Lengths are not all identical in GERG term");
         }
-        auto Npower = term["Npower"];
-        auto NGERG = term["n"].size()- Npower;
+        int Npower = term["Npower"];
+        auto NGERG = static_cast<int>(term["n"].size()) - Npower;
         
         PowerEOSTerm eos;
         eos.n = toeig(term["n"]).head(Npower);
