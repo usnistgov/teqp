@@ -433,42 +433,6 @@ T powi(const T& x, int n) {
     }
 }
 
-template<typename T>
-inline auto powIVi(const T& x, const Eigen::ArrayXi& e) {
-    //return e.binaryExpr(e.cast<T>(), [&x](const auto&& a_, const auto& e_) {return static_cast<T>(powi(x, a_)); });
-    static Eigen::Array<T, Eigen::Dynamic, 1> o;
-    o.resize(e.size());
-    for (auto i = 0; i < e.size(); ++i) {
-        o[i] = powi(x, e[i]);
-    }
-    return o;
-    //return e.cast<T>().unaryExpr([&x](const auto& e_) {return powi(x, e_); }).eval();
-}
-
-//template<typename T>
-//auto powIV(const T& x, const Eigen::ArrayXd& e) {
-//    Eigen::Array<T, Eigen::Dynamic, 1> o = e.cast<T>();
-//    return o.unaryExpr([&x](const auto& e_) {return powi(x, e_); } ).eval();
-//}
-
-template<typename T>
-auto pow(const std::complex<T> &x, const Eigen::ArrayXd& e) {
-    Eigen::Array<std::complex<T>, Eigen::Dynamic, 1> o(e.size());
-    for (auto i = 0; i < e.size(); ++i) {
-        o[i] = pow(x, e[i]);
-    }
-    return o;
-}
-
-template<typename T>
-auto pow(const mcx::MultiComplex<T> &x, const Eigen::ArrayXd& e) {
-    Eigen::Array<mcx::MultiComplex<T>, Eigen::Dynamic, 1> o(e.size());
-    for (auto i = 0; i < e.size(); ++i) {
-        o[i] = pow(x, e[i]);
-    }
-    return o;
-}
-
 inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& name)
 {
     using namespace nlohmann;
