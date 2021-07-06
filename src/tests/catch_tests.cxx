@@ -5,7 +5,10 @@
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/cubicsuperancillary.hpp"
 #include "teqp/models/CPA.hpp"
+#include "teqp/models/eos.hpp"
+
 #include "teqp/algorithms/VLE.hpp"
+#include "teqp/algorithms/critical_tracing.hpp"
 
 auto build_vdW_argon() {
     double Omega_b = 1.0 / 8, Omega_a = 27.0 / 64;
@@ -185,6 +188,34 @@ TEST_CASE("Check 0n derivatives", "[virial][p]")
 
 }
 
+TEST_CASE("Test infinite dilution critical locus derivatives", "[vdWcrit]")
+{
+    // Argon + Xenon
+    std::valarray<double> Tc_K = { 150.687, 289.733 };
+    std::valarray<double> pc_Pa = { 4863000.0, 5842000.0 };
+    std::valarray<double> molefrac = { 1.0 };
+    vdWEOS<double> vdW(Tc_K, pc_Pa);
+    auto Zc = 3.0 / 8.0;
+    using ct = CriticalTracing<decltype(vdW), double, Eigen::ArrayXd>;
+    
+    for (int i = 0; i < 2; ++i) {
+        auto rhoc0 = pc_Pa[i] / (vdW.R(molefrac) * Tc_K[i]) / Zc;
+        double T0 = Tc_K[i];
+        Eigen::ArrayXd rhovec0(2); rhovec0.setZero(); rhovec0[i] = rhoc0;
+
+        // Values for infinite dilution
+        auto infdil = ct::get_drhovec_dT_crit(vdW, T0, rhovec0);
+        auto epinfdil = ct::eigen_problem(vdW, T0, rhovec0);
+
+        // Just slightly not infinite dilution, values should be very similar
+        Eigen::ArrayXd rhovec0almost = rhovec0; rhovec0almost[1 - i] = 1e-6;
+        auto dil = ct::get_drhovec_dT_crit(vdW, T0, rhovec0almost);
+        auto epdil = ct::eigen_problem(vdW, T0, rhovec0almost);
+        int rr = 0;
+        
+    }
+}
+
 TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
 {
     // Argon + Xenon
@@ -358,4 +389,13 @@ TEST_CASE("Test water w/ factory", "") {
    CAPTURE(p_withassoc);
 
    REQUIRE(p_withassoc == 3.14);
+}
+
+TEST_CASE("Check zero(ish)","") {
+    double zero = 0.0;
+    REQUIRE(zero == 0.0);
+    autodiff::dual2nd zeroad(0.0);
+    REQUIRE(zeroad == 0.0);
+    //mcx::MultiComplex zeromcx = 0.0;
+    //REQUIRE(zeromcx == 0.0);
 }
