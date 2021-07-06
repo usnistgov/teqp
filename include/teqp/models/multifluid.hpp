@@ -9,7 +9,9 @@
 #include <optional>
 #include <variant>
 
+#include "teqp/derivs.hpp"
 #include "teqp/types.hpp"
+
 #include "MultiComplex/MultiComplex.hpp"
 
 #include "multifluid_eosterms.hpp"
