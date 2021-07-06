@@ -9,6 +9,8 @@ Written by Ian Bell, NIST.
 
 ## Build (cmake based)
 
+Try it in your browser: [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/ianhbell/teqp/master)
+
 Be aware: compiling takes a while in release mode (multiple minutes per file in some cases) thanks to the use of generic typing in the models.  Working on making this faster...
 
 For example to build the critical line tracing example in visual studio, do:
