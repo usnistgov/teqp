@@ -73,6 +73,35 @@ public:
     }
 };
 
+/// From Ulrich Deiters
+template <typename T>                             // arbitrary integer power
+T powi(const T& x, int n) {
+    if (n == 0)
+        return static_cast<T>(1.0);                       // x^0 = 1 even for x == 0
+    else if (n < 0){
+        using namespace autodiff::detail;
+        if constexpr (isDual<T> || isExpr<T>) {
+            return eval(powi(eval(1.0/x), -n));
+        }
+        else {
+            return powi(static_cast<T>(1.0) / x, -n);
+        }
+    }
+    else {
+        T y(x), xpwr(x);
+        n--;
+        while (n > 0) {
+            if (n % 2 == 1) {
+                y = y*xpwr;
+                n--;
+            }
+            xpwr = xpwr*xpwr;
+            n /= 2;
+        }
+        return y;
+    }
+}
+
 template<typename T>
 inline auto powIVi(const T& x, const Eigen::ArrayXi& e) {
     //return e.binaryExpr(e.cast<T>(), [&x](const auto&& a_, const auto& e_) {return static_cast<T>(powi(x, a_)); });

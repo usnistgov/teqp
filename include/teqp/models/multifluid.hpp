@@ -404,35 +404,6 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
     return funcs;
 }
 
-/// From Ulrich Deiters
-template <typename T>                             // arbitrary integer power
-T powi(const T& x, int n) {
-    if (n == 0)
-        return static_cast<T>(1.0);                       // x^0 = 1 even for x == 0
-    else if (n < 0){
-        using namespace autodiff::detail;
-        if constexpr (isDual<T> || isExpr<T>) {
-            return eval(powi(eval(1.0/x), -n));
-        }
-        else {
-            return powi(static_cast<T>(1.0) / x, -n);
-        }
-    }
-    else {
-        T y(x), xpwr(x);
-        n--;
-        while (n > 0) {
-            if (n % 2 == 1) {
-                y = y*xpwr;
-                n--;
-            }
-            xpwr = xpwr*xpwr;
-            n /= 2;
-        }
-        return y;
-    }
-}
-
 inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& name)
 {
     using namespace nlohmann;
