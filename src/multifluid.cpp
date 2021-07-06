@@ -1,11 +1,7 @@
-#define USE_AUTODIFF
-
 #include "teqp/core.hpp"
 #include "teqp/models/multifluid.hpp"
 
 #include <optional>
-
-
 
 template<typename J>
 void time_calls(const std::string &coolprop_root, const J &BIPcollection) {

@@ -38,6 +38,10 @@ auto forceeval(T&& expr)
 template<typename T> struct is_complex_t : public std::false_type {};
 template<typename T> struct is_complex_t<std::complex<T>> : public std::true_type {};
 
+// See https://stackoverflow.com/a/41438758
+template<typename T> struct is_mcx_t : public std::false_type {};
+template<typename T> struct is_mcx_t<mcx::MultiComplex<T>> : public std::true_type {};
+
 template<typename T>
 auto getbaseval(const T& expr)
 {
@@ -46,6 +50,9 @@ auto getbaseval(const T& expr)
         return val(expr);
     }
     else if constexpr (is_complex_t<T>()) {
+        return expr.real();
+    }
+    else if constexpr (is_mcx_t<T>()) {
         return expr.real();
     }
     else {
