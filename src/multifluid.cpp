@@ -1,4 +1,5 @@
 #include "teqp/core.hpp"
+
 #include "teqp/models/multifluid.hpp"
 
 #include <optional>
@@ -11,7 +12,7 @@ void time_calls(const std::string &coolprop_root, const J &BIPcollection) {
     {
         const auto molefrac = (Eigen::ArrayXd(2) << rhovec[0] / rhovec.sum(), rhovec[1] / rhovec.sum()).finished();
 
-        using vd = VirialDerivatives<decltype(model)>;
+        using vd = VirialDerivatives<decltype(model), double, Eigen::ArrayXd>;
         auto B12 = vd::get_B12vir(model, T, molefrac);
 
         using id = IsochoricDerivatives<decltype(model), double, Eigen::ArrayXd>;
@@ -21,7 +22,7 @@ void time_calls(const std::string &coolprop_root, const J &BIPcollection) {
         double T = 300.0;
         constexpr int N = 10000;
         volatile double alphar;
-        using tdx = TDXDerivatives<decltype(model)>;
+        using tdx = TDXDerivatives<decltype(model), double, Eigen::ArrayXd>;
         double rrrr = tdx::get_Ar01(model, T, rho, molefrac);
         double rrrr2 = tdx::get_Ar02(model, T, rho, molefrac);
         {
