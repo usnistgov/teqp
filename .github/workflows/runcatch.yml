@@ -15,11 +15,11 @@ jobs:
       run: mkdir build && cd build
     - name: cmake config
       run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=ON
-    - name: cmake make
+    - name: build Catch tests
       run: cmake --build build --target catch_tests
     - name: build multifluid
       run: cmake --build build --target multifluid
-    - name: build teqp
+    - name: build teqp Python package
       run: cmake --build build --target teqp
     # run tests
     - name: run Catch tests

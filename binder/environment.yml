@@ -9,4 +9,3 @@ dependencies:
   - notebook
   - sympy
   - pip
-  - cmake
