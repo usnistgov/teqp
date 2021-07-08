@@ -222,7 +222,7 @@ public:
         }
     }
     template<typename VecType>
-    auto max_rhoN(double T, const VecType& mole_fractions) {
+    double max_rhoN(double T, const VecType& mole_fractions) {
         auto N = mole_fractions.size();
         Eigen::ArrayX<decltype(T)> d(N);
         for (auto i = 0; i < N; ++i) {
