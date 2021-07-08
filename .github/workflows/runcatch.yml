@@ -22,4 +22,4 @@ jobs:
     - name: build multifluid
       run: cmake --build build --target multifluid
     - name: build teqp Python package
-      run: cmake --build build --target teqp
+      run: python setup.py build
