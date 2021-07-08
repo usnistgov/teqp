@@ -22,4 +22,4 @@ jobs:
     - name: build multifluid
       run: cmake --build build --target multifluid
     - name: build teqp Python package
-      run: python setup.py build
+      run: CXX=clang++ python setup.py build
