@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(teqp)
+enable_testing()
 
 ####  SETUP
 set(CMAKE_CXX_STANDARD 17)
@@ -34,6 +35,7 @@ if (MSVC)
     target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
 target_link_libraries(catch_tests autodiff)
+add_test(catch catch_tests)
 
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)

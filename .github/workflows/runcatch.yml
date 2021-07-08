@@ -17,10 +17,9 @@ jobs:
       run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=ON
     - name: build Catch tests
       run: cmake --build build --target catch_tests
+    - name: run Catch tests
+      run: cd build && ctest --verbose
     - name: build multifluid
       run: cmake --build build --target multifluid
     - name: build teqp Python package
       run: cmake --build build --target teqp
-    # run tests
-    - name: run Catch tests
-      run: build/catch_tests
