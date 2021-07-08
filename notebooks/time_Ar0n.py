@@ -21,7 +21,7 @@ def build_models():
         teqp.PCSAFTEOS(['Methane']),
         teqp.vdWEOS([150.687], [4863000.0]),
         teqp.vdWEOS1(1, 2),
-        # mH2O,
+        mH2O,
         teqp.build_multifluid_model(["Methane"], '../mycp', '../mycp/dev/mixtures/mixture_binary_pairs.json')
     ]
 
