@@ -141,8 +141,8 @@ template<class Model, class Scalar, class VecType>
 auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhovecL, const VecType& rhovecV) {
     //tic = timeit.default_timer();
     using id = IsochoricDerivatives<Model, Scalar, VecType>;
-    auto Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
-    auto Hvap = id::build_Psi_Hessian_autodiff(model, T, rhovecV).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = id::build_Psi_Hessian_autodiff(model, T, rhovecV).eval();
     //Hvap[~np.isfinite(Hvap)] = 1e20;
     //Hliq[~np.isfinite(Hliq)] = 1e20;
 
