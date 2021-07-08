@@ -35,21 +35,21 @@ void time_calls(const std::string &coolprop_root, const J &BIPcollection) {
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = tdx::get_Ar01<ADBackends::complex_step>(model, T, rho, molefrac);
+                alphar = tdx::template get_Ar01<ADBackends::complex_step>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st CSD" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = tdx::get_Ar01<ADBackends::autodiff>(model, T, rho, molefrac);
+                alphar = tdx::template get_Ar01<ADBackends::autodiff>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st autodiff::autodiff" << std::endl;
         }
         {
             Timer t(N);
             for (auto i = 0; i < N; ++i) {
-                alphar = tdx::get_Ar01<ADBackends::multicomplex>(model, T, rho, molefrac);
+                alphar = tdx::template get_Ar01<ADBackends::multicomplex>(model, T, rho, molefrac);
             }
             std::cout << alphar << "; 1st MCX" << std::endl;
         }
