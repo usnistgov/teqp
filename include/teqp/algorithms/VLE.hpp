@@ -79,7 +79,7 @@ public:
 };
 
 template<typename Residual, typename Scalar>
-auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
+Eigen::ArrayXd do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
     auto rhovec = (Eigen::ArrayXd(2) << rhoL, rhoV).finished();
     auto r0 = resid.call(rhovec);
     auto J = resid.Jacobian(rhovec);
@@ -99,12 +99,11 @@ auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
         }
         rhovec = rhovecnew;
     }
-    Eigen::ArrayXd r = (Eigen::ArrayXd(2) << rhovec[0], rhovec[1]).finished();
-    return r;
+    return (Eigen::ArrayXd(2) << rhovec[0], rhovec[1]).finished();
 }
 
 template<typename Model, typename Scalar>
-auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
+Eigen::ArrayXd pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
     auto res = IsothermPureVLEResiduals(model, T);
     return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
 }
