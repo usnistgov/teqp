@@ -16,7 +16,7 @@ def trace():
     
     pc_Pa = []
     for i in range(2):
-        z = [0,0]; z[i] = 1
+        z = [0.0, 0.0]; z[i] = 1.0
         z = np.array(z)
         p = 8.314462618*Tcvec[i]*rhocvec[i]*(1+model.get_Ar01(Tcvec[i], rhocvec[i], z))
         pc_Pa.append(p)
@@ -25,7 +25,7 @@ def trace():
 
     i = 1
     T0 = Tcvec[i]
-    z = np.array([0, 0]); z[i] = 1
+    z = np.array([0.0, 0.0]); z[i] = 1.0
 
     fig1, ax1 = plt.subplots(1,1)
     fig2, ax2 = plt.subplots(1,1)
@@ -46,7 +46,7 @@ def trace():
         df['z0 / mole frac.'] = df['rho0 / mol/m^3']/(df['rho0 / mol/m^3']+df['rho1 / mol/m^3'])
         ax1.plot(df['z0 / mole frac.'], df['T / K']); ax1.set(xlabel='z0 / mole frac.', ylabel='$T$ / K')
         ax2.plot(df['T / K'], df['p / Pa']); ax2.set(xlabel='$T$ / K', ylabel='$p$ / Pa')
-        ax3.plot(df['z0 / mole frac.'], df['s^+']/df['s^+'].iloc[0]); ax3.set(xlabel='x0 / mole frac.', ylabel='')
+        ax3.plot(df['z0 / mole frac.'], df['s^+']/df['s^+'].iloc[0]); ax3.set(xlabel='x0 / mole frac.', ylabel=r'$s^+/s^+_{0}$; $s^+=-s^{\rm r}/R$')
     plt.show()
 
 if __name__ == '__main__':
