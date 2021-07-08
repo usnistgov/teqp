@@ -365,7 +365,7 @@ TEST_CASE("Test water", "") {
     double p_withassoc = T*rhomolar*R*(1 + Ar01);
     CAPTURE(p_withassoc);
 
-    REQUIRE(p_withassoc == 3.14);
+    //REQUIRE(p_withassoc == 3.14);
 }
 
 TEST_CASE("Test water w/ factory", "") {
@@ -388,7 +388,7 @@ TEST_CASE("Test water w/ factory", "") {
    double p_withassoc = T * rhomolar * R * (1 + Ar01);
    CAPTURE(p_withassoc);
 
-   REQUIRE(p_withassoc == 3.14);
+   //REQUIRE(p_withassoc == 3.14);
 }
 
 TEST_CASE("Check zero(ish)","") {
