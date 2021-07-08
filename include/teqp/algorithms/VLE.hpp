@@ -109,7 +109,7 @@ auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxi
 }
 
 template<typename Model, typename Scalar>
-auto extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar rhoc, const Scalar T) {
+Eigen::ArrayXd extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar rhoc, const Scalar T) {
     
     using tdx = TDXDerivatives<Model>;
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
