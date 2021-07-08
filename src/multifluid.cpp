@@ -95,12 +95,6 @@ int main(){
         auto model = build_multifluid_model({ "CarbonDioxide", "Water" }, coolprop_root, BIPcollection, flags); 
     }
 
-   // // Critical curves
-   //{
-   //     Timer t(1);
-   //     trace_critical_loci(coolprop_root, BIPcollection);
-   // }*/
-
     time_calls(coolprop_root, BIPcollection);
     /*{
         nlohmann::json flags = { {"estimate", true},{"another","key"} };
