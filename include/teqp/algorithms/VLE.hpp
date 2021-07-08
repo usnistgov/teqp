@@ -99,7 +99,7 @@ auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
         }
         rhovec = rhovecnew;
     }
-    auto r = (Eigen::ArrayXd(2) << rhovec[0], rhovec[1]).finished();
+    Eigen::ArrayXd r = (Eigen::ArrayXd(2) << rhovec[0], rhovec[1]).finished();
     return r;
 }
 
