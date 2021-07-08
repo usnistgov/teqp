@@ -85,7 +85,7 @@ struct TDXDerivatives {
     }
 
     template<ADBackends be = ADBackends::autodiff>
-    static auto get_Ar01(const Model& model, const Scalar&T, const Scalar &rho, const VectorType& molefrac) {
+    static Scalar get_Ar01(const Model& model, const Scalar&T, const Scalar &rho, const VectorType& molefrac){
         if constexpr(be == ADBackends::complex_step){
             double h = 1e-100;
             auto der = model.alphar(T, std::complex<Scalar>(rho, h), molefrac).imag() / h;
