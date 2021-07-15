@@ -39,13 +39,13 @@ def traceT_x(model, T, rhovec0, *, kwargs={}):
     toc = timeit.default_timer()
     x = sol.y[0,:]/(sol.y[0,:] + sol.y[1,:])
     y = sol.y[2,:]/(sol.y[2,:] + sol.y[3,:])
-    plt.plot(x, p, 'r',**kwargs)
-    plt.plot(y, p, 'g',**kwargs)
+    plt.plot(x, p, 'r', **kwargs)
+    plt.plot(y, p, 'g', **kwargs)
 
 def traceT_arclength(model, T, rhovec0, *, kwargs={}):
 
     R = model.get_R(np.array([0.0, 1.0]))
-    print(T)
+    print('T:', T, 'K')
 
     c = 1.0
     def norm(x): return (x*x).sum()**0.5
@@ -77,12 +77,16 @@ def traceT_arclength(model, T, rhovec0, *, kwargs={}):
             self.Itheta = 0
             self.Nmax = Nmax
             self.termination_reason = None
+            self.minstepcount = 0
             
         def post_deriv_callback(self): pass
         
         def premature_termination(self): 
             if self.Itheta > self.Nmax: 
                 self.termination_reason = 'too many steps'
+                return True
+            if self.minstepcount > 10: 
+                self.termination_reason = '10 tiny steps in a row'
                 return True
             if np.any(self.xold<0): 
                 self.termination_reason = 'negative x'
@@ -142,16 +146,17 @@ def traceT_arclength(model, T, rhovec0, *, kwargs={}):
 
     tic = timeit.default_timer()
     i = RK45Integrator(Nmax=1000)
-    i.do_integration(0, 5000000, atol=1e-6, rtol=1e-6, hmin=4.46772051e-03)    
+    i.do_integration(0, 5000000, atol=0, rtol=1e-8, hmin=4.46772051e-03)   
     t = i.x
     soly = np.array(i.y).T
     toc = timeit.default_timer()
     print(toc-tic,'s for parametric w/ my RK45')
     reason = i.termination_reason
-    if reason:
-        print('reason:', reason)
+    # if reason:
+    #     print('reason:', reason)
     print(i.Itheta)
 
+    # print(t[0:len(t)-1], np.diff(t))
     x = soly[0,:]/(soly[0,:] + soly[1,:])
     y = soly[2,:]/(soly[2,:] + soly[3,:])
     pL = [teqp.get_pr(model, T, soly[0:2,j]) + R*T*soly[0:2,j].sum() for j in range(len(t))]
@@ -180,6 +185,7 @@ def prettyPX(model, puremodels, names, ipure, Tvec, *, plot_critical=True, show=
         df['z0 / mole frac.'] = df['rho0 / mol/m^3']/(df['rho0 / mol/m^3']+df['rho1 / mol/m^3'])
         plt.plot(df['z0 / mole frac.'], df['p / Pa'], lw=2)
         #print(toc-tic, 'complete critical locus')
+        plt.ylim(1e-3, np.max(df['p / Pa']))
 
     def plot_isotherms():
         for T in Tvec:
