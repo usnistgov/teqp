@@ -14,18 +14,6 @@
 #include <Eigen/Dense>
 #include "teqp/derivs.hpp"
 
-class Timer {
-private:
-    int N;
-    decltype(std::chrono::steady_clock::now()) tic;
-public:
-    Timer(int N) : N(N), tic(std::chrono::steady_clock::now()) {}
-    ~Timer() {
-        auto elap = std::chrono::duration<double>(std::chrono::steady_clock::now() - tic).count();
-        std::cout << elap / N * 1e6 << " us/call" << std::endl;
-    }
-};
-
 template <typename ModelContainer, typename T1, typename T2, typename T3>
 auto get_f(const ModelContainer& modcon, const T1& x1, const T2& x2, const T3& x3) {
     // Call the function with T, rho, molefrac arguments
