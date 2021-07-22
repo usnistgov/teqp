@@ -607,7 +607,7 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
             container.add_term(build_exponential(term));
         }
         else {
-            throw std::invalid_argument("Bad term type, should not get here");
+            throw std::invalid_argument("Bad term type: "+type);
         }
     }
     return container;
