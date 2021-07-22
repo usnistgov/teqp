@@ -373,6 +373,37 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
         e.epsilon = toeig(term["epsilon"]).tail(NGERG);
         dep.add_term(e);
     };
+    auto build_GaussianExponential = [&](const auto& term, auto& dep) {
+        if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
+            throw std::invalid_argument("Lengths are not all identical in Gaussian+Exponential term");
+        }
+        int Npower = term["Npower"];
+        auto NGauss = static_cast<int>(term["n"].size()) - Npower;
+
+        PowerEOSTerm eos;
+        eos.n = toeig(term["n"]).head(Npower);
+        eos.t = toeig(term["t"]).head(Npower);
+        eos.d = toeig(term["d"]).head(Npower);
+        if (term.contains("l")) {
+            eos.l = toeig(term["l"]).head(Npower);
+        }
+        else {
+            eos.l = 0.0 * eos.n;
+        }
+        eos.c = (eos.l > 0).cast<int>().cast<double>();
+        eos.l_i = eos.l.cast<int>();
+        dep.add_term(eos);
+
+        GaussianEOSTerm e;
+        e.n = toeig(term["n"]).tail(NGauss);
+        e.t = toeig(term["t"]).tail(NGauss);
+        e.d = toeig(term["d"]).tail(NGauss);
+        e.eta = toeig(term["eta"]).tail(NGauss);
+        e.beta = toeig(term["beta"]).tail(NGauss);
+        e.gamma = toeig(term["gamma"]).tail(NGauss);
+        e.epsilon = toeig(term["epsilon"]).tail(NGauss);
+        dep.add_term(e);
+    };
     auto get_function = [&](auto& funcname) {
         auto j = get_departure_json(funcname); 
         auto type = j["type"];
@@ -383,8 +414,11 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
         else if(type == "GERG-2004" || type == "GERG-2008") {
             build_GERG2004(j, dep);
         }
+        else if (type == "Gaussian+Exponential") {
+            build_GaussianExponential(j, dep);
+        }
         else {
-            throw std::invalid_argument("Bad term type, should not get here");
+            throw std::invalid_argument("Bad departure term type: "+funcname+"");
         }
         return dep;
     };
