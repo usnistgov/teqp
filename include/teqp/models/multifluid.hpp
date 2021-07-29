@@ -649,55 +649,6 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
 }
 
 /**
-This class holds a lightweight reference to the core parts of the model, allowing for the reducing function to be modified
-by the user, perhaps for model optimization purposes
-
-The reducing function is moved into this class, while the donor class is used for the remaining bits and pieces 
-*/
-template<typename ReducingFunction, typename BaseClass>
-class MultiFluidReducingFunctionAdapter {
-
-public:
-    const BaseClass& base; 
-    const ReducingFunction redfunc;
-
-    template<class VecType>
-    auto R(const VecType& molefrac) const { return base.R(molefrac); }
-
-    MultiFluidReducingFunctionAdapter(const BaseClass& base, ReducingFunction&& redfunc) : base(base), redfunc(redfunc) {};
-
-    template<typename TType, typename RhoType, typename MoleFracType>
-    auto alphar(const TType& T,
-        const RhoType& rho,
-        const MoleFracType& molefrac) const
-    {
-        auto Tred = forceeval(redfunc.get_Tr(molefrac));
-        auto rhored = forceeval(redfunc.get_rhor(molefrac));
-        auto delta = forceeval(rho / rhored);
-        auto tau = forceeval(Tred / T);
-        auto val = base.corr.alphar(tau, delta, molefrac) + base.dep.alphar(tau, delta, molefrac);
-        return forceeval(val);
-    }
-};
-
-template<class Model>
-auto build_BIPmodified(Model& model, const nlohmann::json& j) {
-    auto red = model.redfunc;
-    auto betaT = red.betaT;
-    betaT(0, 1) = j["betaT"];
-    betaT(1, 0) = 1/betaT(0, 1);
-    auto betaV = red.betaV;
-    betaV(0, 1) = j["betaV"];
-    betaV(1, 0) = 1/betaV(0, 1);
-    auto gammaT = red.gammaT, gammaV = red.gammaV;
-    gammaT(0, 1) = j["gammaT"]; gammaT(1, 0) = gammaT(0, 1);
-    gammaV(0, 1) = j["gammaV"]; gammaV(1, 0) = gammaV(0, 1);
-    auto Tc = red.Tc, vc = red.vc;
-    auto newred = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
-    return MultiFluidReducingFunctionAdapter(model, std::move(newred));
-}
-
-/**
 This class holds a lightweight reference to the core parts of the model
 
 The reducing and departure functions are moved into this class, while the donor class is used for the corresponding states portion
