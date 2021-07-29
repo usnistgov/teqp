@@ -30,7 +30,7 @@ if (NOT TEQP_NO_PYTHON)
     target_link_libraries(teqp PRIVATE autodiff)
 endif()
 
-add_executable(catch_tests "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/catch_tests.cxx")
+add_executable(catch_tests "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/catch_tests.cxx" "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/catch_test_mutant.cxx")
 if (MSVC)
     target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
