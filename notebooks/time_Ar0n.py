@@ -91,6 +91,30 @@ def time(*, model, n, Nrep, use_gen):
     elap = (toc-tic)/Nrep
     return elap
 
+def time_virials(*, Ncomp, Nrep):
+    T = 300
+    molefrac = np.array([1.0])
+
+    model = teqp.vdWEOS(
+        np.linspace(150.687, 160, Ncomp).tolist(), 
+        np.linspace(4863000.0, 4.9e6, Ncomp).tolist()
+    )
+
+    f = getattr(model, f"get_B2vir")
+    # Warm up the core with some useless calls
+    for i in range(Nrep):
+        f(T, molefrac)
+    # Do the calculations
+    tic = timeit.default_timer()
+    for i in range(Nrep):
+        f(T, molefrac)
+    toc = timeit.default_timer()
+    elap = (toc-tic)/Nrep
+    return elap
+
+for Ncomp in np.arange(1, 20, 1):
+    print(Ncomp, time_virials(Nrep=10000, Ncomp=Ncomp))
+
 def timeall(*, models, Nrep):
     o = []
     for use_gen in [True,False]:
@@ -138,6 +162,7 @@ def timeall(*, models, Nrep):
     plt.close()
 
 if __name__ == '__main__':
+
     timeall(models=build_models(), Nrep= 10000)
 
     def time_overhead(x):
