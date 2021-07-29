@@ -269,20 +269,7 @@ public:
     template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, vc, betaV, Yv); }
 };
 
-inline auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
-
-    // Allocate the matrix with default models
-    std::vector<std::vector<DepartureTerms>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
-
-    // Load the collection of data on departure functions
-    auto depcollection = nlohmann::json::parse(std::ifstream(coolprop_root + "/dev/mixtures/mixture_departure_functions.json"));
-    auto get_departure_json = [&depcollection](const std::string& Name) {
-        for (auto& el : depcollection) {
-            if (el["Name"] == Name) { return el; }
-        }
-        throw std::invalid_argument("Bad argument");
-    };
-
+inline auto build_departure_function(const nlohmann::json& j) {
     auto build_power = [&](auto term) {
         std::size_t N = term["n"].size();
 
@@ -328,7 +315,7 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
         return eos;
     };
 
-    auto build_gaussian = [&](auto &term) {
+    auto build_gaussian = [&](auto& term) {
         GaussianEOSTerm eos;
         eos.n = toeig(term["n"]);
         eos.t = toeig(term["t"]);
@@ -342,13 +329,13 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
         }
         return eos;
     };
-    auto build_GERG2004 = [&](const auto& term, auto &dep) {
+    auto build_GERG2004 = [&](const auto& term, auto& dep) {
         if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
             throw std::invalid_argument("Lengths are not all identical in GERG term");
         }
         int Npower = term["Npower"];
         auto NGERG = static_cast<int>(term["n"].size()) - Npower;
-        
+
         PowerEOSTerm eos;
         eos.n = toeig(term["n"]).head(Npower);
         eos.t = toeig(term["t"]).head(Npower);
@@ -404,23 +391,39 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
         e.epsilon = toeig(term["epsilon"]).tail(NGauss);
         dep.add_term(e);
     };
-    auto get_function = [&](auto& funcname) {
-        auto j = get_departure_json(funcname); 
-        auto type = j["type"];
-        DepartureTerms dep;
-        if (type == "Exponential") {
-            dep.add_term(build_power(j));
+
+    auto type = j["type"];
+    DepartureTerms dep;
+    if (type == "Exponential") {
+        dep.add_term(build_power(j));
+    }
+    else if (type == "GERG-2004" || type == "GERG-2008") {
+        build_GERG2004(j, dep);
+    }
+    else if (type == "Gaussian+Exponential") {
+        build_GaussianExponential(j, dep);
+    }
+    else if (type == "none") {
+        dep.add_term(NullEOSTerm());
+    }
+    else {
+        throw std::invalid_argument("Bad departure term type: " + type);
+    }
+    return dep;
+}
+
+inline auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
+
+    // Allocate the matrix with default models
+    std::vector<std::vector<DepartureTerms>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
+
+    // Load the collection of data on departure functions
+    auto depcollection = nlohmann::json::parse(std::ifstream(coolprop_root + "/dev/mixtures/mixture_departure_functions.json"));
+    auto get_departure_json = [&depcollection](const std::string& Name) {
+        for (auto& el : depcollection) {
+            if (el["Name"] == Name) { return el; }
         }
-        else if(type == "GERG-2004" || type == "GERG-2008") {
-            build_GERG2004(j, dep);
-        }
-        else if (type == "Gaussian+Exponential") {
-            build_GaussianExponential(j, dep);
-        }
-        else {
-            throw std::invalid_argument("Bad departure term type: "+funcname+"");
-        }
-        return dep;
+        throw std::invalid_argument("Bad argument");
     };
 
     for (auto i = 0; i < funcs.size(); ++i) {
@@ -428,8 +431,9 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
             auto BIP = MultiFluidReducingFunction::get_BIPdep(BIPcollection, { components[i], components[j] }, flags);
             std::string funcname = BIP.contains("function") ? BIP["function"] : "";
             if (!funcname.empty()) {
-                funcs[i][j] = get_function(funcname);
-                funcs[j][i] = get_function(funcname);
+                auto jj = get_departure_json(funcname);
+                funcs[i][j] = build_departure_function(jj);
+                funcs[j][i] = build_departure_function(jj);
             }
             else {
                 funcs[i][j].add_term(NullEOSTerm());
@@ -726,36 +730,49 @@ public:
 };
 
 template<class Model>
-auto build_multifluid_mutant(Model& model, const nlohmann::json& j) {
+auto build_multifluid_mutant(Model& model, const nlohmann::json& jj) {
 
     auto red = model.redfunc;
-    auto betaT = red.betaT;
-    betaT(0, 1) = j["betaT"];
-    betaT(1, 0) = 1 / betaT(0, 1);
-    auto betaV = red.betaV;
-    betaV(0, 1) = j["betaV"];
-    betaV(1, 0) = 1 / betaV(0, 1);
-    auto gammaT = red.gammaT, gammaV = red.gammaV;
-    gammaT(0, 1) = j["gammaT"]; gammaT(1, 0) = gammaT(0, 1);
-    gammaV(0, 1) = j["gammaV"]; gammaV(1, 0) = gammaV(0, 1);
-    auto Tc = red.Tc, vc = red.vc;
-    auto newred = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
+    auto N = red.Tc.size();
 
-    if (j.contains("Fij") && j["Fij"] != 0.0) {
-        throw std::invalid_argument("We don't support Fij != 0 for now");
-    }
-    auto N = 2;
-    // Allocate the matrix with default models
-    Eigen::MatrixXd F(2, 2); F.setZero();
+    auto betaT = red.betaT, gammaT = red.gammaT, betaV = red.betaV, gammaV = red.gammaV;
+    auto Tc = red.Tc, vc = red.vc;
+
+    // Allocate the matrices of default models and F factors
+    Eigen::MatrixXd F(N, N); F.setZero();
     std::vector<std::vector<DepartureTerms>> funcs(N);
-    for (auto i = 0; i < funcs.size(); ++i) {
-        funcs[i].resize(funcs.size());
-        for (auto j = 0; j < N; ++j) {
-            funcs[i][j].add_term(NullEOSTerm());
+    for (auto i = 0; i < N; ++i) { funcs[i].resize(N); }
+
+    for (auto i = 0; i < N; ++i) {
+        for (auto j = i; j < N; ++j) {
+            if (i == j) {
+                funcs[i][i].add_term(NullEOSTerm());
+            }
+            else {
+                // Extract the given entry
+                auto entry = jj[std::to_string(i)][std::to_string(j)];
+
+                auto BIP = entry["BIP"];
+                // Set the reducing function parameters in the copy
+                betaT(i, j) = BIP["betaT"];
+                betaT(j, i) = 1 / red.betaT(i, j);
+                betaV(i, j) = BIP["betaV"];
+                betaV(j, i) = 1 / red.betaV(i, j);
+                gammaT(i, j) = BIP["gammaT"]; gammaT(j, i) = gammaT(i, j);
+                gammaV(i, j) = BIP["gammaV"]; gammaV(j, i) = gammaV(i, j);
+
+                // Build the matrix of F and departure functions
+                auto dep = entry["departure"];
+                F(i, j) = BIP["Fij"];
+                F(j, i) = F(i, j);
+                funcs[i][j] = build_departure_function(dep);
+                funcs[j][i] = build_departure_function(dep);
+            }
         }
     }
-    auto newdep = DepartureContribution(std::move(F), std::move(funcs));
 
+    auto newred = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
+    auto newdep = DepartureContribution(std::move(F), std::move(funcs));
     return MultiFluidAdapter(model, std::move(newred), std::move(newdep));
 }
 
