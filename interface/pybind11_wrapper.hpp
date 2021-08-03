@@ -57,6 +57,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_Ar10", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar10<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar11", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar11<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar12", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar12<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
+    cls.def("get_Ar20", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar20<ADBackends::autodiff>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
 
     cls.def("get_Ar01n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<1>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar02n", [](const Model& m, const double T, const double rho, const RAX molefrac) { return tdx::template get_Ar0n<2>(m, T, rho, molefrac); }, py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
