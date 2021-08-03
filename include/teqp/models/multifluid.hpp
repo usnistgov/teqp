@@ -293,8 +293,14 @@ inline auto build_departure_function(const nlohmann::json& j) {
         if (term["l"].empty()) {
             // exponential part not included
             l.setZero();
+            if (!all_same_length(term, { "n","t","d" })) {
+                throw std::invalid_argument("Lengths are not all identical in polynomial term");
+            }
         }
         else {
+            if (!all_same_length(term, { "n","t","d","l"})) {
+                throw std::invalid_argument("Lengths are not all identical in exponential term");
+            }
             l = toeig(term["l"]);
             // l is included, use it to build c; c_i = 1 if l_i > 0, zero otherwise
             for (auto i = 0; i < c.size(); ++i) {
