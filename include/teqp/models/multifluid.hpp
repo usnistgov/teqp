@@ -405,7 +405,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
         dep.add_term(e);
     };
 
-    auto type = j["type"];
+    std::string type = j["type"];
     DepartureTerms dep;
     if (type == "Exponential") {
         dep.add_term(build_power(j));
@@ -604,7 +604,7 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
     };
     
     for (auto& term : alphar) {
-        auto type = term["type"];
+        std::string type = term["type"];
         if (type == "ResidualHelmholtzPower") {
             container.add_term(build_power(term));
         }
