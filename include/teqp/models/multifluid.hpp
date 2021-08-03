@@ -78,6 +78,8 @@ public:
 template<typename ReducingFunction, typename CorrespondingTerm, typename DepartureTerm>
 class MultiFluid {  
 
+private:
+    std::string meta = ""; ///< A string that can be used to store arbitrary metadata as needed
 public:
     const ReducingFunction redfunc;
     const CorrespondingTerm corr;
@@ -87,6 +89,11 @@ public:
     auto R(const VecType& molefrac) const {
         return get_R_gas<decltype(molefrac[0])>();
     }
+
+    /// Store some sort of metadata in string form (perhaps a JSON representation of the model?)
+    void set_meta(const std::string& m) { meta = m; }
+    /// Get the metadata stored in string form
+    auto get_meta() const { return meta; }
 
     MultiFluid(ReducingFunction&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep) : redfunc(redfunc), corr(corr), dep(dep) {};
 
@@ -662,6 +669,9 @@ The reducing and departure functions are moved into this class, while the donor 
 template<typename ReducingFunction, typename DepartureFunction, typename BaseClass>
 class MultiFluidAdapter {
 
+private:
+    std::string meta = "";
+
 public:
     const BaseClass& base;
     const ReducingFunction redfunc;
@@ -671,6 +681,11 @@ public:
     auto R(const VecType& molefrac) const { return base.R(molefrac); }
 
     MultiFluidAdapter(const BaseClass& base, ReducingFunction&& redfunc, DepartureFunction &&depfunc) : base(base), redfunc(redfunc), depfunc(depfunc) {};
+
+    /// Store some sort of metadata in string form (perhaps a JSON representation of the model?)
+    void set_meta(const std::string& m) { meta = m; }
+    /// Get the metadata stored in string form
+    auto get_meta() const { return meta; }
 
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType& T,
@@ -730,7 +745,10 @@ auto build_multifluid_mutant(Model& model, const nlohmann::json& jj) {
 
     auto newred = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
     auto newdep = DepartureContribution(std::move(F), std::move(funcs));
-    return MultiFluidAdapter(model, std::move(newred), std::move(newdep));
+    auto mfa = MultiFluidAdapter(model, std::move(newred), std::move(newdep));
+    /// Store the departure term in the adapted multifluid class
+    mfa.set_meta(jj.dump());
+    return mfa;
 }
 
 

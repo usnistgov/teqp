@@ -10,8 +10,11 @@ void add_multifluid_mutant(py::module& m) {
         m.def("build_multifluid_mutant", &build_multifluid_mutant<MultiFluid>);
         using RedType = std::decay_t<decltype(MultiFluid::redfunc)>;
         using DepType = std::decay_t<decltype(MultiFluid::dep)>;
-        using BIPmod = MultiFluidAdapter<RedType, DepType, MultiFluid>;
-        auto wMFBIP = py::class_<BIPmod>(m, "MultiFluidMutant");
+        using BIPmod = std::decay_t<MultiFluidAdapter<RedType, DepType, MultiFluid>>;
+        auto wMFBIP = py::class_<BIPmod>(m, "MultiFluidMutant")
+            .def("set_meta", [](BIPmod& c, const std::string &s) { return c.set_meta(s); })
+            .def("get_meta", [](const BIPmod& c) { return c.get_meta(); })
+            ;
         add_derivatives<BIPmod>(m, wMFBIP);
     }
 }
