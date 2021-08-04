@@ -9,6 +9,7 @@ jobs:
     env:
       TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
       TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+      CXX: clang++
     steps:
       - uses: actions/checkout@v2
       - name: checkout submodules
