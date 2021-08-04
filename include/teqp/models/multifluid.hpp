@@ -11,6 +11,7 @@
 
 #include "teqp/derivs.hpp"
 #include "teqp/types.hpp"
+#include "teqp/constants.hpp"
 
 #include "MultiComplex/MultiComplex.hpp"
 
