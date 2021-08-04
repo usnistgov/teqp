@@ -16,6 +16,7 @@ jobs:
         run: git submodule update --init --recursive
       - name: build and upload manylinux wheels
         uses: Niraj-Kamdar/manylinux-wheel-builder@master
+        continue-on-error: true
   Matrix-build:
     runs-on: ${{ matrix.os }}
     env:
