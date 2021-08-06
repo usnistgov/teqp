@@ -277,6 +277,51 @@ public:
     template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, vc, betaV, Yv); }
 };
 
+class MultiFluidInvariantReducingFunction {
+private:
+    Eigen::MatrixXd YT, Yv;
+    template <typename Num> auto cube(Num x) const { return x * x * x; }
+    template <typename Num> auto square(Num x) const { return x * x; }
+public:
+    const Eigen::MatrixXd phiT, lambdaT, phiV, lambdaV;
+    const Eigen::ArrayXd Tc, vc;
+
+    template<typename ArrayLike>
+    MultiFluidInvariantReducingFunction(
+        const Eigen::MatrixXd& phiT, const Eigen::MatrixXd& lambdaT,
+        const Eigen::MatrixXd& phiV, const Eigen::MatrixXd& lambdaV,
+        const ArrayLike& Tc, const ArrayLike& vc)
+        : phiT(phiT), lambdaT(lambdaT), phiV(phiV), lambdaV(lambdaV), Tc(Tc), vc(vc) {
+
+        auto N = Tc.size();
+
+        YT.resize(N, N); YT.setZero();
+        Yv.resize(N, N); Yv.setZero();
+        for (auto i = 0; i < N; ++i) {
+            for (auto j = 0; j < N; ++j) {
+                YT(i, j) = sqrt(Tc[i] * Tc[j]);
+                YT(j, i) = sqrt(Tc[i] * Tc[j]);
+                Yv(i, j) = 1.0 / 8.0 * cube(cbrt(vc[i]) + cbrt(vc[j]));
+                Yv(j, i) = 1.0 / 8.0 * cube(cbrt(vc[i]) + cbrt(vc[j]));
+            }
+        }
+    }
+    template <typename MoleFractions>
+    auto Y(const MoleFractions& z, const Eigen::MatrixXd& phi, const Eigen::MatrixXd& lambda, const Eigen::MatrixXd& Yij) const {
+        auto N = z.size();
+        typename MoleFractions::value_type sum = 0.0;
+        for (auto i = 0; i < N; ++i) {
+            for (auto j = 0; j < N; ++j) {
+                auto contrib = z[i] * z[j] * (phi(i, j) + z[j] * lambda(i, j)) * Yij(i, j);
+                sum += contrib;
+            }
+        }
+        return sum;
+    }
+    template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return Y(molefracs, phiT, lambdaT, YT); }
+    template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, phiV, lambdaV, Yv); }
+};
+
 inline auto build_departure_function(const nlohmann::json& j) {
     auto build_power = [&](auto term) {
         std::size_t N = term["n"].size();
@@ -745,6 +790,64 @@ auto build_multifluid_mutant(Model& model, const nlohmann::json& jj) {
     }
 
     auto newred = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
+    auto newdep = DepartureContribution(std::move(F), std::move(funcs));
+    auto mfa = MultiFluidAdapter(model, std::move(newred), std::move(newdep));
+    /// Store the departure term in the adapted multifluid class
+    mfa.set_meta(jj.dump());
+    return mfa;
+}
+
+template<class Model>
+auto build_multifluid_mutant_invariant(Model& model, const nlohmann::json& jj) {
+
+    auto red = model.redfunc;
+    auto N = red.Tc.size();
+    if (N != 2) {
+        throw std::invalid_argument("Only binary mixtures are currently supported with invariant departure functions");
+    }
+
+    auto phiT = red.betaT, lambdaT = red.gammaT, phiV = red.betaV, lambdaV = red.gammaV;
+    phiT.setOnes(); phiV.setOnes();
+    lambdaV.setZero(); lambdaV.setZero();
+    auto Tc = red.Tc, vc = red.vc;
+
+    // Allocate the matrices of default models and F factors
+    Eigen::MatrixXd F(N, N); F.setZero();
+    std::vector<std::vector<DepartureTerms>> funcs(N);
+    for (auto i = 0; i < N; ++i) { funcs[i].resize(N); }
+
+    for (auto i = 0; i < N; ++i) {
+        for (auto j = i; j < N; ++j) {
+            if (i == j) {
+                funcs[i][i].add_term(NullEOSTerm());
+            }
+            else {
+                // Extract the given entry
+                auto entry = jj[std::to_string(i)][std::to_string(j)];
+
+                auto BIP = entry["BIP"];
+                // Set the reducing function parameters in the copy
+                phiT(i, j) = BIP["phiT"];
+                phiT(j, i) = phiT(i, j);
+                lambdaT(i, j) = BIP["lambdaT"]; 
+                lambdaT(j, i) = -lambdaT(i, j);
+
+                phiV(i, j) = BIP["phiV"];
+                phiV(j, i) = phiV(i, j);
+                lambdaV(i, j) = BIP["lambdaV"]; 
+                lambdaV(j, i) = -lambdaV(i, j);
+
+                // Build the matrix of F and departure functions
+                auto dep = entry["departure"];
+                F(i, j) = BIP["Fij"];
+                F(j, i) = F(i, j);
+                funcs[i][j] = build_departure_function(dep);
+                funcs[j][i] = build_departure_function(dep);
+            }
+        }
+    }
+
+    auto newred = MultiFluidInvariantReducingFunction(phiT, lambdaT, phiV, lambdaV, Tc, vc);
     auto newdep = DepartureContribution(std::move(F), std::move(funcs));
     auto mfa = MultiFluidAdapter(model, std::move(newred), std::move(newdep));
     /// Store the departure term in the adapted multifluid class
