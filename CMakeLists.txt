@@ -17,6 +17,9 @@ set(AUTODIFF_BUILD_TESTS FALSE CACHE BOOL "No autodiff tests")
 set(AUTODIFF_BUILD_PYTHON FALSE CACHE BOOL "No autodiff python")
 set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
 
+# Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
+set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
+
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
