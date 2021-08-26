@@ -38,7 +38,7 @@ void add_multifluid_mutant_invariant(py::module& m) {
     m.def("build_multifluid_mutant_invariant", &build_multifluid_mutant_invariant<MultiFluid>);
 
     // Typedef for mutant with the invariant reducing function
-    using Mutant = std::invoke_result_t<decltype(build_multifluid_mutant_invariant<MultiFluid>), MultiFluid, nlohmann::json>;
+    using Mutant = std::invoke_result_t<decltype(build_multifluid_mutant_invariant<MultiFluid>), std::ref(MultiFluid), std::ref(nlohmann::json)>;
 
     // Define python wrapper of the mutant class
     auto wMutant = py::class_<Mutant>(m, "MultiFluidMutantInvariant")
