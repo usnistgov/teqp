@@ -41,6 +41,9 @@ void add_derivatives(py::module &m, Wrapper &cls) {
 
     using ct = CriticalTracing<Model, double, Eigen::Array<double, Eigen::Dynamic, 1>>;
     m.def("trace_critical_arclength_binary", &ct::trace_critical_arclength_binary);
+    m.def("get_criticality_conditions", &ct::get_criticality_conditions);
+    m.def("eigen_problem", &ct::eigen_problem);
+    m.def("get_minimum_eigenvalue_Psi_Hessian", &ct::get_minimum_eigenvalue_Psi_Hessian);
     m.def("get_drhovec_dT_crit", &ct::get_drhovec_dT_crit);
 
     m.def("extrapolate_from_critical", &extrapolate_from_critical<Model, double>);

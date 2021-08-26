@@ -112,6 +112,10 @@ struct CriticalTracing {
         EigenData ei;
     };
 
+    static auto get_minimum_eigenvalue_Psi_Hessian(const Model& model, const Scalar T, const VecType& rhovec) {
+        return eigen_problem(model, T, rhovec).eigenvalues[0];
+    }
+
     static auto get_derivs(const Model& model, const Scalar T, const VecType& rhovec) {
         auto molefrac = rhovec / rhovec.sum();
         auto R = model.R(molefrac);
@@ -261,6 +265,11 @@ struct CriticalTracing {
         return drhovec_dT;
     }
 
+    static auto get_criticality_conditions(const Model& model, const Scalar T, const VecType& rhovec) {
+        auto derivs = get_derivs(model, T, rhovec);
+        return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
+    }
+
     static auto critical_polish_molefrac(const Model& model, const Scalar T, const VecType& rhovec, const Scalar z0) {
         auto polish_x_resid = [&model, &z0](const auto& x) {
             auto T = x[0];
@@ -269,6 +278,27 @@ struct CriticalTracing {
             auto derivs = get_derivs(model, T, rhovec);
             // First two are residuals on critical point, third is residual on composition
             return (Eigen::ArrayXd(3) << derivs.tot[2], derivs.tot[3], z0new - z0).finished();
+        };
+        Eigen::ArrayXd x0(3); x0 << T, rhovec[0], rhovec[1];
+        auto r0 = polish_x_resid(x0);
+        auto x = NewtonRaphson(polish_x_resid, x0, 1e-10);
+        auto r = polish_x_resid(x);
+        Eigen::ArrayXd change = x0 - x;
+        if (!std::isfinite(T) || !std::isfinite(x[1]) || !std::isfinite(x[2])) {
+            throw std::invalid_argument("Something not finite; aborting polishing");
+        }
+        Eigen::ArrayXd rho = x.tail(x.size() - 1);
+        return std::make_tuple(x[0], rho);
+    }
+    static auto critical_polish_fixedrho(const Model& model, const Scalar T, const VecType& rhovec, const int i) {
+        Scalar rhoval = rhovec[i];
+        auto polish_x_resid = [&model, &i, &rhoval](const auto& x) {
+            auto T = x[0];
+            Eigen::ArrayXd rhovec(2); rhovec << x[1], x[2];
+            auto z0new = rhovec[0] / rhovec.sum();
+            auto derivs = get_derivs(model, T, rhovec);
+            // First two are residuals on critical point, third is residual on the molar concentration to be held constant
+            return (Eigen::ArrayXd(3) << derivs.tot[2], derivs.tot[3], rhovec[i] - rhoval).finished();
         };
         Eigen::ArrayXd x0(3); x0 << T, rhovec[0], rhovec[1];
         auto r0 = polish_x_resid(x0);
@@ -296,15 +326,21 @@ struct CriticalTracing {
         std::ofstream ofs = (filename.empty()) ? std::ofstream() : std::ofstream(filename);
 
         double c = 1.0;
-        ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c" << std::endl;
+        ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c,dT/dt,drho0/dT,drho1/dT,condition(1),condition(2)" << std::endl;
         for (auto iter = 0; iter < 1000; ++iter) {
             auto rhotot = rhovec.sum();
             auto z0 = rhovec[0] / rhotot;
+          
+            auto drhodT = get_drhovec_dT_crit(model, T, rhovec).array().eval();
+            auto dTdt = 1.0 / norm(drhodT);
+            auto drhodt = (drhodT * dTdt).eval();
 
-            auto write_line = [&rhovec, &rhotot, &z0, &model, &T, &c, &ofs]() {
+            auto conditions = get_criticality_conditions(model, T, rhovec);
+
+            auto write_line = [&]() {
                 std::stringstream out;
                 using id = IsochoricDerivatives<decltype(model)>;
-                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec/rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << std::endl;
+                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << dTdt << "," << drhodT(0) << "," << drhodT(1) << "," << conditions(0) << "," << conditions(1) << std::endl;
                 std::string sout(out.str());
                 std::cout << sout;
                 if (ofs.is_open()) {
@@ -317,10 +353,6 @@ struct CriticalTracing {
                 }
             }
 
-            auto drhodT = get_drhovec_dT_crit(model, T, rhovec).array().eval();
-            auto dTdt = 1.0 / norm(drhodT);
-            auto drhodt = (drhodT * dTdt).eval();
-
             // Flip the sign if the tracing wants to go backwards, or if the first step would yield any negative concentrations
 
             VecType this_drhodt = (c * drhodt).eval();
@@ -329,7 +361,7 @@ struct CriticalTracing {
             if (iter == 0 && negativestepvals.any()) {
                 c *= -1;
             }
-            else if (iter > 0 && dot(this_drhodt, last_drhodt) < 0) {
+            else if (iter > 1 && dot(this_drhodt, last_drhodt) < 0) {
                 c *= -1;
             }
 
@@ -341,13 +373,23 @@ struct CriticalTracing {
                 break;
             }
 
-            try {
+            /*try {
                 auto [Tnew, rhovecnew] = critical_polish_molefrac(model, T, rhovec, z0);
                 T = Tnew; rhovec = rhovecnew;
             }
             catch (std::exception& e) {
                 std::cout << e.what() << std::endl;
+            }*/
+
+            try {
+                int i = 0;
+                auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
+                T = Tnew; rhovec = rhovecnew;
             }
+            catch (std::exception& e) {
+                std::cout << e.what() << std::endl;
+            }
+           
 
             rhotot = rhovec.sum();
             z0 = rhovec[0] / rhotot;
@@ -361,6 +403,7 @@ struct CriticalTracing {
             }
             using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
             double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
+            conditions = get_criticality_conditions(model, T, rhovec);
             double splus = id::get_splus(model, T, rhovec);
             nlohmann::json point = {
                 {"t", t},
@@ -370,6 +413,8 @@ struct CriticalTracing {
                 {"c", c},
                 {"s^+", splus},
                 {"p / Pa", p},
+                {"lambda1", conditions[0]},
+                {"dirderiv(lambda1)/dalpha", conditions[1]},
             };
             JSONdata.push_back(point);
         }
