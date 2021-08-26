@@ -10,7 +10,7 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 with open('interface/teqpversion.hpp','w') as fpver:
     fpver.write(f'#include <string>\nconst std::string TEQPVERSION = "{VERSION}";')
 

@@ -772,16 +772,16 @@ auto build_multifluid_mutant(Model& model, const nlohmann::json& jj) {
 
                 auto BIP = entry["BIP"];
                 // Set the reducing function parameters in the copy
-                betaT(i, j) = BIP["betaT"];
+                betaT(i, j) = BIP.at("betaT");
                 betaT(j, i) = 1 / red.betaT(i, j);
-                betaV(i, j) = BIP["betaV"];
+                betaV(i, j) = BIP.at("betaV");
                 betaV(j, i) = 1 / red.betaV(i, j);
-                gammaT(i, j) = BIP["gammaT"]; gammaT(j, i) = gammaT(i, j);
-                gammaV(i, j) = BIP["gammaV"]; gammaV(j, i) = gammaV(i, j);
+                gammaT(i, j) = BIP.at("gammaT"); gammaT(j, i) = gammaT(i, j);
+                gammaV(i, j) = BIP.at("gammaV"); gammaV(j, i) = gammaV(i, j);
 
                 // Build the matrix of F and departure functions
                 auto dep = entry["departure"];
-                F(i, j) = BIP["Fij"];
+                F(i, j) = BIP.at("Fij");
                 F(j, i) = F(i, j);
                 funcs[i][j] = build_departure_function(dep);
                 funcs[j][i] = build_departure_function(dep);
@@ -827,19 +827,19 @@ auto build_multifluid_mutant_invariant(Model& model, const nlohmann::json& jj) {
 
                 auto BIP = entry["BIP"];
                 // Set the reducing function parameters in the copy
-                phiT(i, j) = BIP["phiT"];
+                phiT(i, j) = BIP.at("phiT");
                 phiT(j, i) = phiT(i, j);
-                lambdaT(i, j) = BIP["lambdaT"]; 
+                lambdaT(i, j) = BIP.at("lambdaT"); 
                 lambdaT(j, i) = -lambdaT(i, j);
 
-                phiV(i, j) = BIP["phiV"];
+                phiV(i, j) = BIP.at("phiV");
                 phiV(j, i) = phiV(i, j);
-                lambdaV(i, j) = BIP["lambdaV"]; 
+                lambdaV(i, j) = BIP.at("lambdaV"); 
                 lambdaV(j, i) = -lambdaV(i, j);
 
                 // Build the matrix of F and departure functions
                 auto dep = entry["departure"];
-                F(i, j) = BIP["Fij"];
+                F(i, j) = BIP.at("Fij");
                 F(j, i) = F(i, j);
                 funcs[i][j] = build_departure_function(dep);
                 funcs[j][i] = build_departure_function(dep);
