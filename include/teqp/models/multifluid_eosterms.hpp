@@ -47,7 +47,7 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        return forceeval((n * exp(t * log(tau) + d * log(delta) - eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum());
+        return forceeval((n * exp(t * log(tau) + d * log(delta) - eta * (delta - epsilon).square() - beta * (delta - gamma))).sum());
     }
 };
 
