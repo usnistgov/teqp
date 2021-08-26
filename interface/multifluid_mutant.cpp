@@ -32,13 +32,13 @@ void add_multifluid_mutant(py::module& m) {
 void add_multifluid_mutant_invariant(py::module& m) {
 
     // A typedef for the base model from which we steal the pure fluids
-    using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"", ""}, "", ""));
+    using MultiFluid = std::decay_t<decltype(build_multifluid_model(std::vector<std::string>{"", ""}, "", ""))>;
 
     // Wrap the function for generating a multifluid mutant
     m.def("build_multifluid_mutant_invariant", &build_multifluid_mutant_invariant<MultiFluid>);
 
     // Typedef for mutant with the invariant reducing function
-    using Mutant = std::invoke_result_t<build_multifluid_mutant_invariant<MultiFluid>, MultiFluid, nlohmann::json>;
+    using Mutant = std::invoke_result_t<decltype(build_multifluid_mutant_invariant<MultiFluid>), MultiFluid, nlohmann::json>;
 
     // Define python wrapper of the mutant class
     auto wMutant = py::class_<Mutant>(m, "MultiFluidMutantInvariant")
