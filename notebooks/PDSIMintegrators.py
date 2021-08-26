@@ -1,3 +1,8 @@
+"""
+These integrator classes started their life in PDSim (https://pdsim.readthedocs.io/en/latest/) and since have 
+been updated and some additional functionality has been added
+"""
+
 from __future__ import division, print_function
 
 import abc, math
