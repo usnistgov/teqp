@@ -797,7 +797,7 @@ auto build_multifluid_mutant(Model& model, const nlohmann::json& jj) {
     return mfa;
 }
 
-template<class Model>
+template<typename Model>
 auto build_multifluid_mutant_invariant(Model& model, const nlohmann::json& jj) {
 
     auto red = model.redfunc;
