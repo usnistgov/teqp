@@ -373,14 +373,6 @@ struct CriticalTracing {
                 break;
             }
 
-            /*try {
-                auto [Tnew, rhovecnew] = critical_polish_molefrac(model, T, rhovec, z0);
-                T = Tnew; rhovec = rhovecnew;
-            }
-            catch (std::exception& e) {
-                std::cout << e.what() << std::endl;
-            }*/
-
             try {
                 int i = 0;
                 auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
