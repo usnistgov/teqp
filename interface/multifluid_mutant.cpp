@@ -38,12 +38,7 @@ void add_multifluid_mutant_invariant(py::module& m) {
     m.def("build_multifluid_mutant_invariant", &build_multifluid_mutant_invariant<MultiFluid>);
 
     // Typedef for mutant with the invariant reducing function
-    using Mutant = std::invoke_result_t<decltype(build_multifluid_mutant_invariant<MultiFluid>), MultiFluid, nlohmann::json>;
-
-    // The reducing function type and the departure function types are the same
-    // as the base model
-    using RedType = std::decay_t<decltype(Mutant::redfunc)>;
-    using DepType = std::decay_t<decltype(MultiFluid::dep)>;
+    using Mutant = std::invoke_result_t<build_multifluid_mutant_invariant<MultiFluid>, MultiFluid, nlohmann::json>;
 
     // Define python wrapper of the mutant class
     auto wMutant = py::class_<Mutant>(m, "MultiFluidMutantInvariant")
