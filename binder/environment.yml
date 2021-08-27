@@ -6,7 +6,7 @@ dependencies:
   - scipy
   - numpy
   - jupyter
+  - pandas
   - notebook
-  - sympy
   - pip
   - cmake
