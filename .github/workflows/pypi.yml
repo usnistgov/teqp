@@ -36,7 +36,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: build wheel
         run: |
-          pip install wheel
+          pip install -U pip wheel
           pip -vvv wheel -w dist .
       - name: upload wheel
         run: |
