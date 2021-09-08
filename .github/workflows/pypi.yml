@@ -37,7 +37,7 @@ jobs:
       - name: build wheel
         run: |
           pip install -U pip wheel
-          pip -vvv wheel -w dist .
+          python -m pip -vvv wheel --use-feature=in-tree-build -w dist .
       - name: upload wheel
         run: |
           pip install twine
