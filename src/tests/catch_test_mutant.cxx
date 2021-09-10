@@ -53,7 +53,7 @@ TEST_CASE("Test construction of mutant with invariant departure function", "[mut
         "0": {
             "1": {
                 "BIP": {
-                    "phiT": 1.1,
+                    "phiT": 1.1
                 },
                 "departure":{
                     "type": "none"
