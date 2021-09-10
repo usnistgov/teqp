@@ -47,6 +47,23 @@ TEST_CASE("Test construction of mutant with invariant departure function", "[mut
 
     auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, coolprop_root, BIPcollection);
 
+    // Check that missing fields throw
+    nlohmann::json jbad = nlohmann::json::parse(R"(
+    {
+        "0": {
+            "1": {
+                "BIP": {
+                    "phiT": 1.1,
+                },
+                "departure":{
+                    "type": "none"
+                }
+            }
+        }
+    }
+    )");
+    CHECK_THROWS(build_multifluid_mutant_invariant(model, jbad));
+
     std::string s = R"({
         "0": {
             "1": {
