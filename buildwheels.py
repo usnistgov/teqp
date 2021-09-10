@@ -1,3 +1,11 @@
+"""
+For twine auth, want a pypirc file with contents:
+
+[pypi]
+username = usernameusernameusername
+password = XXXXXXXXXX
+"""
+
 import sys
 import os
 import subprocess
