@@ -3,9 +3,26 @@
 
 This library implements advanced derivative techniques to allow for implementation of EOS without any hand-written derivatives.  The name TEQP comes from Templated Equation of State Package
 
-[![Catch tests via Github Actions](https://github.com/ianhbell/teqp/actions/workflows/runcatch.yml/badge.svg)](https://github.com/ianhbell/teqp/actions/workflows/runcatch.yml)
+So far the following EOS are implemented:
+
+* van der Waals
+* PC-SAFT
+* cubic plus association (CPA) for pure fluids
+* multi-fluid model in the form of GERG
 
 Written by Ian Bell, NIST.  
+
+## Install
+
+For windows and OSX, you should be able to install the most recent version from PYPI with
+
+``pip install teqp``
+
+For linux users, please build yourself following the instructions below.
+
+## Tests
+
+[![Catch tests via Github Actions](https://github.com/ianhbell/teqp/actions/workflows/runcatch.yml/badge.svg)](https://github.com/ianhbell/teqp/actions/workflows/runcatch.yml)
 
 ## Build (cmake based)
 
