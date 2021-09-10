@@ -22,11 +22,11 @@ For linux users, please build yourself following the instructions below.
 
 ## Tests
 
-[![Catch tests via Github Actions](https://github.com/ianhbell/teqp/actions/workflows/runcatch.yml/badge.svg)](https://github.com/ianhbell/teqp/actions/workflows/runcatch.yml)
+[![Catch tests via Github Actions](https://github.com/usnistgov/teqp/actions/workflows/runcatch.yml/badge.svg)](https://github.com/usnistgov/teqp/actions/workflows/runcatch.yml)
 
 ## Build (cmake based)
 
-Try it in your browser: [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/ianhbell/teqp/master)
+Try it in your browser: [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/usnistgov/teqp/master)
 
 Be aware: compiling takes a while in release mode (multiple minutes per file in some cases) thanks to the use of generic typing in the models.  Working on making this faster...
 
