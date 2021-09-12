@@ -15,6 +15,64 @@
 
 #include "teqp/models/multifluid.hpp"
 
+struct OneTiming {
+    double value, sec_per_call;
+};
+
+template<typename Taus, typename Deltas>
+auto some_REFPROP(int itau, int idelta, Taus &taus, Deltas &deltas) {
+    std::vector<OneTiming> o;
+    double z[20] = { 1.0 };
+    for (auto repeat = 0; repeat < 100; ++repeat) {
+        std::valarray<double> ps = 0.0 * taus;
+        double Arterm = -10000;
+        auto tic = std::chrono::high_resolution_clock::now();
+        for (auto i = 0; i < taus.size(); ++i) {
+            PHIXdll(itau, idelta, taus[i], deltas[i], z, Arterm); ps[i] = Arterm;
+        }
+        auto toc = std::chrono::high_resolution_clock::now();
+        double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
+        double val = std::accumulate(std::begin(ps), std::end(ps), 0.0) / ps.size();
+        OneTiming result = { val, elap_us };
+        o.emplace_back(result);
+    }
+    return o;
+}
+
+template<int itau, int idelta, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
+auto some_teqp(const Taus& taus, const Deltas& deltas, const Model &model, const TT &Ts, const RHO &rhos) {
+    std::vector<OneTiming> out;
+
+    // And the same example with teqp
+    auto N = taus.size();
+    auto c = (Eigen::ArrayXd(1) << 1.0).finished();
+
+    using tdx = TDXDerivatives<Model, double, decltype(c)>;
+
+    for (auto counter = 0; counter < 100; ++counter)
+    {
+        double o = 0.0;
+        auto tic = std::chrono::high_resolution_clock::now();
+        for (auto j = 0; j < N; ++j) {
+            if constexpr (itau == 0 && idelta == 0) {
+                o += tdx::get_Ar00(model, Ts[j], rhos[j], c);
+            }
+            else if constexpr (itau == 0 && idelta == 1) {
+                o += tdx::get_Ar01(model, Ts[j], rhos[j], c);
+            }
+            else if constexpr (itau == 0 && idelta == 2) {
+                o += tdx::get_Ar02(model, Ts[j], rhos[j], c);
+            }
+        }
+        auto toc = std::chrono::high_resolution_clock::now();
+        double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
+        double val = o / N;
+        OneTiming result = { val, elap_us };
+        out.emplace_back(result);
+    }
+    return out;
+}
+
 int main()
 {
     // You may need to change this path to suit your installation
@@ -29,7 +87,7 @@ int main()
     if (!loaded_REFPROP){return EXIT_FAILURE; }
     SETPATHdll(const_cast<char*>(path.c_str()), 400);
     int ierr = 0, nc = 1;
-    char herr[255], hfld[10000] = "KRYPTON", hhmx[255] = "HMX.BNC", href[4] = "DEF";
+    char herr[255], hfld[10000] = "PROPANE", hhmx[255] = "HMX.BNC", href[4] = "DEF";
     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
     {
         char hflag[256] = "Cache                                                ";
@@ -41,9 +99,13 @@ int main()
     if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
     {
         double d = 1.0;
-        double z[20] = {1.0}, p = -1;
 
-        // Random speed testing
+        auto model = build_multifluid_model({ "n-Propane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+
+        double rhoc = 1/model.redfunc.vc[0];
+        double Tc = model.redfunc.Tc[0];
+
+        //
         std::default_random_engine re;        
         std::valarray<double> taus(100000);
         {
@@ -54,43 +116,28 @@ int main()
             std::uniform_real_distribution<double> unif(0.0015981745536338204, 0.0016981745536338204);
             std::transform(std::begin(deltas), std::end(deltas), std::begin(deltas), [&unif, &re](double x) { return unif(re); });
         }
-        int itau = 0, idelta = 0;
-        for (auto repeat = 0; repeat < 100; ++repeat) {
-            std::valarray<double> ps = 0.0 * taus;
-            double rhoc = 10139.128;
-            double Tc = 190.564;
-            auto tic = std::chrono::high_resolution_clock::now();
-            for (auto i = 0; i < taus.size(); ++i) {
-                double Ar01 = -10000;
-                PHIXdll(itau, idelta, taus[i], deltas[i], z, Ar01); ps[i] = Ar01; //ps[i] = (Ar01 + 1)*deltas[i]*rhoc*8.31451*Tc/taus[i];
-                /*idelta = 1;
-                PHIXdll(itau, idelta, Ts[i], ds[i], z, p); ps[i] += p;
-                idelta = 2;
-                PHIXdll(itau, idelta, Ts[i], ds[i], z, p); ps[i] += p;
-                idelta = 3;
-                PHIXdll(itau, idelta, Ts[i], ds[i], z, p); ps[i] += p;*/
-                //PRESSdll(Ts[i], ds[i], z, p); ps[i] = p;
-            }
-            auto toc = std::chrono::high_resolution_clock::now();
-            double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
-            std::cout << "Repeat " << std::to_string(repeat) << ": " << elap_us << " us/call for PRESSdll; " << std::accumulate(std::begin(ps), std::end(ps), 0.0)/ps.size() << std::endl;
-        }
 
-        // And the same example with teqp
-        auto model = build_multifluid_model({ "Krypton" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
-        auto N = taus.size();
-        auto c = (Eigen::ArrayXd(1) << 1.0).finished();
-
-        // Get reference to pure fluid model
-        const auto f = model.corr.get_EOS(0);
-        for (auto counter = 0; counter < 100; ++counter)
-        {
-            double o = 0.0;
-            Timer t(N);
-            for (auto j = 0; j < N; ++j) {
-                o += f.alphar(taus[j], deltas[j]);
+        auto check_values = [](auto res) {
+            Eigen::ArrayXd vals(res.size());
+            for (auto i = 0; i < res.size(); ++i) { vals[i] = res[i].value; }
+            if (std::abs(vals.maxCoeff() - vals.minCoeff()) > 1e-15 * std::abs(vals.minCoeff())) {
+                throw std::invalid_argument("Didn't get the same value for all inputs");
             }
-            std::cout << o/N << std::endl;
+            return vals.mean();
+        };
+
+        constexpr int itau = 0, idelta = 0;
+
+        auto timingREFPROP = some_REFPROP(itau, idelta, taus, deltas);
+
+        auto Ts = Tc / taus;
+        auto rhos = deltas * rhoc;
+        auto timingteqp = some_teqp<itau, idelta>(taus, deltas, model, Ts, rhos);
+        
+        std::cout << "Values:" << check_values(timingREFPROP) << ", " <<  check_values(timingteqp) << std::endl;
+
+        for (auto i = 0; i < timingREFPROP.size(); ++i) {
+            std::cout << timingteqp[i].sec_per_call << ", " << timingREFPROP[i].sec_per_call << std::endl;
         }
     }
     return EXIT_SUCCESS;
