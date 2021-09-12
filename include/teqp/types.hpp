@@ -83,9 +83,20 @@ public:
 /// From Ulrich Deiters
 template <typename T>                             // arbitrary integer power
 T powi(const T& x, int n) {
-    if (n == 0)
+    switch (n) {
+    case 0:
         return static_cast<T>(1.0);                       // x^0 = 1 even for x == 0
-    else if (n < 0){
+    case 1:
+        return static_cast<T>(x);
+    case 2:
+        return static_cast<T>(x*x);
+    case 3:
+        return static_cast<T>(x*x*x);
+    case 4:
+        auto x2 = x * x;
+        return static_cast<T>(x2*x2);
+    }
+    if (n < 0){
         using namespace autodiff::detail;
         if constexpr (isDual<T> || isExpr<T>) {
             return eval(powi(eval(1.0/x), -n));

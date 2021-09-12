@@ -7,7 +7,12 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        return forceeval((n * exp(t * log(tau) + d * log(delta) - c * powIVi(delta, l_i))).sum());
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        for (auto i = 0; i < n.size(); ++i) {
+            r += n[i] * exp(t[i]*lntau + d[i]*lndelta -c[i]*powi(delta, l_i[i]));
+        }
+        return r;
     }
 };
 
