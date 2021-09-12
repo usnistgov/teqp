@@ -126,13 +126,13 @@ struct TDXDerivatives {
 
     template<int Nderiv, ADBackends be = ADBackends::autodiff>
     static auto get_Ar0n(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        std::map<int, double> o;
+        std::valarray<double> o(Nderiv+1);
         if constexpr (be == ADBackends::autodiff) {
             autodiff::HigherOrderDual<Nderiv, double> rhodual = rho;
             auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
             auto ders = derivatives(f, wrt(rhodual), at(rhodual));
             for (auto n = 0; n <= Nderiv; ++n) {
-                o[n] = pow(rho, n) * ders[n];
+                o[n] = powi(rho, n) * ders[n];
             }
             return o;
         }

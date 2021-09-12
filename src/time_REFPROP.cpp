@@ -59,9 +59,10 @@ auto some_teqp(const Taus& taus, const Deltas& deltas, const Model &model, const
             }
             else if constexpr (itau == 0 && idelta == 1) {
                 o += tdx::get_Ar01(model, Ts[j], rhos[j], c);
+                //o += tdx::get_Ar0n<1>(model, Ts[j], rhos[j], c)[1];
             }
-            else if constexpr (itau == 0 && idelta == 2) {
-                o += tdx::get_Ar02(model, Ts[j], rhos[j], c);
+            else if constexpr (itau == 0 && idelta > 1) {
+                o += tdx::get_Ar0n<idelta>(model, Ts[j], rhos[j], c)[idelta];
             }
         }
         auto toc = std::chrono::high_resolution_clock::now();
@@ -71,6 +72,29 @@ auto some_teqp(const Taus& taus, const Deltas& deltas, const Model &model, const
         out.emplace_back(result);
     }
     return out;
+}
+
+template<int itau, int idelta, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
+auto one_deriv(Taus& taus, Deltas& deltas, const Model& model, TT& Ts, RHO& rhos) {
+
+    auto check_values = [](auto res) {
+        Eigen::ArrayXd vals(res.size());
+        for (auto i = 0; i < res.size(); ++i) { vals[i] = res[i].value; }
+        if (std::abs(vals.maxCoeff() - vals.minCoeff()) > 1e-15 * std::abs(vals.minCoeff())) {
+            throw std::invalid_argument("Didn't get the same value for all inputs");
+        }
+        return vals.mean();
+    };
+
+    auto timingREFPROP = some_REFPROP(itau, idelta, taus, deltas);
+    auto timingteqp = some_teqp<itau, idelta>(taus, deltas, model, Ts, rhos);
+
+    std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqp) << std::endl;
+
+    auto N = timingREFPROP.size();
+    for (auto i = 1; i < 6; ++i) {
+        std::cout << timingteqp[N-i].sec_per_call << ", " << timingREFPROP[N-i].sec_per_call << std::endl;
+    }
 }
 
 int main()
@@ -98,15 +122,13 @@ int main()
 
     if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
     {
-        double d = 1.0;
-
         auto model = build_multifluid_model({ "n-Propane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
 
         double rhoc = 1/model.redfunc.vc[0];
         double Tc = model.redfunc.Tc[0];
 
         //
-        std::default_random_engine re;        
+        std::default_random_engine re;
         std::valarray<double> taus(100000);
         {
             std::uniform_real_distribution<double> unif(2.0941098901098902, 2.1941098901098902);
@@ -117,28 +139,12 @@ int main()
             std::transform(std::begin(deltas), std::end(deltas), std::begin(deltas), [&unif, &re](double x) { return unif(re); });
         }
 
-        auto check_values = [](auto res) {
-            Eigen::ArrayXd vals(res.size());
-            for (auto i = 0; i < res.size(); ++i) { vals[i] = res[i].value; }
-            if (std::abs(vals.maxCoeff() - vals.minCoeff()) > 1e-15 * std::abs(vals.minCoeff())) {
-                throw std::invalid_argument("Didn't get the same value for all inputs");
-            }
-            return vals.mean();
-        };
-
-        constexpr int itau = 0, idelta = 0;
-
-        auto timingREFPROP = some_REFPROP(itau, idelta, taus, deltas);
-
         auto Ts = Tc / taus;
         auto rhos = deltas * rhoc;
-        auto timingteqp = some_teqp<itau, idelta>(taus, deltas, model, Ts, rhos);
-        
-        std::cout << "Values:" << check_values(timingREFPROP) << ", " <<  check_values(timingteqp) << std::endl;
-
-        for (auto i = 0; i < timingREFPROP.size(); ++i) {
-            std::cout << timingteqp[i].sec_per_call << ", " << timingREFPROP[i].sec_per_call << std::endl;
-        }
+        one_deriv<0, 0>(taus, deltas, model, Ts, rhos);
+        one_deriv<0, 1>(taus, deltas, model, Ts, rhos);
+        one_deriv<0, 2>(taus, deltas, model, Ts, rhos);
+        one_deriv<0, 3>(taus, deltas, model, Ts, rhos);
     }
     return EXIT_SUCCESS;
 }
