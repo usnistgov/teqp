@@ -19,28 +19,37 @@ struct OneTiming {
     double value, sec_per_call;
 };
 
+constexpr int repeatmax = 100;
+enum class obtainablethings { PHIX, CHEMPOT };
+
 template<typename Taus, typename Deltas>
-auto some_REFPROP(int itau, int idelta, Taus &taus, Deltas &deltas) {
+auto some_REFPROP(obtainablethings thing, int itau, int idelta, Taus& taus, Deltas& deltas) {
     std::vector<OneTiming> o;
-    double z[20] = { 1.0 };
-    for (auto repeat = 0; repeat < 100; ++repeat) {
-        std::valarray<double> ps = 0.0 * taus;
-        double Arterm = -10000;
-        auto tic = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < taus.size(); ++i) {
-            PHIXdll(itau, idelta, taus[i], deltas[i], z, Arterm); ps[i] = Arterm;
+    
+    if (thing == obtainablethings::PHIX) {
+        double z[20] = { 1.0 };
+        for (auto repeat = 0; repeat < repeatmax; ++repeat) {
+            std::valarray<double> ps = 0.0 * taus;
+            double Arterm = -10000;
+            auto tic = std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < taus.size(); ++i) {
+                PHIXdll(itau, idelta, taus[i], deltas[i], z, Arterm); ps[i] = Arterm;
+            }
+            auto toc = std::chrono::high_resolution_clock::now();
+            double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
+            double val = std::accumulate(std::begin(ps), std::end(ps), 0.0) / ps.size();
+            OneTiming result = { val, elap_us };
+            o.emplace_back(result);
         }
-        auto toc = std::chrono::high_resolution_clock::now();
-        double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
-        double val = std::accumulate(std::begin(ps), std::end(ps), 0.0) / ps.size();
-        OneTiming result = { val, elap_us };
-        o.emplace_back(result);
+    }
+    else {
+
     }
     return o;
 }
 
 template<int itau, int idelta, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
-auto some_teqp(const Taus& taus, const Deltas& deltas, const Model &model, const TT &Ts, const RHO &rhos) {
+auto some_teqp(obtainablethings thing, const Taus& taus, const Deltas& deltas, const Model &model, const TT &Ts, const RHO &rhos) {
     std::vector<OneTiming> out;
 
     // And the same example with teqp
@@ -49,33 +58,37 @@ auto some_teqp(const Taus& taus, const Deltas& deltas, const Model &model, const
 
     using tdx = TDXDerivatives<Model, double, decltype(c)>;
 
-    for (auto counter = 0; counter < 100; ++counter)
-    {
-        double o = 0.0;
-        auto tic = std::chrono::high_resolution_clock::now();
-        for (auto j = 0; j < N; ++j) {
-            if constexpr (itau == 0 && idelta == 0) {
-                o += tdx::get_Ar00(model, Ts[j], rhos[j], c);
+    if (thing == obtainablethings::PHIX) {
+        for (auto repeat = 0; repeat < repeatmax; ++repeat)
+        {
+            double o = 0.0;
+            auto tic = std::chrono::high_resolution_clock::now();
+            for (auto j = 0; j < N; ++j) {
+                if constexpr (itau == 0 && idelta == 0) {
+                    o += tdx::get_Ar00(model, Ts[j], rhos[j], c);
+                }
+                else if constexpr (itau == 0 && idelta == 1) {
+                    o += tdx::get_Ar01(model, Ts[j], rhos[j], c);
+                    //o += tdx::get_Ar0n<1>(model, Ts[j], rhos[j], c)[1];
+                }
+                else if constexpr (itau == 0 && idelta > 1) {
+                    o += tdx::get_Ar0n<idelta>(model, Ts[j], rhos[j], c)[idelta];
+                }
             }
-            else if constexpr (itau == 0 && idelta == 1) {
-                o += tdx::get_Ar01(model, Ts[j], rhos[j], c);
-                //o += tdx::get_Ar0n<1>(model, Ts[j], rhos[j], c)[1];
-            }
-            else if constexpr (itau == 0 && idelta > 1) {
-                o += tdx::get_Ar0n<idelta>(model, Ts[j], rhos[j], c)[idelta];
-            }
+            auto toc = std::chrono::high_resolution_clock::now();
+            double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
+            double val = o / N;
+            OneTiming result = { val, elap_us };
+            out.emplace_back(result);
         }
-        auto toc = std::chrono::high_resolution_clock::now();
-        double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
-        double val = o / N;
-        OneTiming result = { val, elap_us };
-        out.emplace_back(result);
+    }
+    else {
     }
     return out;
 }
 
 template<int itau, int idelta, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
-auto one_deriv(Taus& taus, Deltas& deltas, const Model& model, TT& Ts, RHO& rhos) {
+auto one_deriv(obtainablethings thing, Taus& taus, Deltas& deltas, const Model& model, TT& Ts, RHO& rhos) {
 
     auto check_values = [](auto res) {
         Eigen::ArrayXd vals(res.size());
@@ -86,8 +99,8 @@ auto one_deriv(Taus& taus, Deltas& deltas, const Model& model, TT& Ts, RHO& rhos
         return vals.mean();
     };
 
-    auto timingREFPROP = some_REFPROP(itau, idelta, taus, deltas);
-    auto timingteqp = some_teqp<itau, idelta>(taus, deltas, model, Ts, rhos);
+    auto timingREFPROP = some_REFPROP(thing, itau, idelta, taus, deltas);
+    auto timingteqp = some_teqp<itau, idelta>(thing, taus, deltas, model, Ts, rhos);
 
     std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqp) << std::endl;
 
@@ -108,8 +121,9 @@ int main()
     std::string err;
     bool loaded_REFPROP = load_REFPROP(err, path, DLL_name);
     printf("Loaded refprop: %s @ address %zu\n", loaded_REFPROP ? "true" : "false", REFPROP_address());
-    if (!loaded_REFPROP){return EXIT_FAILURE; }
+    if (!loaded_REFPROP) { return EXIT_FAILURE; }
     SETPATHdll(const_cast<char*>(path.c_str()), 400);
+
     int ierr = 0, nc = 1;
     char herr[255], hfld[10000] = "PROPANE", hhmx[255] = "HMX.BNC", href[4] = "DEF";
     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
@@ -118,6 +132,49 @@ int main()
         int jFlag = 3, kFlag = -1;
         FLAGSdll(hflag, jFlag, kFlag, ierr, herr, 255, 255);
         std::cout << kFlag << std::endl;
+    }
+
+    {
+        auto model = build_multifluid_model({ "Methane","Ethane","n-Propane","n-Butane"}, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+        auto tic = std::chrono::high_resolution_clock::now();
+        using id = IsochoricDerivatives<decltype(model), double>;
+        double T = 300;
+        int N = 1000;
+        auto rhovec = (Eigen::ArrayXd(4) << 0.1, 0.2, 0.3, 0.4).finished();
+        for (auto j = 0; j < N; ++j) {
+            auto val = id::build_d2PsirdTdrhoi_autodiff(model, T, rhovec);
+        }
+        auto toc = std::chrono::high_resolution_clock::now();
+        double elap_us = std::chrono::duration<double>(toc - tic).count()/N*1e6;
+        std::cout << elap_us << " us/call for temperature derivative of residual part of chemical potential" << std::endl;
+    }
+    {
+        auto model = build_multifluid_model({ "Methane","Ethane","n-Propane","n-Butane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+        auto tic = std::chrono::high_resolution_clock::now();
+        using id = IsochoricDerivatives<decltype(model), double>;
+        double T = 300;
+        int N = 1000;
+        auto rhovec = (Eigen::ArrayXd(4) << 0.1, 0.2, 0.3, 0.4).finished();
+        for (auto j = 0; j < N; ++j) {
+            auto val = id::build_Psir_gradient_autodiff(model, T, rhovec);
+        }
+        auto toc = std::chrono::high_resolution_clock::now();
+        double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
+        std::cout << elap_us << " us/call for residual part of chemical potential" << std::endl;
+    }
+    {
+        auto model = build_multifluid_model({ "Methane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+        auto tic = std::chrono::high_resolution_clock::now();
+        using id = IsochoricDerivatives<decltype(model), double>;
+        double T = 300;
+        int N = 1000;
+        auto rhovec = (Eigen::ArrayXd(1) << 1.0).finished();
+        for (auto j = 0; j < N; ++j) {
+            auto val = id::build_Psir_gradient_autodiff(model, T, rhovec);
+        }
+        auto toc = std::chrono::high_resolution_clock::now();
+        double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
+        std::cout << elap_us << " us/call for residual part of chemical potential" << std::endl;
     }
 
     if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
@@ -141,10 +198,12 @@ int main()
 
         auto Ts = Tc / taus;
         auto rhos = deltas * rhoc;
-        one_deriv<0, 0>(taus, deltas, model, Ts, rhos);
-        one_deriv<0, 1>(taus, deltas, model, Ts, rhos);
-        one_deriv<0, 2>(taus, deltas, model, Ts, rhos);
-        one_deriv<0, 3>(taus, deltas, model, Ts, rhos);
+
+        obtainablethings thing = obtainablethings::PHIX;
+        one_deriv<0, 0>(thing, taus, deltas, model, Ts, rhos);
+        one_deriv<0, 1>(thing, taus, deltas, model, Ts, rhos);
+        one_deriv<0, 2>(thing, taus, deltas, model, Ts, rhos);
+        one_deriv<0, 3>(thing, taus, deltas, model, Ts, rhos);
     }
     return EXIT_SUCCESS;
 }
