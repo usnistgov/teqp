@@ -10,7 +10,7 @@ public:
         using result = std::common_type_t<TauType, DeltaType>;
         result r = 0.0, lntau = log(tau), lndelta = log(delta);
         for (auto i = 0; i < n.size(); ++i) {
-            r += n[i] * exp(t[i]*lntau + d[i]*lndelta -c[i]*powi(delta, l_i[i]));
+            r = r + n[i] * exp(t[i]*lntau + d[i]*lndelta -c[i]*powi(delta, l_i[i]));
         }
         return r;
     }
