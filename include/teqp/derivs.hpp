@@ -456,8 +456,8 @@ struct IsochoricDerivatives{
     * Uses autodiff to calculate derivatives
     */
     static auto build_Psir_gradient_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
-        ArrayXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
-        auto psirfunc = [&model, &T](const ArrayXdual2nd& rho_) {
+        ArrayXdual rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto psirfunc = [&model, &T](const ArrayXdual& rho_) {
             auto rhotot_ = rho_.sum();
             auto molefrac = (rho_ / rhotot_).eval();
             return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
