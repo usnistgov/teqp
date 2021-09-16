@@ -14,6 +14,8 @@
 #include <numeric>
 
 #include "teqp/models/multifluid.hpp"
+#include "teqp/models/eos.hpp"
+#include "teqp/models/pcsaft.hpp"
 
 struct OneTiming {
     double value, sec_per_call;
@@ -71,6 +73,9 @@ auto some_teqp(obtainablethings thing, const Taus& taus, const Deltas& deltas, c
                     o += tdx::get_Ar01(model, Ts[j], rhos[j], c);
                     //o += tdx::get_Ar0n<1>(model, Ts[j], rhos[j], c)[1];
                 }
+                else if constexpr (itau == 0 && idelta == 2) {
+                    o += tdx::get_Ar02(model, Ts[j], rhos[j], c);
+                }
                 else if constexpr (itau == 0 && idelta > 1) {
                     o += tdx::get_Ar0n<idelta>(model, Ts[j], rhos[j], c)[idelta];
                 }
@@ -88,7 +93,7 @@ auto some_teqp(obtainablethings thing, const Taus& taus, const Deltas& deltas, c
 }
 
 template<int itau, int idelta, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
-auto one_deriv(obtainablethings thing, Taus& taus, Deltas& deltas, const Model& model, TT& Ts, RHO& rhos) {
+auto one_deriv(obtainablethings thing, Taus& taus, Deltas& deltas, const Model& model, const std::string &modelname, TT& Ts, RHO& rhos) {
 
     auto check_values = [](auto res) {
         Eigen::ArrayXd vals(res.size());
@@ -99,15 +104,30 @@ auto one_deriv(obtainablethings thing, Taus& taus, Deltas& deltas, const Model& 
         return vals.mean();
     };
 
+    std::cout << "Ar_{" << itau << "," << idelta << "}" << std::endl;
+
     auto timingREFPROP = some_REFPROP(thing, itau, idelta, taus, deltas);
     auto timingteqp = some_teqp<itau, idelta>(thing, taus, deltas, model, Ts, rhos);
 
     std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqp) << std::endl;
 
     auto N = timingREFPROP.size();
+    std::vector<double> timesteqp, timesREFPROP;
+    for (auto i = 0; i < N; ++i) {
+        timesteqp.push_back(timingteqp[i].sec_per_call);
+        timesREFPROP.push_back(timingREFPROP[i].sec_per_call);
+    }
     for (auto i = 1; i < 6; ++i) {
         std::cout << timingteqp[N-i].sec_per_call << ", " << timingREFPROP[N-i].sec_per_call << std::endl;
     }
+    nlohmann::json j = {
+        {"timeteqp",timesteqp},
+        {"timeREFPROP",timesREFPROP},
+        {"model", modelname},
+        {"itau", itau},
+        {"idelta", idelta}
+    };
+    return j;
 }
 
 int main()
@@ -133,50 +153,6 @@ int main()
         FLAGSdll(hflag, jFlag, kFlag, ierr, herr, 255, 255);
         std::cout << kFlag << std::endl;
     }
-
-    {
-        auto model = build_multifluid_model({ "Methane","Ethane","n-Propane","n-Butane"}, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
-        auto tic = std::chrono::high_resolution_clock::now();
-        using id = IsochoricDerivatives<decltype(model), double>;
-        double T = 300;
-        int N = 1000;
-        auto rhovec = (Eigen::ArrayXd(4) << 0.1, 0.2, 0.3, 0.4).finished();
-        for (auto j = 0; j < N; ++j) {
-            auto val = id::build_d2PsirdTdrhoi_autodiff(model, T, rhovec);
-        }
-        auto toc = std::chrono::high_resolution_clock::now();
-        double elap_us = std::chrono::duration<double>(toc - tic).count()/N*1e6;
-        std::cout << elap_us << " us/call for temperature derivative of residual part of chemical potential" << std::endl;
-    }
-    {
-        auto model = build_multifluid_model({ "Methane","Ethane","n-Propane","n-Butane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
-        auto tic = std::chrono::high_resolution_clock::now();
-        using id = IsochoricDerivatives<decltype(model), double>;
-        double T = 300;
-        int N = 1000;
-        auto rhovec = (Eigen::ArrayXd(4) << 0.1, 0.2, 0.3, 0.4).finished();
-        for (auto j = 0; j < N; ++j) {
-            auto val = id::build_Psir_gradient_autodiff(model, T, rhovec);
-        }
-        auto toc = std::chrono::high_resolution_clock::now();
-        double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
-        std::cout << elap_us << " us/call for residual part of chemical potential" << std::endl;
-    }
-    {
-        auto model = build_multifluid_model({ "Methane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
-        auto tic = std::chrono::high_resolution_clock::now();
-        using id = IsochoricDerivatives<decltype(model), double>;
-        double T = 300;
-        int N = 1000;
-        auto rhovec = (Eigen::ArrayXd(1) << 1.0).finished();
-        for (auto j = 0; j < N; ++j) {
-            auto val = id::build_Psir_gradient_autodiff(model, T, rhovec);
-        }
-        auto toc = std::chrono::high_resolution_clock::now();
-        double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
-        std::cout << elap_us << " us/call for residual part of chemical potential" << std::endl;
-    }
-
     if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
     {
         auto model = build_multifluid_model({ "n-Propane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
@@ -186,7 +162,7 @@ int main()
 
         //
         std::default_random_engine re;
-        std::valarray<double> taus(100000);
+        std::valarray<double> taus(10000);
         {
             std::uniform_real_distribution<double> unif(2.0941098901098902, 2.1941098901098902);
             std::transform(std::begin(taus), std::end(taus), std::begin(taus), [&unif, &re](double x) { return unif(re); });
@@ -200,10 +176,47 @@ int main()
         auto rhos = deltas * rhoc;
 
         obtainablethings thing = obtainablethings::PHIX;
-        one_deriv<0, 0>(thing, taus, deltas, model, Ts, rhos);
-        one_deriv<0, 1>(thing, taus, deltas, model, Ts, rhos);
-        one_deriv<0, 2>(thing, taus, deltas, model, Ts, rhos);
-        one_deriv<0, 3>(thing, taus, deltas, model, Ts, rhos);
+
+        nlohmann::json outputs = nlohmann::json::array();
+
+        auto build_vdW = [](auto Ncomp) {
+            std::valarray<double> Tc_K(Ncomp), pc_Pa(Ncomp);
+            for (int i = 0; i < Ncomp; ++i) {
+                Tc_K[i] = 100.0 + 10.0 * i;
+                pc_Pa[i] = 1e6 + 0.1e6 * i;
+            }
+            return vdWEOS(Tc_K, pc_Pa);
+        };
+        auto vdW = build_vdW(1);
+        outputs.push_back(one_deriv<0, 0>(thing, taus, deltas, vdW, "vdW", Ts, rhos));
+        outputs.push_back(one_deriv<0, 1>(thing, taus, deltas, vdW, "vdW", Ts, rhos));
+        outputs.push_back(one_deriv<0, 2>(thing, taus, deltas, vdW, "vdW", Ts, rhos));
+        outputs.push_back(one_deriv<0, 3>(thing, taus, deltas, vdW, "vdW", Ts, rhos));
+
+        auto build_PCSAFT = [](auto Ncomp) {
+            SAFTCoeffs coeff;
+            std::vector<SAFTCoeffs> coeffs(1);
+            auto &c = coeffs[0];
+            c.m = 2.0020;
+            c.sigma_Angstrom = 3.6184;
+            c.epsilon_over_k = 208.11;
+            c.name = "propane";
+            c.BibTeXKey = "Gross-IECR-2001";
+            return PCSAFTMixture(coeffs);
+        };
+        auto SAFT = build_PCSAFT(1);
+        outputs.push_back(one_deriv<0, 0>(thing, taus, deltas, SAFT, "PCSAFT", Ts, rhos));
+        outputs.push_back(one_deriv<0, 1>(thing, taus, deltas, SAFT, "PCSAFT", Ts, rhos));
+        outputs.push_back(one_deriv<0, 2>(thing, taus, deltas, SAFT, "PCSAFT", Ts, rhos));
+        outputs.push_back(one_deriv<0, 3>(thing, taus, deltas, SAFT, "PCSAFT", Ts, rhos));
+
+        outputs.push_back(one_deriv<0, 0>(thing, taus, deltas, model, "multifluid", Ts, rhos));
+        outputs.push_back(one_deriv<0, 1>(thing, taus, deltas, model, "multifluid", Ts, rhos));
+        outputs.push_back(one_deriv<0, 2>(thing, taus, deltas, model, "multifluid", Ts, rhos));
+        outputs.push_back(one_deriv<0, 3>(thing, taus, deltas, model, "multifluid", Ts, rhos));
+
+        std::ofstream file("Ar0n_timings.json");
+        file << outputs;
     }
     return EXIT_SUCCESS;
 }
