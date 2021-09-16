@@ -28,7 +28,7 @@ for pyver in ['3.7','3.8','3.9']:
         subprocess.check_call(f'conda create -y -n {condaenv} python={pyver}', shell=True)
         subprocess.check_call(f'conda activate {condaenv} && python -m pip install -U pip wheel', shell=True)
         try:
-            subprocess.check_call(f'conda activate {condaenv} && python -m pip -vvv wheel .', shell=True)
+            subprocess.check_call(f'conda activate {condaenv} && python -m pip -vvv --use-feature=in-tree-build wheel .', shell=True)
         except:
             pass
         finally:
