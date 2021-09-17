@@ -5,6 +5,8 @@
 #include <tuple>
 #include <map>
 
+#include "teqp/types.hpp"
+
 #include "MultiComplex/MultiComplex.hpp"
 
 // autodiff include
