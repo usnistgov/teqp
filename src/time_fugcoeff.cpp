@@ -28,19 +28,25 @@ int main()
     bool loaded_REFPROP = load_REFPROP(err, path, DLL_name);
     printf("Loaded refprop: %s @ address %zu\n", loaded_REFPROP ? "true" : "false", REFPROP_address());
     if (!loaded_REFPROP) { return EXIT_FAILURE; }
-    char hpath[256] = " ";
-    strcpy(hpath, const_cast<char*>(path.c_str()));
-    SETPATHdll(hpath, 255);
+    
+    {
+        char hpath[256] = " ";
+        strcpy(hpath, const_cast<char*>(path.c_str()));
+        SETPATHdll(hpath, 255);
+    }
 
-    int ierr = 0, nc = 1;
-    char herr[256], hfld[10001] = "PROPANE", hhmx[256] = "HMX.BNC", href[4] = "DEF";
-    SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
-    if (ierr != 0) {
-        printf("This ierr: %d herr: %s\n", ierr, herr);
-        return EXIT_FAILURE;
+    {
+        int ierr = 0, nc = 1;
+        char herr[256], hfld[10001] = "PROPANE", hhmx[256] = "HMX.BNC", href[4] = "DEF";
+        SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
+        if (ierr != 0) {
+            printf("This ierr: %d herr: %s\n", ierr, herr);
+            return EXIT_FAILURE;
+        }
     }
     // Try to disable caching in REFPROP
     {
+        int ierr = 0; char herr[256];
         char hflag[256] = "Cache                                                ";
         int jFlag = 3, kFlag = -1;
         FLAGSdll(hflag, jFlag, kFlag, ierr, herr, 255, 255);
@@ -89,6 +95,7 @@ int main()
                 std::valarray<double> z(20); z = 0.0; z[std::slice(0, Ncomp, 1)] = 1.0 / Ncomp;
                 std::valarray<double> u(20); u = 0.0;
                 auto usummer = 0.0;
+                int ierr = 0; char herr[256];
                 auto tic = std::chrono::high_resolution_clock::now();
                 for (auto j = 0; j < N; ++j) {
                     FUGCOFdll(T, D_moldm3, &(z[0]), &(u[0]), ierr, herr, 255);
