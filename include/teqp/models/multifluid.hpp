@@ -49,7 +49,7 @@ public:
         for (auto i = 0; i < N; ++i) {
             alphar = alphar + molefracs[i] * EOSs[i].alphar(tau, delta);
         }
-        return alphar;
+        return forceeval(alphar);
     }
 
     template<typename TauType, typename DeltaType>
@@ -82,7 +82,7 @@ public:
                 alphar = alphar + molefracs[i] * molefracs[j] * F(i, j) * funcs[i][j].alphar(tau, delta);
             }
         }
-        return alphar;
+        return forceeval(alphar);
     }
 };
 
