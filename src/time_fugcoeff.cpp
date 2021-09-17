@@ -74,8 +74,6 @@ int main()
                 return nlohmann::json{ {"val",usummer},{"time",elap_us},{"model","teqp"}, {"Ncomp",Ncomp} };
             };
             auto one_REFPROP = [&](){
-                // REFPROP!
-
                 // Initialize the model
                 {
                     std::string name = fluid_set[0];
@@ -83,7 +81,7 @@ int main()
                         name += "*" + fluid_set[j];
                     }
                     int ierr = 0, nc = Ncomp;
-                    char herr[255], hfld[10000] = " ", hhmx[255] = "HMX.BNC", href[4] = "DEF";
+                    char herr[256], hfld[10001] = " ", hhmx[256] = "HMX.BNC", href[4] = "DEF";
                     strcpy(hfld, (name + "\0").c_str());
                     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
                     if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
@@ -94,7 +92,7 @@ int main()
                 auto tic = std::chrono::high_resolution_clock::now();
                 for (auto j = 0; j < N; ++j) {
                     FUGCOFdll(T, D_moldm3, &(z[0]), &(u[0]), ierr, herr, 255);
-                    usummer += u.sum();
+                    usummer += std::valarray<double>(u[std::slice(0, Ncomp, 1)]).sum();
                 }
                 auto toc = std::chrono::high_resolution_clock::now();
                 double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
