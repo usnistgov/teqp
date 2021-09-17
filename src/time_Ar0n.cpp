@@ -167,7 +167,7 @@ int main()
         double rhoc = 1/model.redfunc.vc[0];
         double Tc = model.redfunc.Tc[0];
         std::default_random_engine re;
-        std::valarray<double> taus(1000);
+        std::valarray<double> taus(10000);
         {
             std::uniform_real_distribution<double> unif(2.0941098901098902, 2.1941098901098902);
             std::transform(std::begin(taus), std::end(taus), std::begin(taus), [&unif, &re](double x) { return unif(re); });
@@ -183,7 +183,7 @@ int main()
 
         nlohmann::json outputs = nlohmann::json::array();
 
-        std::vector<std::string> component_list = { "METHANE","ETHANE","N-PROPANE","N-BUTANE","N-PENTANE","N-HEXANE" };
+        std::vector<std::string> component_list = { "Methane","Ethane","n-Propane","n-Butane","n-Pentane","n-Hexane" };
         for (int Ncomp : {1, 2, 3, 4, 5, 6}) {
             std::vector<std::string> fluid_set(component_list.begin(), component_list.begin() + Ncomp);
 
