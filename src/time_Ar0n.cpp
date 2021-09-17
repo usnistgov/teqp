@@ -77,7 +77,7 @@ auto some_teqp(obtainablethings thing, const Taus& taus, const Deltas& deltas, c
                 else if constexpr (itau == 0 && idelta == 2) {
                     o += tdx::get_Ar02(model, Ts[j], rhos[j], c);
                 }
-                else if constexpr (itau == 0 && idelta > 1) {
+                else if constexpr (itau == 0 && idelta > 2) {
                     o += tdx::get_Ar0n<idelta>(model, Ts[j], rhos[j], c)[idelta];
                 }
             }
