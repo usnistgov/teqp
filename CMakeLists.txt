@@ -40,10 +40,6 @@ endif()
 target_link_libraries(catch_tests autodiff)
 add_test(catch catch_tests)
 
-if(CMAKE_DL_LIBS)
-  find_package (${CMAKE_DL_LIBS} REQUIRED)
-endif()
-
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)
   # Collect all the snippets
