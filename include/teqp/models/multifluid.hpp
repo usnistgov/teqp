@@ -139,11 +139,11 @@ private:
 
     template <typename Num>
     auto cube(Num x) const {
-        return x*x*x;
+        return forceeval(x*x*x);
     }
     template <typename Num>
     auto square(Num x) const {
-        return x*x;
+        return forceeval(x*x);
     }
 
 public:
