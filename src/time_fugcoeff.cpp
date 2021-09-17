@@ -86,7 +86,7 @@ int main()
                     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
                     if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
                 }
-                std::valarray<double> z(20); z = 1.0/Ncomp;
+                std::valarray<double> z(20); z = 0.0; z[std::slice(0, Ncomp, 1)] = 1.0 / Ncomp;
                 std::valarray<double> u(20); u = 0.0;
                 auto usummer = 0.0;
                 auto tic = std::chrono::high_resolution_clock::now();
