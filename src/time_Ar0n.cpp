@@ -16,6 +16,7 @@
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/eos.hpp"
 #include "teqp/models/pcsaft.hpp"
+#include "teqp/derivs.hpp"
 
 struct OneTiming {
     double value, sec_per_call;
@@ -112,10 +113,12 @@ auto one_deriv(obtainablethings thing, Taus& taus, Deltas& deltas, const Model& 
     std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqp) << std::endl;
 
     auto N = timingREFPROP.size();
-    std::vector<double> timesteqp, timesREFPROP;
+    std::vector<double> timesteqp, timesREFPROP, valsteqp, valsREFPROP;
     for (auto i = 0; i < N; ++i) {
         timesteqp.push_back(timingteqp[i].sec_per_call);
         timesREFPROP.push_back(timingREFPROP[i].sec_per_call);
+        valsteqp.push_back(timingteqp[i].value);
+        valsREFPROP.push_back(timingREFPROP[i].value);
     }
     for (auto i = 1; i < 6; ++i) {
         std::cout << timingteqp[N-i].sec_per_call << ", " << timingREFPROP[N-i].sec_per_call << std::endl;
@@ -123,6 +126,8 @@ auto one_deriv(obtainablethings thing, Taus& taus, Deltas& deltas, const Model& 
     nlohmann::json j = {
         {"timeteqp",timesteqp},
         {"timeREFPROP",timesREFPROP},
+        {"valteqp",valsteqp},
+        {"valREFPROP",valsREFPROP},
         {"model", modelname},
         {"itau", itau},
         {"idelta", idelta}
@@ -135,7 +140,7 @@ int main()
     // You may need to change this path to suit your installation
     // Note: forward-slashes are recommended.
     std::string path = "C:/Program Files (x86)/REFPROP";
-    std::string DLL_name = "REFPRP64.dll";
+    std::string DLL_name = "";
 
     // Load the shared library and set up the fluid
     std::string err;
