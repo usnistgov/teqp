@@ -139,7 +139,7 @@ int main()
 {
     // You may need to change this path to suit your installation
     // Note: forward-slashes are recommended.
-    std::string path = "C:/Program Files (x86)/REFPROP";
+    std::string path = std::getenv("RPPREFIX");
     std::string DLL_name = "";
 
     // Load the shared library and set up the fluid
