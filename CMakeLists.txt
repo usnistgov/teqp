@@ -40,6 +40,10 @@ endif()
 target_link_libraries(catch_tests autodiff)
 add_test(catch catch_tests)
 
+if(CMAKE_DL_LIBS)
+  find_package (${CMAKE_DL_LIBS} REQUIRED)
+endif()
+
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)
   # Collect all the snippets
@@ -55,8 +59,12 @@ if (TEQP_SNIPPETS)
     add_executable(${snippet_exe} ${snippet})
     if (MSVC)
 	    target_sources(${snippet_exe} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
-	endif()
-	target_link_libraries(${snippet_exe} autodiff)
+	  endif()
+
+	  target_link_libraries(${snippet_exe} autodiff)
+    if(UNIX)
+      target_link_libraries (${snippet_exe} ${CMAKE_DL_LIBS})
+    endif()
   endforeach()
 else()
   message(STATUS "No snippets will be compiled, pass -DTEQP_SNIPPETS=ON to build them")
