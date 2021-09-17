@@ -49,7 +49,7 @@ int main()
 
     nlohmann::json outputs = nlohmann::json::array();
 
-    double T = 300, D_moldm3 = 30, D_molm3 = D_moldm3*1e3;
+    double T = 300, D_moldm3 = 3, D_molm3 = D_moldm3*1e3;
     int N = 100000;
     std::vector<std::string> component_list = { "Methane","Ethane","n-Propane","n-Butane","n-Pentane","n-Hexane" };
     {
@@ -71,7 +71,7 @@ int main()
                 auto toc = std::chrono::high_resolution_clock::now();
                 double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
                 std::cout << elap_us << " us/call for fugacity coefficient w/ " << Ncomp << " component(s) with value " << usummer << std::endl;
-                return nlohmann::json{ {"val",usummer},{"time",elap_us},{"model","teqp"}, {"Ncomp",Ncomp} };
+                return nlohmann::json{ {"val",usummer/N},{"time",elap_us},{"model","teqp"}, {"Ncomp",Ncomp} };
             };
             auto one_REFPROP = [&](){
                 // Initialize the model
@@ -92,12 +92,13 @@ int main()
                 auto tic = std::chrono::high_resolution_clock::now();
                 for (auto j = 0; j < N; ++j) {
                     FUGCOFdll(T, D_moldm3, &(z[0]), &(u[0]), ierr, herr, 255);
+                    //if (ierr != 0) { std::cout << ierr << ": " << herr << std::endl; }
                     usummer += std::valarray<double>(u[std::slice(0, Ncomp, 1)]).sum();
                 }
                 auto toc = std::chrono::high_resolution_clock::now();
                 double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
                 std::cout << elap_us << " us/call for FUGCOF w/ " << Ncomp << " component(s) with value " << usummer << std::endl;
-                return nlohmann::json{ {"val",usummer},{"time",elap_us},{"model","REFPROP"}, {"Ncomp",Ncomp} };
+                return nlohmann::json{ {"val",usummer/N},{"time",elap_us},{"model","REFPROP"}, {"Ncomp",Ncomp} };
             };
 
             outputs.push_back(one_teqp());
