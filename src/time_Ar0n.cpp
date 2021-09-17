@@ -26,17 +26,17 @@ constexpr int repeatmax = 100;
 enum class obtainablethings { PHIX, CHEMPOT };
 
 template<typename Taus, typename Deltas>
-auto some_REFPROP(obtainablethings thing, int itau, int idelta, Taus& taus, Deltas& deltas) {
+auto some_REFPROP(obtainablethings thing, int Ncomp, int itau, int idelta, Taus& taus, Deltas& deltas) {
     std::vector<OneTiming> o;
     
     if (thing == obtainablethings::PHIX) {
-        double z[20] = { 1.0 };
+        std::valarray<double> z(20); z = 1.0 / static_cast<double>(Ncomp);
         for (auto repeat = 0; repeat < repeatmax; ++repeat) {
             std::valarray<double> ps = 0.0 * taus;
             double Arterm = -10000;
             auto tic = std::chrono::high_resolution_clock::now();
             for (auto i = 0; i < taus.size(); ++i) {
-                PHIXdll(itau, idelta, taus[i], deltas[i], z, Arterm); ps[i] = Arterm;
+                PHIXdll(itau, idelta, taus[i], deltas[i], &(z[0]), Arterm); ps[i] = Arterm;
             }
             auto toc = std::chrono::high_resolution_clock::now();
             double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
@@ -52,12 +52,12 @@ auto some_REFPROP(obtainablethings thing, int itau, int idelta, Taus& taus, Delt
 }
 
 template<int itau, int idelta, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
-auto some_teqp(obtainablethings thing, const Taus& taus, const Deltas& deltas, const Model &model, const TT &Ts, const RHO &rhos) {
+auto some_teqp(obtainablethings thing, int Ncomp, const Taus& taus, const Deltas& deltas, const Model &model, const TT &Ts, const RHO &rhos) {
     std::vector<OneTiming> out;
 
     // And the same example with teqp
     auto N = taus.size();
-    auto c = (Eigen::ArrayXd(1) << 1.0).finished();
+    auto c = Eigen::ArrayXd::Ones(Ncomp) / static_cast<double>(Ncomp);
 
     using tdx = TDXDerivatives<Model, double, decltype(c)>;
 
@@ -94,7 +94,7 @@ auto some_teqp(obtainablethings thing, const Taus& taus, const Deltas& deltas, c
 }
 
 template<int itau, int idelta, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
-auto one_deriv(obtainablethings thing, Taus& taus, Deltas& deltas, const Model& model, const std::string &modelname, TT& Ts, RHO& rhos) {
+auto one_deriv(obtainablethings thing, int Ncomp, Taus& taus, Deltas& deltas, const Model& model, const std::string &modelname, TT& Ts, RHO& rhos) {
 
     auto check_values = [](auto res) {
         Eigen::ArrayXd vals(res.size());
@@ -107,8 +107,8 @@ auto one_deriv(obtainablethings thing, Taus& taus, Deltas& deltas, const Model& 
 
     std::cout << "Ar_{" << itau << "," << idelta << "}" << std::endl;
 
-    auto timingREFPROP = some_REFPROP(thing, itau, idelta, taus, deltas);
-    auto timingteqp = some_teqp<itau, idelta>(thing, taus, deltas, model, Ts, rhos);
+    auto timingREFPROP = some_REFPROP(thing, Ncomp, itau, idelta, taus, deltas);
+    auto timingteqp = some_teqp<itau, idelta>(thing, Ncomp, taus, deltas, model, Ts, rhos);
 
     std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqp) << std::endl;
 
@@ -156,18 +156,18 @@ int main()
         char hflag[256] = "Cache                                                ";
         int jFlag = 3, kFlag = -1;
         FLAGSdll(hflag, jFlag, kFlag, ierr, herr, 255, 255);
-        std::cout << kFlag << std::endl;
+        //std::cout << kFlag << std::endl;
     }
     if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
     {
+        // Prepare some input values. It doesn't matter what the values of tau and delta are,
+        // so long as they are not the same since we are not doing a phase equilibrium calculation, just
+        // non-iterative calculations
         auto model = build_multifluid_model({ "n-Propane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
-
         double rhoc = 1/model.redfunc.vc[0];
         double Tc = model.redfunc.Tc[0];
-
-        //
         std::default_random_engine re;
-        std::valarray<double> taus(10000);
+        std::valarray<double> taus(1000);
         {
             std::uniform_real_distribution<double> unif(2.0941098901098902, 2.1941098901098902);
             std::transform(std::begin(taus), std::end(taus), std::begin(taus), [&unif, &re](double x) { return unif(re); });
@@ -176,7 +176,6 @@ int main()
             std::uniform_real_distribution<double> unif(0.0015981745536338204, 0.0016981745536338204);
             std::transform(std::begin(deltas), std::end(deltas), std::begin(deltas), [&unif, &re](double x) { return unif(re); });
         }
-
         auto Ts = Tc / taus;
         auto rhos = deltas * rhoc;
 
@@ -184,41 +183,68 @@ int main()
 
         nlohmann::json outputs = nlohmann::json::array();
 
-        auto build_vdW = [](auto Ncomp) {
-            std::valarray<double> Tc_K(Ncomp), pc_Pa(Ncomp);
-            for (int i = 0; i < Ncomp; ++i) {
-                Tc_K[i] = 100.0 + 10.0 * i;
-                pc_Pa[i] = 1e6 + 0.1e6 * i;
+        std::vector<std::string> component_list = { "METHANE","ETHANE","N-PROPANE","N-BUTANE","N-PENTANE","N-HEXANE" };
+        for (int Ncomp : {1, 2, 3, 4, 5, 6}) {
+            std::vector<std::string> fluid_set(component_list.begin(), component_list.begin() + Ncomp);
+
+            // Initialize the model
+            {
+                std::string name = fluid_set[0];
+                for (auto j = 1; j < fluid_set.size(); ++j) {
+                    name += "*" + fluid_set[j];
+                }
+                int ierr = 0, nc = Ncomp;
+                char herr[255], hfld[10000] = " ", hhmx[255] = "HMX.BNC", href[4] = "DEF";
+                strcpy(hfld, (name + "\0").c_str());
+                SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
+                if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
             }
-            return vdWEOS(Tc_K, pc_Pa);
-        };
-        auto vdW = build_vdW(1);
-        outputs.push_back(one_deriv<0, 0>(thing, taus, deltas, vdW, "vdW", Ts, rhos));
-        outputs.push_back(one_deriv<0, 1>(thing, taus, deltas, vdW, "vdW", Ts, rhos));
-        outputs.push_back(one_deriv<0, 2>(thing, taus, deltas, vdW, "vdW", Ts, rhos));
-        outputs.push_back(one_deriv<0, 3>(thing, taus, deltas, vdW, "vdW", Ts, rhos));
 
-        auto build_PCSAFT = [](auto Ncomp) {
-            SAFTCoeffs coeff;
-            std::vector<SAFTCoeffs> coeffs(1);
-            auto &c = coeffs[0];
-            c.m = 2.0020;
-            c.sigma_Angstrom = 3.6184;
-            c.epsilon_over_k = 208.11;
-            c.name = "propane";
-            c.BibTeXKey = "Gross-IECR-2001";
-            return PCSAFTMixture(coeffs);
-        };
-        auto SAFT = build_PCSAFT(1);
-        outputs.push_back(one_deriv<0, 0>(thing, taus, deltas, SAFT, "PCSAFT", Ts, rhos));
-        outputs.push_back(one_deriv<0, 1>(thing, taus, deltas, SAFT, "PCSAFT", Ts, rhos));
-        outputs.push_back(one_deriv<0, 2>(thing, taus, deltas, SAFT, "PCSAFT", Ts, rhos));
-        outputs.push_back(one_deriv<0, 3>(thing, taus, deltas, SAFT, "PCSAFT", Ts, rhos));
+            auto append_Ncomp = [&outputs, &Ncomp]() { outputs.back()["Ncomp"] = Ncomp; };
+            
+            auto model = build_multifluid_model(fluid_set, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
 
-        outputs.push_back(one_deriv<0, 0>(thing, taus, deltas, model, "multifluid", Ts, rhos));
-        outputs.push_back(one_deriv<0, 1>(thing, taus, deltas, model, "multifluid", Ts, rhos));
-        outputs.push_back(one_deriv<0, 2>(thing, taus, deltas, model, "multifluid", Ts, rhos));
-        outputs.push_back(one_deriv<0, 3>(thing, taus, deltas, model, "multifluid", Ts, rhos));
+            auto build_vdW = [](auto Ncomp) {
+                std::valarray<double> Tc_K(Ncomp), pc_Pa(Ncomp);
+                for (int i = 0; i < Ncomp; ++i) {
+                    Tc_K[i] = 100.0 + 10.0 * i;
+                    pc_Pa[i] = 1e6 + 0.1e6 * i;
+                }
+                return vdWEOS(Tc_K, pc_Pa);
+            };
+            auto vdW = build_vdW(Ncomp);
+
+            auto build_PCSAFT = [](auto Ncomp) {
+                std::vector<SAFTCoeffs> coeffs;
+                for (auto i = 0; i < Ncomp; ++i) {
+                    // Values don't matter to the computer...
+                    SAFTCoeffs c;
+                    c.m = 2.0020;
+                    c.sigma_Angstrom = 3.6184;
+                    c.epsilon_over_k = 208.11;
+                    c.name = "propane";
+                    c.BibTeXKey = "Gross-IECR-2001";
+                    coeffs.push_back(c);
+                }
+                return PCSAFTMixture(coeffs);
+            };
+            auto SAFT = build_PCSAFT(Ncomp);
+
+            outputs.push_back(one_deriv<0, 0>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 1>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 2>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 3>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
+
+            outputs.push_back(one_deriv<0, 0>(thing, Ncomp, taus, deltas, SAFT, "PCSAFT", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 1>(thing, Ncomp, taus, deltas, SAFT, "PCSAFT", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 2>(thing, Ncomp, taus, deltas, SAFT, "PCSAFT", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 3>(thing, Ncomp, taus, deltas, SAFT, "PCSAFT", Ts, rhos)); append_Ncomp();
+
+            outputs.push_back(one_deriv<0, 0>(thing, Ncomp, taus, deltas, model, "multifluid", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 1>(thing, Ncomp, taus, deltas, model, "multifluid", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 2>(thing, Ncomp, taus, deltas, model, "multifluid", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 3>(thing, Ncomp, taus, deltas, model, "multifluid", Ts, rhos)); append_Ncomp();
+        }
 
         std::ofstream file("Ar0n_timings.json");
         file << outputs;
