@@ -28,10 +28,12 @@ int main()
     bool loaded_REFPROP = load_REFPROP(err, path, DLL_name);
     printf("Loaded refprop: %s @ address %zu\n", loaded_REFPROP ? "true" : "false", REFPROP_address());
     if (!loaded_REFPROP) { return EXIT_FAILURE; }
-    SETPATHdll(const_cast<char*>(path.c_str()), 400);
+    char hpath[256] = " ";
+    strcpy(hpath, const_cast<char*>(path.c_str()));
+    SETPATHdll(hpath, 255);
 
     int ierr = 0, nc = 1;
-    char herr[255], hfld[10000] = "PROPANE", hhmx[255] = "HMX.BNC", href[4] = "DEF";
+    char herr[256], hfld[10001] = "PROPANE", hhmx[256] = "HMX.BNC", href[4] = "DEF";
     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
     if (ierr != 0) {
         printf("This ierr: %d herr: %s\n", ierr, herr);
@@ -45,6 +47,8 @@ int main()
         //std::cout << kFlag << std::endl;
     }
 
+    nlohmann::json outputs = nlohmann::json::array();
+
     double T = 300, D_moldm3 = 30, D_molm3 = D_moldm3*1e3;
     int N = 100000;
     std::vector<std::string> component_list = { "Methane","Ethane","n-Propane","n-Butane","n-Pentane","n-Hexane" };
@@ -52,12 +56,12 @@ int main()
         for (int Ncomp : {1, 2, 3, 4, 5, 6}) {
             
             std::vector<std::string> fluid_set(component_list.begin(), component_list.begin() + Ncomp);
-
+            auto one_teqp = [&]()
             {
                 // teqp!!
                 auto model = build_multifluid_model(fluid_set, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
                 using id = IsochoricDerivatives<decltype(model), double>;
-                auto rhovec = D_molm3*Eigen::ArrayXd::Ones(Ncomp)/Ncomp;
+                auto rhovec = (D_molm3*Eigen::ArrayXd::Ones(Ncomp)/Ncomp).eval();
                 auto tic = std::chrono::high_resolution_clock::now(); 
                 double usummer = 0.0;
                 for (auto j = 0; j < N; ++j) {
@@ -67,8 +71,9 @@ int main()
                 auto toc = std::chrono::high_resolution_clock::now();
                 double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
                 std::cout << elap_us << " us/call for fugacity coefficient w/ " << Ncomp << " component(s) with value " << usummer << std::endl;
-            }
-            {
+                return nlohmann::json{ {"val",usummer},{"time",elap_us},{"model","teqp"}, {"Ncomp",Ncomp} };
+            };
+            auto one_REFPROP = [&](){
                 // REFPROP!
 
                 // Initialize the model
@@ -94,8 +99,14 @@ int main()
                 auto toc = std::chrono::high_resolution_clock::now();
                 double elap_us = std::chrono::duration<double>(toc - tic).count() / N * 1e6;
                 std::cout << elap_us << " us/call for FUGCOF w/ " << Ncomp << " component(s) with value " << usummer << std::endl;
-            }
+                return nlohmann::json{ {"val",usummer},{"time",elap_us},{"model","REFPROP"}, {"Ncomp",Ncomp} };
+            };
+
+            outputs.push_back(one_teqp());
+            outputs.push_back(one_REFPROP());
         }
+        std::ofstream file("fugcoeff_timings.json");
+        file << outputs;
     }
     return EXIT_SUCCESS;
 }
