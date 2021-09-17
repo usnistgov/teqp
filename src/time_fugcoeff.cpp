@@ -42,12 +42,12 @@ int main()
         char hflag[256] = "Cache                                                ";
         int jFlag = 3, kFlag = -1;
         FLAGSdll(hflag, jFlag, kFlag, ierr, herr, 255, 255);
-        std::cout << kFlag << std::endl;
+        //std::cout << kFlag << std::endl;
     }
 
     double T = 300, D_moldm3 = 30, D_molm3 = D_moldm3*1e3;
     int N = 100000;
-    std::vector<std::string> component_list = { "METHANE","ETHANE","N-PROPANE","N-BUTANE","N-PENTANE","N-HEXANE" };
+    std::vector<std::string> component_list = { "Methane","Ethane","n-Propane","n-Butane","n-Pentane","n-Hexane" };
     {
         for (int Ncomp : {1, 2, 3, 4, 5, 6}) {
             
