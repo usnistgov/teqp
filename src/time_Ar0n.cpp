@@ -170,7 +170,7 @@ int main()
         double rhoc = 1/dummymodel.redfunc.vc[0];
         double Tc = dummymodel.redfunc.Tc[0];
         std::default_random_engine re;
-        std::valarray<double> taus(10000);
+        std::valarray<double> taus(1000);
         {
             std::uniform_real_distribution<double> unif(2.0941098901098902, 2.1941098901098902);
             std::transform(std::begin(taus), std::end(taus), std::begin(taus), [&unif, &re](double x) { return unif(re); });
