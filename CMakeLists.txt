@@ -58,10 +58,10 @@ if (TEQP_SNIPPETS)
 
     add_executable(${snippet_exe} ${snippet})
     if (MSVC)
-	    target_sources(${snippet_exe} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
-	  endif()
+      target_sources(${snippet_exe} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+    endif()
 
-	  target_link_libraries(${snippet_exe} autodiff)
+    target_link_libraries(${snippet_exe} autodiff)
     if(UNIX)
       target_link_libraries (${snippet_exe} ${CMAKE_DL_LIBS})
     endif()
