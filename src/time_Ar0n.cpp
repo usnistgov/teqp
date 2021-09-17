@@ -78,7 +78,7 @@ auto some_teqp(obtainablethings thing, const Taus& taus, const Deltas& deltas, c
                     o += tdx::get_Ar02(model, Ts[j], rhos[j], c);
                 }
                 else if constexpr (itau == 0 && idelta > 2) {
-                    o += template tdx::get_Ar0n<idelta>(model, Ts[j], rhos[j], c)[idelta];
+                    o += tdx::template get_Ar0n<idelta>(model, Ts[j], rhos[j], c)[idelta];
                 }
             }
             auto toc = std::chrono::high_resolution_clock::now();
