@@ -12,7 +12,7 @@ public:
         for (auto i = 0; i < n.size(); ++i) {
             r = r + n[i] * exp(t[i]*lntau + d[i]*lndelta -c[i]*powi(delta, l_i[i]));
         }
-        return r;
+        return forceeval(r);
     }
 };
 

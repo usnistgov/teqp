@@ -187,7 +187,7 @@ public:
             }
         }
 
-        return sum1 + sum2;
+        return forceeval(sum1 + sum2);
     }
 
     static auto get_BIPdep(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
