@@ -30,7 +30,10 @@ auto some_REFPROP(obtainablethings thing, int Ncomp, int itau, int idelta, Taus&
     std::vector<OneTiming> o;
     
     if (thing == obtainablethings::PHIX) {
-        std::valarray<double> z(20); z = 1.0 / static_cast<double>(Ncomp);
+        std::valarray<double> z(20); z = 0;
+        for (auto i = 0; i < Ncomp; ++i) {
+            z[i] = 1.0 / static_cast<double>(Ncomp);
+        }
         for (auto repeat = 0; repeat < repeatmax; ++repeat) {
             std::valarray<double> ps = 0.0 * taus;
             double Arterm = -10000;
@@ -57,7 +60,7 @@ auto some_teqp(obtainablethings thing, int Ncomp, const Taus& taus, const Deltas
 
     // And the same example with teqp
     auto N = taus.size();
-    auto c = Eigen::ArrayXd::Ones(Ncomp) / static_cast<double>(Ncomp);
+    auto c = (Eigen::ArrayXd::Ones(Ncomp) / static_cast<double>(Ncomp)).eval();
 
     using tdx = TDXDerivatives<Model, double, decltype(c)>;
 
@@ -163,9 +166,9 @@ int main()
         // Prepare some input values. It doesn't matter what the values of tau and delta are,
         // so long as they are not the same since we are not doing a phase equilibrium calculation, just
         // non-iterative calculations
-        auto model = build_multifluid_model({ "n-Propane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
-        double rhoc = 1/model.redfunc.vc[0];
-        double Tc = model.redfunc.Tc[0];
+        auto dummymodel = build_multifluid_model({ "n-Propane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+        double rhoc = 1/dummymodel.redfunc.vc[0];
+        double Tc = dummymodel.redfunc.Tc[0];
         std::default_random_engine re;
         std::valarray<double> taus(10000);
         {
@@ -183,7 +186,7 @@ int main()
 
         nlohmann::json outputs = nlohmann::json::array();
 
-        std::vector<std::string> component_list = { "Methane","Ethane","n-Propane","n-Butane","n-Pentane","n-Hexane" };
+        std::vector<std::string> component_list = { "n-Propane","Ethane","Methane","n-Butane","n-Pentane","n-Hexane" };
         for (int Ncomp : {1, 2, 3, 4, 5, 6}) {
             std::vector<std::string> fluid_set(component_list.begin(), component_list.begin() + Ncomp);
 
