@@ -480,6 +480,21 @@ struct IsochoricDerivatives{
         return (build_Psir_gradient_autodiff(model, T, rho).array() + model.R(molefrac)*T*(rhorefideal + log(rho / rhorefideal))).eval();
     }
 
+    /***
+    * \brief Calculate the fugacity coefficient of each component
+    *
+    * Uses autodiff to calculate derivatives
+    */
+    static auto get_fugacity_coefficients(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        using tdx = TDXDerivatives<Model, Scalar>;
+        auto Z = 1.0 + tdx::get_Ar01(model, T, rhotot, molefrac);
+        auto lnphi = (build_Psir_gradient_autodiff(model, T, rhovec).array() / (R * T) - log(Z)).eval();
+        return exp(lnphi).eval();
+    }
+
     static auto build_d2PsirdTdrhoi_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
         VectorType deriv(rho.size());
         // d^2psir/dTdrho_i
