@@ -25,8 +25,8 @@ struct OneTiming {
 constexpr int repeatmax = 100;
 enum class obtainablethings { PHIX, CHEMPOT };
 
-template<typename Taus, typename Deltas>
-auto some_REFPROP(obtainablethings thing, int Ncomp, int itau, int idelta, Taus& taus, Deltas& deltas) {
+template<typename Taus, typename Deltas, typename TT, typename RHO>
+auto some_REFPROP(obtainablethings thing, int Ncomp, int itau, int idelta, Taus& taus, Deltas& deltas, const TT &Ts, const RHO &rhos) {
     std::vector<OneTiming> o;
     
     if (thing == obtainablethings::PHIX) {
@@ -38,8 +38,11 @@ auto some_REFPROP(obtainablethings thing, int Ncomp, int itau, int idelta, Taus&
             std::valarray<double> ps = 0.0 * taus;
             double Arterm = -10000;
             auto tic = std::chrono::high_resolution_clock::now();
+            double Tr=-1, Dr=-1;
             for (auto i = 0; i < taus.size(); ++i) {
-                PHIXdll(itau, idelta, taus[i], deltas[i], &(z[0]), Arterm); ps[i] = Arterm;
+                REDXdll(&(z[0]), Tr, Dr);
+                double tau = Tr / Ts[i], delta = rhos[i] / Dr;
+                PHIXdll(itau, idelta, tau, delta, &(z[0]), Arterm); ps[i] = Arterm;
             }
             auto toc = std::chrono::high_resolution_clock::now();
             double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
@@ -110,7 +113,7 @@ auto one_deriv(obtainablethings thing, int Ncomp, Taus& taus, Deltas& deltas, co
 
     std::cout << "Ar_{" << itau << "," << idelta << "}" << std::endl;
 
-    auto timingREFPROP = some_REFPROP(thing, Ncomp, itau, idelta, taus, deltas);
+    auto timingREFPROP = some_REFPROP(thing, Ncomp, itau, idelta, taus, deltas, Ts, rhos);
     auto timingteqp = some_teqp<itau, idelta>(thing, Ncomp, taus, deltas, model, Ts, rhos);
 
     std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqp) << std::endl;
