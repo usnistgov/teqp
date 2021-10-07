@@ -121,7 +121,10 @@ struct TDXDerivatives {
             return rho*rho*ders[2];
         }
         else {
-            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar02");
+            using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
+            bool and_val = true;
+            fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
+            return powi(rho, 2)*diff_mcx1(f, rho, 2, and_val)[2];
         }
         throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar02");
     }
@@ -139,7 +142,14 @@ struct TDXDerivatives {
             return o;
         }
         else {
-            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar0n");
+            using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
+            bool and_val = true;
+            fcn_t f = [&](const auto& rhomcx) { return model.alphar(T, rhomcx, molefrac); };
+            auto ders = diff_mcx1(f, rho, Nderiv, and_val);
+            for (auto n = 0; n <= Nderiv; ++n) {
+                o[n] = powi(rho, n) * ders[n];
+            }
+            return o;
         }
         throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar0n");
     }
@@ -469,6 +479,63 @@ struct IsochoricDerivatives{
     }
 
     /***
+    * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
+    *
+    * Uses multicomplex to calculate derivatives
+    */
+    static auto build_Psir_gradient_multicomplex(const Model& model, const Scalar& T, const VectorType& rho) {
+        using rho_type = VectorType::value_type;
+        Eigen::ArrayX<mcx::MultiComplex<rho_type>> rhovecc(rho.size()); //for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto psirfunc = [&model](const auto &T, const auto& rho_) {
+            auto rhotot_ = rho_.sum();
+            auto molefrac = (rho_ / rhotot_).eval();
+            return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
+        };
+        VectorType out(rho.size());
+        for (int i = 0; i < rho.size(); ++i) {
+            out[i] = derivrhoi(psirfunc, T, rho, i);
+        }
+        return out;
+    }
+    /***
+    * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
+    *
+    * Uses complex step to calculate derivatives
+    */
+    static auto build_Psir_gradient_complex_step(const Model& model, const Scalar& T, const VectorType& rho) {
+        using rho_type = VectorType::value_type;
+        Eigen::ArrayX<std::complex<rho_type>> rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto psirfunc = [&model](const auto& T, const auto& rho_) {
+            auto rhotot_ = rho_.sum();
+            auto molefrac = (rho_ / rhotot_).eval();
+            return forceeval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
+        };
+        VectorType out(rho.size());
+        for (int i = 0; i < rho.size(); ++i) {
+            auto rhocopy = rhovecc;
+            rho_type h = 1e-100;
+            rhocopy[i] = rhocopy[i] + std::complex<rho_type>(0,h);
+            auto calc = psirfunc(T, rhocopy);
+            out[i] = calc.imag / static_cast<double>(h);
+        }
+        return out;
+    }
+
+    /* Convenience function to select the correct implementation at compile-time */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto build_Psir_gradient(const Model& model, const Scalar& T, const VectorType& rho) {
+        if constexpr (be == ADBackends::multicomplex) {
+            return build_Psir_gradient_multicomplex(model, T, rho);
+        }
+        else if constexpr (be == ADBackends::autodiff) {
+            return build_Psir_gradient_autodiff(model, T, rho);
+        }
+        else if constexpr (be == ADBackends::complex_step) {
+            return build_Psir_gradient_complex_step(model, T, rho);
+        }
+    }
+
+    /***
     * \brief Calculate the chemical potential of each component
     *
     * Uses autodiff to calculate derivatives
@@ -487,13 +554,16 @@ struct IsochoricDerivatives{
     *
     * Uses autodiff to calculate derivatives
     */
+    template<ADBackends be = ADBackends::autodiff>
     static auto get_fugacity_coefficients(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot = forceeval(rhovec.sum());
         auto molefrac = (rhovec / rhotot).eval();
         auto R = model.R(molefrac);
-        using tdx = TDXDerivatives<Model, Scalar>;
-        auto Z = 1.0 + tdx::get_Ar01(model, T, rhotot, molefrac);
-        auto lnphi = (build_Psir_gradient_autodiff(model, T, rhovec).array() / (R * T) - log(Z)).eval();
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Z = 1.0 + tdx::get_Ar01<be>(model, T, rhotot, molefrac);
+        auto grad = build_Psir_gradient<be>(model, T, rhovec).eval();
+        auto RT = R * T;
+        auto lnphi = ((grad / RT).array() - log(Z)).eval();
         return exp(lnphi).eval();
     }
 
