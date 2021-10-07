@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include "teqp/constants.hpp"
 #include "teqp/types.hpp"
 
