@@ -129,7 +129,7 @@ template <typename TCType, typename PCType, typename AcentricType>
 auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric) {
     double Delta1 = 1+sqrt(2);
     double Delta2 = 1-sqrt(2);
-    auto m = acentric*0.0;
+    AcentricType m = acentric*0.0;
     std::vector<AlphaFunctionOptions> alphas; 
     for (auto i = 0; i < Tc_K.size(); ++i) {
         if (acentric[i] < 0.491) {
