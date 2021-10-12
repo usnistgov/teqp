@@ -96,6 +96,9 @@ public:
         const RhoType& rho,
         const MoleFracType& molefrac) const
     {
+        if (molefrac.size() != alphas.size()) {
+            throw std::invalid_argument("Sizes do not match");
+        }
         auto b = get_b(T, molefrac);
         auto Psiminus = -log(1.0 - b * rho);
         auto Psiplus = log((Delta1 * b * rho + 1) / (Delta2 * b * rho + 1)) / (b * (Delta1 - Delta2));
