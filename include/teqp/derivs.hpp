@@ -484,7 +484,7 @@ struct IsochoricDerivatives{
     * Uses multicomplex to calculate derivatives
     */
     static auto build_Psir_gradient_multicomplex(const Model& model, const Scalar& T, const VectorType& rho) {
-        using rho_type = VectorType::value_type;
+        using rho_type = typename VectorType::value_type;
         Eigen::ArrayX<mcx::MultiComplex<rho_type>> rhovecc(rho.size()); //for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
         auto psirfunc = [&model](const auto &T, const auto& rho_) {
             auto rhotot_ = rho_.sum();
@@ -503,7 +503,7 @@ struct IsochoricDerivatives{
     * Uses complex step to calculate derivatives
     */
     static auto build_Psir_gradient_complex_step(const Model& model, const Scalar& T, const VectorType& rho) {
-        using rho_type = VectorType::value_type;
+        using rho_type = typename VectorType::value_type;
         Eigen::ArrayX<std::complex<rho_type>> rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
         auto psirfunc = [&model](const auto& T, const auto& rho_) {
             auto rhotot_ = rho_.sum();
