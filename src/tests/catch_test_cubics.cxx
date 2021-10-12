@@ -12,10 +12,13 @@ TEST_CASE("Test construction of cubic", "[cubic]")
     auto modelSRK = canonical_SRK(Tc_K, pc_Pa, acentric);
     auto modelPR = canonical_PR(Tc_K, pc_Pa, acentric);
 
-    double T = 300, rho = 300;
-    Eigen::ArrayXd molefrac(2); molefrac = 0.5;
+    double T = 800, rho = 5000;
+    auto molefrac = (Eigen::ArrayXd(3) << 0.5, 0.3, 0.2).finished();
     
     auto Ar02SRK = TDXDerivatives<decltype(modelSRK)>::get_Ar02(modelSRK, T, rho, molefrac);
+    auto Ar01PR = TDXDerivatives<decltype(modelPR)>::get_Ar01(modelPR, T, rho, molefrac);
     auto Ar02PR = TDXDerivatives<decltype(modelPR)>::get_Ar02(modelPR, T, rho, molefrac);
+    auto Ar03PR = TDXDerivatives<decltype(modelPR)>::get_Ar0n<3>(modelPR, T, rho, molefrac)[3];
+    auto Ar04PR = TDXDerivatives<decltype(modelPR)>::get_Ar0n<4>(modelPR, T, rho, molefrac)[4];
     int rr = 0;
 }
