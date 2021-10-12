@@ -57,7 +57,7 @@ auto some_REFPROP(obtainablethings thing, int Ncomp, int itau, int idelta, Taus&
     return o;
 }
 
-template<int itau, int idelta, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
+template<int itau, int idelta, ADBackends backend, typename Taus, typename Deltas, typename TT, typename RHO, typename Model>
 auto some_teqp(obtainablethings thing, int Ncomp, const Taus& taus, const Deltas& deltas, const Model &model, const TT &Ts, const RHO &rhos) {
     std::vector<OneTiming> out;
 
@@ -77,14 +77,14 @@ auto some_teqp(obtainablethings thing, int Ncomp, const Taus& taus, const Deltas
                     o += tdx::get_Ar00(model, Ts[j], rhos[j], c);
                 }
                 else if constexpr (itau == 0 && idelta == 1) {
-                    o += tdx::get_Ar01(model, Ts[j], rhos[j], c);
+                    o += tdx::get_Ar01<backend>(model, Ts[j], rhos[j], c);
                     //o += tdx::get_Ar0n<1>(model, Ts[j], rhos[j], c)[1];
                 }
                 else if constexpr (itau == 0 && idelta == 2) {
-                    o += tdx::get_Ar02(model, Ts[j], rhos[j], c);
+                    o += tdx::get_Ar02<backend>(model, Ts[j], rhos[j], c);
                 }
                 else if constexpr (itau == 0 && idelta > 2) {
-                    o += tdx::template get_Ar0n<idelta>(model, Ts[j], rhos[j], c)[idelta];
+                    o += tdx::template get_Ar0n<idelta, backend>(model, Ts[j], rhos[j], c)[idelta];
                 }
             }
             auto toc = std::chrono::high_resolution_clock::now();
@@ -114,25 +114,32 @@ auto one_deriv(obtainablethings thing, int Ncomp, Taus& taus, Deltas& deltas, co
     std::cout << "Ar_{" << itau << "," << idelta << "}" << std::endl;
 
     auto timingREFPROP = some_REFPROP(thing, Ncomp, itau, idelta, taus, deltas, Ts, rhos);
-    auto timingteqp = some_teqp<itau, idelta>(thing, Ncomp, taus, deltas, model, Ts, rhos);
+    auto timingteqpad = some_teqp<itau, idelta, ADBackends::autodiff>(thing, Ncomp, taus, deltas, model, Ts, rhos);
+    auto timingteqpmcx = some_teqp<itau, idelta, ADBackends::multicomplex>(thing, Ncomp, taus, deltas, model, Ts, rhos);
 
-    std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqp) << std::endl;
+    std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqpad) << std::endl;
 
     auto N = timingREFPROP.size();
-    std::vector<double> timesteqp, timesREFPROP, valsteqp, valsREFPROP;
+    std::vector<double> timesteqpad, timesteqpmcx, timesREFPROP, 
+                        valsteqpad,   valsteqpmcx,  valsREFPROP;
     for (auto i = 0; i < N; ++i) {
-        timesteqp.push_back(timingteqp[i].sec_per_call);
+        timesteqpad.push_back(timingteqpad[i].sec_per_call);
+        timesteqpmcx.push_back(timingteqpmcx[i].sec_per_call);
         timesREFPROP.push_back(timingREFPROP[i].sec_per_call);
-        valsteqp.push_back(timingteqp[i].value);
+        valsteqpad.push_back(timingteqpad[i].value);
+        valsteqpmcx.push_back(timingteqpmcx[i].value);
         valsREFPROP.push_back(timingREFPROP[i].value);
     }
     for (auto i = 1; i < 6; ++i) {
-        std::cout << timingteqp[N-i].sec_per_call << ", " << timingREFPROP[N-i].sec_per_call << std::endl;
+        std::cout << timingteqpad[N-i].sec_per_call << ", " << timingREFPROP[N-i].sec_per_call << std::endl;
     }
     nlohmann::json j = {
-        {"timeteqp",timesteqp},
+        {"timeteqp",timesteqpad},
+        {"timeteqp(autodiff)",timesteqpad},
+        {"timeteqp(multicomplex)",timesteqpmcx},
         {"timeREFPROP",timesREFPROP},
-        {"valteqp",valsteqp},
+        {"valteqp(autodiff)",valsteqpad},
+        {"valteqp(multicomplex)",valsteqpmcx},
         {"valREFPROP",valsREFPROP},
         {"model", modelname},
         {"itau", itau},
@@ -173,7 +180,7 @@ int main()
         double rhoc = 1/dummymodel.redfunc.vc[0];
         double Tc = dummymodel.redfunc.Tc[0];
         std::default_random_engine re;
-        std::valarray<double> taus(1000);
+        std::valarray<double> taus(100);
         {
             std::uniform_real_distribution<double> unif(2.0941098901098902, 2.1941098901098902);
             std::transform(std::begin(taus), std::end(taus), std::begin(taus), [&unif, &re](double x) { return unif(re); });
