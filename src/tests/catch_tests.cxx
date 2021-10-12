@@ -10,6 +10,11 @@
 #include "teqp/algorithms/VLE.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 
+// Imports from boost
+#include <boost/multiprecision/cpp_bin_float.hpp>
+using namespace boost::multiprecision;
+#include "teqp/finite_derivs.hpp"
+
 auto build_vdW_argon() {
     double Omega_b = 1.0 / 8, Omega_a = 27.0 / 64;
     double Tcrit = 150.687, pcrit = 4863000.0; // Argon
@@ -186,6 +191,61 @@ TEST_CASE("Check 0n derivatives", "[virial][p]")
     auto Ar01n = tdx::get_Ar0n<4>(model, T, rho, molefrac)[1];
     CHECK(std::abs(Ar01 - Ar01n) < 1e-13);
 
+}
+
+TEST_CASE("Test all vdW derivatives good to numerical precision", "[vdW]") 
+{
+    using my_float_type = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100U>>;
+
+    double a = 1, b = 2;
+    auto model = vdWEOS1(a, b);
+
+    double T_ = 300;
+    double rho = 2.3e-5;
+    Eigen::ArrayXd z(1); z.fill(1.0);
+    my_float_type T = T_, D = rho, h = pow(my_float_type(10.0), -10);
+
+    auto fD = [&](const auto& x) { return model.alphar(T_, x, z); };
+
+    // Exact values from differentiation of alphar = -log(1-b*rho)-a*rho/(R*T)
+    my_float_type bb = b, brho = D * bb;
+    auto der02exact = static_cast<double>(pow(brho / (brho - 1.0), 2));
+    auto der03exact = static_cast<double>(-2 * pow((brho) / (brho - 1.0), 3));
+    auto der04exact = static_cast<double>(6 * pow((brho) / (brho - 1.0), 4));
+
+    SECTION("2nd derivs") {
+        auto der02_2 = static_cast<double>(pow(D, 2) * centered_diff<2, 2>(fD, D, h));
+        auto der02_4 = static_cast<double>(pow(D, 2) * centered_diff<2, 4>(fD, D, h));
+        auto der02_6 = static_cast<double>(pow(D, 2) * centered_diff<2, 6>(fD, D, h));
+        auto der02_ad = TDXDerivatives<decltype(model)>::get_Ar02(model, T_, rho, z);
+        auto target = Approx(der02exact).margin(1e-15*der02exact);
+        CHECK(der02_ad == target);
+        CHECK(der02_2 == target);
+        CHECK(der02_4 == target);
+        CHECK(der02_6 == target);
+    }
+    SECTION("3rd derivs") {
+        auto der03_2 = static_cast<double>(pow(D, 3) * centered_diff<3, 2>(fD, D, h));
+        auto der03_4 = static_cast<double>(pow(D, 3) * centered_diff<3, 4>(fD, D, h));
+        auto der03_6 = static_cast<double>(pow(D, 3) * centered_diff<3, 6>(fD, D, h));
+        auto der03_ad = TDXDerivatives<decltype(model)>::get_Ar0n<3>(model, T_, rho, z)[3];
+        auto target = Approx(der03exact).margin(1e-15*der03exact);
+        CHECK(der03_ad == target);
+        CHECK(der03_2 == target);
+        CHECK(der03_4 == target);
+        CHECK(der03_6 == target);
+    }
+    SECTION("4th derivs") {
+        auto der04_2 = static_cast<double>(pow(D, 4) * centered_diff<4, 2>(fD, D, h));
+        auto der04_4 = static_cast<double>(pow(D, 4) * centered_diff<4, 4>(fD, D, h));
+        auto der04_6 = static_cast<double>(pow(D, 4) * centered_diff<4, 6>(fD, D, h));
+        auto der04_ad = TDXDerivatives<decltype(model)>::get_Ar0n<4>(model, T_, rho, z)[4];
+        auto target = Approx(der04exact).margin(1e-15*der04exact);
+        CHECK(der04_ad == target);
+        CHECK(der04_2 == target);
+        CHECK(der04_4 == target);
+        CHECK(der04_6 == target);
+    }
 }
 
 TEST_CASE("Test infinite dilution critical locus derivatives", "[vdWcrit]")
