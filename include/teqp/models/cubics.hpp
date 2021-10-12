@@ -8,6 +8,7 @@ Implemetations of the canonical cubic equations of state
 #include <variant>
 #include <valarray>
 
+#include "teqp/types.hpp"
 #include "teqp/constants.hpp"
 
 /**
