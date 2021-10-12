@@ -5,10 +5,23 @@ enable_testing()
 ####  SETUP
 set(CMAKE_CXX_STANDARD 17)
 
+set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_multiprecision.tar.gz")
+set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_multiprecision/Jamroot")
+if (EXISTS ${ZIPFN})
+    if(NOT EXISTS ${OUTFN})
+        execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xf ${ZIPFN}
+                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+        message(STATUS "Untarred boost::multiprecision")
+    endif()
+else()
+    message(FATAL_ERROR "Must use zipped boost::multiprecision, uncomment this error message to allow use of boost-cmake")
+endif()
+
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/mcx/multicomplex/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_multiprecision")
 
 set(BUILD_TESTING FALSE CACHE BOOL "Turn off Eigen tests")
 set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
