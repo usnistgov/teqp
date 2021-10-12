@@ -23,10 +23,7 @@ public:
 
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType &T, const RhoType& rhotot, const VecType &molefrac) const {
-        auto Psiminus = -log(1.0 - b * rhotot);
-        auto Psiplus = rhotot;
-        auto val = Psiminus - a / (R(molefrac) * T) * Psiplus;
-        return forceeval(val);
+        return forceeval(-log(1.0 - b * rhotot) - (a / (R(molefrac) * T)) * rhotot);
     }
 
     double p(double T, double v) {
