@@ -6,6 +6,8 @@ This library implements advanced derivative techniques to allow for implementati
 So far the following EOS are implemented:
 
 * van der Waals
+* Peng-Robinson
+* Soave-Redlich-Kwong
 * PC-SAFT
 * cubic plus association (CPA) for pure fluids
 * multi-fluid model in the form of GERG
