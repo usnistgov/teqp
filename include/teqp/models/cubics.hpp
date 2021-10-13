@@ -101,7 +101,7 @@ public:
         }
         auto b = get_b(T, molefrac);
         auto Psiminus = -log(1.0 - b * rho);
-        auto Psiplus = log((Delta1 * b * rho + 1) / (Delta2 * b * rho + 1)) / (b * (Delta1 - Delta2));
+        auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
         auto val = Psiminus - get_a(T, molefrac) / (Ru * T) * Psiplus;
         return forceeval(val);
     }
