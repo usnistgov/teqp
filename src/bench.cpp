@@ -101,7 +101,7 @@ TEST_CASE("Canonical cubic EOS derivatives", "[cubic]")
     auto model = canonical_PR(Tc_K, pc_Pa, acentric);
 
     double T = 300, rho = 2;
-    std::valarray<double> z(2, 1.0);
+    std::valarray<double> z = { 0.5, 0.3, 0.2 };
     using tdx = TDXDerivatives<decltype(model), double, decltype(z)>;
 
     BENCHMARK("alphar") {
