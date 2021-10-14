@@ -1,5 +1,23 @@
 #pragma once
 
+/**
+\f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i}\f$
+*/
+class JustPowerEOSTerm {
+public:
+    Eigen::ArrayXd n, t, d;
+
+    template<typename TauType, typename DeltaType>
+    auto alphar(const TauType& tau, const DeltaType& delta) const {
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        for (auto i = 0; i < n.size(); ++i) {
+            r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta);
+        }
+        return forceeval(r);
+    }
+};
+
 class PowerEOSTerm {
 public:
     Eigen::ArrayXd n, t, d, c, l;
@@ -149,6 +167,6 @@ public:
     }
 };
 
-using EOSTerms = EOSTermContainer<PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm>;
+using EOSTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm>;
 
-using DepartureTerms = EOSTermContainer<PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm>;
+using DepartureTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm>;

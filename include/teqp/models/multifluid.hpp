@@ -333,7 +333,7 @@ public:
 };
 
 inline auto build_departure_function(const nlohmann::json& j) {
-    auto build_power = [&](auto term) {
+    auto build_power = [&](auto term, auto& dep) {
         std::size_t N = term["n"].size();
 
         PowerEOSTerm eos;
@@ -353,11 +353,15 @@ inline auto build_departure_function(const nlohmann::json& j) {
         eos.d = eigorzero("d");
 
         Eigen::ArrayXd c(N), l(N); c.setZero();
+
+        int Nlzero = 0, Nlnonzero = 0;
+        bool contiguous_lzero;
+
         if (term["l"].empty()) {
             // exponential part not included
             l.setZero();
             if (!all_same_length(term, { "n","t","d" })) {
-                throw std::invalid_argument("Lengths are not all identical in polynomial term");
+                throw std::invalid_argument("Lengths are not all identical in polynomial-like term");
             }
         }
         else {
@@ -371,17 +375,66 @@ inline auto build_departure_function(const nlohmann::json& j) {
                     c[i] = 1.0;
                 }
             }
+
+            // See how many of the first entries have zero values for l_i
+            contiguous_lzero = (l[0] == 0);
+            for (auto i = 0; i < c.size(); ++i) {
+                if (l[i] == 0) {
+                    Nlzero++;
+                }
+            }
         }
+        Nlnonzero = l.size() - Nlzero;
+
+        if ((l[0] != 0) && (l[l.size() - 1] == 0)) {
+            throw std::invalid_argument("If l_i has zero and non-zero values, the zero values need to come first");
+        }
+
         eos.c = c;
         eos.l = l;
 
         eos.l_i = eos.l.cast<int>();
 
+        if (Nlzero + Nlnonzero != l.size()) {
+            throw std::invalid_argument("Somehow the l lengths don't add up");
+        }
+
+
         if (((eos.l_i.cast<double>() - eos.l).cwiseAbs() > 0.0).any()) {
             throw std::invalid_argument("Non-integer entry in l found");
         }
 
-        return eos;
+        // If a contiguous portion of the terms have values of l_i that are zero
+        // it is computationally advantageous to break up the evaluation into 
+        // part that has just the n_i*tau^t_i*delta^d_i and the part with the
+        // exponential term exp(-delta^l_i)
+        if (l.sum() == 0) {
+            // No l term at all, just polynomial
+            JustPowerEOSTerm poly;
+            poly.n = eos.n;
+            poly.t = eos.t;
+            poly.d = eos.d;
+            dep.add_term(poly);
+        }
+        else if (l.sum() > 0 && contiguous_lzero){
+            JustPowerEOSTerm poly; 
+            poly.n = eos.n.head(Nlzero);
+            poly.t = eos.t.head(Nlzero);
+            poly.d = eos.d.head(Nlzero);
+            dep.add_term(poly);
+
+            PowerEOSTerm e;
+            e.n = eos.n.tail(Nlnonzero);
+            e.t = eos.t.tail(Nlnonzero);
+            e.d = eos.d.tail(Nlnonzero);
+            e.c = eos.c.tail(Nlnonzero);
+            e.l = eos.l.tail(Nlnonzero);
+            dep.add_term(e);
+        }
+        else {
+            // Don't try to get too clever, just add the departure term
+            dep.add_term(eos);
+        }
     };
 
     auto build_gaussian = [&](auto& term) {
@@ -464,7 +517,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
     std::string type = j["type"];
     DepartureTerms dep;
     if (type == "Exponential") {
-        dep.add_term(build_power(j));
+        build_power(j, dep);
     }
     else if (type == "GERG-2004" || type == "GERG-2008") {
         build_GERG2004(j, dep);
@@ -535,7 +588,7 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
 
     EOSTerms container;
 
-    auto build_power = [&](auto term) {
+    auto build_power = [&](auto term, auto & container) {
         std::size_t N = term["n"].size();
 
         PowerEOSTerm eos;
@@ -555,6 +608,8 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
         eos.d = eigorzero("d");
 
         Eigen::ArrayXd c(N), l(N); c.setZero();
+        int Nlzero = 0, Nlnonzero = 0;
+        bool contiguous_lzero;
         if (term["l"].empty()) {
             // exponential part not included
             l.setZero();
@@ -567,17 +622,62 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
                     c[i] = 1.0;
                 }
             }
+
+            // See how many of the first entries have zero values for l_i
+            contiguous_lzero = (l[0] == 0);
+            for (auto i = 0; i < c.size(); ++i) {
+                if (l[i] == 0) {
+                    Nlzero++;
+                }
+            }
         }
+        Nlnonzero = l.size() - Nlzero;
+        
         eos.c = c;
         eos.l = l;
 
         eos.l_i = eos.l.cast<int>();
 
+        if (Nlzero + Nlnonzero != l.size()) {
+            throw std::invalid_argument("Somehow the l lengths don't add up");
+        }
+
         if (((eos.l_i.cast<double>() - eos.l).cwiseAbs() > 0.0).any()) {
             throw std::invalid_argument("Non-integer entry in l found");
         }
         
-        return eos;
+        // If a contiguous portion of the terms have values of l_i that are zero
+        // it is computationally advantageous to break up the evaluation into 
+        // part that has just the n_i*tau^t_i*delta^d_i and the part with the
+        // exponential term exp(-delta^l_i)
+        if (l.sum() == 0) {
+            // No l term at all, just polynomial
+            JustPowerEOSTerm poly;
+            poly.n = eos.n;
+            poly.t = eos.t;
+            poly.d = eos.d;
+            container.add_term(poly);
+        }
+        else if (l.sum() > 0 && contiguous_lzero) {
+            JustPowerEOSTerm poly;
+            poly.n = eos.n.head(Nlzero);
+            poly.t = eos.t.head(Nlzero);
+            poly.d = eos.d.head(Nlzero);
+            container.add_term(poly);
+
+            PowerEOSTerm e;
+            e.n = eos.n.tail(Nlnonzero);
+            e.t = eos.t.tail(Nlnonzero);
+            e.d = eos.d.tail(Nlnonzero);
+            e.c = eos.c.tail(Nlnonzero);
+            e.l = eos.l.tail(Nlnonzero);
+            e.l_i = e.l.cast<int>();
+            container.add_term(e);
+        }
+        else {
+            // Don't try to get too clever, just add the term
+            container.add_term(eos);
+        }
     };
 
     auto build_Lemmon2005 = [&](auto term) {
@@ -662,7 +762,7 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
     for (auto& term : alphar) {
         std::string type = term["type"];
         if (type == "ResidualHelmholtzPower") {
-            container.add_term(build_power(term));
+            build_power(term, container);
         }
         else if (type == "ResidualHelmholtzGaussian") {
             container.add_term(build_gaussian(term));
