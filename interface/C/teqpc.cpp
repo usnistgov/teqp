@@ -1,3 +1,8 @@
+/***
+ * Although this is a C-language interface, the code itself is of course written in C++
+ * to allow for features only available in C++ and avoiding C memory management
+ */
+
 #include <unordered_map>
 #include <variant>
 
@@ -6,6 +11,7 @@
 #include "teqp/derivs.hpp"
 
 // TODO: actually make new UUID for each model instance
+// TODO: catch tests
 
 using vad = std::valarray<double>;
 using cub = decltype(canonical_PR(vad{}, vad{}, vad{}));
@@ -81,12 +87,12 @@ int free_model(char* uuid, char* errmsg, int errmsg_length) {
 int get_Arxy(char* uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
-        // Copy the double buffer into a valarray
-        std::valarray molefrac_(molefrac, Ncomp);
+        // Make an Eigen view of the double buffer
+        Eigen::Map<const Eigen::ArrayXd> molefrac_(molefrac, Ncomp);
 
         // Lambda function to extract the given derivative from the thing contained in the variant
         auto f = [&](auto& model) {
-            using tdx = TDXDerivatives<decltype(model), double, std::valarray<double>>;  
+            using tdx = TDXDerivatives<decltype(model), double, decltype(molefrac_)>;  
             return tdx::get_Ar(NT, ND, model, T, rho, molefrac_);
         };
 
@@ -102,11 +108,11 @@ int get_Arxy(char* uuid, const int NT, const int ND, const double T, const doubl
 int main() {
     constexpr int errmsg_length = 300;
     char uuid[300] = "", errmsg[errmsg_length] = "";
+    double val = -1;
+    std::valarray<double> molefrac = { 1.0 };
     {
-        std::string j = R"({"kind":"vdW1", "model":{"a":1.0, "rb":2.0}})";
+        std::string j = R"({"kind":"vdW1", "model":{"a":1.0, "b":2.0}})";
         int errcode1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        double val = -1;
-        std::valarray<double> molefrac = { 1.0 };
         int errcode11 = get_Arxy(uuid, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
         int errcode2 = free_model(uuid, errmsg, errmsg_length);
         int rrr = 0;
@@ -123,8 +129,6 @@ int main() {
             }
         )";
         int errcode1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        double val = -1;
-        std::valarray<double> molefrac = { 1.0 };
         int errcode11 = get_Arxy(uuid, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
         int errcode2 = free_model(uuid, errmsg, errmsg_length);
         int rrr = 0;
@@ -141,8 +145,6 @@ int main() {
             }
         )";
         int errcode1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        double val = -1;
-        std::valarray<double> molefrac = { 1.0 };
         int errcode11 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
         int errcode2 = free_model(uuid, errmsg, errmsg_length);
         int rrr = 0;
