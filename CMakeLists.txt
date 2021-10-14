@@ -53,6 +53,12 @@ endif()
 target_link_libraries(catch_tests autodiff)
 add_test(catch catch_tests)
 
+add_executable(teqpc "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
+if (MSVC)
+    target_sources(teqpc PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+endif()
+target_link_libraries(teqpc autodiff)
+
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)
   # Collect all the snippets
