@@ -251,7 +251,7 @@ int main()
             };
             auto SAFT = build_PCSAFT(Ncomp);
 
-            std::valarray<double> Tc_K = { 369.89 }, pc_Pa = { 4251200.0 }, acentric = { 0.1521 };
+            std::valarray<double> Tc_K(369.89, Ncomp), pc_Pa(4251200.0, Ncomp), acentric(0.1521, Ncomp);
             auto PR = canonical_PR(Tc_K, pc_Pa, acentric);
 
             outputs.push_back(one_deriv<0, 0>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
