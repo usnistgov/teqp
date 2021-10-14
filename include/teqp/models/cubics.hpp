@@ -11,6 +11,8 @@ Implemetations of the canonical cubic equations of state
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
 
+#include "nlohmann/json.hpp"
+
 /**
 * \brief The standard alpha function used by Peng-Robinson and SRK
 */
@@ -39,6 +41,8 @@ protected:
     const NumType Delta1, Delta2, OmegaA, OmegaB;
     const AlphaFunctions alphas;
 
+    nlohmann::json meta;
+
     template<typename TType, typename IndexType>
     auto get_ai(TType T, IndexType i) const { return ai[i]; }
 
@@ -57,6 +61,9 @@ public:
         }
         k = std::valarray<std::valarray<NumType>>(std::valarray<NumType>(0.0, Tc_K.size()), Tc_K.size());
     };
+
+    void set_meta(const nlohmann::json& j) { meta = j; }
+    auto get_meta() const { return meta; }
 
     const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
 
@@ -122,7 +129,17 @@ auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric) {
     double OmegaA = 1.0 / (9.0 * (cbrt(2) - 1));
     double OmegaB = (cbrt(2) - 1) / 3;
 
-    return GenericCubic(Delta1, Delta2, OmegaA, OmegaB, Tc_K, pc_K, std::move(alphas));
+    nlohmann::json meta = {
+        {"Delta1", Delta1},
+        {"Delta2", Delta2},
+        {"OmegaA", OmegaA},
+        {"OmegaB", OmegaB},
+        {"kind", "Soave-Redlich-Kwong"}
+    };
+
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, Tc_K, pc_K, std::move(alphas));
+    cub.set_meta(meta);
+    return cub;
 }
 
 template <typename TCType, typename PCType, typename AcentricType>
@@ -145,5 +162,15 @@ auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric) {
     double OmegaA = 0.45723552892138218938;
     double OmegaB = 0.077796073903888455972;
 
-    return GenericCubic(Delta1, Delta2, OmegaA, OmegaB, Tc_K, pc_K, std::move(alphas));
+    nlohmann::json meta = {
+        {"Delta1", Delta1},
+        {"Delta2", Delta2},
+        {"OmegaA", OmegaA},
+        {"OmegaB", OmegaB},
+        {"kind", "Peng-Robinson"}
+    };
+
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, Tc_K, pc_K, std::move(alphas));
+    cub.set_meta(meta);
+    return cub;
 }

@@ -6,11 +6,12 @@ void add_cubics(py::module& m) {
 
     using va = std::valarray<double>;
     
-    using PR = decltype(canonical_PR(va{}, va{}, va{}));
-    auto wPR = py::class_<PR>(m, "PengRobinson");
-    add_derivatives<PR>(m, wPR);
+    m.def("canonical_PR", &canonical_PR<va,va,va>, py::arg("Tc_K"), py::arg("pc_Pa"), py::arg("acentric"));
+    m.def("canonical_SRK", &canonical_SRK<va, va, va>, py::arg("Tc_K"), py::arg("pc_Pa"), py::arg("acentric"));
 
-    using SRK = decltype(canonical_SRK(va{}, va{}, va{}));
-    auto wSRK = py::class_<SRK>(m, "SoaveRedlichKwong");
-    add_derivatives<SRK>(m, wSRK);
+    using cub = decltype(canonical_PR(va{}, va{}, va{}));
+    auto wcub = py::class_<cub>(m, "GenericCubic")
+        .def("get_meta", &cub::get_meta)
+        ;
+    add_derivatives<cub>(m, wcub);
 }
