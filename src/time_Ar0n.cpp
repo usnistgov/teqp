@@ -83,11 +83,11 @@ auto some_teqp(obtainablethings thing, int Ncomp, const Taus& taus, const Deltas
                     o += tdx::get_Ar00(model, Ts[j], rhos[j], c);
                 }
                 else if constexpr (itau == 0 && idelta == 1) {
-                    o += tdx::get_Ar01<backend>(model, Ts[j], rhos[j], c);
+                    o += tdx::template get_Ar01<backend>(model, Ts[j], rhos[j], c);
                     //o += tdx::get_Ar0n<1>(model, Ts[j], rhos[j], c)[1];
                 }
                 else if constexpr (itau == 0 && idelta == 2) {
-                    o += tdx::get_Ar02<backend>(model, Ts[j], rhos[j], c);
+                    o += tdx::template get_Ar02<backend>(model, Ts[j], rhos[j], c);
                 }
                 else if constexpr (itau == 0 && idelta > 2) {
                     o += tdx::template get_Ar0n<idelta, backend>(model, Ts[j], rhos[j], c)[idelta];
