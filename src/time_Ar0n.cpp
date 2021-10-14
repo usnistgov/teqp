@@ -122,7 +122,7 @@ auto one_deriv(obtainablethings thing, int Ncomp, Taus& taus, Deltas& deltas, co
 
     auto timingREFPROP = some_REFPROP(thing, Ncomp, itau, idelta, taus, deltas, Ts, rhos);
     auto timingteqpad = some_teqp<itau, idelta, ADBackends::autodiff>(thing, Ncomp, taus, deltas, model, Ts, rhos);
-    auto timingteqpmcx = some_teqp<itau, idelta, ADBackends::multicomplex>(thing, Ncomp, taus, deltas, model, Ts, rhos);
+    //auto timingteqpmcx = some_teqp<itau, idelta, ADBackends::multicomplex>(thing, Ncomp, taus, deltas, model, Ts, rhos);
 
     std::cout << "Values:" << check_values(timingREFPROP) << ", " << check_values(timingteqpad) << std::endl;
 
@@ -131,10 +131,10 @@ auto one_deriv(obtainablethings thing, int Ncomp, Taus& taus, Deltas& deltas, co
                         valsteqpad,   valsteqpmcx,  valsREFPROP;
     for (auto i = 0; i < N; ++i) {
         timesteqpad.push_back(timingteqpad[i].sec_per_call);
-        timesteqpmcx.push_back(timingteqpmcx[i].sec_per_call);
+        //timesteqpmcx.push_back(timingteqpmcx[i].sec_per_call);
         timesREFPROP.push_back(timingREFPROP[i].sec_per_call);
         valsteqpad.push_back(timingteqpad[i].value);
-        valsteqpmcx.push_back(timingteqpmcx[i].value);
+        //valsteqpmcx.push_back(timingteqpmcx[i].value);
         valsREFPROP.push_back(timingREFPROP[i].value);
     }
     for (auto i = 1; i < 6; ++i) {
@@ -143,10 +143,10 @@ auto one_deriv(obtainablethings thing, int Ncomp, Taus& taus, Deltas& deltas, co
     nlohmann::json j = {
         {"timeteqp",timesteqpad},
         {"timeteqp(autodiff)",timesteqpad},
-        {"timeteqp(multicomplex)",timesteqpmcx},
+        //{"timeteqp(multicomplex)",timesteqpmcx},
         {"timeREFPROP",timesREFPROP},
         {"valteqp(autodiff)",valsteqpad},
-        {"valteqp(multicomplex)",valsteqpmcx},
+        //{"valteqp(multicomplex)",valsteqpmcx},
         {"valREFPROP",valsREFPROP},
         {"model", modelname},
         {"itau", itau},
