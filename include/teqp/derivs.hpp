@@ -560,7 +560,7 @@ struct IsochoricDerivatives{
         auto molefrac = (rhovec / rhotot).eval();
         auto R = model.R(molefrac);
         using tdx = TDXDerivatives<Model, Scalar, VectorType>;
-        auto Z = 1.0 + tdx::get_Ar01<be>(model, T, rhotot, molefrac);
+        auto Z = 1.0 + tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
         auto grad = build_Psir_gradient<be>(model, T, rhovec).eval();
         auto RT = R * T;
         auto lnphi = ((grad / RT).array() - log(Z)).eval();

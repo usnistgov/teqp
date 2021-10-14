@@ -71,7 +71,7 @@ int main()
                 auto tic = std::chrono::high_resolution_clock::now(); 
                 double usummer = 0.0;
                 for (auto j = 0; j < N; ++j) {
-                    auto val = id::get_fugacity_coefficients(model, T, rhovec);
+                    auto val = id::template get_fugacity_coefficients(model, T, rhovec);
                     usummer += val.sum();
                 }
                 auto toc = std::chrono::high_resolution_clock::now();
