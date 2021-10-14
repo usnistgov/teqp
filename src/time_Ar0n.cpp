@@ -13,6 +13,11 @@
 #include <random>
 #include <numeric>
 
+// On windows, the small macro is defined in a header.  Sigh...
+#if defined(small)
+#undef small
+#endif
+
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/eos.hpp"
 #include "teqp/models/pcsaft.hpp"
@@ -41,8 +46,9 @@ auto some_REFPROP(obtainablethings thing, int Ncomp, int itau, int idelta, Taus&
             double Tr=-1, Dr=-1;
             for (auto i = 0; i < taus.size(); ++i) {
                 REDXdll(&(z[0]), Tr, Dr);
-                double tau = Tr / Ts[i], delta = rhos[i] / Dr;
-                PHIXdll(itau, idelta, tau, delta, &(z[0]), Arterm); ps[i] = Arterm;
+                // rhos are in mol/m^3, but REFPROP gives Dr in mol/L
+                double tau = Tr / Ts[i], delta = rhos[i]/1000.0/Dr;
+                PHIXdll(itau, idelta, taus[i], deltas[i], &(z[0]), Arterm); ps[i] = Arterm;
             }
             auto toc = std::chrono::high_resolution_clock::now();
             double elap_us = std::chrono::duration<double>(toc - tic).count() / taus.size() * 1e6;
@@ -111,6 +117,7 @@ auto one_deriv(obtainablethings thing, int Ncomp, Taus& taus, Deltas& deltas, co
         return vals.mean();
     };
 
+    std::cout << modelname << std::endl;
     std::cout << "Ar_{" << itau << "," << idelta << "}" << std::endl;
 
     auto timingREFPROP = some_REFPROP(thing, Ncomp, itau, idelta, taus, deltas, Ts, rhos);
