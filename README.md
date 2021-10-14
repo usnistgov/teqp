@@ -22,6 +22,8 @@ For windows and OSX, you should be able to install the most recent version from 
 
 For linux users, please build yourself following the instructions below.
 
+The windows wheels are built/pushed with the ``buildwheels.py`` script, the OSX wheels are built as part of github action
+
 ## Tests
 
 [![Catch tests via Github Actions](https://github.com/usnistgov/teqp/actions/workflows/runcatch.yml/badge.svg)](https://github.com/usnistgov/teqp/actions/workflows/runcatch.yml)
