@@ -20,6 +20,7 @@
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/eos.hpp"
+#include "teqp/models/cubics.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/derivs.hpp"
 
@@ -250,10 +251,18 @@ int main()
             };
             auto SAFT = build_PCSAFT(Ncomp);
 
+            std::valarray<double> Tc_K = { 369.89 }, pc_Pa = { 4251200.0 }, acentric = { 0.1521 };
+            auto PR = canonical_PR(Tc_K, pc_Pa, acentric);
+
             outputs.push_back(one_deriv<0, 0>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
             outputs.push_back(one_deriv<0, 1>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
             outputs.push_back(one_deriv<0, 2>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
             outputs.push_back(one_deriv<0, 3>(thing, Ncomp, taus, deltas, vdW, "vdW", Ts, rhos)); append_Ncomp();
+
+            outputs.push_back(one_deriv<0, 0>(thing, Ncomp, taus, deltas, PR, "PR", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 1>(thing, Ncomp, taus, deltas, PR, "PR", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 2>(thing, Ncomp, taus, deltas, PR, "PR", Ts, rhos)); append_Ncomp();
+            outputs.push_back(one_deriv<0, 3>(thing, Ncomp, taus, deltas, PR, "PR", Ts, rhos)); append_Ncomp();
 
             outputs.push_back(one_deriv<0, 0>(thing, Ncomp, taus, deltas, SAFT, "PCSAFT", Ts, rhos)); append_Ncomp();
             outputs.push_back(one_deriv<0, 1>(thing, Ncomp, taus, deltas, SAFT, "PCSAFT", Ts, rhos)); append_Ncomp();
