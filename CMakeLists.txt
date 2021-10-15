@@ -51,7 +51,7 @@ if (MSVC)
     target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
 target_link_libraries(catch_tests autodiff)
-add_test(catch catch_tests)
+add_test(normal_tests catch_tests)
 
 add_executable(teqpc "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
 if (MSVC)
@@ -59,7 +59,7 @@ if (MSVC)
 endif()
 target_link_libraries(teqpc autodiff)
 target_compile_definitions(teqpc PRIVATE -DTEQPC_CATCH)
-add_test(teqpc_catch teqpc)
+add_test(teqpc_tests teqpc)
 
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)

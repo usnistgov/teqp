@@ -17,6 +17,8 @@ jobs:
       run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=ON
     - name: build Catch tests
       run: cmake --build build --target catch_tests
+    - name: build teqpc Catch tests
+      run: cmake --build build --target teqpc
     - name: run Catch tests
       run: cd build && ctest --verbose
     - name: build multifluid
