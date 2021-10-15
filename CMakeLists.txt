@@ -58,6 +58,8 @@ if (MSVC)
     target_sources(teqpc PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
 target_link_libraries(teqpc autodiff)
+target_include_definitions(teqpc PUBLIC -DTEQPC_CATCH)
+add_test(teqpc_catch teqpc)
 
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)

@@ -226,12 +226,12 @@ struct TDXDerivatives {
             if (idelta == 0) {
                 return get_Ar00(model, T, rho, molefrac);
             }
-            //else if (idelta == 1) {
-            //    return get_Ar01(model, T, rho, molefrac);
-            //}
-            //else if (idelta == 2) {
-            //    return get_Ar02(model, T, rho, molefrac);
-            //}
+            else if (idelta == 1) {
+                return get_Ar01(model, T, rho, molefrac);
+            }
+            else if (idelta == 2) {
+                return get_Ar02(model, T, rho, molefrac);
+            }
             else {
                 throw std::invalid_argument("Invalid value for idelta");
             }
@@ -259,7 +259,7 @@ struct TDXDerivatives {
             }
         }
         else {
-            throw std::invalid_argument("Invalid value for idelta");
+            throw std::invalid_argument("Invalid value for itau");
         }
     }
 

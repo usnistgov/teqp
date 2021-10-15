@@ -5,19 +5,28 @@
 
 #include <unordered_map>
 #include <variant>
+#include <atomic>
 
 #include "teqp/models/eos.hpp"
 #include "teqp/models/cubics.hpp"
 #include "teqp/derivs.hpp"
-
-// TODO: actually make new UUID for each model instance
-// TODO: catch tests
 
 using vad = std::valarray<double>;
 using cub = decltype(canonical_PR(vad{}, vad{}, vad{}));
 
 using AllowedModels = std::variant<vdWEOS1, cub>;
 std::unordered_map<std::string, AllowedModels> library;
+
+// An atomic is used here for thread safety
+// The max possible index is 18,446,744,073,709,551,615
+std::atomic<unsigned long long int> next_index{ 0 };
+
+/// A function for returning a sequential index of the next 
+std::string get_uid(int N) {
+    auto s = std::to_string(next_index);
+    next_index++;
+    return std::string(N - s.size(), '0') + s;
+}
 
 class teqpcException : public std::exception {
 public:
@@ -26,7 +35,7 @@ public:
     teqpcException(int code, const std::string& msg) : code(code), msg(msg) {}
 };
 
-void HandleException(int& errcode, char* message_buffer, const int buffer_length)
+void exception_handler(int& errcode, char* message_buffer, const int buffer_length)
 {
     try{
         throw; // Rethrow the error so that we can handle it here
@@ -44,12 +53,13 @@ void HandleException(int& errcode, char* message_buffer, const int buffer_length
 int build_model(const char* j, char* uuid, char* errmsg, int errmsg_length){
     int errcode = 0;
     try{
-        std::string uid = "100"; // TODO: this needs to be unique, not hardcoded
         nlohmann::json json = nlohmann::json::parse(j);
         
-        // Extract the name of the model and the parameters
+        // Extract the name of the model and the model parameters
         std::string kind = json.at("kind");
         auto spec = json.at("model");
+
+        std::string uid = get_uid(32);
 
         if (kind == "vdW1") {
             library.emplace(std::make_pair(uid, vdWEOS1(spec.at("a"), spec.at("b"))));
@@ -68,7 +78,7 @@ int build_model(const char* j, char* uuid, char* errmsg, int errmsg_length){
         strcpy(uuid, uid.c_str());
     }
     catch (...) {
-        HandleException(errcode, errmsg, errmsg_length);
+        exception_handler(errcode, errmsg, errmsg_length);
     }
     return errcode;
 }
@@ -79,7 +89,7 @@ int free_model(char* uuid, char* errmsg, int errmsg_length) {
         library.erase(std::string(uuid));
     }
     catch (...) {
-        HandleException(errcode, errmsg, errmsg_length);
+        exception_handler(errcode, errmsg, errmsg_length);
     }
     return errcode;
 }
@@ -100,24 +110,47 @@ int get_Arxy(char* uuid, const int NT, const int ND, const double T, const doubl
         *val = std::visit(f, library.at(std::string(uuid)));
     }
     catch (...) {
-        HandleException(errcode, errmsg, errmsg_length);
+        exception_handler(errcode, errmsg, errmsg_length);
     }
     return errcode;
 }
 
-int main() {
+#if defined(TEQPC_CATCH)
+
+#define CATCH_CONFIG_ENABLE_BENCHMARKING
+#define CATCH_CONFIG_MAIN
+#include "catch/catch.hpp"
+
+TEST_CASE("Use of C interface with simple models") {
+
     constexpr int errmsg_length = 300;
-    char uuid[300] = "", errmsg[errmsg_length] = "";
+    char uuid[33] = "", uuidPR[33] = "", errmsg[errmsg_length] = "";
     double val = -1;
     std::valarray<double> molefrac = { 1.0 };
-    {
+
+    std::string j = R"(
+            {
+                "kind": "PR", 
+                "model": {
+                    "Tcrit / K": [190], 
+                    "pcrit / Pa": [3.5e6], 
+                    "acentric": [0.11]
+                }
+            }
+        )";
+    build_model(j.c_str(), uuidPR, errmsg, errmsg_length);
+    
+    BENCHMARK("vdW1") {
         std::string j = R"({"kind":"vdW1", "model":{"a":1.0, "b":2.0}})";
-        int errcode1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        int errcode11 = get_Arxy(uuid, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
-        int errcode2 = free_model(uuid, errmsg, errmsg_length);
-        int rrr = 0;
-    }
-    {
+        int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e3 = free_model(uuid, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
+        REQUIRE(e2 == 0);
+        REQUIRE(e3 == 0);
+        return val;
+    };
+    BENCHMARK("PR") {
         std::string j = R"(
             {
                 "kind": "PR", 
@@ -128,12 +161,20 @@ int main() {
                 }
             }
         )";
-        int errcode1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        int errcode11 = get_Arxy(uuid, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
-        int errcode2 = free_model(uuid, errmsg, errmsg_length);
-        int rrr = 0;
-    }
-    {
+        int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e3 = free_model(uuid, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
+        REQUIRE(e2 == 0);
+        REQUIRE(e3 == 0);
+        return val;
+    };
+    BENCHMARK("PR call") {
+        int e = get_Arxy(uuidPR, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        REQUIRE(e == 0);
+        return val;
+    };
+    BENCHMARK("SRK") {
         std::string j = R"(
             {
                 "kind": "SRK", 
@@ -144,9 +185,16 @@ int main() {
                 }
             }
         )";
-        int errcode1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        int errcode11 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
-        int errcode2 = free_model(uuid, errmsg, errmsg_length);
-        int rrr = 0;
-    }
+        int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e3 = free_model(uuid, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
+        REQUIRE(e2 == 0);
+        REQUIRE(e3 == 0);
+        return val;
+    };
 }
+#else 
+int main() {
+}
+#endif
