@@ -44,7 +44,12 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        return forceeval((n * exp(t * log(tau) + d * log(delta) - g * powIVi(delta, l_i))).sum());
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        for (auto i = 0; i < n.size(); ++i) {
+            r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - g[i] * powi(delta, l_i[i]));
+        }
+        return forceeval(r);
     }
 };
 
@@ -57,7 +62,13 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        return forceeval((n * exp(t * log(tau) + d * log(delta) - eta * (delta - epsilon).square() - beta * (tau - gamma).square())).sum());
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        auto square = [](auto x) { return x * x; };
+        for (auto i = 0; i < n.size(); ++i) {
+            r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - eta[i]*square(delta - epsilon[i]) - beta[i]*square(tau - gamma[i]));
+        }
+        return forceeval(r);
     }
 };
 
@@ -70,7 +81,13 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        return forceeval((n * exp(t * log(tau) + d * log(delta) - eta * (delta - epsilon).square() - beta * (delta - gamma))).sum());
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        auto square = [](auto x) { return x * x; };
+        for (auto i = 0; i < n.size(); ++i) {
+            r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - eta[i] * square(delta - epsilon[i]) - beta[i] * (delta - gamma[i]));
+        }
+        return forceeval(r);
     }
 };
 
@@ -85,7 +102,12 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        return forceeval((n * exp(t * log(tau) + d * log(delta) - powIVi(delta, l_i) - pow(tau, m))).sum());
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        for (auto i = 0; i < n.size(); ++i) {
+            r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - powi(delta, l[i]) - pow(tau, m[i]));
+        }
+        return forceeval(r);
     }
 };
 
@@ -98,8 +120,14 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
-        auto terms = n * exp(t * log(tau) + d * log(delta) - eta * (delta - epsilon).square() + 1.0 / (beta * (tau - gamma).square() + b));
-        return forceeval(terms.sum());
+
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        auto square = [](auto x) { return x * x; };
+        for (auto i = 0; i < n.size(); ++i) {
+            r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - eta[i] * square(delta - epsilon[i]) + 1.0 / (beta[i] * square(tau - gamma[i]) + b[i]));
+        }
+        return forceeval(r);
     }
 };
 
@@ -123,15 +151,20 @@ public:
         // The non-analytic term
         auto square = [](auto x) { return x * x; };
         auto delta_min1_sq = square(delta - 1.0);
-        auto Psi = (exp(-C * delta_min1_sq - D * square(tau - 1.0))).eval();
-        const Eigen::ArrayXd k = 1.0 / (2.0 * beta);
-        auto theta = ((1.0 - tau) + A * pow(delta_min1_sq, k)).eval();
-        auto Delta = (theta.square() + B * pow(delta_min1_sq, a)).eval();
 
-        auto outval = forceeval((n * pow(Delta, b) * delta * Psi).eval().sum());
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        for (auto i = 0; i < n.size(); ++i) {
+            auto Psi = exp(-C[i]*delta_min1_sq - D[i]*square(tau - 1.0));
+            auto k = 1.0 / (2.0 * beta[i]);
+            auto theta = (1.0 - tau) + A[i] * pow(delta_min1_sq, k);
+            auto Delta = square(theta) + B[i]*pow(delta_min1_sq, a[i]);
+            r = r + n[i]*pow(Delta, b[i])*delta*Psi;
+        }
+        result outval = forceeval(r);
 
         // If we are really, really close to the critical point (tau=delta=1), then the term will become undefined, so let's just return 0 in that case
-        double dbl = getbaseval(outval);
+        double dbl = static_cast<double>(getbaseval(outval));
         if (std::isfinite(dbl)) {
             return outval;
         }
