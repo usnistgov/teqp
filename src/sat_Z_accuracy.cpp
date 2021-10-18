@@ -55,9 +55,10 @@ int REFPROP_setup() {
     bool loaded_REFPROP = load_REFPROP(err, path, DLL_name);
     printf("Loaded refprop: %s @ address %zu\n", loaded_REFPROP ? "true" : "false", REFPROP_address());
     if (!loaded_REFPROP) { throw std::invalid_argument("Bad load of REFPROP"); }
-    SETPATHdll(const_cast<char*>(path.c_str()), 400);
+    char hpath[256]; strcpy(hpath, path + std::string(254-path.size(),'\0'));
+    SETPATHdll(hpath, 255);
     int ierr = 0, nc = 1;
-    char herr[256], hfld[10000] = "PROPANE", hhmx[255] = "HMX.BNC", href[4] = "DEF";
+    char herr[256], hfld[10000] = "PROPANE           ", hhmx[255] = "HMX.BNC", href[4] = "DEF";
     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
     if (ierr != 0) { throw std::invalid_argument("Bad setup of REFPROP: "+std::string(herr)); }
 }
