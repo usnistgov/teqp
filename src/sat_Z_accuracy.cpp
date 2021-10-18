@@ -58,9 +58,10 @@ int REFPROP_setup() {
     char hpath[256]; strcpy(hpath, (path + std::string(254-path.size(),'\0')).c_str());
     SETPATHdll(hpath, 255);
     int ierr = 0, nc = 1;
-    char herr[256], hfld[10000] = "PROPANE           ", hhmx[255] = "HMX.BNC", href[4] = "DEF";
+    char herr[256], hfld[10000] = "PROPANE           ", hhmx[256] = "HMX.BNC", href[4] = "DEF";
     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
     if (ierr != 0) { throw std::invalid_argument("Bad setup of REFPROP: "+std::string(herr)); }
+    return 0;
 }
 
 struct REFPROP_sat_output {
