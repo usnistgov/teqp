@@ -24,8 +24,7 @@ jobs:
       TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
     strategy:
       matrix:
-#, windows-latest]        
-        os: [macos-latest]
+        os: [macos-latest]      #, windows-latest]
         python-version: [3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
