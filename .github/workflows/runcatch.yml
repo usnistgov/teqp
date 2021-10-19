@@ -12,7 +12,8 @@ jobs:
         os: [macos-latest, ubuntu-latest]
         python-version: [3.9] # Could add more here, but it just makes the build matrix bigger
   steps:
-    - uses: actions/checkout@v2
+    - name: checkout
+      uses: actions/checkout@v2
     - name: checkout submodules
       run: git submodule update --init --recursive
     - name: mkdir
