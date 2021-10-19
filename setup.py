@@ -5,12 +5,13 @@ import re
 import sys
 import platform
 import subprocess
+import shutil
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
-VERSION = '0.1.3'
+VERSION = '0.2'
 with open('interface/teqpversion.hpp','w') as fpver:
     fpver.write(f'#include <string>\nconst std::string TEQPVERSION = "{VERSION}";')
 
@@ -60,16 +61,52 @@ class CMakeBuild(build_ext):
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
+        subprocess.check_call(['cmake', '--build', '.', '--target', 'teqp'] + build_args, cwd=self.build_temp)
 
-setup(
-    name='teqp',
-    version=VERSION,
-    author='Ian Bell and friends',
-    author_email='ian.bell@nist.gov',
-    description='Templated EQuation of state Package',
-    long_description='',
-    ext_modules=[CMakeExtension('teqp')],
-    cmdclass=dict(build_ext=CMakeBuild),
-    zip_safe=False,
-)
+init_template  = r'''import os
+
+# Bring all entities from the extension module into this namespace
+from .teqp import * 
+
+def get_datapath():
+    """Get the absolute path to the folder containing the root of multi-fluid data"""
+    return os.path.abspath(os.path.dirname(__file__)+"/fluiddata")
+'''
+
+def prepare():
+    # Package up the fluid data files for the multi-fluid
+    # model
+    if os.path.exists('teqp'):
+        shutil.rmtree('teqp')
+    os.makedirs('teqp')
+    shutil.copytree('mycp','teqp/fluiddata')
+
+    # Make a temporary MANIFEST.in to avoid polluting the repository
+    # since it only contains one line
+    with open('MANIFEST.in','w') as fp:
+        fp.write('recursive-include teqp *.json')
+    
+    with open('teqp/__init__.py', 'w') as fp:
+        fp.write(init_template)
+
+def teardown():
+    shutil.rmtree('teqp')
+    os.remove('MANIFEST.in')
+
+try:
+    prepare()
+    setup(
+        name='teqp',
+        version=VERSION,
+        author='Ian Bell and friends',
+        author_email='ian.bell@nist.gov',
+        description='Templated EQuation of state Package',
+        long_description='',
+        ext_modules=[CMakeExtension('teqp.teqp')], # teqp.teqp is the extension module that lives inside the teqp package
+        packages=['teqp'],
+        include_package_data=True,
+        cmdclass=dict(build_ext=CMakeBuild),
+        zip_safe=False,
+    )
+finally:
+    teardown()
