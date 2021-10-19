@@ -1,38 +1,38 @@
 name: build and run Catch tests and some other testing
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 jobs:
   Matrix-build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
-        python-version: [3.9] # Could add more here, but it just makes the build matrix bigger
-  steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: checkout submodules
-      run: git submodule update --init --recursive
-    - name: mkdir
-      run: mkdir build && cd build
-    - name: cmake config
-      run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=ON
-    - name: build conventional Catch tests
-      run: cmake --build build --target catch_tests
-    - name: build teqpc Catch tests
-      run: cmake --build build --target teqpc
-    - name: run all the compiled Catch tests
-      run: cd build && ctest --verbose
-    - name: build multifluid
-      run: cmake --build build --target multifluid
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: build wheel
-      run: |
-        pip install -U pip wheel
-        CXX=clang++ python -m pip -vvv wheel .
+        python-version: [3.9]  # Could add more here, but it just makes the build matrix bigger
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: checkout submodules
+        run: git submodule update --init --recursive
+      - name: mkdir
+        run: mkdir build && cd build
+      - name: cmake config
+        run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=ON
+      - name: build conventional Catch tests
+        run: cmake --build build --target catch_tests
+      - name: build teqpc Catch tests
+        run: cmake --build build --target teqpc
+      - name: run all the compiled Catch tests
+        run: cd build && ctest --verbose
+      - name: build multifluid
+        run: cmake --build build --target multifluid
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: build wheel
+        run: |
+          pip install -U pip wheel
+          CXX=clang++ python -m pip -vvv wheel .
