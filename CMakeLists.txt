@@ -5,16 +5,16 @@ enable_testing()
 ####  SETUP
 set(CMAKE_CXX_STANDARD 17)
 
-set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_multiprecision.tar.gz")
-set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_multiprecision/Jamroot")
+set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/boost_bcp_docker/boost_teqp.tar.gz")
+set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp/Jamroot")
 if (EXISTS ${ZIPFN})
     if(NOT EXISTS ${OUTFN})
         execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xf ${ZIPFN}
                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-        message(STATUS "Untarred boost::multiprecision")
+        message(STATUS "Untarred boost headers")
     endif()
 else()
-    message(FATAL_ERROR "Must use zipped boost::multiprecision, uncomment this error message to allow use of boost-cmake")
+    message(FATAL_ERROR "tar.gz of boost sources needed for teqp cannot be found")
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
