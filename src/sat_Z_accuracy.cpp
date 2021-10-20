@@ -23,6 +23,7 @@ using namespace boost::multiprecision;
 
 /// A standalone implementation to be more in control of type promotion.  
 /// In the end this standalone implementation gives the same answer
+/// This is for propane
 template<typename T, typename Tau, typename Delta>
 auto alphar_Lemmon2009(Tau tau, Delta delta)
 {
@@ -44,7 +45,7 @@ auto alphar_Lemmon2009(Tau tau, Delta delta)
     return result;
 }
 
-int REFPROP_setup() {
+int REFPROP_setup(const std::string &RPname) {
     // You may need to change this path to suit your installation
     // Note: forward-slashes are recommended.
     std::string path = std::getenv("RPPREFIX");
@@ -58,7 +59,8 @@ int REFPROP_setup() {
     char hpath[256]; strcpy(hpath, (path + std::string(254-path.size(),'\0')).c_str());
     SETPATHdll(hpath, 255);
     int ierr = 0, nc = 1;
-    char herr[256], hfld[10000] = "PROPANE           ", hhmx[256] = "HMX.BNC", href[4] = "DEF";
+    char herr[256], hfld[10000] = "                             ", hhmx[256] = "HMX.BNC", href[4] = "DEF";
+    strcpy(hfld, RPname.c_str());
     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
     if (ierr != 0) { throw std::invalid_argument("Bad setup of REFPROP: "+std::string(herr)); }
     return 0;
@@ -87,7 +89,7 @@ struct calc_output {
 };
 
 template<typename Model, typename VECTOR>
-auto with_teqp_and_boost(const Model &model, double T, double rhoL, const VECTOR &z){
+auto with_teqp_and_boost(const Model &model, double T, double rhoL, const VECTOR &z, bool is_propane){
     // Pressure for each phase via teqp in double precision w/ autodiff
     using tdx = TDXDerivatives<decltype(model), double, std::valarray<double>>;
     double Zteqp = 1.0 + tdx::get_Ar01(model, T, rhoL, z);
@@ -95,22 +97,37 @@ auto with_teqp_and_boost(const Model &model, double T, double rhoL, const VECTOR
     // Calculation with ridiculous number of digits of precision (the approximation of ground truth)
     using my_float = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>;
     my_float Tc = model.redfunc.Tc[0];
-    my_float rhoc = 5000.0;
+    my_float rhoc = 1.0/static_cast<my_float>(model.redfunc.vc[0]);
     auto delta = static_cast<my_float>(rhoL) / rhoc;
     auto tau = Tc / static_cast<my_float>(T);
     my_float ddelta = 1e-30 * delta;
     my_float deltaplus = delta + ddelta, deltaminus = delta - ddelta;
-    using coef_type = my_float; // What numerical type to use to initialize the coefficients (actually it doesn't matter since they all get upcasted to my_float)
+    using coef_type = my_float; // What numerical type to use to initialize the coefficients (in the end it doesn't matter since they all get upcasted to my_float)
 
     // Check that the function values are exactly the same
     auto ar1 = model.corr.get_EOS(0).alphar(tau, delta);
-    auto ar2 = alphar_Lemmon2009<my_float>(tau, delta);
-    auto dar2 = static_cast<double>((ar2 - ar1) / ar1);
-    if (std::abs(dar2) > 1e-100) { // yes, we have ridiculously accurate values
-        throw std::invalid_argument("Function values are not exactly the same");
+    if (is_propane) {
+        // As the standalone (if we are using propane)
+        auto ar2 = alphar_Lemmon2009<my_float>(tau, delta);
+        auto dar2 = static_cast<double>((ar2 - ar1) / ar1);
+        if (std::abs(dar2) > 1e-100) { // yes, we have ridiculously accurate values
+            throw std::invalid_argument("Function values are not exactly the same");
+        }
+    }
+    else {
+        // Or from REFPROP otherwise
+        int itau = 0, idelta = 0;
+        double tau_ = static_cast<double>(tau), delta_ = static_cast<double>(delta);
+        std::valarray<double> z(20); z = 1;
+        double ar2 = -1; PHIXdll(itau, idelta, tau_, delta_, &(z[0]), ar2);
+        double dar2 = static_cast<double>((ar2 - ar1) / ar1);
+        if (std::abs(dar2) > 5e-14) { // basically double precision..
+            std::cout << dar2 << std::endl;
+            throw std::invalid_argument("Function values are not exactly the same; error (%): "+std::to_string(dar2));
+        }
     }
 
-    // And now the derivative value in two subtly different approaches, also checl that 2nd-order-truncation and 4th-order-truncation are the same
+    // And now the derivative value in two subtly different approaches, also check that 2nd-order-truncation and 4th-order-truncation are the same
     auto derL2_2nd = (alphar_Lemmon2009<coef_type>(tau, deltaplus) - alphar_Lemmon2009<coef_type>(tau, deltaminus)) / (2.0 * ddelta) * delta;
     auto derL2_4th = (
          1.0*alphar_Lemmon2009<coef_type>(tau, delta - 2.0*ddelta)/12.0 
@@ -119,13 +136,14 @@ auto with_teqp_and_boost(const Model &model, double T, double rhoL, const VECTOR
         -1.0*alphar_Lemmon2009<coef_type>(tau, delta + 2.0*ddelta)/12.0
         ) / ddelta * delta;
     auto derL3 = (model.corr.get_EOS(0).alphar(tau, deltaplus) - model.corr.get_EOS(0).alphar(tau, deltaminus)) / (2.0 * ddelta) * delta;
-    auto Zexact = derL2_4th + 1.0;
+    auto Zexact = derL3 + 1.0;
 
-    auto d3 = static_cast<double>((derL2_2nd - derL3) / derL2_2nd);
-    auto d34th = static_cast<double>((derL2_4th - derL2_2nd) / derL2_2nd);
-
-    if (std::abs(d3) > 1e-100) { // yes, we have ridiculously accurate values
-        throw std::invalid_argument("Derivatives are not exactly the same in teqp and in standalone implementation");
+    if (is_propane) {
+        auto d3 = static_cast<double>((derL2_2nd - derL3) / derL2_2nd);
+        auto d34th = static_cast<double>((derL2_4th - derL2_2nd) / derL2_2nd);
+        if (std::abs(d3) > 1e-100) { // yes, we have ridiculously accurate values
+            throw std::invalid_argument("Derivatives are not exactly the same in teqp and in standalone implementation");
+        }
     }
 
     calc_output o;
@@ -134,12 +152,14 @@ auto with_teqp_and_boost(const Model &model, double T, double rhoL, const VECTOR
     return o;
 }
 
-int main()
+int do_one(const std::string &RPname, const std::string &teqpname)
 {
-    REFPROP_setup();
-    auto model = build_multifluid_model({"n-Propane"}, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+    REFPROP_setup(RPname);
+    auto model = build_multifluid_model({ teqpname }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
     std::valarray<double> z = { 1.0 };
-    double Tt = 85.525, Tc = 369.89;
+    bool is_propane = (RPname == "PROPANE");
+    double Tt = (is_propane) ? 85.525 : 273.16, 
+           Tc = (is_propane) ? 369.89 : 647.096;
     int NT = 200;
     nlohmann::json outputs = nlohmann::json::array();
     for (double T : Eigen::ArrayXd::LinSpaced(NT, Tt, Tc)) {
@@ -155,7 +175,7 @@ int main()
 
         double rhoL = o.rhoLmol_L * 1000.0, rhoV = o.rhoVmol_L*1000.0;
 
-        auto c = with_teqp_and_boost(model, T, rhoL, z);
+        auto c = with_teqp_and_boost(model, T, rhoL, z, is_propane);
         outputs.push_back({
             {"T / K", T},
             {"Q", 0},
@@ -166,7 +186,7 @@ int main()
             {"ZRP", ZLRP},
         });
 
-        auto cV = with_teqp_and_boost(model, T, rhoV, z);
+        auto cV = with_teqp_and_boost(model, T, rhoV, z, is_propane);
         outputs.push_back({
             {"T / K", T},
             {"Q", 1},
@@ -178,7 +198,14 @@ int main()
             });
         std::cout << "Completed:" << T << std::endl;
     }
-    std::ofstream file("saturation_Z_accuracy.json");
+    std::ofstream file(RPname + "_saturation_Z_accuracy.json");
     file << outputs;
+    return EXIT_SUCCESS;
+}
+
+int main()
+{
+    do_one("WATER", "Water");
+    do_one("PROPANE", "n-Propane");
     return EXIT_SUCCESS;
 }
