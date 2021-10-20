@@ -2,7 +2,7 @@
 /build
 /interface/teqpversion.hpp
 /pypirc
-/boost_multiprecision
+/boost_teqp
 /teqp.egg-info
 /MANIFEST.in
 /teqp
