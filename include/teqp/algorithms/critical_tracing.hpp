@@ -6,6 +6,10 @@
 #include <Eigen/Dense>
 #include "teqp/algorithms/rootfinding.hpp"
 
+// Imports from boost
+#include <boost/numeric/odeint/stepper/controlled_runge_kutta.hpp>
+#include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
+
 template<typename Model, typename Scalar = double, typename VecType = Eigen::ArrayXd>
 struct CriticalTracing {
     /***
@@ -314,10 +318,7 @@ struct CriticalTracing {
 
     static auto trace_critical_arclength_binary(const Model& model, const Scalar &T0, const VecType& rhovec0, const std::string& filename) -> nlohmann::json {
 
-        double t = 0.0, dt = 100;
         VecType last_drhodt;
-        VecType rhovec = rhovec0;
-        double T = T0;
 
         auto dot = [](const auto& v1, const auto& v2) { return (v1 * v2).sum(); };
         auto norm = [](const auto& v) { return sqrt((v * v).sum()); };
@@ -325,22 +326,71 @@ struct CriticalTracing {
         auto JSONdata = nlohmann::json::array();
         std::ofstream ofs = (filename.empty()) ? std::ofstream() : std::ofstream(filename);
 
-        double c = 1.0;
-        ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c,dT/dt,drho0/dT,drho1/dT,condition(1),condition(2)" << std::endl;
-        for (auto iter = 0; iter < 1000; ++iter) {
-            auto rhotot = rhovec.sum();
-            auto z0 = rhovec[0] / rhotot;
-          
+        using state_type = std::vector<double>;
+        double c = 1.0; 
+
+        // The function for the derivative in the form of odeint
+        // x is [T, rhovec]
+        auto xprime = [&model, &c, norm](const state_type& x, state_type& dxdt, const double /* t */)
+        {
+            const double& T = x[0];
+            const auto rhovec = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 1, x.size() - 1);
+            auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
             auto drhodT = get_drhovec_dT_crit(model, T, rhovec).array().eval();
             auto dTdt = 1.0 / norm(drhodT);
-            auto drhodt = (drhodT * dTdt).eval();
+            dxdt[0] = c*dTdt; 
+            drhodt = c*(drhodT * dTdt).eval();
+        };
 
-            auto conditions = get_criticality_conditions(model, T, rhovec);
+        // Typedefs for the types
+        using namespace boost::numeric::odeint;
+        typedef runge_kutta_cash_karp54< state_type > error_stepper_type;
+        typedef controlled_runge_kutta< error_stepper_type > controlled_stepper_type;
+
+        // Define the tolerances
+        double abs_err = 1.0e-10, rel_err = 1.0e-6, a_x = 1.0, a_dxdt = 1.0;
+        controlled_stepper_type controlled_stepper(default_error_checker< double, range_algebra, default_operations >(abs_err, rel_err, a_x, a_dxdt));
+
+        double t = 0, dt = 0.1;
+
+        // Build the initial state arrary, T, followed by rhovec
+        std::vector<double> x0(rhovec0.size() + 1); 
+        
+        x0[0] = T0;
+        Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 1, x0.size() - 1) = rhovec0;
+        
+        ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c,dT/dt,drho0/dT,drho1/dT,condition(1),condition(2)" << std::endl;
+        for (auto iter = 0; iter < 1000; ++iter) {
+
+            // Make T and rhovec references to the contents of x0 vector
+            // The views are mutable (danger!)
+            double& T = x0[0];
+            auto rhovec = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 1, x0.size() - 1);
+
+            {
+                auto dxdt = x0;
+                xprime(x0, dxdt, -1.0);
+                auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
+
+                // Flip the sign if the tracing wants to go backwards, or if the first step would yield any negative concentrations
+                auto this_drhodt = (c * drhodt).eval();
+                auto step = rhovec + this_drhodt * dt;
+                Eigen::ArrayX<bool> negativestepvals = (step < 0).eval();
+                if (iter == 0 && negativestepvals.any()) {
+                    c *= -1;
+                }
+                else if (iter > 1 && dot(this_drhodt, last_drhodt) < 0) {
+                    c *= -1;
+                }
+            }
 
             auto write_line = [&]() {
                 std::stringstream out;
+                auto rhotot = rhovec.sum();
+                double z0 = rhovec[0] / rhotot;
                 using id = IsochoricDerivatives<decltype(model)>;
-                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << dTdt << "," << drhodT(0) << "," << drhodT(1) << "," << conditions(0) << "," << conditions(1) << std::endl;
+                auto conditions = get_criticality_conditions(model, T, rhovec);
+                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << conditions(0) << "," << conditions(1) << std::endl;
                 std::string sout(out.str());
                 std::cout << sout;
                 if (ofs.is_open()) {
@@ -353,22 +403,28 @@ struct CriticalTracing {
                 }
             }
 
-            // Flip the sign if the tracing wants to go backwards, or if the first step would yield any negative concentrations
-
-            VecType this_drhodt = (c * drhodt).eval();
-            VecType step = rhovec + this_drhodt * dt;
-            Eigen::ArrayX<bool> negativestepvals = (step < 0).eval();
-            if (iter == 0 && negativestepvals.any()) {
-                c *= -1;
+            controlled_step_result res;
+            try {
+                res = controlled_stepper.try_step(xprime, x0, t, dt);
             }
-            else if (iter > 1 && dot(this_drhodt, last_drhodt) < 0) {
-                c *= -1;
+            catch(...){
+                break;
+            }
+            if (res != controlled_step_result::success) {
+                // Try again, with a smaller step size
+                iter--;
+                continue;
             }
 
-            rhovec += c * drhodt * dt;
-            T += c * dTdt * dt;
+            // Call the function again to get drho/dt in order 
+            // to cache it
+            auto dxdt = x0;
+            xprime(x0, dxdt, -1.0);
+            auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
+            last_drhodt = c * drhodt;
 
-            z0 = rhovec[0] / rhovec.sum();
+            auto conditions = get_criticality_conditions(model, T, rhovec);
+            auto z0 = rhovec[0] / rhovec.sum();
             if (z0 < 0 || z0 > 1) {
                 break;
             }
@@ -381,22 +437,24 @@ struct CriticalTracing {
             catch (std::exception& e) {
                 std::cout << e.what() << std::endl;
             }
-           
 
-            rhotot = rhovec.sum();
+            auto rhotot = rhovec.sum();
             z0 = rhovec[0] / rhotot;
-
             if (z0 < 0 || z0 > 1) {
                 break;
-            }
-            last_drhodt = c * drhodt;
+            }           
+
             if (!filename.empty()) {
                 write_line();
             }
+            
+            // Calculate some other parameters, for debugging, or scientific interest
             using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
             double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
             conditions = get_criticality_conditions(model, T, rhovec);
             double splus = id::get_splus(model, T, rhovec);
+
+            // Store the data in a JSON structure
             nlohmann::json point = {
                 {"t", t},
                 {"T / K", T},
