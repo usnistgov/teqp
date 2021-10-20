@@ -797,7 +797,11 @@ inline auto get_EOSs(const std::string& coolprop_root, const std::vector<std::st
 
 inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags = {}) {
 
-    const auto BIPcollection = nlohmann::json::parse(std::ifstream(BIPcollectionpath));
+    auto stream = std::ifstream(BIPcollectionpath);
+    if (!stream) {
+        throw std::invalid_argument("Cannot open BIP collection file: " + BIPcollectionpath);
+    }
+    const auto BIPcollection = nlohmann::json::parse(stream);
 
     // Pure fluids
     auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(coolprop_root, components);
