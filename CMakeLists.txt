@@ -21,7 +21,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/mcx/multicomplex/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_multiprecision")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 
 set(BUILD_TESTING FALSE CACHE BOOL "Turn off Eigen tests")
 set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
