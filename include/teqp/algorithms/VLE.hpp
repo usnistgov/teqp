@@ -138,8 +138,7 @@ auto linsolve(const A &a, const B& b) {
 }
 
 template<class Model, class Scalar, class VecType>
-std::tuple< Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>, Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
-get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhovecL, const VecType& rhovecV) {
+auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhovecL, const VecType& rhovecV) {
     //tic = timeit.default_timer();
     using id = IsochoricDerivatives<Model, Scalar, VecType>;
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
