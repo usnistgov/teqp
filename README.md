@@ -14,6 +14,11 @@ So far the following EOS are implemented:
 
 Written by Ian Bell, NIST.  
 
+## Changelog
+
+0.3.0 Add integration options to the tracing of the critical curve; fix ``__version__``
+0.2.0 Add fluid files to the python package
+
 ## Install
 
 For windows and OSX, you should be able to install the most recent version from PYPI with
