@@ -402,8 +402,32 @@ struct CriticalTracing {
 
             // Make T and rhovec references to the contents of x0 vector
             // The views are mutable (danger!)
-            double &T = x0[0];
+            double& T = x0[0];
             auto rhovec = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 1, x0.size() - 1);
+
+            auto store_point = [&]() {
+
+                // Calculate some other parameters, for debugging, or scientific interest
+                auto rhotot = rhovec.sum();
+                using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
+                double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
+                auto conditions = get_criticality_conditions(model, T, rhovec);
+                double splus = id::get_splus(model, T, rhovec);
+
+                // Store the data in a JSON structure
+                nlohmann::json point = {
+                    {"t", t},
+                    {"T / K", T},
+                    {"rho0 / mol/m^3", static_cast<double>(rhovec[0])},
+                    {"rho1 / mol/m^3", static_cast<double>(rhovec[1])},
+                    {"c", c},
+                    {"s^+", splus},
+                    {"p / Pa", p},
+                    {"lambda1", conditions[0]},
+                    {"dirderiv(lambda1)/dalpha", conditions[1]},
+                };
+                JSONdata.push_back(point);
+            };
 
             {
                 auto dxdt = x0;
@@ -439,6 +463,9 @@ struct CriticalTracing {
                 if (!filename.empty()) {
                     write_line();
                 }
+            }
+            if (iter == 0 && retry_count == 0) {
+                store_point();
             }
 
             double dtold = dt;
@@ -523,26 +550,7 @@ struct CriticalTracing {
             if (!filename.empty()) {
                 write_line();
             }
-            
-            // Calculate some other parameters, for debugging, or scientific interest
-            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-            double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
-            conditions = get_criticality_conditions(model, T, rhovec);
-            double splus = id::get_splus(model, T, rhovec);
-
-            // Store the data in a JSON structure
-            nlohmann::json point = {
-                {"t", t},
-                {"T / K", T},
-                {"rho0 / mol/m^3", static_cast<double>(rhovec[0])},
-                {"rho1 / mol/m^3", static_cast<double>(rhovec[1])},
-                {"c", c},
-                {"s^+", splus},
-                {"p / Pa", p},
-                {"lambda1", conditions[0]},
-                {"dirderiv(lambda1)/dalpha", conditions[1]},
-            };
-            JSONdata.push_back(point);
+            store_point();
 
             if (counter_T_converged > options.small_T_count) {
                 break;
