@@ -281,18 +281,30 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
     // Argon + Xenon
     std::valarray<double> Tc_K = { 150.687, 289.733 };
     std::valarray<double> pc_Pa = { 4863000.0, 5842000.0 };
-    std::valarray<double> molefrac = { 1.0 };
+    const std::valarray<double> molefrac = { 1.0 };
     vdWEOS<double> vdW(Tc_K, pc_Pa);
     auto Zc = 3.0/8.0;
-    auto rhoc0 = pc_Pa[0] / (vdW.R(molefrac) * Tc_K[0]) / Zc;
-    double T0 = Tc_K[0];
-    Eigen::ArrayXd rhovec0(2); rhovec0 << rhoc0, 0.0 ;
+    std::valarray<double> max_spluses(Tc_K.size());
+    for (auto ifluid = 0; ifluid < Tc_K.size(); ++ifluid) {
+        auto rhoc0 = pc_Pa[ifluid] / (vdW.R(molefrac) * Tc_K[ifluid]) / Zc;
+        double T0 = Tc_K[ifluid];
+        Eigen::ArrayXd rhovec0(2); rhovec0 = 0.0; rhovec0[ifluid] = rhoc0;
+        REQUIRE(rhovec0[ifluid] / rhovec0.sum() == 1.0);
 
-    auto tic0 = std::chrono::steady_clock::now();
-    std::string filename = "";
-    using ct = CriticalTracing<decltype(vdW), double, Eigen::ArrayXd>;
-    ct::trace_critical_arclength_binary(vdW, T0, rhovec0, filename);
-    auto tic1 = std::chrono::steady_clock::now();
+        auto tic0 = std::chrono::steady_clock::now();
+        std::string filename = "";
+        using ct = CriticalTracing<decltype(vdW), double, Eigen::ArrayXd>;
+        auto trace = ct::trace_critical_arclength_binary(vdW, T0, rhovec0, filename);
+        auto tic1 = std::chrono::steady_clock::now();
+        double max_splus = 0;
+        for (auto &point : trace) {
+            double splus = point.at("s^+");
+            max_splus = std::max(max_splus, splus);
+        }
+        max_spluses[ifluid] = max_splus;
+    }
+    CHECK(max_spluses.min() == Approx(max_spluses.max()).epsilon(0.01));
+    CHECK(max_spluses.min() > -log(1 - 1.0 / 3.0));
 }
 
 TEST_CASE("TEST B12", "") {
