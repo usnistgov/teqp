@@ -33,14 +33,11 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 #set(BUILD_TESTING FALSE CACHE BOOL "Turn off Eigen tests")
 # add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 
-set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen")
 set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen, for autodiff")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen finder module, for autodiff")
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen finder module, for autodiff")
 set(AUTODIFF_BUILD_TESTS FALSE CACHE BOOL "No autodiff tests")
 set(AUTODIFF_BUILD_PYTHON FALSE CACHE BOOL "No autodiff python")
 set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
-message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
 # Find eigen library
