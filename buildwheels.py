@@ -21,8 +21,8 @@ else:
             raise KeyError(f'You must set the twine environment variable {k}')
 
 def build():
+    """ Build the wheel """
     for pyver in ['3.7','3.8','3.9']:
-        # Build the wheel if it is not already built
         abbrv = pyver.replace('.', '')
         condaenv = f'conda-{pyver}'
         subprocess.check_call(f'conda create -y -n {condaenv} python={pyver}', shell=True)
