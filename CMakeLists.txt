@@ -43,6 +43,9 @@ set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
+# Find eigen library
+find_package(Eigen3 REQUIRED)
+
 # Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
 set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
 
