@@ -77,8 +77,8 @@ public:
         auto b = get_b(T, z);
         auto Ttilde = R(z)*T*b/get_a(T,z);
         return std::make_tuple(
-            CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)*b,
-            CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)*b
+            CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)/b,
+            CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)/b
         );
     }
 
