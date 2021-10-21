@@ -291,6 +291,10 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
         Eigen::ArrayXd rhovec0(2); rhovec0 = 0.0; rhovec0[ifluid] = rhoc0;
         REQUIRE(rhovec0[ifluid] / rhovec0.sum() == 1.0);
 
+        using id = IsochoricDerivatives<decltype(vdW)>;
+        double splus = id::get_splus(vdW, T0, rhovec0);
+        REQUIRE(splus == Approx(-log(1 - 1.0 / 3.0)));
+
         auto tic0 = std::chrono::steady_clock::now();
         std::string filename = "";
         using ct = CriticalTracing<decltype(vdW), double, Eigen::ArrayXd>;
