@@ -11,7 +11,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 
 set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/boost_bcp_docker/boost_teqp.tar.gz")
-set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp/Jamroot")
+set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp/boost/version.hpp")
 if (EXISTS ${ZIPFN})
     if(NOT EXISTS ${OUTFN})
         execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xf ${ZIPFN}
@@ -28,18 +28,20 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 
+set(EIGEN_BUILD_DOC FALSE CACHE BOOL "Turn off Eigen snippets in their docs")
+set(EIGEN_TEST_NOQT TRUE CACHE BOOL "Turn off Eigen tests of Qt")
 set(BUILD_TESTING FALSE CACHE BOOL "Turn off Eigen tests")
 set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 
 set(AUTODIFF_BUILD_TESTS FALSE CACHE BOOL "No autodiff tests")
 set(AUTODIFF_BUILD_PYTHON FALSE CACHE BOOL "No autodiff python")
 set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
 # Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
 set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
 set(TEQP_NO_PYTHON false)
 if (NOT TEQP_NO_PYTHON)
