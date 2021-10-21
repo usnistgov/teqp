@@ -33,7 +33,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 #set(BUILD_TESTING FALSE CACHE BOOL "Turn off Eigen tests")
 # add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 
-set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
+set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen, for autodiff")
 set(AUTODIFF_BUILD_TESTS FALSE CACHE BOOL "No autodiff tests")
 set(AUTODIFF_BUILD_PYTHON FALSE CACHE BOOL "No autodiff python")
 set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
