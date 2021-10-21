@@ -10,6 +10,7 @@ Implemetations of the canonical cubic equations of state
 
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
+#include "cubicsuperancillary.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -40,6 +41,7 @@ protected:
     std::valarray<std::valarray<NumType>> k;
     const NumType Delta1, Delta2, OmegaA, OmegaB;
     const AlphaFunctions alphas;
+    int superanc_index;
 
     nlohmann::json meta;
 
@@ -50,8 +52,8 @@ protected:
     auto get_bi(TType T, IndexType i) const { return bi[i]; }
 
 public:
-    GenericCubic(NumType Delta1, NumType Delta2, NumType OmegaA, NumType OmegaB, const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas)
-        : Delta1(Delta1), Delta2(Delta2), OmegaA(OmegaA), OmegaB(OmegaB), alphas(alphas)
+    GenericCubic(NumType Delta1, NumType Delta2, NumType OmegaA, NumType OmegaB, int superanc_index, const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas)
+        : Delta1(Delta1), Delta2(Delta2), OmegaA(OmegaA), OmegaB(OmegaB), superanc_index(superanc_index), alphas(alphas)
     {
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
@@ -64,6 +66,21 @@ public:
 
     void set_meta(const nlohmann::json& j) { meta = j; }
     auto get_meta() const { return meta; }
+
+    /// Return a tuple of saturated liquid and vapor densities for the EOS given the temperature
+    /// Uses the superancillary equations from Bell and Deiters: 
+    auto superanc_rhoLV(double T) const {
+        if (ai.size() != 1) {
+            throw std::invalid_argument("function only available for pure species");
+        }
+        const std::valarray<double> z = { 1.0 };
+        auto b = get_b(T, z);
+        auto Ttilde = R(z)*T*b/get_a(T,z);
+        return std::make_tuple(
+            CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)*b,
+            CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)*b
+        );
+    }
 
     const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
 
@@ -90,7 +107,7 @@ public:
     }
 
     template<typename TType, typename CompType>
-    auto get_b(TType T, const CompType& molefracs) const {
+    auto get_b(TType /*T*/, const CompType& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> b_ = 0.0;
         for (auto i = 0; i < molefracs.size(); ++i) {
             b_ = b_ + molefracs[i] * bi[i];
@@ -137,7 +154,7 @@ auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric) {
         {"kind", "Soave-Redlich-Kwong"}
     };
 
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, Tc_K, pc_K, std::move(alphas));
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::SRK_CODE, Tc_K, pc_K, std::move(alphas));
     cub.set_meta(meta);
     return cub;
 }
@@ -170,7 +187,7 @@ auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric) {
         {"kind", "Peng-Robinson"}
     };
 
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, Tc_K, pc_K, std::move(alphas));
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::PR_CODE, Tc_K, pc_K, std::move(alphas));
     cub.set_meta(meta);
     return cub;
 }

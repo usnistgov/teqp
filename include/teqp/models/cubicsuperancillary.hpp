@@ -1,3 +1,4 @@
+#pragma once 
 #include <vector>
 
 namespace CubicSuperAncillary {
@@ -24,7 +25,7 @@ public:
 
 // https://proquest.safaribooksonline.com/9780321637413
 // https://web.stanford.edu/class/archive/cs/cs107/cs107.1202/lab1/
-int midpoint_Knuth(int x, int y) {
+static int midpoint_Knuth(int x, int y) {
     return (x & y) + ((x ^ y) >> 1);
 };
 
@@ -3796,7 +3797,7 @@ const auto PR_rhoV = SuperAncillary{
 }
 };
 
-double supercubic(int EOS, int prop, double Ttilde){
+static double supercubic(int EOS, int prop, double Ttilde){
     switch(EOS){
         case 0:{
             switch(prop){

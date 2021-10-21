@@ -12,6 +12,7 @@ void add_cubics(py::module& m) {
     using cub = decltype(canonical_PR(va{}, va{}, va{}));
     auto wcub = py::class_<cub>(m, "GenericCubic")
         .def("get_meta", &cub::get_meta)
+        .def("superanc_rhoLV", &cub::superanc_rhoLV)
         ;
     add_derivatives<cub>(m, wcub);
 }

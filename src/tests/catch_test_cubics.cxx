@@ -22,3 +22,20 @@ TEST_CASE("Test construction of cubic", "[cubic]")
     auto Ar04PR = TDXDerivatives<decltype(modelPR)>::get_Ar0n<4>(modelPR, T, rho, molefrac)[4];
     int rr = 0;
 }
+
+TEST_CASE("Check calling superancillary curves", "[cubic][superanc]") 
+{
+    std::valarray<double> Tc_K = { 150.687 };
+    std::valarray<double> pc_Pa = { 4863000.0 };
+    std::valarray<double> acentric = { 0.0 }; 
+    SECTION("PR") {
+        auto model = canonical_PR(Tc_K, pc_Pa, acentric);
+        auto [rhoL, rhoV] = model.superanc_rhoLV(130.0);
+        CHECK(rhoL > rhoV);
+    }
+    SECTION("SRK") {
+        auto model = canonical_SRK(Tc_K, pc_Pa, acentric);
+        auto [rhoL, rhoV] = model.superanc_rhoLV(130.0);
+        CHECK(rhoL > rhoV);
+    }
+}
