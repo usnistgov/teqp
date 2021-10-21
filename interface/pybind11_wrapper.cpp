@@ -1,4 +1,5 @@
 #include "pybind11_wrapper.hpp"
+#include "teqp/algorithms/critical_tracing.hpp"
 
 #include "teqpversion.hpp"
 
@@ -26,6 +27,15 @@ void init_teqp(py::module& m) {
     add_multifluid_mutant(m);
     add_multifluid_mutant_invariant(m);
     add_cubics(m);
+
+    // The options class for critical tracer, not tied to a particular model
+    py::class_<TCABOptions>(m, "TCABOptions")
+        .def(py::init<>())
+        .def_readwrite("abs_err", &TCABOptions::abs_err)
+        .def_readwrite("rel_err", &TCABOptions::rel_err)
+        .def_readwrite("init_dt", &TCABOptions::init_dt)
+        .def_readwrite("integration_order", &TCABOptions::integration_order)
+        ;
 
     // Some functions for timing overhead of interface
     m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <fstream>
+#include <optional>
+
 #include "nlohmann/json.hpp"
 
 #include <Eigen/Dense>
@@ -9,6 +11,18 @@
 // Imports from boost
 #include <boost/numeric/odeint/stepper/controlled_runge_kutta.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
+#include <boost/numeric/odeint/stepper/euler.hpp>
+
+// This has to be outside the critical tracing struct so that the pybind11 wrapper doesn't fight with the types
+struct TCABOptions {
+    double abs_err = 1.0e-6,
+        rel_err = 1.0e-6,
+        init_dt = 10, ///< The initial step size
+        max_dt = 10000000000,
+        T_tol = 1e-6; ///< The tolerance on temperature to indicate that it is converged
+    int small_T_count = 5; ///< How many small temperature steps indicates convergence
+    int integration_order = 5; ///<
+};
 
 template<typename Model, typename Scalar = double, typename VecType = Eigen::ArrayXd>
 struct CriticalTracing {
@@ -315,8 +329,25 @@ struct CriticalTracing {
         Eigen::ArrayXd rho = x.tail(x.size() - 1);
         return std::make_tuple(x[0], rho);
     }
+    static auto critical_polish_fixedT(const Model& model, const Scalar T, const VecType& rhovec) {
+        auto polish_T_resid = [&model, &T](const auto& x) {
+            auto derivs = get_derivs(model, T, x);
+            return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
+        };
+        Eigen::ArrayXd x0 = rhovec;
+        auto r0 = polish_T_resid(x0);
+        auto x = NewtonRaphson(polish_T_resid, x0, 1e-10);
+        auto r = polish_T_resid(x);
+        Eigen::ArrayXd change = x0 - x;
+        if (!std::isfinite(T) || !std::isfinite(x[1])) {
+            throw std::invalid_argument("Something not finite; aborting polishing");
+        }
+        return x;
+    }
 
-    static auto trace_critical_arclength_binary(const Model& model, const Scalar &T0, const VecType& rhovec0, const std::string& filename) -> nlohmann::json {
+    static auto trace_critical_arclength_binary(const Model& model, const Scalar& T0, const VecType& rhovec0, const std::optional<std::string>& filename_ = std::nullopt, const std::optional<TCABOptions> &options_ = std::nullopt) -> nlohmann::json {
+        std::string filename = filename_.value_or("");
+        TCABOptions options = options_.value_or(TCABOptions{});
 
         VecType last_drhodt;
 
@@ -333,25 +364,31 @@ struct CriticalTracing {
         // x is [T, rhovec]
         auto xprime = [&model, &c, norm](const state_type& x, state_type& dxdt, const double /* t */)
         {
-            const double& T = x[0];
+            // Unpack the inputs
+            const double T = x[0];
             const auto rhovec = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 1, x.size() - 1);
-            auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
+            
             auto drhodT = get_drhovec_dT_crit(model, T, rhovec).array().eval();
             auto dTdt = 1.0 / norm(drhodT);
             dxdt[0] = c*dTdt; 
+            auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1); 
             drhodt = c*(drhodT * dTdt).eval();
         };
 
         // Typedefs for the types
         using namespace boost::numeric::odeint;
+
+        // Class for simple Euler integration
+        euler<state_type> eul;
+
         typedef runge_kutta_cash_karp54< state_type > error_stepper_type;
         typedef controlled_runge_kutta< error_stepper_type > controlled_stepper_type;
 
         // Define the tolerances
-        double abs_err = 1.0e-10, rel_err = 1.0e-6, a_x = 1.0, a_dxdt = 1.0;
+        double abs_err = options.abs_err, rel_err = options.rel_err, a_x = 1.0, a_dxdt = 1.0;
         controlled_stepper_type controlled_stepper(default_error_checker< double, range_algebra, default_operations >(abs_err, rel_err, a_x, a_dxdt));
 
-        double t = 0, dt = 0.1;
+        double t = 0, dt = options.init_dt;
 
         // Build the initial state arrary, T, followed by rhovec
         std::vector<double> x0(rhovec0.size() + 1); 
@@ -359,27 +396,28 @@ struct CriticalTracing {
         x0[0] = T0;
         Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 1, x0.size() - 1) = rhovec0;
         
-        ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c,dT/dt,drho0/dT,drho1/dT,condition(1),condition(2)" << std::endl;
+        int counter_T_converged = 0, retry_count = 0;
+        ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c,dt,condition(1),condition(2)" << std::endl;
         for (auto iter = 0; iter < 1000; ++iter) {
 
             // Make T and rhovec references to the contents of x0 vector
             // The views are mutable (danger!)
-            double& T = x0[0];
+            double &T = x0[0];
             auto rhovec = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 1, x0.size() - 1);
 
             {
                 auto dxdt = x0;
                 xprime(x0, dxdt, -1.0);
-                auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
+                const auto drhodt = Eigen::Map<const Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
 
                 // Flip the sign if the tracing wants to go backwards, or if the first step would yield any negative concentrations
-                auto this_drhodt = (c * drhodt).eval();
-                auto step = rhovec + this_drhodt * dt;
+                const auto this_drhodt = drhodt.eval();
+                const auto step = rhovec + this_drhodt * dt;
                 Eigen::ArrayX<bool> negativestepvals = (step < 0).eval();
-                if (iter == 0 && negativestepvals.any()) {
+                if (iter == 0 && retry_count == 0 && negativestepvals.any()) {
                     c *= -1;
                 }
-                else if (iter > 1 && dot(this_drhodt, last_drhodt) < 0) {
+                else if (iter > 1 && retry_count == 0 && dot(this_drhodt, last_drhodt) < 0) {
                     c *= -1;
                 }
             }
@@ -390,7 +428,7 @@ struct CriticalTracing {
                 double z0 = rhovec[0] / rhotot;
                 using id = IsochoricDerivatives<decltype(model)>;
                 auto conditions = get_criticality_conditions(model, T, rhovec);
-                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << conditions(0) << "," << conditions(1) << std::endl;
+                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << dt << "," << conditions(0) << "," << conditions(1) << std::endl;
                 std::string sout(out.str());
                 std::cout << sout;
                 if (ofs.is_open()) {
@@ -403,17 +441,35 @@ struct CriticalTracing {
                 }
             }
 
-            controlled_step_result res;
-            try {
-                res = controlled_stepper.try_step(xprime, x0, t, dt);
+            double dtold = dt;
+            auto x0_previous = x0;
+            
+            if (options.integration_order == 5) {
+                controlled_step_result res = controlled_step_result::fail;
+                try {
+                    res = controlled_stepper.try_step(xprime, x0, t, dt);
+                }
+                catch (...) {
+                    break;
+                }
+
+                if (res != controlled_step_result::success) {
+                    // Try again, with a smaller step size
+                    iter--;
+                    retry_count++;
+                    continue;
+                }
+                else {
+                    retry_count = 0;
+                }
+                // Reduce step size if greater than the specified max step size
+                dt = std::min(dt, options.max_dt);
             }
-            catch(...){
-                break;
+            else if (options.integration_order == 1) {
+                eul.do_step(xprime, x0, t, dt);
             }
-            if (res != controlled_step_result::success) {
-                // Try again, with a smaller step size
-                iter--;
-                continue;
+            else {
+                throw std::invalid_argument("integration order is invalid:" + std::to_string(options.integration_order));
             }
 
             // Call the function again to get drho/dt in order 
@@ -421,21 +477,32 @@ struct CriticalTracing {
             auto dxdt = x0;
             xprime(x0, dxdt, -1.0);
             auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
-            last_drhodt = c * drhodt;
+            last_drhodt = drhodt;
+            auto absrelchange = std::abs(drhodt.sum()*dt/rhovec.sum());
 
             auto conditions = get_criticality_conditions(model, T, rhovec);
             auto z0 = rhovec[0] / rhovec.sum();
             if (z0 < 0 || z0 > 1) {
                 break;
             }
-
+            
             try {
                 int i = 0;
                 auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
+                //int rrrr = 0;
                 T = Tnew; rhovec = rhovecnew;
             }
             catch (std::exception& e) {
                 std::cout << e.what() << std::endl;
+            }
+
+            auto actualstep = (Eigen::Map<Eigen::ArrayXd>(&(x0[0]), x0.size()) - Eigen::Map<Eigen::ArrayXd>(&(x0_previous[0]), x0_previous.size())).eval();
+            // Check if T has stopped changing
+            if (std::abs(actualstep[0]) < options.T_tol) {
+                counter_T_converged++;
+            }
+            else {
+                counter_T_converged = 0;
             }
 
             auto rhotot = rhovec.sum();
@@ -467,6 +534,10 @@ struct CriticalTracing {
                 {"dirderiv(lambda1)/dalpha", conditions[1]},
             };
             JSONdata.push_back(point);
+
+            if (counter_T_converged > options.small_T_count) {
+                break;
+            }
         }
         return JSONdata;
     }

@@ -40,7 +40,8 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("get_B12vir", &vd::get_B12vir, py::arg("model"), py::arg("T"), py::arg("molefrac").noconvert());
 
     using ct = CriticalTracing<Model, double, Eigen::Array<double, Eigen::Dynamic, 1>>;
-    m.def("trace_critical_arclength_binary", &ct::trace_critical_arclength_binary);
+    
+    m.def("trace_critical_arclength_binary", &ct::trace_critical_arclength_binary, py::arg("model"), py::arg("T0"), py::arg("rhovec0").noconvert(), py::arg_v("path", std::nullopt, "None"), py::arg_v("options", std::nullopt, "None"));
     m.def("get_criticality_conditions", &ct::get_criticality_conditions);
     m.def("eigen_problem", &ct::eigen_problem);
     m.def("get_minimum_eigenvalue_Psi_Hessian", &ct::get_minimum_eigenvalue_Psi_Hessian);
