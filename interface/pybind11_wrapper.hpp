@@ -33,6 +33,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("build_d2PsirdTdrhoi_autodiff", &id::build_d2PsirdTdrhoi_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
     m.def("get_chempotVLE_autodiff", &id::get_chempotVLE_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
     m.def("get_dchempotdT_autodiff", &id::get_dchempotdT_autodiff, py::arg("model"), py::arg("T"), py::arg("rho"));
+    m.def("get_fugacity_coefficients", &id::template get_fugacity_coefficients<ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"));
 
     using vd = VirialDerivatives<Model, double, Eigen::Array<double,Eigen::Dynamic,1>>;
     m.def("get_B2vir", &vd::get_B2vir, py::arg("model"), py::arg("T"), py::arg("molefrac").noconvert());
