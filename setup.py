@@ -14,7 +14,7 @@ from distutils.version import LooseVersion
 
 # VERSION is now read from teqpversion.hpp header file
 match = re.search(r'TEQPVERSION = \"([0-9a-z.]+)\"\;', open('interface/teqpversion.hpp').read())
-if match != 1:
+if match:
     VERSION = match.group(1)
 else:
     raise ValueError("Unable to parse version string from interface/teqpversion.hpp")
