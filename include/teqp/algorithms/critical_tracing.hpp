@@ -443,6 +443,18 @@ struct CriticalTracing {
 
             double dtold = dt;
             auto x0_previous = x0;
+
+            // Call the function to get drho/dt in order 
+            // to cache it at the *beginning* of the step
+            auto dxdt = x0;
+            try {
+                xprime(x0, dxdt, -1.0);
+            }
+            catch (...) {
+                break;
+            }
+            auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
+            last_drhodt = drhodt;
             
             if (options.integration_order == 5) {
                 controlled_step_result res = controlled_step_result::fail;
@@ -466,19 +478,16 @@ struct CriticalTracing {
                 dt = std::min(dt, options.max_dt);
             }
             else if (options.integration_order == 1) {
-                eul.do_step(xprime, x0, t, dt);
+                try {
+                    eul.do_step(xprime, x0, t, dt);
+                }
+                catch (...) {
+                    break;
+                }
             }
             else {
                 throw std::invalid_argument("integration order is invalid:" + std::to_string(options.integration_order));
             }
-
-            // Call the function again to get drho/dt in order 
-            // to cache it
-            auto dxdt = x0;
-            xprime(x0, dxdt, -1.0);
-            auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
-            last_drhodt = drhodt;
-            auto absrelchange = std::abs(drhodt.sum()*dt/rhovec.sum());
 
             auto conditions = get_criticality_conditions(model, T, rhovec);
             auto z0 = rhovec[0] / rhovec.sum();

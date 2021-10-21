@@ -20,6 +20,19 @@ TEST_CASE("Trace critical locus for nitrogen + ethane", "[crit],[multifluid]")
         auto tic0 = std::chrono::steady_clock::now();
         std::string filename = "h";
         using ct = CriticalTracing<decltype(model), double, Eigen::ArrayXd>;
+        TCABOptions opt; opt.init_dt = 100; opt.integration_order = 1;
+        auto j = ct::trace_critical_arclength_binary(model, T0, rhovec0, filename, opt);
+        CHECK(j.size() > 3);
+        auto tic1 = std::chrono::steady_clock::now();
+    }
+    
+    for (auto ifluid = 0; ifluid < 2; ++ifluid) {
+        double T0 = model.redfunc.Tc[ifluid];
+        Eigen::ArrayXd rhovec0(2); rhovec0 = 0.0; rhovec0[ifluid] = 1.0 / model.redfunc.vc[ifluid];
+
+        auto tic0 = std::chrono::steady_clock::now();
+        std::string filename = "h";
+        using ct = CriticalTracing<decltype(model), double, Eigen::ArrayXd>;
         TCABOptions opt; opt.max_dt = 10000; opt.init_dt = 10; opt.abs_err = 1e-8; opt.rel_err = 1e-6; opt.small_T_count = 100;
         auto j = ct::trace_critical_arclength_binary(model, T0, rhovec0, filename, opt);
         CHECK(j.size() > 3);
