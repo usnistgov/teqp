@@ -6,14 +6,18 @@ import sys
 import platform
 import subprocess
 import shutil
+import re
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
-VERSION = '0.3.1.dev'
-with open('interface/teqpversion.hpp','w') as fpver:
-    fpver.write(f'#include <string>\nconst std::string TEQPVERSION = "{VERSION}";')
+# VERSION is now read from teqpversion.hpp header file
+match = re.search(r'TEQPVERSION = \"([0-9a-z.]+)\"\;', open('interface/teqpversion.hpp').read())
+if match != 1:
+    VERSION = match.group(1)
+else:
+    raise ValueError("Unable to parse version string from interface/teqpversion.hpp")
 
 here = os.path.dirname(os.path.abspath(__file__))
 
