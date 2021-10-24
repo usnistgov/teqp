@@ -38,6 +38,17 @@ void init_teqp(py::module& m) {
         .def_readwrite("integration_order", &TCABOptions::integration_order)
         ;
 
+    // The options class for isotherm tracer, not tied to a particular model
+    py::class_<TVLEOptions>(m, "TVLEOptions")
+        .def(py::init<>())
+        .def_readwrite("abs_err", &TVLEOptions::abs_err)
+        .def_readwrite("rel_err", &TVLEOptions::rel_err)
+        .def_readwrite("init_dt", &TVLEOptions::init_dt)
+        .def_readwrite("max_dt", &TVLEOptions::max_dt)
+        .def_readwrite("max_steps", &TVLEOptions::max_steps)
+        .def_readwrite("integration_order", &TVLEOptions::integration_order)
+        ;
+
     // Some functions for timing overhead of interface
     m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
     using RAX = Eigen::Ref<Eigen::ArrayXd>;

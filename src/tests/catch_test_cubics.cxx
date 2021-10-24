@@ -1,9 +1,11 @@
+
+#include <fstream>
+
 #include "catch/catch.hpp"
 
 #include "teqp/models/cubics.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/algorithms/VLE.hpp"
-
 
 #include <boost/numeric/odeint/stepper/euler.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
@@ -88,32 +90,52 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
         auto pfromderiv = rho * model.R(molefrac) * T + id::get_pr(model, T, rhovecL);
         return pfromderiv;
     };
-    
-    for (int i : { 0 }) {
-        state_type X0 = get_start(T, i); // Starting point; liquid, then vapor
-        double p0 = get_p(X0);
-        state_type Xfinal = get_start(T, 1-i); // Ending point; liquid, then vapor
-        double pfinal = get_p(Xfinal);
 
-        //euler<state_type> integrator;
-        runge_kutta_cash_karp54< state_type > integrator;
-        int Nstep = 10000;
-        double p = p0, pmax = pfinal, dp = (pmax - p0) / (Nstep - 1);
+    SECTION("Manual integration") {
 
-        auto write = [&]() { 
-            //std::cout << p << " " << X0[0] << "," << X0[1] << std::endl;
-        };
-        for (auto i = 0; p < pmax; ++i) {
-            if (p + dp > pmax) { break; }
+        for (int i : { 0 }) {
+            state_type X0 = get_start(T, i); // Starting point; liquid, then vapor
+            double p0 = get_p(X0);
+            state_type Xfinal = get_start(T, 1 - i); // Ending point; liquid, then vapor
+            double pfinal = get_p(Xfinal);
+
+            //euler<state_type> integrator;
+            runge_kutta_cash_karp54< state_type > integrator;
+            int Nstep = 10000;
+            double p = p0, pmax = pfinal, dp = (pmax - p0) / (Nstep - 1);
+
+            auto write = [&]() {
+                //std::cout << p << " " << X0[0] << "," << X0[1] << std::endl;
+            };
+            for (auto i = 0; p < pmax; ++i) {
+                if (p + dp > pmax) { break; }
+                write();
+                integrator.do_step(xprime, X0, p, dp);
+                p += dp;
+            }
+            double diffs = 0;
+            for (auto i = 0; i < X0.size(); ++i) {
+                diffs += std::abs(X0[i] - Xfinal[i]);
+            }
+            CHECK(diffs < 0.1);
             write();
-            integrator.do_step(xprime, X0, p, dp);
-            p += dp;
         }
-        double diffs = 0;
-        for (auto i = 0; i < X0.size(); ++i) {
-            diffs += std::abs(X0[i] - Xfinal[i]);
-        }
-        CHECK(diffs < 0.1);
-        write();
+    }
+    SECTION("Parametric integration of isotherm") {
+        int i = 0;
+        auto X = get_start(T, 0);
+        state_type Xfinal = get_start(T, 1 - i); // Ending point; liquid, then vapor
+        double pfinal_goal = get_p(Xfinal); 
+        
+        auto N = X.size() / 2;
+        Eigen::ArrayXd rhovecL0 = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+        Eigen::ArrayXd rhovecV0 = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+        auto J = trace_VLE_isotherm_binary(model, T, rhovecL0, rhovecV0);
+        auto Nstep = J.size();
+
+        std::ofstream file("isoT.json"); file << J;
+
+        double pfinal = J.back().at("pL / Pa").back();
+        CHECK(std::abs(pfinal / pfinal_goal-1) < 1e-6);
     }
 }

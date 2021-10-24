@@ -1,7 +1,13 @@
 #pragma once
 
+#include <optional>
 #include "teqp/derivs.hpp"
 #include <Eigen/Dense>
+
+// Imports from boost for numerical integration
+#include <boost/numeric/odeint/stepper/controlled_runge_kutta.hpp>
+#include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
+#include <boost/numeric/odeint/stepper/euler.hpp>
 
 template<typename Model, typename TYPE = double>
 class IsothermPureVLEResiduals  {
@@ -207,4 +213,189 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
         drhodp_vap = linsolve(PSIVstar, PSILstar*drhodp_liq);
     }
     return std::make_tuple(drhodp_liq, drhodp_vap);
+}
+
+struct TVLEOptions {
+    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000;
+    int max_steps = 1000, integration_order = 5;
+    bool polish = false;
+};
+
+/***
+* \brief Trace an isotherm with parametric tracing
+*/
+template<typename Model, typename Scalar, typename VecType>
+auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, VecType rhovecV0, const std::optional<TVLEOptions>& options = std::nullopt) 
+{
+    // Get the options, or the default values if not provided
+    TVLEOptions opt = options.value_or(TVLEOptions{});
+    auto N = rhovecL0.size();
+    if (N != 2) {
+        std::invalid_argument("Size must be 2");
+    }
+    if (rhovecL0.size() != rhovecV0.size()) {
+        std::invalid_argument("Both molar concentration arrays must be of the same size");
+    }
+
+    auto norm = [](const auto& v) { return sqrt((v * v).sum()); };
+
+    // Define datatypes and functions for tracing tools
+    auto JSONdata = nlohmann::json::array();
+
+    // Typedefs for the types
+    using namespace boost::numeric::odeint;
+    using state_type = std::vector<double>;
+
+    // Class for simple Euler integration
+    euler<state_type> eul;
+    typedef runge_kutta_cash_karp54< state_type > error_stepper_type;
+    typedef controlled_runge_kutta< error_stepper_type > controlled_stepper_type;
+
+    // Define the tolerances
+    double abs_err = opt.abs_err, rel_err = opt.rel_err, a_x = 1.0, a_dxdt = 1.0;
+    controlled_stepper_type controlled_stepper(default_error_checker< double, range_algebra, default_operations >(abs_err, rel_err, a_x, a_dxdt));
+
+
+    double c = 1.0;
+
+    // The function to be integrated by odeint
+    auto xprime = [&](const state_type& X, state_type& Xprime, double /*t*/) {
+        // Memory maps into the state vector for inputs and their derivatives
+        // These are views, not copies!
+        auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+        auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+        auto drhovecdtL = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]), N);
+        auto drhovecdtV = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]) + N, N);
+        // Get the derivatives with respect to pressure along the isotherm of the phase envelope
+        auto [drhovecdpL, drhovecdpV] = get_drhovecdp_Tsat(model, T, rhovecL, rhovecV);
+        // Get the derivative of p w.r.t. parameter
+        auto dpdt = 1.0/sqrt(norm(drhovecdpL.array()) + norm(drhovecdpV.array()));
+        // And finally the derivatives with respect to the tracing variable
+        drhovecdtL = c*drhovecdpL*dpdt;
+        drhovecdtV = c*drhovecdpV*dpdt;
+    };
+
+    // Set up the initial state vector
+    state_type x0(2*N), last_drhodt(2*N);
+    auto set_init_state = [&](state_type& X) {
+        auto rhovecL = Eigen::Map<Eigen::ArrayXd>(&(X[0]), N);
+        auto rhovecV = Eigen::Map<Eigen::ArrayXd>(&(X[0]) + N, N);
+        rhovecL = rhovecL0;
+        rhovecV = rhovecV0;
+    };
+    set_init_state(x0);
+    
+    // Figure out which direction to trace initially
+    double t = 0, dt = opt.init_dt;
+    {
+        auto dxdt = x0;
+        xprime(x0, dxdt, -1.0);
+        const auto dXdt = Eigen::Map<const Eigen::ArrayXd>(&(dxdt[0]), dxdt.size());
+        const auto X = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), x0.size());
+
+        const Eigen::ArrayXd step = X + dXdt * dt;
+        Eigen::ArrayX<bool> negativestepvals = (step < 0).eval();
+        // Flip the sign if the first step would yield any negative concentrations
+        if (negativestepvals.any()) {
+            c *= -1;
+        }
+    }
+    std::string termination_reason;
+    
+    // Then trace...
+    int retry_count = 0;
+    for (auto istep = 0; istep < opt.max_steps; ++istep) {
+
+        auto store_point = [&]() {
+            //// Calculate some other parameters, for debugging
+            auto N = x0.size() / 2;
+            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), N);
+            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + N, N);
+            auto rhotot = rhovecL.sum();
+            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
+            double pL = rhotot * model.R(rhovecL / rhovecL.sum())*T + id::get_pr(model, T, rhovecL);
+
+            // Store the data in a JSON structure
+            nlohmann::json point = {
+                {"t", t},
+                {"T / K", T},
+                {"pL / Pa", pL},
+                {"c", c},
+                {"rhoL / mol/m^3", rhovecL},
+                {"rhoV / mol/m^3", rhovecV},
+                
+            };
+            JSONdata.push_back(point);
+        };
+        if (istep == 0 && retry_count == 0) {
+            store_point();
+        }
+
+        double dtold = dt;
+        auto x0_previous = x0;
+
+        // Call the derivative function to get drho/dt in order 
+        // to cache it at the *beginning* of the step
+        auto dxdt = x0;
+        try {
+            xprime(x0, dxdt, -1.0);
+        }
+        catch (...) {
+            break;
+        }
+        last_drhodt = dxdt;
+
+        if (opt.integration_order == 5) {
+            controlled_step_result res = controlled_step_result::fail;
+            try {
+                res = controlled_stepper.try_step(xprime, x0, t, dt);
+            }
+            catch (...) {
+                break;
+            }
+
+            if (res != controlled_step_result::success) {
+                // Try again, with a smaller step size
+                istep--;
+                retry_count++;
+                continue;
+            }
+            else {
+                retry_count = 0;
+            }
+            // Reduce step size if greater than the specified max step size
+            dt = std::min(dt, opt.max_dt);
+        }
+        else if (opt.integration_order == 1) {
+            try {
+                eul.do_step(xprime, x0, t, dt);
+            }
+            catch (...) {
+                break;
+            }
+        }
+        else {
+            throw std::invalid_argument("integration order is invalid:" + std::to_string(opt.integration_order));
+        }
+        auto stop_requested = [&]() {
+            //// Calculate some other parameters, for debugging
+            auto N = x0.size() / 2;
+            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), N);
+            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + N, N);
+            auto x = rhovecL / rhovecL.sum();
+            auto y = rhovecV / rhovecV.sum();
+            if ((x < 0).any() || (x > 1).any() || (y < 0).any() || (y > 1).any()) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        };
+        if (stop_requested()) {
+            break;
+        }
+
+        store_point();
+    }
+    return JSONdata;
 }

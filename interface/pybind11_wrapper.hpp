@@ -51,6 +51,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("extrapolate_from_critical", &extrapolate_from_critical<Model, double>);
     m.def("pure_VLE_T", &pure_VLE_T<Model, double>);
     m.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
+    m.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
 
     //cls.def("get_Ar01", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar01(m, T, rhovec); });
     //cls.def("get_Ar10", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar10(m, T, rhovec); });
