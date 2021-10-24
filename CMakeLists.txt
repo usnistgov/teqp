@@ -104,6 +104,7 @@ endif()
 
 if (TEQP_COVERAGE)
   if(CMAKE_COMPILER_IS_GNUCXX)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "This path")
     # See also http://stackoverflow.com/a/16536401 (a detailed guide on using gcov with cmake)
     include(CodeCoverage)
     SET(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
