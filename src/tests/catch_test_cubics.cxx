@@ -40,6 +40,14 @@ TEST_CASE("Check calling superancillary curves", "[cubic][superanc]")
         auto [rhoL, rhoV] = model.superanc_rhoLV(130.0);
         CHECK(rhoL > rhoV);
     }
+    SECTION("PR super large temp") {
+        auto model = canonical_PR(Tc_K, pc_Pa, acentric);
+        CHECK_THROWS(model.superanc_rhoLV(1.3e6));
+    }
+    SECTION("PR super small temp") {
+        auto model = canonical_PR(Tc_K, pc_Pa, acentric);
+        CHECK_THROWS(model.superanc_rhoLV(1.3e-10));
+    }
     SECTION("SRK") {
         auto model = canonical_SRK(Tc_K, pc_Pa, acentric);
         auto [rhoL, rhoV] = model.superanc_rhoLV(130.0);

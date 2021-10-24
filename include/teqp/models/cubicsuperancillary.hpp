@@ -50,6 +50,13 @@ public:
 
     /// Evaluate the SuperAncillary
     double y(double x) const{
+        // First check whether the input is possible
+        if (x < exps[0].xmin) {
+            throw std::invalid_argument("Ttilde (" + std::to_string(x) + ") is below the minimum of " + std::to_string(exps[0].xmin));
+        }
+        if (x > exps.back().xmax) {
+            throw std::invalid_argument("Ttilde (" + std::to_string(x) + ") is above the maximum of " + std::to_string(exps.back().xmax));
+        }
         // Bisection to find the expansion
         // we need
         auto i = get_index(x);
