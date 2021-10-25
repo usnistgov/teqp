@@ -48,8 +48,10 @@ find_package(Eigen3 REQUIRED)
 # Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
 set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
 
+option (TEQP_NO_PYTHON
+        "Enable to NOT build the Python interface"
+        OFF)
 
-set(TEQP_NO_PYTHON false)
 if (NOT TEQP_NO_PYTHON)
     add_definitions(-DUSE_AUTODIFF)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11" "pybind11")
