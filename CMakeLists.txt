@@ -103,12 +103,13 @@ else()
 endif()
 
 if (TEQP_COVERAGE)
-  if(CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "This path")
-    # See also http://stackoverflow.com/a/16536401 (a detailed guide on using gcov with cmake)
-    include(CodeCoverage)
-    SET(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
-    SET(CMAKE_C_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
-    setup_target_for_coverage(teqp_coverage catch_tests coverage)
-  endif()
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "This path")
+  # See also http://stackoverflow.com/a/16536401 (a detailed guide on using gcov with cmake)
+  include(CodeCoverage)
+  append_coverage_compiler_flags()
+  setup_target_for_coverage_gcovr_html(
+    NAME teqp_coverage
+    EXECUTABLE catch_tests
+    BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
 endif()
