@@ -110,6 +110,6 @@ if (TEQP_COVERAGE)
   setup_target_for_coverage_gcovr_html(
     NAME teqp_coverage
     EXECUTABLE catch_tests
-    BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
   )
 endif()
