@@ -14,6 +14,6 @@ COPY CodeCoverage.cmake /teqp
 # Run the catch exe, generating gcov output
 WORKDIR /teqp
 CMD mkdir build && cd build && cp ../CodeCoverage.cmake . && \
-    cmake .. -GNinja -DTEQP_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug && \
+    cmake .. -GNinja -DTEQP_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -DTEQP_NO_PYTHON=ON && \
     cmake --build . --target teqp_coverage && \
     zip -r /output/html.zip teqp_coverage
