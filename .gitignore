@@ -6,3 +6,5 @@
 /teqp.egg-info
 /MANIFEST.in
 /teqp
+/dev/docker/valgrind/output
+/dev/docker/gcov/output
