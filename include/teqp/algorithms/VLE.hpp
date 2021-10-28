@@ -231,10 +231,10 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
     TVLEOptions opt = options.value_or(TVLEOptions{});
     auto N = rhovecL0.size();
     if (N != 2) {
-        std::invalid_argument("Size must be 2");
+        throw std::invalid_argument("Size must be 2");
     }
     if (rhovecL0.size() != rhovecV0.size()) {
-        std::invalid_argument("Both molar concentration arrays must be of the same size");
+        throw std::invalid_argument("Both molar concentration arrays must be of the same size");
     }
 
     auto norm = [](const auto& v) { return sqrt((v * v).sum()); };
