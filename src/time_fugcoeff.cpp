@@ -35,18 +35,6 @@ int main()
         SETPATHdll(hpath, 255);
     }
 
-    {
-        int ierr = 0, nc = 1;
-        char herr[256], hfld[10001] = "PROPANE", hhmx[256] = "HMX.BNC", href[4] = "DEF";
-#if defined(USE_TEQP_HMX)
-        strcpy(hhmx, (std::string("teqpHMX.BNC") + std::string(256 - 10, ' ')).c_str());
-#endif
-        SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
-        if (ierr != 0) {
-            printf("This ierr: %d herr: %s\n", ierr, herr);
-            return EXIT_FAILURE;
-        }
-    }
     // Try to disable caching in REFPROP
     {
         int ierr = 0; char herr[256];
@@ -90,10 +78,17 @@ int main()
                         name += "*" + fluid_set[j];
                     }
                     int ierr = 0, nc = Ncomp;
-                    char herr[256], hfld[10001] = " ", hhmx[256] = "HMX.BNC", href[4] = "DEF";
+                    char herr[256] = " ", hfld[10001] = " ", hhmx[256] = "HMX.BNC", href[4] = "DEF";
+#if defined(USE_TEQP_HMX)
+                    std::string rhs = std::string("./teqpHMX.BNC") + "\0";
+                    strncpy(hhmx, rhs.c_str(), rhs.size());
+#endif
                     strcpy(hfld, (name + "\0").c_str());
                     SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
-                    if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
+                    if (ierr != 0) {
+                        printf("This ierr: %d herr: %s\n", ierr, herr);
+                        return nlohmann::json{ {"err", herr} };
+                    }
                 }
                 std::valarray<double> z(20); z = 0.0; z[std::slice(0, Ncomp, 1)] = 1.0 / Ncomp;
                 std::valarray<double> u(20); u = 0.0;
