@@ -171,8 +171,14 @@ int main()
     SETPATHdll(const_cast<char*>(path.c_str()), 400);
 
     int ierr = 0, nc = 1;
-    char herr[255], hfld[10000] = "PROPANE", hhmx[255] = "HMX.BNC", href[4] = "DEF";
-    SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
+    char herr[255], hfld[10000] = "PROPANE", href[4] = "DEF";
+    
+    char hmx[256] = "HMX.BNC";
+#if defined(USE_TEQP_HMX)
+    strcpy(hmx, (std::string("teqpHMX.BNC")+std::string(256-10,' ')).c_str());
+#endif
+    if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
+    SETUPdll(nc, hfld, hmx, href, ierr, herr, 10000, 255, 3, 255);
     {
         char hflag[256] = "Cache                                                ";
         int jFlag = 3, kFlag = -1;

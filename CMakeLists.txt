@@ -80,6 +80,7 @@ add_test(teqpc_tests teqpc)
 
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)
+  add_definitions(-DUSE_TEQP_HMX)
   # Collect all the snippets
   file(GLOB_RECURSE snippets "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 

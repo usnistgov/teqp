@@ -38,6 +38,9 @@ int main()
     {
         int ierr = 0, nc = 1;
         char herr[256], hfld[10001] = "PROPANE", hhmx[256] = "HMX.BNC", href[4] = "DEF";
+#if defined(USE_TEQP_HMX)
+        strcpy(hhmx, (std::string("teqpHMX.BNC") + std::string(256 - 10, ' ')).c_str());
+#endif
         SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
         if (ierr != 0) {
             printf("This ierr: %d herr: %s\n", ierr, herr);
