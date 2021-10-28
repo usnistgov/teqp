@@ -222,6 +222,9 @@ int main()
                 }
                 int ierr = 0, nc = Ncomp;
                 char herr[255], hfld[10000] = " ", hhmx[255] = "HMX.BNC", href[4] = "DEF";
+#if defined(USE_TEQP_HMX)
+                strcpy(hhmx, (std::string("./teqpHMX.BNC") + "\0").c_str());
+#endif
                 strcpy(hfld, (name + "\0").c_str());
                 SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
                 if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
