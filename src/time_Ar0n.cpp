@@ -168,24 +168,17 @@ int main()
     bool loaded_REFPROP = load_REFPROP(err, path, DLL_name);
     printf("Loaded refprop: %s @ address %zu\n", loaded_REFPROP ? "true" : "false", REFPROP_address());
     if (!loaded_REFPROP) { return EXIT_FAILURE; }
-    SETPATHdll(const_cast<char*>(path.c_str()), 400);
-
-    int ierr = 0, nc = 1;
-    char herr[255], hfld[10000] = "PROPANE", href[4] = "DEF";
+    char hpath[256] = " ";
+    strcpy(hpath, const_cast<char*>(path.c_str()));
+    SETPATHdll(hpath, 255);
     
-    char hmx[256] = "HMX.BNC";
-#if defined(USE_TEQP_HMX)
-    strcpy(hmx, (std::string("teqpHMX.BNC")+std::string(256-10,' ')).c_str());
-#endif
-    if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
-    SETUPdll(nc, hfld, hmx, href, ierr, herr, 10000, 255, 3, 255);
     {
-        char hflag[256] = "Cache                                                ";
+        int ierr = 0; 
+        char hflag[256] = "Cache                                                ", herr[256] = " ";
         int jFlag = 3, kFlag = -1;
         FLAGSdll(hflag, jFlag, kFlag, ierr, herr, 255, 255);
         //std::cout << kFlag << std::endl;
     }
-    if (ierr != 0) printf("This ierr: %d herr: %s\n", ierr, herr);
     {
         // Prepare some input values. It doesn't matter what the values of tau and delta are,
         // so long as they are not the same since we are not doing a phase equilibrium calculation, just
@@ -223,7 +216,8 @@ int main()
                 int ierr = 0, nc = Ncomp;
                 char herr[255], hfld[10000] = " ", hhmx[255] = "HMX.BNC", href[4] = "DEF";
 #if defined(USE_TEQP_HMX)
-                strcpy(hhmx, (std::string("./teqpHMX.BNC") + "\0").c_str());
+                std::string rhs = std::string("./teqpHMX.BNC") + "\0";
+                strncpy(hhmx, rhs.c_str(), rhs.size());
 #endif
                 strcpy(hfld, (name + "\0").c_str());
                 SETUPdll(nc, hfld, hhmx, href, ierr, herr, 10000, 255, 3, 255);
@@ -247,7 +241,7 @@ int main()
             auto build_PCSAFT = [](auto Ncomp) {
                 std::vector<SAFTCoeffs> coeffs;
                 for (auto i = 0; i < Ncomp; ++i) {
-                    // Values don't matter to the computer...
+                    // Values don't matter to the computer, just make them all the same...
                     SAFTCoeffs c;
                     c.m = 2.0020;
                     c.sigma_Angstrom = 3.6184;
