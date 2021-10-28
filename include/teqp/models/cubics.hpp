@@ -1,7 +1,7 @@
 #pragma once
 
 /* 
-Implemetations of the canonical cubic equations of state
+Implementations of the canonical cubic equations of state
 */
 
 #include <vector>

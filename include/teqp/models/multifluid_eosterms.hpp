@@ -1,7 +1,7 @@
 #pragma once
 
 /**
-\f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i}\f$
+\f$ \alpha^{\rm r}=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i}\f$
 */
 class JustPowerEOSTerm {
 public:
@@ -18,6 +18,9 @@ public:
     }
 };
 
+/**
+\f$ \alpha^{\rm r}=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-c_i\delta^{l_i})\f$
+*/
 class PowerEOSTerm {
 public:
     Eigen::ArrayXd n, t, d, c, l;
@@ -35,7 +38,7 @@ public:
 };
 
 /**
-\f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\gamma_i\delta^{l_i})\f$
+\f$ \alpha^{\rm r}=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\gamma_i\delta^{l_i})\f$
 */
 class ExponentialEOSTerm {
 public:
@@ -54,7 +57,7 @@ public:
 };
 
 /**
-\f$ \alpha^r = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 -\beta_i(\tau-\gamma_i)^2 }\f$
+\f$ \alpha^{\rm r} = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 -\beta_i(\tau-\gamma_i)^2 )\f$
 */
 class GaussianEOSTerm {
 public:
@@ -73,7 +76,7 @@ public:
 };
 
 /**
-\f$ \alpha^r = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 -\beta_i(\delta-\gamma_i) }\f$
+\f$ \alpha^{\rm r} = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 -\beta_i(\delta-\gamma_i) )\f$
 */
 class GERG2004EOSTerm {
 public:
@@ -93,7 +96,7 @@ public:
 
 
 /**
-\f$ \alpha^r = \displaystyle\sum_i n_i \delta^ { d_i } \tau^ { t_i } \exp(-\delta^ { l_i } - \tau^ { m_i })\f$
+\f$ \alpha^{\rm r} = \displaystyle\sum_i n_i \delta^ { d_i } \tau^ { t_i } \exp(-\delta^ { l_i } - \tau^ { m_i })\f$
 */
 class Lemmon2005EOSTerm {
 public:
@@ -112,7 +115,7 @@ public:
 };
 
 /**
-\f$ \alpha^r = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 + \frac{1}{\beta_i(\tau-\gamma_i)^2+b_i}\f$
+\f$ \alpha^{\rm r} = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp\left(-\eta_i(\delta-\epsilon_i)^2 + \frac{1}{\beta_i(\tau-\gamma_i)^2+b_i}\right)\f$
 */
 class GaoBEOSTerm {
 public:

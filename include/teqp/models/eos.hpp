@@ -3,36 +3,42 @@
 #include "teqp/constants.hpp"
 #include "teqp/types.hpp"
 
-/** 
+/*
 To add:
-1. Other cubic EOS (PR, SRK)
-2. LKP (Stefan Herrig's thesis)
+1. LKP (Stefan Herrig's thesis)
 */
 
-/* A (very) simple implementation of the van der Waals EOS*/
+/// A (very) simple implementation of the van der Waals EOS
 class vdWEOS1 {
 private:
     double a, b;
 public:
+    /// Intializer, taking the a and b constants directly
     vdWEOS1(double a, double b) : a(a), b(b) {};
 
     const double Ru = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
 
+    /// \brief Get the universal gas constant 
+    /// \note Here the real universal gas constant, with no composition dependence
     template<class VecType>
     auto R(const VecType& molefrac) const { return Ru; }
 
+    /// The evaluation of \f$ \alpha^{\rm r}=a/(RT) \f$
+    /// \param T The temperature
+    /// \param rho The molar density
+    /// \param molefrac The mole fractions of each component
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType &T, const RhoType& rhotot, const VecType &molefrac) const {
         return forceeval(-log(1.0 - b * rhotot) - (a / (R(molefrac) * T)) * rhotot);
     }
 
+    /// \brief For testing, provide the pressure explicit form of the EOS
     double p(double T, double v) {
         return Ru*T/(v - b) - a/(v*v);
     }
 };
 
-/* A slightly more involved implementation of van der Waals, 
-this time with mixture properties */
+/// A slightly more involved implementation of van der Waals, this time with mixture properties
 template <typename NumType>
 class vdWEOS {
 protected:
@@ -45,9 +51,12 @@ protected:
     template<typename TType, typename IndexType>
     auto get_bi(TType T, IndexType i) const { return bi[i]; }
 
-    
-
 public:
+    /// \brief Initializer, taking the arrays of critical temperatures and pressures
+    /// \param Tc_K Array of critical temperatures in Kelvin
+    /// \param pc_Pa Array of critical pressures in Pascal
+    /// 
+    /// \note All interaction parameters are set to default value of zero and cannot currently be tuned
     vdWEOS(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa)
     {
         ai.resize(Tc_K.size());
@@ -59,6 +68,9 @@ public:
         k = std::valarray<std::valarray<NumType>>(std::valarray<NumType>(0.0, Tc_K.size()), Tc_K.size());
     }; 
     
+    /// \brief Calculate the a parameter, based on quadratic mixing rules
+    /// \param T Temperature
+    /// \param molefracs Array of mole fractions
     template<typename TType, typename CompType>
     auto a(TType T, const CompType& molefracs) const {
         typename CompType::value_type a_ = 0.0;
@@ -72,6 +84,8 @@ public:
         return forceeval(a_);
     }
 
+    /// \brief Calculate the b parameter, based on linear mixing rules
+    /// \param molefracs Array of mole fractions
     template<typename CompType>
     auto b(const CompType& molefracs) const {
         typename CompType::value_type b_ = 0.0;
@@ -81,13 +95,20 @@ public:
         return forceeval(b_);
     }
 
-    const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
+    const NumType Ru = get_R_gas<double>(); ///< Universal gas constant, exact number
 
+    /// \brief Get the universal gas constant 
+    /// Here the real universal gas constant, with no composition dependence
+    /// \param molefrac Array of mole fractions (ignored, but required to match other function calls)
     template<class VecType>
-    auto R(const VecType& molefrac) const {
+    auto R(const VecType& /*molefrac*/) const {
         return Ru;
     }
 
+    /// \brief The evaluation of \f$ \alpha^{\rm r}=a/(RT) \f$
+    /// \param T The temperature
+    /// \param rho The molar density
+    /// \param molefrac The mole fractions of each component
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType &T,
         const RhoType& rho,
