@@ -28,7 +28,7 @@ struct OneTiming {
     double value, sec_per_call;
 };
 
-constexpr int repeatmax = 1000;
+constexpr int repeatmax = 10000;
 enum class obtainablethings { PHIX, CHEMPOT };
 
 template<typename Taus, typename Deltas, typename TT, typename RHO>

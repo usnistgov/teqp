@@ -47,7 +47,7 @@ int main()
     nlohmann::json outputs = nlohmann::json::array();
 
     double T = 300, D_moldm3 = 3, D_molm3 = D_moldm3*1e3;
-    int N = 100000;
+    int N = 1000000;
     std::vector<std::string> component_list = { "Methane","Ethane","n-Propane","n-Butane","n-Pentane","n-Hexane" };
     {
         for (int Ncomp : {1, 2, 3, 4, 5, 6}) {
