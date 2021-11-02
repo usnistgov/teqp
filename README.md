@@ -18,9 +18,11 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
-0.3.0 Add integration options to the tracing of the critical curve; fix ``__version__``
+* 0.4.0 Add VLE tracing, code coverage and valgrind testing, fugacity_coefficients, generalize loading of multifluid models
 
-0.2.0 Add fluid files to the python package
+* 0.3.0 Add integration options to the tracing of the critical curve; fix ``__version__``
+
+* 0.2.0 Add fluid files to the python package
 
 ## Install
 
