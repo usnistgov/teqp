@@ -60,3 +60,15 @@ TEST_CASE("Check that all pure fluid models can be instantiated", "[multifluid],
         }
     }    
 }
+
+TEST_CASE("Check that mixtures can also do absolute paths", "[multifluid],[abspath]") {
+    std::string root = "../mycp";
+    SECTION("With absolute paths to json file") {
+        std::vector<std::filesystem::path> paths = { root + "/dev/fluids/Methane.json", root + "/dev/fluids/Ethane.json" };
+        std::vector<std::string> abspaths;
+        for (auto p : paths) {
+            abspaths.emplace_back(std::filesystem::absolute(p).string());
+        }
+        auto model = build_multifluid_model(abspaths, root, root + "/dev/mixtures/mixture_binary_pairs.json");
+    }
+}
