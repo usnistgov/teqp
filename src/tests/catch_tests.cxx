@@ -5,7 +5,7 @@
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/cubicsuperancillary.hpp"
 #include "teqp/models/CPA.hpp"
-#include "teqp/models/eos.hpp"
+#include "teqp/models/vdW.hpp"
 
 #include "teqp/algorithms/VLE.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"

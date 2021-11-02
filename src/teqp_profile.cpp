@@ -6,7 +6,7 @@
 
 #include "teqp/types.hpp"
 #include "nlohmann/json.hpp"
-#include "teqp/models/eos.hpp"
+#include "teqp/models/vdW.hpp"
 //#include "teqp/models/CPA.hpp"
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/pcsaft.hpp"

@@ -1,7 +1,7 @@
 
 #include "pybind11_wrapper.hpp"
 
-#include "teqp/models/eos.hpp"
+#include "teqp/models/vdW.hpp"
 #include "teqp/derivs.hpp"
 
 void add_vdW(py::module &m){

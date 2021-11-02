@@ -2,7 +2,7 @@
 #define CATCH_CONFIG_MAIN
 #include <catch/catch.hpp>
 
-#include "teqp/models/eos.hpp"
+#include "teqp/models/vdW.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/cubics.hpp"
 

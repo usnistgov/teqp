@@ -7,7 +7,7 @@
 #include <variant>
 #include <atomic>
 
-#include "teqp/models/eos.hpp"
+#include "teqp/models/vdW.hpp"
 #include "teqp/models/cubics.hpp"
 #include "teqp/derivs.hpp"
 
