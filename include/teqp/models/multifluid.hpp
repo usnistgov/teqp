@@ -194,9 +194,15 @@ public:
     static auto get_BIPdep(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
 
         if (flags.contains("estimate")) {
-            return nlohmann::json({
-                {"betaT", 1.0}, {"gammaT", 1.0}, {"betaV", 1.0}, {"gammaV", 1.0}, {"F", 0.0} 
-            });
+            std::string scheme = flags["estimate"];
+            if (scheme == "Lorentz-Berthelot") {
+                return nlohmann::json({
+                    {"betaT", 1.0}, {"gammaT", 1.0}, {"betaV", 1.0}, {"gammaV", 1.0}, {"F", 0.0}
+                });
+            }
+            else {
+                throw std::invalid_argument("estimation scheme is not understood:" + scheme);
+            }
         }
 
         // convert string to upper case
