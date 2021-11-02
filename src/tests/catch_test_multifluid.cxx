@@ -42,11 +42,21 @@ TEST_CASE("Trace critical locus for nitrogen + ethane", "[crit],[multifluid]")
     }
 }
 
-TEST_CASE("Check that all models can be instantiated", "[multifluid],[all]"){
+TEST_CASE("Check that all pure fluid models can be instantiated", "[multifluid],[all]"){
     std::string root = "../mycp";
-    for (auto filename : get_files_in_folder(root + "/dev/fluids", ".json")) {
-        auto stem = filename.stem().string(); // filename without the .json
-        if (stem == "Methanol") { continue; }
-        auto model = build_multifluid_model({ stem }, root, root + "/dev/mixtures/mixture_binary_pairs.json");
+    SECTION("With absolute paths to json file") {
+        for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
+            if (path.filename().stem() == "Methanol") { continue; }
+            CAPTURE(path.string());
+            auto abspath = std::filesystem::absolute(path).string();
+            auto model = build_multifluid_model({ abspath }, root, root + "/dev/mixtures/mixture_binary_pairs.json");
+        }
     }
+    SECTION("With filename stems") {
+        for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
+            auto stem = path.filename().stem().string(); // filename without the .json
+            if (stem == "Methanol") { continue; }
+            auto model = build_multifluid_model({ stem }, root, root + "/dev/mixtures/mixture_binary_pairs.json");
+        }
+    }    
 }

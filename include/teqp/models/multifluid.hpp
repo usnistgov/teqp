@@ -8,6 +8,7 @@
 #include <cmath>
 #include <optional>
 #include <variant>
+#include <filesystem>
 
 #include "teqp/derivs.hpp"
 #include "teqp/types.hpp"
@@ -244,20 +245,13 @@ public:
         }
         return std::make_tuple(betaT, gammaT, betaV, gammaV);
     }
-    static auto get_Tcvc(const std::string& coolprop_root, const std::vector<std::string>& components) {
-        Eigen::ArrayXd Tc(components.size()), vc(components.size());
-        using namespace nlohmann;
+    static auto get_Tcvc(const std::vector<nlohmann::json>& pureJSON) {
+        Eigen::ArrayXd Tc(pureJSON.size()), vc(pureJSON.size());
         auto i = 0;
-        for (auto& c : components) {
-            std::string path = coolprop_root + "/dev/fluids/" + c + ".json";
-            std::ifstream ifs(path);
-            if (!ifs) {
-                throw std::invalid_argument("Load path is invalid: " + path);
-            }
-            auto j = json::parse(ifs);
+        for (auto& j : pureJSON) {
             auto red = j["EOS"][0]["STATES"]["reducing"];
-            double Tc_ = red["T"];
-            double rhoc_ = red["rhomolar"];
+            double Tc_ = red.at("T");
+            double rhoc_ = red.at("rhomolar");
             Tc[i] = Tc_;
             vc[i] = 1.0 / rhoc_;
             i++;
@@ -566,10 +560,8 @@ inline auto get_departure_function_matrix(const std::string& coolprop_root, cons
     return funcs;
 }
 
-inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& name)
+inline auto get_EOS_terms(const nlohmann::json& j)
 {
-    using namespace nlohmann;
-    auto j = json::parse(std::ifstream(coolprop_root + "/dev/fluids/" + name + ".json"));
     auto alphar = j["EOS"][0]["alphar"];
 
     const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005", "ResidualHelmholtzExponential" };
@@ -786,13 +778,37 @@ inline auto get_EOS_terms(const std::string& coolprop_root, const std::string& n
     return container;
 }
 
-inline auto get_EOSs(const std::string& coolprop_root, const std::vector<std::string>& names) {
+inline auto get_EOSs(const std::vector<nlohmann::json>& pureJSON) {
     std::vector<EOSTerms> EOSs;
-    for (auto& name : names) {
-        auto term = get_EOS_terms(coolprop_root, name);
+    for (auto& j : pureJSON) {
+        auto term = get_EOS_terms(j);
         EOSs.emplace_back(term);
     }
     return EOSs;
+}
+
+inline auto collect_component_json(const std::vector<std::string>& components, const std::string& root) 
+{
+    std::vector<nlohmann::json> out;
+    for (auto c : components) {
+        std::vector<std::filesystem::path> candidates = { c, root + "/dev/fluids/" + c + ".json" };
+        std::filesystem::path selected_path = "";
+        for (auto candidate : candidates) {
+            if (std::filesystem::exists(candidate)) {
+                selected_path = candidate;
+                break;
+            }
+        }
+        if (selected_path != "") {
+            std::ifstream ifs(selected_path);
+            auto j = nlohmann::json::parse(ifs);
+            out.push_back(j);
+        }
+        else {
+            throw std::invalid_argument("Could not load the fluid:" + c);
+        }
+    }
+    return out;
 }
 
 inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags = {}) {
@@ -804,8 +820,9 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
     const auto BIPcollection = nlohmann::json::parse(stream);
 
     // Pure fluids
-    auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(coolprop_root, components);
-    auto EOSs = get_EOSs(coolprop_root, components); 
+    auto pureJSON = collect_component_json(components, coolprop_root);
+    auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(pureJSON);
+    auto EOSs = get_EOSs(pureJSON); 
     
     // Things related to the mixture
     auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, components, flags);
