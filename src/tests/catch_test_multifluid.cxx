@@ -2,6 +2,8 @@
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
+#include "teqp/filesystem.hpp"
+
 
 TEST_CASE("Confirm failure for missing files","[multifluid]") {
     CHECK_THROWS(build_multifluid_model({ "BADFLUID" }, "IMPOSSIBLE PATH", "IMPOSSIBLE PATH.json"));
@@ -37,5 +39,14 @@ TEST_CASE("Trace critical locus for nitrogen + ethane", "[crit],[multifluid]")
         auto j = ct::trace_critical_arclength_binary(model, T0, rhovec0, filename, opt);
         CHECK(j.size() > 3);
         auto tic1 = std::chrono::steady_clock::now();
+    }
+}
+
+TEST_CASE("Check that all models can be instantiated", "[multifluid],[all]"){
+    std::string root = "../mycp";
+    for (auto filename : get_files_in_folder(root + "/dev/fluids", ".json")) {
+        auto stem = filename.stem().string(); // filename without the .json
+        if (stem == "Methanol") { continue; }
+        auto model = build_multifluid_model({ stem }, root, root + "/dev/mixtures/mixture_binary_pairs.json");
     }
 }
