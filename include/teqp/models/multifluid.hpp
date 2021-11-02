@@ -538,13 +538,13 @@ inline auto build_departure_function(const nlohmann::json& j) {
     return dep;
 }
 
-inline auto get_departure_function_matrix(const std::string& coolprop_root, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
+inline auto get_departure_function_matrix(const nlohmann::json& depcollection, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
 
     // Allocate the matrix with default models
     std::vector<std::vector<DepartureTerms>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
 
     // Load the collection of data on departure functions
-    auto depcollection = nlohmann::json::parse(std::ifstream(coolprop_root + "/dev/mixtures/mixture_departure_functions.json"));
+
     auto get_departure_json = [&depcollection](const std::string& Name) {
         for (auto& el : depcollection) {
             if (el["Name"] == Name) { return el; }
@@ -832,13 +832,17 @@ inline auto collect_identifiers(const std::vector<nlohmann::json>& pureJSON)
     return identifiers;
 }
 
-inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags = {}) {
+inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
 
-    auto stream = std::ifstream(BIPcollectionpath);
+    std::string BIPpath = (BIPcollectionpath.empty()) ? coolprop_root + "/dev/mixtures/mixture_binary_pairs.json" : BIPcollectionpath;
+    auto stream = std::ifstream(BIPpath);
     if (!stream) {
-        throw std::invalid_argument("Cannot open BIP collection file: " + BIPcollectionpath);
+        throw std::invalid_argument("Cannot open BIP collection file: " + BIPpath);
     }
     const auto BIPcollection = nlohmann::json::parse(stream);
+
+    std::string deppath = (departurepath.empty()) ? coolprop_root + "/dev/mixtures/mixture_departure_functions.json" : departurepath;
+    const auto depcollection = nlohmann::json::parse(std::ifstream(deppath));
 
     // Pure fluids
     auto pureJSON = collect_component_json(components, coolprop_root);
@@ -850,7 +854,7 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
     
     // Things related to the mixture
     auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, identifiers, flags);
-    auto funcs = get_departure_function_matrix(coolprop_root, BIPcollection, identifiers, flags);
+    auto funcs = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
     auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, identifiers, flags);
 
     auto redfunc = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
