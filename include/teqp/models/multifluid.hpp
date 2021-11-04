@@ -13,6 +13,7 @@
 #include "teqp/derivs.hpp"
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
+#include "teqp/filesystem.hpp"
 
 #include "MultiComplex/MultiComplex.hpp"
 
@@ -226,18 +227,32 @@ public:
 
         throw std::invalid_argument("Can't match the binary pair for: " + identifiers[0] + "/" + identifiers[1]);
     }
-    static auto get_binary_interaction_double(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
-        auto [el, swap_needed] = get_BIPdep(collection, components, flags);
 
-        double betaT = el["betaT"], gammaT = el["gammaT"], betaV = el["betaV"], gammaV = el["gammaV"];
-        // Backwards order of components, flip beta values
-        if (swap_needed) {
-            betaT = 1.0 / betaT;
-            betaV = 1.0 / betaV;
+    static auto get_binary_interaction_double(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags, const std::vector<double>&Tc, const std::vector<double>&vc) {
+        auto [el, swap_needed] = get_BIPdep(collection, identifiers, flags);
+
+        double betaT, gammaT, betaV, gammaV;
+        if (el.contains("betaT") && el.contains("gammaT") && el.contains("betaV") & el.contains("gammaV")){
+            betaT = el["betaT"]; gammaT = el["gammaT"]; betaV = el["betaV"]; gammaV = el["gammaV"];
+            // Backwards order of components, flip beta values
+            if (swap_needed) {
+                betaT = 1.0 / betaT;
+                betaV = 1.0 / betaV;
+            }
+        }
+        else if (el.contains("xi") && el.contains("zeta")) {
+            gammaT = 0.5 * (Tc[0] + Tc[1] + el["xi"]) / (2 * sqrt(Tc[0] * Tc[1]));
+            gammaV =  4.0 * (vc[0] + vc[1] + el["zeta"]) / (0.25*pow(1 / pow(1 / vc[0], 1.0 / 3.0) + 1 / pow(1 / vc[1], 1.0 / 3.0), 3));
+            betaT = 1.0;
+            betaV = 1.0;
+        }
+        else {
+            std::invalid_argument("Could not understaind what to do with this binary model specification: " + el.dump());
         }
         return std::make_tuple(betaT, gammaT, betaV, gammaV);
     }
-    static auto get_BIP_matrices(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
+    template <typename Tcvec, typename vcvec>
+    static auto get_BIP_matrices(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags, const Tcvec& Tc, const vcvec& vc) {
         Eigen::MatrixXd betaT, gammaT, betaV, gammaV, YT, Yv;
         auto N = components.size();
         betaT.resize(N, N); betaT.setZero();
@@ -246,7 +261,7 @@ public:
         gammaV.resize(N, N); gammaV.setZero();
         for (auto i = 0; i < N; ++i) {
             for (auto j = i + 1; j < N; ++j) {
-                auto [betaT_, gammaT_, betaV_, gammaV_] = get_binary_interaction_double(collection, { components[i], components[j] }, flags);
+                auto [betaT_, gammaT_, betaV_, gammaV_] = get_binary_interaction_double(collection, { components[i], components[j] }, flags, { Tc[i], Tc[j] }, { vc[i], vc[j] });
                 betaT(i, j) = betaT_;         betaT(j, i) = 1.0 / betaT(i, j);
                 gammaT(i, j) = gammaT_;       gammaT(j, i) = gammaT(i, j);
                 betaV(i, j) = betaV_;         betaV(j, i) = 1.0 / betaV(i, j);
@@ -870,6 +885,33 @@ inline nlohmann::json load_a_JSON_file(const std::string &path){
     return nlohmann::json::parse(stream);
 }
 
+/// Build a reverse-lookup map for finding a fluid JSON structure given a backup identifier
+inline auto build_alias_map(const std::string& root) {
+    std::map<std::string, std::string> aliasmap;
+    for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
+        auto j = load_a_JSON_file(path.string());
+        for (std::string k : {"NAME", "CAS", "REFPROP_NAME"}) {
+            std::string val = j.at("INFO").at(k); 
+            if (aliasmap.count(val) > 0) {
+                std::invalid_argument("Duplicated reverse lookup identifier ["+k+"] found in file:" + path.string());
+            }
+            else {
+                aliasmap[val] = std::filesystem::absolute(path).string();
+            }
+        }
+        std::vector<std::string> aliases = j.at("INFO").at("ALIASES");
+        for (std::string alias : aliases) {
+            if (aliasmap.count(alias) > 0) {
+                std::invalid_argument("Duplicated alias [" + alias + "] found in file:" + path.string());
+            }
+            else {
+                aliasmap[alias] = std::filesystem::absolute(path).string();
+            }
+        }
+    }
+    return aliasmap;
+}
+
 inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
 
     std::string BIPpath = (BIPcollectionpath.empty()) ? coolprop_root + "/dev/mixtures/mixture_binary_pairs.json" : BIPcollectionpath;
@@ -879,7 +921,21 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
     const auto depcollection = load_a_JSON_file(deppath);
 
     // Pure fluids
-    auto pureJSON = collect_component_json(components, coolprop_root);
+    std::vector<nlohmann::json> pureJSON;
+    try {
+        // Try the normal lookup, matching component name to a file in dev/fluids (case sensitive match on linux!)
+        pureJSON = collect_component_json(components, coolprop_root);
+    }
+    catch(...){
+        // Lookup the absolute paths for each component
+        auto aliasmap = build_alias_map(coolprop_root);
+        std::vector<std::string> abspaths;
+        for (auto c : components) {
+            abspaths.push_back(aliasmap[c]);
+        }
+        // Backup lookup with absolute paths resolved for each component
+        pureJSON = collect_component_json(abspaths, coolprop_root);
+    }
     auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(pureJSON);
     auto EOSs = get_EOSs(pureJSON); 
 
@@ -891,7 +947,7 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
     // Things related to the mixture
     auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, identifiers, flags);
     auto funcs = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
-    auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, identifiers, flags);
+    auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, identifiers, flags, Tc, vc);
 
     auto redfunc = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
 

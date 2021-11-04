@@ -81,3 +81,20 @@ TEST_CASE("Check that mixtures can also do absolute paths", "[multifluid],[abspa
         auto model2 = build_multifluid_model(abspaths, root); // default path for BIP
     }
 }
+
+TEST_CASE("Check that all binary pairs specified in the binary pair file can be instantiated", "[multifluid],[binaries]") {
+    std::string root = "../mycp";
+    REQUIRE_NOTHROW(build_alias_map(root));
+    auto amap = build_alias_map(root);
+    for (auto el : load_a_JSON_file(root + "/dev/mixtures/mixture_binary_pairs.json")) {
+        auto is_unsupported = [](const auto& s) {
+            return (s == "METHANOL" || s == "R1216" || s == "C14" || s == "IOCTANE" || s == "C4F10" || s == "C5F12" || s == "C1CC6" || s == "C3CC6" || s == "CHLORINE" || s == "RE347MCC");
+        };
+        if (is_unsupported(el["Name1"]) || is_unsupported(el["Name2"])) {
+            continue;
+        }
+        CAPTURE(el["Name1"]);
+        CAPTURE(el["Name2"]);
+        CHECK_NOTHROW(build_multifluid_model({ amap[el["Name1"]], amap[el["Name2"]] }, root)); // default path for BIP
+    }
+}
