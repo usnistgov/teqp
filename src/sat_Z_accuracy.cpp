@@ -228,7 +228,6 @@ int do_one(const std::string &RPname, const std::string &teqpname)
                 {"ratio01-1", Ar01ratiominus1},
                 {"Ar02teqp", c.Ar02teqp},
                 {"Ar02exact", c.Ar02exact},
-                {"ratio02-1", Ar02ratiominus1},
                 {"Ar01RP", ((Q == 0) ? Ar01LRP : Ar01VRP)},
                 {"Ar02RP", ((Q == 0) ? Ar02LRP : Ar02VRP)},
                 {"Ar03RP", ((Q == 0) ? Ar03LRP : Ar03VRP)},
