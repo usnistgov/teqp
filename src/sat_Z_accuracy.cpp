@@ -85,7 +85,7 @@ auto REFPROP_sat(double T) {
 }
 
 struct calc_output {
-    double Zexact, Zteqp, Ar03exact, Ar03teqp;
+    double Zexact, Zteqp, Ar03exact, Ar03teqp, Ar01exact, Ar01teqp;
 };
 
 template<typename Model, typename VECTOR>
@@ -93,6 +93,7 @@ auto with_teqp_and_boost(const Model &model, double T, double rho, const VECTOR 
     // Pressure for each phase via teqp in double precision w/ autodiff
     using tdx = TDXDerivatives<decltype(model), double, VECTOR>;
     double Zteqp = 1.0 + tdx::get_Ar01(model, T, rho, z);
+    double Ar01teqp = 1.0 + tdx::get_Ar01(model, T, rho, z);
 
     // Calculation with ridiculous number of digits of precision (the approximation of ground truth)
     using my_float = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>;
@@ -149,6 +150,8 @@ auto with_teqp_and_boost(const Model &model, double T, double rho, const VECTOR 
     calc_output o;
     o.Zexact = static_cast<double>(Zexact);
     o.Zteqp = Zteqp;
+    o.Ar01exact = derL3;
+    o.Ar01teqp = Ar01teqp;
 
     // Now do the third-order derivative of alphar, as a further test
     // Define a generic lambda function taking rho
@@ -187,6 +190,10 @@ int do_one(const std::string &RPname, const std::string &teqpname)
         double ZVRP = pV/(o.rhoVmol_L*RV*o.T); // Units cancel (factor of 1000 in pV and RV)
         double deltaV = o.rhoVmol_L / Dr, Ar03VRP = -1;
         PHIXdll(itau, idelta, tau, deltaV, &(z[0]), Ar03VRP);
+        double Ar01LRP = -1, Ar01VRP = -1;
+        idelta = 1;
+        PHIXdll(itau, idelta, tau, deltaL, &(z[0]), Ar01LRP);
+        PHIXdll(itau, idelta, tau, deltaV, &(z[0]), Ar01VRP);
 
         double rhoL = o.rhoLmol_L * 1000.0, rhoV = o.rhoVmol_L*1000.0;
         for (double Q : { 0, 1 }) {
@@ -203,7 +210,11 @@ int do_one(const std::string &RPname, const std::string &teqpname)
                 {"Ar03teqp", c.Ar03teqp},
                 {"Ar03exact", c.Ar03exact},
                 {"ratio03-1", c.Ar03teqp / c.Ar03exact - 1},
+                {"Ar01teqp", c.Ar01teqp},
+                {"Ar01exact", c.Ar01exact},
+                {"ratio01-1", c.Ar01teqp / c.Ar01exact - 1},
                 {"Ar03RP", ((Q == 0) ? Ar03LRP : Ar03VRP)},
+                {"Ar03RP", ((Q == 0) ? Ar01LRP : Ar01VRP)},
                 });
         }
         std::cout << "Completed:" << T << std::endl;
