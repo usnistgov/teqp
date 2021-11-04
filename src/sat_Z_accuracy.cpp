@@ -155,7 +155,7 @@ auto with_teqp_and_boost(const Model &model, double T, double rho, const VECTOR 
     auto ff = [&](const auto& rho){ return model.alphar(T, rho, z); };
     my_float drho = 1e-30*rho;
     o.Ar03exact = static_cast<double>(centered_diff<3,6>(ff,static_cast<my_float>(rho),drho)*pow(rho, 3));
-    o.Ar03teqp = tdx::get_Ar0n<3>(model, T, rho, z)[3];
+    o.Ar03teqp = tdx::template get_Ar0n<3>(model, T, rho, z)[3];
     
     return o;
 }
