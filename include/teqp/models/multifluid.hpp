@@ -247,7 +247,7 @@ public:
             betaV = 1.0;
         }
         else {
-            std::invalid_argument("Could not understaind what to do with this binary model specification: " + el.dump());
+            throw std::invalid_argument("Could not understaind what to do with this binary model specification: " + el.dump());
         }
         return std::make_tuple(betaT, gammaT, betaV, gammaV);
     }
