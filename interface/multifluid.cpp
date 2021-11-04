@@ -13,4 +13,7 @@ void add_multifluid(py::module& m) {
         .def("get_vcvec", [](const MultiFluid& c) { return c.redfunc.vc; })
         ;
     add_derivatives<MultiFluid>(m, wMF);
+
+    // Expose the get_BIPdep function to debug what is going on with finding BIP parameters
+    m.def("get_BIPdep", &MultiFluidReducingFunction::get_BIPdep, py::arg("BIPcollection"), py::arg("identifiers"), py::arg("flags") = nlohmann::json{});
 }

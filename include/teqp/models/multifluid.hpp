@@ -224,7 +224,7 @@ public:
         }
         // Second pass, check CAS# (TODO)
 
-        throw std::invalid_argument("Can't match this binary pair");
+        throw std::invalid_argument("Can't match the binary pair for: " + identifiers[0] + "/" + identifiers[1]);
     }
     static auto get_binary_interaction_double(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags) {
         auto [el, swap_needed] = get_BIPdep(collection, components, flags);
@@ -549,7 +549,7 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
         for (auto& el : depcollection) {
             if (el["Name"] == Name) { return el; }
         }
-        throw std::invalid_argument("Bad argument");
+        throw std::invalid_argument("Bad departure function name: "+Name);
     };
 
     for (auto i = 0; i < funcs.size(); ++i) {
@@ -823,34 +823,70 @@ inline auto collect_component_json(const std::vector<std::string>& components, c
 
 inline auto collect_identifiers(const std::vector<nlohmann::json>& pureJSON)
 {
-    std::vector<std::string> identifiers;
+    std::vector<std::string> CAS, Name, REFPROP;
     for (auto j : pureJSON) {
-        std::string CAS = j.at("INFO").at("CAS");
-        std::string name = j.at("INFO").at("NAME");
-        identifiers.push_back(name);
+        Name.push_back(j.at("INFO").at("NAME"));
+        CAS.push_back(j.at("INFO").at("CAS"));
+        REFPROP.push_back(j.at("INFO").at("REFPROP_NAME"));
     }
-    return identifiers;
+    return std::map<std::string, std::vector<std::string>>{
+        {"CAS", CAS},
+        {"Name", Name},
+        {"REFPROP", REFPROP}
+    };
+}
+
+/// Iterate over the possible options for identifiers to determine which one will satisfy all the binary pairs
+template<typename mapvecstring>
+inline auto select_identifier(const nlohmann::json& BIPcollection, const mapvecstring& identifierset, const nlohmann::json& flags){
+    for (const auto &ident: identifierset){
+        std::string key; std::vector<std::string> identifiers;
+        std::tie(key, identifiers) = ident;
+        try{
+            for (auto i = 0; i < identifiers.size(); ++i){
+                for (auto j = i+1; j < identifiers.size(); ++j){
+                    const std::vector<std::string> pair = {identifiers[i], identifiers[j]};
+                    MultiFluidReducingFunction::get_BIPdep(BIPcollection, pair, flags);
+                }
+            }
+            return key;
+        }
+        catch(...){
+            
+        }
+    }
+    throw std::invalid_argument("Unable to match any of the identifier options");
+}
+
+/// Load a JSON file from a specified file
+inline nlohmann::json load_a_JSON_file(const std::string &path){
+    if (!std::filesystem::exists(path)){
+        throw std::invalid_argument("Path to be loaded does not exist: " + path);
+    }
+    auto stream = std::ifstream(path);
+    if (!stream) {
+        throw std::invalid_argument("File stream cannot be opened from: " + path);
+    }
+    return nlohmann::json::parse(stream);
 }
 
 inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
 
     std::string BIPpath = (BIPcollectionpath.empty()) ? coolprop_root + "/dev/mixtures/mixture_binary_pairs.json" : BIPcollectionpath;
-    auto stream = std::ifstream(BIPpath);
-    if (!stream) {
-        throw std::invalid_argument("Cannot open BIP collection file: " + BIPpath);
-    }
-    const auto BIPcollection = nlohmann::json::parse(stream);
+    const auto BIPcollection = load_a_JSON_file(BIPpath);
 
     std::string deppath = (departurepath.empty()) ? coolprop_root + "/dev/mixtures/mixture_departure_functions.json" : departurepath;
-    const auto depcollection = nlohmann::json::parse(std::ifstream(deppath));
+    const auto depcollection = load_a_JSON_file(deppath);
 
     // Pure fluids
     auto pureJSON = collect_component_json(components, coolprop_root);
     auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(pureJSON);
     auto EOSs = get_EOSs(pureJSON); 
 
-    // Extract the identifiers to be used
-    auto identifiers = collect_identifiers(pureJSON);
+    // Extract the set of possible identifiers to be used to match parameters
+    auto identifierset = collect_identifiers(pureJSON);
+    // Decide which identifier is to be used (Name, CAS, REFPROP name)
+    auto identifiers = identifierset[select_identifier(BIPcollection, identifierset, flags)];
     
     // Things related to the mixture
     auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, identifiers, flags);
