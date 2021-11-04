@@ -214,7 +214,7 @@ int do_one(const std::string &RPname, const std::string &teqpname)
                 {"Ar01exact", c.Ar01exact},
                 {"ratio01-1", c.Ar01teqp / c.Ar01exact - 1},
                 {"Ar03RP", ((Q == 0) ? Ar03LRP : Ar03VRP)},
-                {"Ar03RP", ((Q == 0) ? Ar01LRP : Ar01VRP)},
+                {"Ar01RP", ((Q == 0) ? Ar01LRP : Ar01VRP)},
                 });
         }
         std::cout << "Completed:" << T << std::endl;
