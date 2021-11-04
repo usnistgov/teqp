@@ -85,7 +85,7 @@ auto REFPROP_sat(double T) {
 }
 
 struct calc_output {
-    double Zexact, Zteqp, Ar03exact, Ar03teqp, Ar01exact, Ar01teqp;
+    double Zexact, Zteqp, Ar01exact, Ar01teqp, Ar02exact, Ar02teqp, Ar03exact, Ar03teqp;
 };
 
 template<typename Model, typename VECTOR>
@@ -157,6 +157,10 @@ auto with_teqp_and_boost(const Model &model, double T, double rho, const VECTOR 
     // Define a generic lambda function taking rho
     auto ff = [&](const auto& rho){ return model.alphar(T, rho, z); };
     my_float drho = 1e-30*rho;
+
+    o.Ar02exact = static_cast<double>(centered_diff<2,6>(ff,static_cast<my_float>(rho),drho)*pow(rho, 2));
+    o.Ar02teqp = tdx::template get_Ar0n<2>(model, T, rho, z)[2];
+
     o.Ar03exact = static_cast<double>(centered_diff<3,6>(ff,static_cast<my_float>(rho),drho)*pow(rho, 3));
     o.Ar03teqp = tdx::template get_Ar0n<3>(model, T, rho, z)[3];
     
@@ -198,6 +202,11 @@ int do_one(const std::string &RPname, const std::string &teqpname)
         PHIXdll(itau, idelta, tau, deltaL, &(z[0]), Ar01LRP);
         PHIXdll(itau, idelta, tau, deltaV, &(z[0]), Ar01VRP);
 
+        double Ar02LRP = -1, Ar02VRP = -1;
+        idelta = 2;
+        PHIXdll(itau, idelta, tau, deltaL, &(z[0]), Ar02LRP);
+        PHIXdll(itau, idelta, tau, deltaV, &(z[0]), Ar02VRP);
+
         double rhoL = o.rhoLmol_L * 1000.0, rhoV = o.rhoVmol_L*1000.0;
         for (double Q : { 0, 1 }) {
             double rho = (Q == 0) ? rhoL : rhoV;
@@ -217,8 +226,9 @@ int do_one(const std::string &RPname, const std::string &teqpname)
                 {"Ar01teqp", c.Ar01teqp},
                 {"Ar01exact", c.Ar01exact},
                 {"ratio01-1", Ar01ratiominus1},
-                {"Ar03RP", ((Q == 0) ? Ar03LRP : Ar03VRP)},
                 {"Ar01RP", ((Q == 0) ? Ar01LRP : Ar01VRP)},
+                {"Ar02RP", ((Q == 0) ? Ar02LRP : Ar02VRP)},
+                {"Ar03RP", ((Q == 0) ? Ar03LRP : Ar03VRP)},
                 });
         }
         std::cout << "Completed:" << T << std::endl;
