@@ -85,20 +85,20 @@ auto REFPROP_sat(double T) {
 }
 
 struct calc_output {
-    double Zexact, Zteqp;
+    double Zexact, Zteqp, Ar03exact, Ar03teqp;
 };
 
 template<typename Model, typename VECTOR>
-auto with_teqp_and_boost(const Model &model, double T, double rhoL, const VECTOR &z, bool is_propane){
+auto with_teqp_and_boost(const Model &model, double T, double rho, const VECTOR &z, bool is_propane){
     // Pressure for each phase via teqp in double precision w/ autodiff
-    using tdx = TDXDerivatives<decltype(model), double, std::valarray<double>>;
-    double Zteqp = 1.0 + tdx::get_Ar01(model, T, rhoL, z);
+    using tdx = TDXDerivatives<decltype(model), double, VECTOR>;
+    double Zteqp = 1.0 + tdx::get_Ar01(model, T, rho, z);
 
     // Calculation with ridiculous number of digits of precision (the approximation of ground truth)
     using my_float = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>;
     my_float Tc = model.redfunc.Tc[0];
     my_float rhoc = 1.0/static_cast<my_float>(model.redfunc.vc[0]);
-    auto delta = static_cast<my_float>(rhoL) / rhoc;
+    auto delta = static_cast<my_float>(rho) / rhoc;
     auto tau = Tc / static_cast<my_float>(T);
     my_float ddelta = 1e-30 * delta;
     my_float deltaplus = delta + ddelta, deltaminus = delta - ddelta;
@@ -149,6 +149,14 @@ auto with_teqp_and_boost(const Model &model, double T, double rhoL, const VECTOR
     calc_output o;
     o.Zexact = static_cast<double>(Zexact);
     o.Zteqp = Zteqp;
+
+    // Now do the third-order derivative of alphar, as a further test
+    // Define a generic lambda function taking rho
+    auto ff = [&](const auto& rho){ return model.alphar(T, rho, z); };
+    my_float drho = 1e-30*rho;
+    o.Ar03exact = static_cast<double>(centered_diff<3,6>(ff,static_cast<my_float>(rho),drho)*pow(rho, 3));
+    o.Ar03teqp = tdx::get_Ar0n<3>(model, T, rho, z)[3];
+    
     return o;
 }
 
@@ -169,33 +177,35 @@ int do_one(const std::string &RPname, const std::string &teqpname)
         double pL = -1; PRESSdll(o.T, o.rhoLmol_L, &(z[0]), pL);
         double RL = -1; RMIX2dll(&(z[0]), RL);
         double ZLRP = pL/(o.rhoLmol_L*RL*o.T); // Units cancel (factor of 1000 in pL and RL)
+
+        double Tr = -1, Dr = -1;
+        REDXdll(&(z[0]), Tr, Dr);
+        int itau = 0, idelta = 3; double tau = Tr / o.T, deltaL = o.rhoLmol_L / Dr, Ar03LRP = -1;
+        PHIXdll(itau, idelta, tau, deltaL, &(z[0]), Ar03LRP);
         double pV = -1; PRESSdll(o.T, o.rhoVmol_L, &(z[0]), pV);
         double RV = -1; RMIX2dll(&(z[0]), RV);
         double ZVRP = pV/(o.rhoVmol_L*RV*o.T); // Units cancel (factor of 1000 in pV and RV)
+        double deltaV = o.rhoVmol_L / Dr, Ar03VRP = -1;
+        PHIXdll(itau, idelta, tau, deltaV, &(z[0]), Ar03VRP);
 
         double rhoL = o.rhoLmol_L * 1000.0, rhoV = o.rhoVmol_L*1000.0;
-
-        auto c = with_teqp_and_boost(model, T, rhoL, z, is_propane);
-        outputs.push_back({
-            {"T / K", T},
-            {"Q", 0},
-            {"rho / mol/m^3", rhoL},
-            {"Zteqp", c.Zteqp},
-            {"Zexact", c.Zexact},
-            {"ratio-1", c.Zteqp/c.Zexact-1},
-            {"ZRP", ZLRP},
-        });
-
-        auto cV = with_teqp_and_boost(model, T, rhoV, z, is_propane);
-        outputs.push_back({
-            {"T / K", T},
-            {"Q", 1},
-            {"rho / mol/m^3", rhoV},
-            {"Zteqp", cV.Zteqp},
-            {"Zexact", cV.Zexact},
-            {"ratio-1", cV.Zteqp/cV.Zexact-1},
-            {"ZRP", ZVRP},
-            });
+        for (double Q : { 0, 1 }) {
+            double rho = (Q == 0) ? rhoL : rhoV;
+            auto c = with_teqp_and_boost(model, T, rho, z, is_propane);
+            outputs.push_back({
+                {"T / K", T},
+                {"Q", Q},
+                {"rho / mol/m^3", rho},
+                {"Zteqp", c.Zteqp},
+                {"Zexact", c.Zexact},
+                {"ratio-1", c.Zteqp / c.Zexact - 1},
+                {"ZRP", ((Q == 0) ? ZLRP : ZVRP)},
+                {"Ar03teqp", c.Ar03teqp},
+                {"Ar03exact", c.Ar03exact},
+                {"ratio03-1", c.Ar03teqp / c.Ar03exact - 1},
+                {"Ar03RP", ((Q == 0) ? Ar03LRP : Ar03VRP)},
+                });
+        }
         std::cout << "Completed:" << T << std::endl;
     }
     std::ofstream file(RPname + "_saturation_Z_accuracy.json");
@@ -205,7 +215,7 @@ int do_one(const std::string &RPname, const std::string &teqpname)
 
 int main()
 {
+    do_one("PROPANE", "n-Propane"); 
     do_one("WATER", "Water");
-    do_one("PROPANE", "n-Propane");
     return EXIT_SUCCESS;
 }
