@@ -150,7 +150,7 @@ auto with_teqp_and_boost(const Model &model, double T, double rho, const VECTOR 
     calc_output o;
     o.Zexact = static_cast<double>(Zexact);
     o.Zteqp = Zteqp;
-    o.Ar01exact = derL3;
+    o.Ar01exact = static_cast<double>(derL3);
     o.Ar01teqp = Ar01teqp;
 
     // Now do the third-order derivative of alphar, as a further test
