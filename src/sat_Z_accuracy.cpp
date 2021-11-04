@@ -93,7 +93,7 @@ auto with_teqp_and_boost(const Model &model, double T, double rho, const VECTOR 
     // Pressure for each phase via teqp in double precision w/ autodiff
     using tdx = TDXDerivatives<decltype(model), double, VECTOR>;
     double Zteqp = 1.0 + tdx::get_Ar01(model, T, rho, z);
-    double Ar01teqp = 1.0 + tdx::get_Ar01(model, T, rho, z);
+    double Ar01teqp = tdx::get_Ar01(model, T, rho, z);
 
     // Calculation with ridiculous number of digits of precision (the approximation of ground truth)
     using my_float = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>;
@@ -183,13 +183,16 @@ int do_one(const std::string &RPname, const std::string &teqpname)
 
         double Tr = -1, Dr = -1;
         REDXdll(&(z[0]), Tr, Dr);
-        int itau = 0, idelta = 3; double tau = Tr / o.T, deltaL = o.rhoLmol_L / Dr, Ar03LRP = -1;
-        PHIXdll(itau, idelta, tau, deltaL, &(z[0]), Ar03LRP);
+        
         double pV = -1; PRESSdll(o.T, o.rhoVmol_L, &(z[0]), pV);
         double RV = -1; RMIX2dll(&(z[0]), RV);
         double ZVRP = pV/(o.rhoVmol_L*RV*o.T); // Units cancel (factor of 1000 in pV and RV)
+        
+        int itau = 0, idelta = 3; double tau = Tr / o.T, deltaL = o.rhoLmol_L / Dr, Ar03LRP = -1;
         double deltaV = o.rhoVmol_L / Dr, Ar03VRP = -1;
+        PHIXdll(itau, idelta, tau, deltaL, &(z[0]), Ar03LRP);
         PHIXdll(itau, idelta, tau, deltaV, &(z[0]), Ar03VRP);
+        
         double Ar01LRP = -1, Ar01VRP = -1;
         idelta = 1;
         PHIXdll(itau, idelta, tau, deltaL, &(z[0]), Ar01LRP);
@@ -199,20 +202,21 @@ int do_one(const std::string &RPname, const std::string &teqpname)
         for (double Q : { 0, 1 }) {
             double rho = (Q == 0) ? rhoL : rhoV;
             auto c = with_teqp_and_boost(model, T, rho, z, is_propane);
+            double Zratiominus1 = c.Zteqp / c.Zexact - 1, Ar01ratiominus1 = c.Ar01teqp / c.Ar01exact - 1;
             outputs.push_back({
                 {"T / K", T},
                 {"Q", Q},
                 {"rho / mol/m^3", rho},
                 {"Zteqp", c.Zteqp},
                 {"Zexact", c.Zexact},
-                {"ratio-1", c.Zteqp / c.Zexact - 1},
+                {"ratio-1", Zratiominus1},
                 {"ZRP", ((Q == 0) ? ZLRP : ZVRP)},
                 {"Ar03teqp", c.Ar03teqp},
                 {"Ar03exact", c.Ar03exact},
                 {"ratio03-1", c.Ar03teqp / c.Ar03exact - 1},
                 {"Ar01teqp", c.Ar01teqp},
                 {"Ar01exact", c.Ar01exact},
-                {"ratio01-1", c.Ar01teqp / c.Ar01exact - 1},
+                {"ratio01-1", Ar01ratiominus1},
                 {"Ar03RP", ((Q == 0) ? Ar03LRP : Ar03VRP)},
                 {"Ar01RP", ((Q == 0) ? Ar01LRP : Ar01VRP)},
                 });
