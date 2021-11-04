@@ -164,7 +164,7 @@ int do_one(const std::string &RPname, const std::string &teqpname)
 {
     REFPROP_setup(RPname);
     auto model = build_multifluid_model({ teqpname }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
-    std::valarray<double> z = { 1.0 };
+    Eigen::ArrayXd z(1); z = 1.0;
     bool is_propane = (RPname == "PROPANE");
     double Tt = (is_propane) ? 85.525 : 273.16, 
            Tc = (is_propane) ? 369.89 : 647.096;
