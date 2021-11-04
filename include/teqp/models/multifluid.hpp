@@ -241,8 +241,9 @@ public:
             }
         }
         else if (el.contains("xi") && el.contains("zeta")) {
-            gammaT = 0.5 * (Tc[0] + Tc[1] + el["xi"]) / (2 * sqrt(Tc[0] * Tc[1]));
-            gammaV =  4.0 * (vc[0] + vc[1] + el["zeta"]) / (0.25*pow(1 / pow(1 / vc[0], 1.0 / 3.0) + 1 / pow(1 / vc[1], 1.0 / 3.0), 3));
+            double xi = el["xi"], zeta = el["zeta"];
+            gammaT = 0.5 * (Tc[0] + Tc[1] + xi) / (2 * sqrt(Tc[0] * Tc[1]));
+            gammaV =  4.0 * (vc[0] + vc[1] + zeta) / (0.25*pow(1 / pow(1 / vc[0], 1.0 / 3.0) + 1 / pow(1 / vc[1], 1.0 / 3.0), 3));
             betaT = 1.0;
             betaV = 1.0;
         }
