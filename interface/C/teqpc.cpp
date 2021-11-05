@@ -11,6 +11,25 @@
 #include "teqp/exceptions.hpp"
 #include "teqp/json_builder.hpp"
 
+// Define empty macros so that no exporting happens
+#if defined(TEQPC_CATCH)
+#define EXPORT_CODE
+#define CONVENTION
+
+#else
+
+#if defined(EXTERN_C_DLLEXPORT)
+#define EXPORT_CODE extern "C" __declspec(dllexport) 
+#endif
+#if defined(EXTERN_C)
+#define EXPORT_CODE extern "C" 
+#endif
+#ifndef CONVENTION
+#  define CONVENTION
+#endif
+#endif
+
+
 // An atomic is used here for thread safety
 // The max possible index is 18,446,744,073,709,551,615
 std::atomic<unsigned long long int> next_index{ 0 };
@@ -39,7 +58,7 @@ void exception_handler(int& errcode, char* message_buffer, const int buffer_leng
     }
 }
 
-int build_model(const char* j, char* uuid, char* errmsg, int errmsg_length){
+EXPORT_CODE int CONVENTION build_model(const char* j, char* uuid, char* errmsg, int errmsg_length){
     int errcode = 0;
     try{
         nlohmann::json json = nlohmann::json::parse(j);
@@ -58,7 +77,7 @@ int build_model(const char* j, char* uuid, char* errmsg, int errmsg_length){
     return errcode;
 }
 
-int free_model(char* uuid, char* errmsg, int errmsg_length) {
+EXPORT_CODE int CONVENTION free_model(char* uuid, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
         library.erase(std::string(uuid));
@@ -69,7 +88,7 @@ int free_model(char* uuid, char* errmsg, int errmsg_length) {
     return errcode;
 }
 
-int get_Arxy(char* uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
+EXPORT_CODE int CONVENTION get_Arxy(char* uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
         // Make an Eigen view of the double buffer

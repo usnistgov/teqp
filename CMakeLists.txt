@@ -70,13 +70,26 @@ endif()
 target_link_libraries(catch_tests autodiff)
 add_test(normal_tests catch_tests)
 
-add_executable(teqpc "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
+# Make a shared extern "C" library
+add_library(teqpc SHARED "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
 if (MSVC)
     target_sources(teqpc PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
 target_link_libraries(teqpc autodiff)
-target_compile_definitions(teqpc PRIVATE -DTEQPC_CATCH)
-add_test(teqpc_tests teqpc)
+if (NOT UNIX)
+  target_compile_definitions(teqpc PRIVATE -DEXTERN_C_DLLEXPORT)
+else()
+  target_compile_definitions(teqpc PRIVATE -DEXTERN_C)
+endif()
+
+# Standalone testing of C interface
+add_executable(teqpc_catch "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
+if (MSVC)
+    target_sources(teqpc_catch PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+endif()
+target_link_libraries(teqpc_catch autodiff)
+target_compile_definitions(teqpc_catch PRIVATE -DTEQPC_CATCH)
+add_test(teqpc_tests teqpc_catch)
 
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)

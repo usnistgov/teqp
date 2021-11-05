@@ -1,4 +1,4 @@
-name: build and run Catch tests and some other testing
+name: build and run tests
 on:
   push:
     branches: [master]
@@ -23,6 +23,8 @@ jobs:
       - name: build conventional Catch tests
         run: cmake --build build --target catch_tests
       - name: build teqpc Catch tests
+        run: cmake --build build --target teqpc_catch
+      - name: build teqpc shared library
         run: cmake --build build --target teqpc
       - name: run all the compiled Catch tests
         run: cd build && ctest --verbose
