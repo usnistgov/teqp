@@ -24,7 +24,10 @@ class DLLCaller():
         uid = ct.create_string_buffer(200)
         errmsg = ct.create_string_buffer(1000)
         errcode = f(hrf, uid, errmsg, len(errmsg))
-        return uid
+        if errcode == 0:
+            return uid
+        else:
+            raise ValueError(trim(errmsg))
 
     def get_Arxy(self, *, uid, NT, ND, T, rho, z):
         f = self._getfcn(self.dll, 'get_Arxy')
