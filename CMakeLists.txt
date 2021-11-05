@@ -81,6 +81,12 @@ if (NOT UNIX)
 else()
   target_compile_definitions(teqpc PRIVATE -DEXTERN_C)
 endif()
+if(MSVC)
+  add_custom_command(
+    TARGET teqpc
+    POST_BUILD
+    COMMAND dumpbin /EXPORTS $<TARGET_FILE:teqpc> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+endif()
 
 # Standalone testing of C interface
 add_executable(teqpc_catch "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
