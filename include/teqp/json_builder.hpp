@@ -3,14 +3,18 @@
 #include "teqp/models/vdW.hpp"
 #include "teqp/models/cubics.hpp"
 #include "teqp/models/CPA.hpp"
+#include "teqp/models/pcsaft.hpp"
 
 #include "nlohmann/json.hpp"
 
 using vad = std::valarray<double>;
-using cub = decltype(canonical_PR(vad{}, vad{}, vad{}));
-using cpatype = decltype(CPA::CPAfactory(nlohmann::json{})); // The type returned by the factory function
 
-using AllowedModels = std::variant<vdWEOS1, cub, cpatype>;
+// Define the EOS types by interrogating the types returned by the respective factory function
+using cub = decltype(canonical_PR(vad{}, vad{}, vad{})); 
+using cpatype = decltype(CPA::CPAfactory(nlohmann::json{}));
+using pcsafttype = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
+
+using AllowedModels = std::variant<vdWEOS1, cub, cpatype, pcsafttype>;
 
 AllowedModels build_model(const nlohmann::json& json) {
 
@@ -31,6 +35,9 @@ AllowedModels build_model(const nlohmann::json& json) {
     }
     else if (kind == "CPA") {
         return CPA::CPAfactory(spec);
+    }
+    else if (kind == "PCSAFT") {
+        return PCSAFT::PCSAFTfactory(spec);
     }
     else {
         throw teqpcException(30, "Unknown kind:" + kind);

@@ -3,6 +3,8 @@
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/derivs.hpp"
 
+using namespace PCSAFT;
+
 void add_PCSAFT(py::module& m) {
 
 	py::class_<SAFTCoeffs>(m, "SAFTCoeffs")

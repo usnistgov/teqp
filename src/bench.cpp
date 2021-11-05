@@ -52,6 +52,7 @@ TEST_CASE("vdW derivatives", "[vdW]")
 
 TEST_CASE("PCSAFT derivatives", "[PCSAFT]")
 {
+    using namespace PCSAFT;
     std::vector<std::string> names = { "Methane", "Ethane" };
     auto model = PCSAFTMixture(names);
 

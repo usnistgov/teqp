@@ -96,7 +96,7 @@ int get_Arxy(char* uuid, const int NT, const int ND, const double T, const doubl
 #define CATCH_CONFIG_MAIN
 #include "catch/catch.hpp"
 
-TEST_CASE("Use of C interface with simple models") {
+TEST_CASE("Use of C interface") {
 
     constexpr int errmsg_length = 300;
     char uuid[33] = "", uuidPR[33] = "", errmsg[errmsg_length] = "";
@@ -192,6 +192,26 @@ TEST_CASE("Use of C interface with simple models") {
         REQUIRE(e3 == 0);
         return val;
     };
+
+    BENCHMARK("PCSAFT") {
+        nlohmann::json jmodel = nlohmann::json::array();
+        std::valarray<double> molefrac = { 0.4, 0.6 };
+        jmodel.push_back({ {"name", "Methane"}, { "m", 1.0 }, { "sigma_Angstrom", 3.7039},{"epsilon_over_k", 150.03}, {"BibTeXKey", "Gross-IECR-2001"} });
+        jmodel.push_back({ {"name", "Ethane"}, { "m", 1.6069 }, { "sigma_Angstrom", 3.5206},{"epsilon_over_k", 191.42}, {"BibTeXKey", "Gross-IECR-2001"} });
+        nlohmann::json j = {
+            {"kind", "PCSAFT"},
+            {"model", jmodel}
+        };
+        std::string js = j.dump(2);
+        int e1 = build_model(j.dump(2).c_str(), uuid, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e3 = free_model(uuid, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
+        REQUIRE(e2 == 0);
+        REQUIRE(e3 == 0);
+        return val;
+    };
+    
 }
 #else 
 int main() {

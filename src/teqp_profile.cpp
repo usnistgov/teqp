@@ -10,6 +10,7 @@
 //#include "teqp/models/CPA.hpp"
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/pcsaft.hpp"
+using namespace PCSAFT;
 #include "teqp/containers.hpp"
 #include <Eigen/Dense>
 #include "teqp/derivs.hpp"

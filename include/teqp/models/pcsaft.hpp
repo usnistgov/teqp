@@ -1,5 +1,9 @@
 #pragma once
 
+#include "nlohmann/json.hpp"
+
+namespace PCSAFT {
+
 /// Coefficients for one fluid
 struct SAFTCoeffs {
     std::string name; ///< Name of fluid
@@ -293,3 +297,19 @@ public:
         return forceeval(alphar_hc + alphar_disp);
     }
 };
+
+auto PCSAFTfactory(const nlohmann::json& json) {
+    std::vector<SAFTCoeffs> coeffs;
+    for (auto j : json) {
+        SAFTCoeffs c;
+        c.name = j.at("name");
+        c.m = j.at("m");
+        c.sigma_Angstrom = j.at("sigma_Angstrom");
+        c.epsilon_over_k = j.at("epsilon_over_k");
+        c.BibTeXKey = j.at("BibTeXKey");
+        coeffs.push_back(c);
+    }
+    return PCSAFTMixture(coeffs);
+};
+
+} /* namespace PCSAFT */

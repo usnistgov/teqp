@@ -3,6 +3,7 @@
 
 #include "teqp/core.hpp"
 #include "teqp/models/pcsaft.hpp"
+using namespace PCSAFT;
 #include "teqp/models/cubicsuperancillary.hpp"
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/vdW.hpp"

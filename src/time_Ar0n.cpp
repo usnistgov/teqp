@@ -22,6 +22,7 @@
 #include "teqp/models/vdW.hpp"
 #include "teqp/models/cubics.hpp"
 #include "teqp/models/pcsaft.hpp"
+using namespace PCSAFT;
 #include "teqp/derivs.hpp"
 
 struct OneTiming {
