@@ -168,6 +168,30 @@ TEST_CASE("Use of C interface with simple models") {
         REQUIRE(e3 == 0);
         return val;
     };
+
+    BENCHMARK("CPA") {
+        nlohmann::json water = {
+            {"a0i / Pa m^6/mol^2",0.12277 }, {"bi / m^3/mol", 0.000014515}, {"c1", 0.67359}, {"Tc / K", 647.096},
+            {"epsABi / J/mol", 16655.0}, {"betaABi", 0.0692}, {"class", "4C"}
+        };
+        nlohmann::json jCPA = {
+            {"cubic","SRK"},
+            {"pures", {water}},
+            {"R_gas / J/mol/K", 8.3144598}
+        };
+        nlohmann::json j = {
+            {"kind", "CPA"},
+            {"model", jCPA}
+        };
+        std::string jstring = j.dump();
+        int e1 = build_model(jstring.c_str(), uuid, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e3 = free_model(uuid, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
+        REQUIRE(e2 == 0);
+        REQUIRE(e3 == 0);
+        return val;
+    };
 }
 #else 
 int main() {
