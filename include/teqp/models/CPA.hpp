@@ -9,7 +9,7 @@ template<typename X> auto POW3(X x) { return x * POW2(x); };
 
 enum class association_classes {not_set, a1A, a2B, a3B, a4C, not_associating};
 
-auto get_association_classes(const std::string& s) {
+inline auto get_association_classes(const std::string& s) {
     if (s == "1A") { return association_classes::a1A; }
     else if (s == "2B") { return association_classes::a2B; }
     else if (s == "2B") { return association_classes::a2B; }
@@ -24,7 +24,7 @@ enum class radial_dist { CS, KG, OT };
 
 /// Function that calculates the association binding strength between site A of molecule i and site B on molecule j
 template<typename BType, typename TType, typename RhoType, typename VecType>
-auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_cubic, TType RT, RhoType rhomolar, const VecType& molefrac) {
+inline auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_cubic, TType RT, RhoType rhomolar, const VecType& molefrac) {
 
     using eta_type = std::common_type_t<decltype(rhomolar), decltype(b_cubic)>;
     eta_type eta;
@@ -65,7 +65,7 @@ auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_c
 /// 
 
 template<typename BType, typename TType, typename RhoType, typename VecType>
-auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double betaABi, const BType b_cubic, const TType RT, const RhoType rhomolar, const VecType& molefrac) {
+inline auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double betaABi, const BType b_cubic, const TType RT, const RhoType rhomolar, const VecType& molefrac) {
 
     // Matrix XA(A, j) that contains all of the fractions of sites A not bonded to other active sites for each molecule i
     // Start values for the iteration(set all sites to non - bonded, = 1)
@@ -113,7 +113,7 @@ auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double
 };
 
 enum class cubic_flag {not_set, PR, SRK};
-auto get_cubic_flag(const std::string& s) {
+inline auto get_cubic_flag(const std::string& s) {
     if (s == "PR") { return cubic_flag::PR; }
     else if (s == "SRK") { return cubic_flag::SRK; }
     else {
@@ -259,7 +259,7 @@ public:
 
 /// A factory function to return an instantiated CPA instance given
 /// the JSON representation of the model
-auto CPAfactory(const nlohmann::json &j){
+inline auto CPAfactory(const nlohmann::json &j){
     auto build_cubic = [](const auto& j) {
         auto N = j["pures"].size();
         std::valarray<double> a0i(N), bi(N), c1(N), Tc(N);

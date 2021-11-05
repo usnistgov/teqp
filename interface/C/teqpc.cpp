@@ -112,7 +112,6 @@ EXPORT_CODE int CONVENTION get_Arxy(char* uuid, const int NT, const int ND, cons
 #if defined(TEQPC_CATCH)
 
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
-#define CATCH_CONFIG_MAIN
 #include "catch/catch.hpp"
 
 TEST_CASE("Use of C interface") {

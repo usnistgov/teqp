@@ -63,10 +63,12 @@ endif()
 
 file(GLOB catch_tests_files "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/*.cxx")
 
-add_executable(catch_tests "${catch_tests_files}")
+# Make all the catch and benchmarking tests
+add_executable(catch_tests "${catch_tests_files}" "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
 if (MSVC)
     target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
+target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
 target_link_libraries(catch_tests autodiff)
 add_test(normal_tests catch_tests)
 
@@ -87,15 +89,6 @@ if(MSVC)
     POST_BUILD
     COMMAND dumpbin /EXPORTS $<TARGET_FILE:teqpc> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
 endif()
-
-# Standalone testing of C interface
-add_executable(teqpc_catch "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
-if (MSVC)
-    target_sources(teqpc_catch PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
-endif()
-target_link_libraries(teqpc_catch autodiff)
-target_compile_definitions(teqpc_catch PRIVATE -DTEQPC_CATCH)
-add_test(teqpc_tests teqpc_catch)
 
 ### TARGETS from src folder
 if (TEQP_SNIPPETS)

@@ -135,8 +135,6 @@ auto get_I2(const Eta& eta, MbarType mbar) {
     return std::make_tuple(forceeval(summer_I2), forceeval(summer_etadI2deta));
 }
 
-PCSAFTLibrary library;
-
 /**
 Sum up three array-like objects that can each have different container types and value types
 */
@@ -187,6 +185,7 @@ public:
         sigma_Angstrom.resize(names.size());
         epsilon_over_k.resize(names.size());
         auto i = 0;
+        PCSAFTLibrary library;
         for (auto name : names) {
             const SAFTCoeffs& coeff = library.get_normal_fluid(name);
             m[i] = coeff.m;
@@ -298,7 +297,7 @@ public:
     }
 };
 
-auto PCSAFTfactory(const nlohmann::json& json) {
+inline auto PCSAFTfactory(const nlohmann::json& json) {
     std::vector<SAFTCoeffs> coeffs;
     for (auto j : json) {
         SAFTCoeffs c;

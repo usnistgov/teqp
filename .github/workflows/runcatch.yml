@@ -20,10 +20,8 @@ jobs:
         run: mkdir build && cd build
       - name: cmake config
         run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=ON
-      - name: build conventional Catch tests
+      - name: build sll Catch tests
         run: cmake --build build --target catch_tests
-      - name: build teqpc Catch tests
-        run: cmake --build build --target teqpc_catch
       - name: build teqpc shared library
         run: cmake --build build --target teqpc
       - name: run all the compiled Catch tests
