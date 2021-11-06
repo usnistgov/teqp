@@ -330,6 +330,23 @@ struct VirialDerivatives {
         return o;
     }
 
+    /// This version of the get_Bnvir takes the maximum number of derivatives as a runtime argument
+    /// and then forwards all arguments to the templated function
+    template <ADBackends be = ADBackends::autodiff>
+    static auto get_Bnvir_runtime(const int Nderiv, const Model& model, const Scalar &T, const VectorType& molefrac) {
+        switch(Nderiv){
+            case 2: return get_Bnvir<2,be>(model, T, molefrac);
+            case 3: return get_Bnvir<3,be>(model, T, molefrac);
+            case 4: return get_Bnvir<4,be>(model, T, molefrac);
+            case 5: return get_Bnvir<5,be>(model, T, molefrac);
+            case 6: return get_Bnvir<6,be>(model, T, molefrac);
+            case 7: return get_Bnvir<7,be>(model, T, molefrac);
+            case 8: return get_Bnvir<8,be>(model, T, molefrac);
+            case 9: return get_Bnvir<9,be>(model, T, molefrac);
+            default: throw std::invalid_argument("Only Nderiv up to 9 is supported, get_Bnvir templated function allows more");
+        }
+    }
+
     static auto get_B12vir(const Model& model, const Scalar &T, const VectorType& molefrac) {
     
         auto B2 = get_B2vir(model, T, molefrac); // Overall B2 for mixture
