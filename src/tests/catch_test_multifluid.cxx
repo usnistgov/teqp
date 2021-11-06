@@ -98,3 +98,25 @@ TEST_CASE("Check that all binary pairs specified in the binary pair file can be 
         CHECK_NOTHROW(build_multifluid_model({ amap[el["Name1"]], amap[el["Name2"]] }, root)); // default path for BIP
     }
 }
+
+TEST_CASE("Check that all pure fluid models can be evaluated at zero density", "[multifluid],[all],[virial]") {
+    std::string root = "../mycp";
+    SECTION("With filename stems") {
+        for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
+            auto stem = path.filename().stem().string(); // filename without the .json
+            if (stem == "Methanol") { continue; }
+            auto model = build_multifluid_model({ stem }, root);
+            std::valarray<double> z(1.0, 1); 
+            using tdx = TDXDerivatives<decltype(model), double, decltype(z) >;
+            auto ders = tdx::template get_Ar0n<4>(model, model.redfunc.Tc[0], 0.0, z);
+            CAPTURE(stem);
+            CHECK(std::isfinite(ders[1]));
+
+            using vd = VirialDerivatives<decltype(model),double, decltype(z)>;
+            auto Bn = vd::get_Bnvir<4>(model, model.redfunc.Tc[0], z);
+
+            CAPTURE(stem);
+            CHECK(std::isfinite(Bn[2]));
+        }
+    }
+}
