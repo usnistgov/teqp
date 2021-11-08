@@ -17,4 +17,5 @@ void add_multifluid(py::module& m) {
     // Expose some additional functions for working with the JSON data structures and resolving aliases
     m.def("get_BIPdep", &MultiFluidReducingFunction::get_BIPdep, py::arg("BIPcollection"), py::arg("identifiers"), py::arg("flags") = nlohmann::json{});
     m.def("build_alias_map", &build_alias_map, py::arg("root"));
+    m.def("collect_component_json", &collect_component_json, py::arg("identifiers"), py::arg("root"));
 }
