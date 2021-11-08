@@ -82,6 +82,18 @@ TEST_CASE("Check that mixtures can also do absolute paths", "[multifluid],[abspa
     }
 }
 
+TEST_CASE("Check mixing absolute and relative paths and fluid names", "[multifluid],[abspath]") {
+    std::string root = "../mycp";
+    SECTION("With correct name of fluid") {
+        std::vector<std::string> paths = { std::filesystem::absolute(root + "/dev/fluids/Methane.json").string(), "Ethane" };
+        auto model = build_multifluid_model(paths, root, root + "/dev/mixtures/mixture_binary_pairs.json");
+    }
+    SECTION("Needing a reverse lookup for one fluid") {
+        std::vector<std::string> paths = { std::filesystem::absolute(root + "/dev/fluids/Methane.json").string(), "PROPANE" };
+        auto model = build_multifluid_model(paths, root, root + "/dev/mixtures/mixture_binary_pairs.json");
+    }
+}
+
 TEST_CASE("Check that all binary pairs specified in the binary pair file can be instantiated", "[multifluid],[binaries]") {
     std::string root = "../mycp";
     REQUIRE_NOTHROW(build_alias_map(root));

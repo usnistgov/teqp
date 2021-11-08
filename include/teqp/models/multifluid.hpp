@@ -901,8 +901,18 @@ inline auto build_alias_map(const std::string& root) {
     std::map<std::string, std::string> aliasmap;
     for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
         auto j = load_a_JSON_file(path.string());
+        std::string REFPROP_name = j.at("INFO").at("REFPROP_NAME"); 
+        std::string name = j.at("INFO").at("NAME");
         for (std::string k : {"NAME", "CAS", "REFPROP_NAME"}) {
-            std::string val = j.at("INFO").at(k); 
+            std::string val = j.at("INFO").at(k);
+            // Skip REFPROP names that match the fluid itself
+            if (k == "REFPROP_NAME" && val == name) {
+                continue;
+            }
+            // Skip invalid REFPROP names
+            if (k == "REFPROP_NAME" && val == "N/A") {
+                continue;
+            }
             if (aliasmap.count(val) > 0) {
                 throw std::invalid_argument("Duplicated reverse lookup identifier ["+k+"] found in file:" + path.string());
             }
@@ -911,12 +921,15 @@ inline auto build_alias_map(const std::string& root) {
             }
         }
         std::vector<std::string> aliases = j.at("INFO").at("ALIASES");
+        
         for (std::string alias : aliases) {
-            if (aliasmap.count(alias) > 0) {
-                throw std::invalid_argument("Duplicated alias [" + alias + "] found in file:" + path.string());
-            }
-            else {
-                aliasmap[alias] = std::filesystem::absolute(path).string();
+            if (alias != REFPROP_name && alias != name) { // Don't add REFPROP name or base name, were already above to list of aliases
+                if (aliasmap.count(alias) > 0) {
+                    throw std::invalid_argument("Duplicated alias [" + alias + "] found in file:" + path.string());
+                }
+                else {
+                    aliasmap[alias] = std::filesystem::absolute(path).string();
+                }
             }
         }
     }
@@ -942,7 +955,13 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
         auto aliasmap = build_alias_map(coolprop_root);
         std::vector<std::string> abspaths;
         for (auto c : components) {
-            abspaths.push_back(aliasmap[c]);
+            // Allow matching of absolute paths first
+            if (std::filesystem::exists(c)) {
+                abspaths.push_back(c);
+            }
+            else {
+                abspaths.push_back(aliasmap[c]);
+            }
         }
         // Backup lookup with absolute paths resolved for each component
         pureJSON = collect_component_json(abspaths, coolprop_root);
