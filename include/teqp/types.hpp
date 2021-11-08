@@ -9,6 +9,8 @@
 #include <set>
 #include <chrono>
 
+#include "boost/multiprecision/cpp_bin_float.hpp"
+
 // Registration of types that are considered to be containers
 // See https://stackoverflow.com/a/12045843
 template <typename Container>
@@ -54,6 +56,9 @@ auto getbaseval(const T& expr)
     }
     else if constexpr (is_mcx_t<T>()) {
         return expr.real();
+    }
+    else if constexpr (boost::multiprecision::is_number<T>()) {
+        return static_cast<double>(expr);
     }
     else {
         return expr;
