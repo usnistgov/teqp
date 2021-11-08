@@ -826,6 +826,7 @@ inline auto collect_component_json(const std::vector<std::string>& components, c
 {
     std::vector<nlohmann::json> out;
     for (auto c : components) {
+        // First we try to lookup the name as a path, which can be on the filesystem, or relative to the root for default name lookup
         std::vector<std::filesystem::path> candidates = { c, root + "/dev/fluids/" + c + ".json" };
         std::filesystem::path selected_path = "";
         for (auto candidate : candidates) {
@@ -840,7 +841,7 @@ inline auto collect_component_json(const std::vector<std::string>& components, c
             out.push_back(j);
         }
         else {
-            throw std::invalid_argument("Could not load the fluid:" + c);
+            throw std::invalid_argument("Could not load any of the candidates:" + c);
         }
     }
     return out;
@@ -903,7 +904,7 @@ inline auto build_alias_map(const std::string& root) {
         for (std::string k : {"NAME", "CAS", "REFPROP_NAME"}) {
             std::string val = j.at("INFO").at(k); 
             if (aliasmap.count(val) > 0) {
-                std::invalid_argument("Duplicated reverse lookup identifier ["+k+"] found in file:" + path.string());
+                throw std::invalid_argument("Duplicated reverse lookup identifier ["+k+"] found in file:" + path.string());
             }
             else {
                 aliasmap[val] = std::filesystem::absolute(path).string();
@@ -912,7 +913,7 @@ inline auto build_alias_map(const std::string& root) {
         std::vector<std::string> aliases = j.at("INFO").at("ALIASES");
         for (std::string alias : aliases) {
             if (aliasmap.count(alias) > 0) {
-                std::invalid_argument("Duplicated alias [" + alias + "] found in file:" + path.string());
+                throw std::invalid_argument("Duplicated alias [" + alias + "] found in file:" + path.string());
             }
             else {
                 aliasmap[alias] = std::filesystem::absolute(path).string();
