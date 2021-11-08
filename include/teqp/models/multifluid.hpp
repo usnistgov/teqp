@@ -223,8 +223,17 @@ public:
                 return std::make_tuple(el, true);
             }
         }
-        // Second pass, check CAS# (TODO)
-
+        // Second pass, check CAS#
+        for (auto& el : collection) {
+            std::string CAS1 = el["CAS1"];
+            std::string CAS2 = el["CAS2"];
+            if (identifiers[0] == CAS1 && identifiers[1] == CAS2) {
+                return std::make_tuple(el, false);
+            }
+            if (identifiers[0] == CAS2 && identifiers[1] == CAS1) {
+                return std::make_tuple(el, true);
+            }
+        }
         throw std::invalid_argument("Can't match the binary pair for: " + identifiers[0] + "/" + identifiers[1]);
     }
 
