@@ -88,15 +88,15 @@ EXPORT_CODE int CONVENTION free_model(char* uuid, char* errmsg, int errmsg_lengt
     return errcode;
 }
 
-EXPORT_CODE int CONVENTION get_Arxy(char* uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
+EXPORT_CODE int CONVENTION get_Arxy(const char* uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
         // Make an Eigen view of the double buffer
         Eigen::Map<const Eigen::ArrayXd> molefrac_(molefrac, Ncomp);
 
         // Lambda function to extract the given derivative from the thing contained in the variant
-        auto f = [&](auto& model) {
-            using tdx = TDXDerivatives<decltype(model), double, decltype(molefrac_)>;  
+        auto f = [&](const auto& model) {
+            using tdx = TDXDerivatives<decltype(model), double, decltype(molefrac_)>;
             return tdx::get_Ar(NT, ND, model, T, rho, molefrac_);
         };
 
@@ -114,7 +114,7 @@ EXPORT_CODE int CONVENTION get_Arxy(char* uuid, const int NT, const int ND, cons
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch/catch.hpp"
 
-TEST_CASE("Use of C interface") {
+TEST_CASE("Use of C interface","[teqpc]") {
 
     constexpr int errmsg_length = 300;
     char uuid[33] = "", uuidPR[33] = "", errmsg[errmsg_length] = "";

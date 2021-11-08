@@ -28,11 +28,6 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 
-#set(EIGEN_BUILD_DOC FALSE CACHE BOOL "Turn off Eigen snippets in their docs")
-#set(EIGEN_TEST_NOQT TRUE CACHE BOOL "Turn off Eigen tests of Qt")
-#set(BUILD_TESTING FALSE CACHE BOOL "Turn off Eigen tests")
-# add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
-
 set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
 set(EIGEN3_VERSION_OK TRUE CACHE BOOL "Yes eigen is fine")
 set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen, for autodiff")
@@ -50,6 +45,14 @@ set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohma
 
 option (TEQP_NO_PYTHON
         "Enable to NOT build the Python interface"
+        OFF)
+
+option (TEQP_TEQPC
+        "Enable to build the shared library with extern \"C\" interface"
+        OFF)
+
+option (TEQP_COVERAGE
+        "Enable to build the GCOV tests of the catch tests"
         OFF)
 
 if (NOT TEQP_NO_PYTHON)
@@ -72,22 +75,32 @@ target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
 target_link_libraries(catch_tests autodiff)
 add_test(normal_tests catch_tests)
 
-# Make a shared extern "C" library
-add_library(teqpc SHARED "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
-if (MSVC)
-    target_sources(teqpc PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
-endif()
-target_link_libraries(teqpc autodiff)
-if (NOT UNIX)
-  target_compile_definitions(teqpc PRIVATE -DEXTERN_C_DLLEXPORT)
-else()
-  target_compile_definitions(teqpc PRIVATE -DEXTERN_C)
-endif()
-if(MSVC)
-  add_custom_command(
-    TARGET teqpc
-    POST_BUILD
-    COMMAND dumpbin /EXPORTS $<TARGET_FILE:teqpc> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+if (TEQP_TEQPC)
+  # Make a shared extern "C" library
+  add_library(teqpc SHARED "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
+  if (MSVC)
+      target_sources(teqpc PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+  endif()
+  target_link_libraries(teqpc autodiff)
+  if (NOT UNIX)
+    target_compile_definitions(teqpc PRIVATE -DEXTERN_C_DLLEXPORT)
+  else()
+    target_compile_definitions(teqpc PRIVATE -DEXTERN_C)
+  endif()
+  if(MSVC)
+    add_custom_command(
+      TARGET teqpc
+      POST_BUILD
+      COMMAND dumpbin /EXPORTS $<TARGET_FILE:teqpc> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
+  endif()
+
+  # And a little testing harness for extern "C" library
+  add_executable(teqpc_demo "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/demo.cpp")
+  target_link_libraries(teqpc_demo teqpc)
+
+  # And a little benchmarking harness for extern "C" library
+  add_executable(teqpc_bench "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc_bench.cpp")
+  target_link_libraries(teqpc_bench teqpc)
 endif()
 
 ### TARGETS from src folder
