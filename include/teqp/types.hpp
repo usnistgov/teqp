@@ -151,6 +151,10 @@ namespace teqp {
         return std::pow(x, e);
     }
 
+    inline auto pow(const double& x, const int& e) {
+        return powi(x, e);
+    }
+
     template<typename T>
     auto pow(const std::complex<T>& x, const Eigen::ArrayXd& e) {
         Eigen::Array<std::complex<T>, Eigen::Dynamic, 1> o(e.size());
