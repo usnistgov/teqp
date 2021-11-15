@@ -4,6 +4,8 @@
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/filesystem.hpp"
 
+using namespace teqp;
+
 
 TEST_CASE("Confirm failure for missing files","[multifluid]") {
     CHECK_THROWS(build_multifluid_model({ "BADFLUID" }, "IMPOSSIBLE PATH", "IMPOSSIBLE PATH.json"));

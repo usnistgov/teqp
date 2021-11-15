@@ -35,6 +35,8 @@ namespace Eigen {
     };
 }
 
+namespace teqp{
+
 template<typename EOSCollection>
 class CorrespondingStatesContribution {
 
@@ -1167,3 +1169,5 @@ inline void test_dummy() {
     std::valarray<double> rhovec = { 1.0, 2.0 };
     auto alphar = model.alphar(300.0, rhovec);
 }
+
+}; // namespace teqp

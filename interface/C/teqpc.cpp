@@ -29,6 +29,7 @@
 #endif
 #endif
 
+using namespace teqp;
 
 // An atomic is used here for thread safety
 // The max possible index is 18,446,744,073,709,551,615

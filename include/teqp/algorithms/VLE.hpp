@@ -9,6 +9,8 @@
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
 #include <boost/numeric/odeint/stepper/euler.hpp>
 
+namespace teqp{
+
 template<typename Model, typename TYPE = double>
 class IsothermPureVLEResiduals  {
     typedef Eigen::Array<TYPE, 2, 1> EigenArray;
@@ -399,3 +401,5 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
     }
     return JSONdata;
 }
+
+}; /* namespace teqp*/

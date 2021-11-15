@@ -10,6 +10,8 @@
 #include <boost/numeric/odeint/stepper/euler.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
 
+using namespace teqp;
+
 TEST_CASE("Test construction of cubic", "[cubic]")
 {
     // Values taken from http://dx.doi.org/10.6028/jres.121.011

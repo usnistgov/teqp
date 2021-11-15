@@ -4,7 +4,7 @@
 //concept has_meta = requires(T const& m) {
 //    { m.get_meta() };
 //};
-
+namespace teqp { 
 template<typename... Args>
 class ModelContainer {
 public:
@@ -46,3 +46,4 @@ public:
     //    return result;
     //}
 };
+}; // namespace teqp

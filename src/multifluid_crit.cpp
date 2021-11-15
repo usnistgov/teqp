@@ -1,10 +1,10 @@
-#define USE_AUTODIFF
-
 #include "teqp/core.hpp"
 #include "teqp/models/multifluid.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 
 #include <optional>
+
+using namespace teqp;
 
 void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json &BIPcollection) {
    std::vector<std::vector<std::string>> pairs = { 

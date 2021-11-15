@@ -12,6 +12,8 @@
 #include <autodiff/forward/dual/eigen.hpp>
 using namespace autodiff;
 
+namespace teqp {
+
 /***
 * \brief Given a function, use complex step derivatives to calculate the derivative with 
 * respect to the first variable which here is temperature
@@ -611,3 +613,5 @@ struct IsochoricDerivatives{
         return build_d2PsirdTdrhoi_autodiff(model, T, rhovec) + model.R(molefrac)*(rhorefideal + log(rhovec/rhorefideal));
     }
 };
+
+}; // namespace teqp

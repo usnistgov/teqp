@@ -10,10 +10,12 @@
 //#include "teqp/models/CPA.hpp"
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/pcsaft.hpp"
-using namespace PCSAFT;
+using namespace teqp::PCSAFT;
 #include "teqp/containers.hpp"
 #include <Eigen/Dense>
 #include "teqp/derivs.hpp"
+
+using namespace teqp;
 
 template <typename ModelContainer, typename T1, typename T2, typename T3>
 auto get_f(const ModelContainer& modcon, const T1& x1, const T2& x2, const T3& x3) {

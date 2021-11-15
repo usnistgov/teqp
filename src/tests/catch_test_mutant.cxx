@@ -2,6 +2,8 @@
 
 #include "teqp/models/multifluid.hpp"
 
+using namespace teqp;
+
 TEST_CASE("Test construction of mutant", "[mutant]")
 {
 

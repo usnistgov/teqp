@@ -3,6 +3,7 @@
 #include "teqp/constants.hpp"
 #include "teqp/types.hpp"
 
+namespace teqp {
 /*
 To add:
 1. LKP (Stefan Herrig's thesis)
@@ -120,3 +121,5 @@ public:
         return forceeval(val);
     }
 };
+
+}; // namespace teqp

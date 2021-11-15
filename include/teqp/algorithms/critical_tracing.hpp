@@ -13,6 +13,7 @@
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
 #include <boost/numeric/odeint/stepper/euler.hpp>
 
+namespace teqp {
 // This has to be outside the critical tracing struct so that the pybind11 wrapper doesn't fight with the types
 struct TCABOptions {
     double abs_err = 1.0e-6,
@@ -560,3 +561,5 @@ struct CriticalTracing {
     }
 
 }; // namespace VecType
+
+}; // namespace teqp

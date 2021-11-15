@@ -22,8 +22,10 @@
 #include "teqp/models/vdW.hpp"
 #include "teqp/models/cubics.hpp"
 #include "teqp/models/pcsaft.hpp"
-using namespace PCSAFT;
+using namespace teqp::PCSAFT;
 #include "teqp/derivs.hpp"
+
+using namespace teqp;
 
 struct OneTiming {
     double value, sec_per_call;

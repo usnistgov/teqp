@@ -13,6 +13,7 @@
 * 
 * Warning: these routines are optimized for accuracy, not for speed or memory use
 */
+namespace teqp{
 
 template<int Nderiv, int Norder, typename Function, typename Scalar>
 auto centered_diff(const Function &f, const Scalar x, const Scalar h) {
@@ -62,3 +63,4 @@ auto centered_diff(const Function &f, const Scalar x, const Scalar h) {
 	auto val = num / pow(h, Nderiv);
 	return val;
 }
+}; // namespace teqp

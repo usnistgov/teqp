@@ -2,6 +2,8 @@
 
 #include "nlohmann/json.hpp"
 
+namespace teqp {
+
 namespace CPA {
 
 template<typename X> auto POW2(X x) { return x * x; };
@@ -290,3 +292,5 @@ inline auto CPAfactory(const nlohmann::json &j){
 }
 
 }; /* namespace CPA */
+
+}; // namespace teqp

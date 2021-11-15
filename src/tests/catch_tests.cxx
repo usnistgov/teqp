@@ -4,7 +4,7 @@
 
 #include "teqp/core.hpp"
 #include "teqp/models/pcsaft.hpp"
-using namespace PCSAFT;
+using namespace teqp::PCSAFT;
 #include "teqp/models/cubicsuperancillary.hpp"
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/vdW.hpp"
@@ -16,6 +16,8 @@ using namespace PCSAFT;
 #include <boost/multiprecision/cpp_bin_float.hpp>
 using namespace boost::multiprecision;
 #include "teqp/finite_derivs.hpp"
+
+using namespace teqp;
 
 auto build_vdW_argon() {
     double Omega_b = 1.0 / 8, Omega_a = 27.0 / 64;

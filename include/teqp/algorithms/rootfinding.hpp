@@ -1,5 +1,7 @@
 #pragma once
 
+namespace teqp{
+
 template<typename Callable, typename Inputs>
 auto NewtonRaphson(Callable f, const Inputs& args, double tol) {
     // Jacobian matrix
@@ -22,3 +24,5 @@ auto NewtonRaphson(Callable f, const Inputs& args, double tol) {
     }
     return x;
 }
+
+}; /* namespace teqp */

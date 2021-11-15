@@ -13,6 +13,7 @@
 #include "teqp/algorithms/VLE.hpp"
 
 namespace py = pybind11;
+using namespace teqp;
 
 template<typename Model, typename Wrapper>
 void add_derivatives(py::module &m, Wrapper &cls) {

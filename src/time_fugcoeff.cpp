@@ -16,6 +16,8 @@
 #include "teqp/models/multifluid.hpp"
 #include "teqp/derivs.hpp"
 
+using namespace teqp;
+
 int main()
 {
     // You may need to change this path to suit your installation

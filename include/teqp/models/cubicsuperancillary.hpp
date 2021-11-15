@@ -1,6 +1,8 @@
 #pragma once 
 #include <vector>
 
+namespace teqp {
+
 namespace CubicSuperAncillary {
 
 struct Chebyshev{
@@ -3851,3 +3853,5 @@ const int VDW_CODE = 0, SRK_CODE = 1, PR_CODE = 2;
 const int P_CODE = 100, RHOL_CODE = 101, RHOV_CODE = 102;
 
 }; // namespace CubicSuperAncillary
+
+}; // namespace teqp

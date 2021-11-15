@@ -4,6 +4,8 @@
 
 #include <optional>
 
+using namespace teqp;
+
 template<typename J>
 void time_calls(const std::string &coolprop_root, const J &BIPcollection) {
     auto model = build_multifluid_model({ "methane", "ethane" }, coolprop_root, BIPcollection);

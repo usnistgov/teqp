@@ -8,6 +8,8 @@
 
 #include "teqp/derivs.hpp"
 
+using namespace teqp;
+
 TEST_CASE("vdW derivatives", "[vdW]")
 {
 	double Omega_b = 1.0 / 8, Omega_a = 27.0 / 64;

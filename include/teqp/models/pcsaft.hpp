@@ -2,6 +2,7 @@
 
 #include "nlohmann/json.hpp"
 
+namespace teqp {
 namespace PCSAFT {
 
 /// Coefficients for one fluid
@@ -312,3 +313,4 @@ inline auto PCSAFTfactory(const nlohmann::json& json) {
 };
 
 } /* namespace PCSAFT */
+}; // namespace teqp

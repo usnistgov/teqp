@@ -1,6 +1,9 @@
 #pragma once
 
 #include "teqp/types.hpp"
+
+namespace teqp {
+
 /**
 \f$ \alpha^{\rm r}=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i}\f$
 */
@@ -258,3 +261,5 @@ public:
 using EOSTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm>;
 
 using DepartureTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm>;
+
+}; // namespace teqp
