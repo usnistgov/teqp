@@ -69,13 +69,13 @@ namespace teqp {
         }
     }
 
-    auto toeig = [](const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); };
+    inline auto toeig (const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); }
 
-    auto all_same_length = [](const nlohmann::json& j, const std::vector<std::string>& ks) {
+    inline auto all_same_length(const nlohmann::json& j, const std::vector<std::string>& ks) {
         std::set<decltype(j[0].size())> lengths;
         for (auto k : ks) { lengths.insert(j[k].size()); }
         return lengths.size() == 1;
-    };
+    }
 
     class Timer {
     private:
