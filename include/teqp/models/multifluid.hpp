@@ -367,6 +367,11 @@ inline auto build_departure_function(const nlohmann::json& j) {
     auto build_power = [&](auto term, auto& dep) {
         std::size_t N = term["n"].size();
 
+        // Don't add a departure function if there are no coefficients provided
+        if (N == 0) {
+            return;
+        }
+
         PowerEOSTerm eos;
 
         auto eigorzero = [&term, &N](const std::string& name) -> Eigen::ArrayXd {
