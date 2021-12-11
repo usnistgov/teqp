@@ -141,3 +141,10 @@ if (TEQP_COVERAGE)
     BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
   )
 endif()
+
+if (TEQP_JAVASCRIPT_MODULE)
+  # cmake -DTEQP_JAVASCRIPT_MODULE=ON
+  #       -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
+  #       
+  set(CMAKE_EXE_LINKER_FLAGS "--bind -s ASSERTIONS=1 -s SAFE_HEAP=1 -s DISABLE_EXCEPTION_CATCHING=0")
+endif()
