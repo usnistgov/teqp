@@ -146,5 +146,20 @@ if (TEQP_JAVASCRIPT_MODULE)
   # cmake -DTEQP_JAVASCRIPT_MODULE=ON
   #       -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
   #       
-  set(CMAKE_EXE_LINKER_FLAGS "--bind -s ASSERTIONS=1 -s SAFE_HEAP=1 -s DISABLE_EXCEPTION_CATCHING=0")
+
+  # All the things will compile to HTML with no prefix and file extension of HTML
+  # Or you could not do this and run in node
+  SET_TARGET_PROPERTIES(catch_tests PROPERTIES PREFIX "" SUFFIX .html)
+  SET_TARGET_PROPERTIES(emtest_catch_exception PROPERTIES PREFIX "" SUFFIX .html)
+  SET_TARGET_PROPERTIES(bench PROPERTIES PREFIX "" SUFFIX .html)
+
+  # Note: add_compile_options seems to have no effect with ToolChain enabled. So flags 
+  # to the compiler can be sent via add_definitions
+  ##### add_compile_options( -s DISABLE_EXCEPTION_CATCHING=0) # appears to have no effect with toolchain file in effect
+  add_definitions( -s DISABLE_EXCEPTION_CATCHING=0 -s ALLOW_MEMORY_GROWTH=1 -s ASSERTIONS=1)
+  set(CMAKE_EXE_LINKER_FLAGS " -s DISABLE_EXCEPTION_CATCHING=0 -s ALLOW_MEMORY_GROWTH=1 -s ASSERTIONS=1 ")
+
+  #add_compile_options( -gsource-map -fsanitize=address)
+  #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -gsource-map -fsanitize=address ")
+
 endif()
