@@ -9,3 +9,4 @@ services:
       - type: bind
         source: ../..
         target: /src
+        # read_only: true
