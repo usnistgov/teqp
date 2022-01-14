@@ -23,6 +23,7 @@ struct TCABOptions {
         T_tol = 1e-6; ///< The tolerance on temperature to indicate that it is converged
     int small_T_count = 5; ///< How many small temperature steps indicates convergence
     int integration_order = 5; ///<
+    int max_step_count = 1000;
 };
 
 template<typename Model, typename Scalar = double, typename VecType = Eigen::ArrayXd>
@@ -399,7 +400,7 @@ struct CriticalTracing {
         
         int counter_T_converged = 0, retry_count = 0;
         ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c,dt,condition(1),condition(2)" << std::endl;
-        for (auto iter = 0; iter < 1000; ++iter) {
+        for (auto iter = 0; iter < options.max_step_count; ++iter) {
 
             // Make T and rhovec references to the contents of x0 vector
             // The views are mutable (danger!)
