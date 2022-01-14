@@ -479,7 +479,8 @@ struct CriticalTracing {
             try {
                 xprime(x0, dxdt, -1.0);
             }
-            catch (...) {
+            catch (const std::exception &e) {
+                std::cout << e.what() << std::endl;
                 break;
             }
             auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
@@ -490,7 +491,8 @@ struct CriticalTracing {
                 try {
                     res = controlled_stepper.try_step(xprime, x0, t, dt);
                 }
-                catch (...) {
+                catch (const std::exception &e) {
+                    std::cout << e.what() << std::endl;
                     break;
                 }
 
@@ -509,8 +511,10 @@ struct CriticalTracing {
             else if (options.integration_order == 1) {
                 try {
                     eul.do_step(xprime, x0, t, dt);
+                    t += dt;
                 }
-                catch (...) {
+                catch (const std::exception &e) {
+                    std::cout << e.what() << std::endl;
                     break;
                 }
             }
@@ -548,7 +552,7 @@ struct CriticalTracing {
             if (z0 < 0 || z0 > 1) {
                 break;
             }
-            t += dt;           
+
 
             if (!filename.empty()) {
                 write_line();
