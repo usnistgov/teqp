@@ -547,7 +547,8 @@ struct CriticalTracing {
             z0 = rhovec[0] / rhotot;
             if (z0 < 0 || z0 > 1) {
                 break;
-            }           
+            }
+            t += dt;           
 
             if (!filename.empty()) {
                 write_line();
