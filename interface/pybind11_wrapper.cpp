@@ -34,8 +34,11 @@ void init_teqp(py::module& m) {
         .def_readwrite("abs_err", &TCABOptions::abs_err)
         .def_readwrite("rel_err", &TCABOptions::rel_err)
         .def_readwrite("init_dt", &TCABOptions::init_dt)
+        .def_readwrite("init_c", &TCABOptions::init_c)
         .def_readwrite("max_dt", &TCABOptions::max_dt)
         .def_readwrite("max_step_count", &TCABOptions::max_step_count)
+        .def_readwrite("polish", &TCABOptions::polish)
+        .def_readwrite("skip_dircheck_count", &TCABOptions::skip_dircheck_count)
         .def_readwrite("integration_order", &TCABOptions::integration_order)
         ;
 

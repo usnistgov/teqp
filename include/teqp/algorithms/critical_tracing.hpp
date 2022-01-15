@@ -20,10 +20,13 @@ struct TCABOptions {
         rel_err = 1.0e-6,
         init_dt = 10, ///< The initial step size
         max_dt = 10000000000,
-        T_tol = 1e-6; ///< The tolerance on temperature to indicate that it is converged
+        T_tol = 1e-6, ///< The tolerance on temperature to indicate that it is converged
+        init_c = 1.0; ///< The c parameter which controls the initial search direction for the first step. Choices are 1 or -1
     int small_T_count = 5; ///< How many small temperature steps indicates convergence
-    int integration_order = 5; ///<
-    int max_step_count = 1000;
+    int integration_order = 5; ///< The order of integration, either 1 for simple Euler or 5 for adaptive RK45
+    int max_step_count = 1000; ///< Maximum number of steps allowed
+    int skip_dircheck_count = 1; ///< Only start checking the direction dot product after this many steps
+    bool polish = false; ///< If true, polish the solution at every step
 };
 
 template<typename Model, typename Scalar = double, typename VecType = Eigen::ArrayXd>
@@ -290,25 +293,26 @@ struct CriticalTracing {
         return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
     }
 
+    /// Polish a critical point while keeping the overall composition constant and iterating for temperature and overall density
     static auto critical_polish_molefrac(const Model& model, const Scalar T, const VecType& rhovec, const Scalar z0) {
         auto polish_x_resid = [&model, &z0](const auto& x) {
             auto T = x[0];
-            Eigen::ArrayXd rhovec(2); rhovec << x[1], x[2];
+            Eigen::ArrayXd rhovec(2); rhovec << z0*x[1], (1-z0)*x[1];
             auto z0new = rhovec[0] / rhovec.sum();
             auto derivs = get_derivs(model, T, rhovec);
-            // First two are residuals on critical point, third is residual on composition
-            return (Eigen::ArrayXd(3) << derivs.tot[2], derivs.tot[3], z0new - z0).finished();
+            // First two are residuals on critical point
+            return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
         };
-        Eigen::ArrayXd x0(3); x0 << T, rhovec[0], rhovec[1];
+        Eigen::ArrayXd x0(2); x0 << T, rhovec[0]+rhovec[1];
         auto r0 = polish_x_resid(x0);
         auto x = NewtonRaphson(polish_x_resid, x0, 1e-10);
         auto r = polish_x_resid(x);
         Eigen::ArrayXd change = x0 - x;
-        if (!std::isfinite(T) || !std::isfinite(x[1]) || !std::isfinite(x[2])) {
+        if (!std::isfinite(x[0]) || !std::isfinite(x[1])) {
             throw std::invalid_argument("Something not finite; aborting polishing");
         }
-        Eigen::ArrayXd rho = x.tail(x.size() - 1);
-        return std::make_tuple(x[0], rho);
+        Eigen::ArrayXd rhovecsoln(2); rhovecsoln << x[1]*z0, x[1] * (1 - z0);
+        return std::make_tuple(x[0], rhovecsoln);
     }
     static auto critical_polish_fixedrho(const Model& model, const Scalar T, const VecType& rhovec, const int i) {
         Scalar rhoval = rhovec[i];
@@ -353,18 +357,24 @@ struct CriticalTracing {
 
         VecType last_drhodt;
 
+        // Typedefs for the types for odeint for simple Euler and RK45 integrators
+        using state_type = std::vector<double>; 
+        using namespace boost::numeric::odeint;
+        euler<state_type> eul; // Class for simple Euler integration
+        typedef runge_kutta_cash_karp54< state_type > error_stepper_type;
+        typedef controlled_runge_kutta< error_stepper_type > controlled_stepper_type;
+
         auto dot = [](const auto& v1, const auto& v2) { return (v1 * v2).sum(); };
         auto norm = [](const auto& v) { return sqrt((v * v).sum()); };
 
         auto JSONdata = nlohmann::json::array();
         std::ofstream ofs = (filename.empty()) ? std::ofstream() : std::ofstream(filename);
-
-        using state_type = std::vector<double>;
-        double c = 1.0; 
+        
+        double c = options.init_c; 
 
         // The function for the derivative in the form of odeint
         // x is [T, rhovec]
-        auto xprime = [&model, &c, norm](const state_type& x, state_type& dxdt, const double /* t */)
+        auto xprime = [&](const state_type& x, state_type& dxdt, const double /* t */)
         {
             // Unpack the inputs
             const double T = x[0];
@@ -372,19 +382,29 @@ struct CriticalTracing {
             
             auto drhodT = get_drhovec_dT_crit(model, T, rhovec).array().eval();
             auto dTdt = 1.0 / norm(drhodT);
-            dxdt[0] = c*dTdt; 
-            auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1); 
-            drhodt = c*(drhodT * dTdt).eval();
+            Eigen::ArrayXd drhodt = c * (drhodT * dTdt).eval();
+
+            dxdt[0] = c*dTdt;
+
+            auto drhodtview = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1); 
+            drhodtview = drhodt; // Copy values into the view
+
+            if (last_drhodt.size() > 0) {
+                auto rhodot = dot(drhodt, last_drhodt);
+                if (rhodot < 0) {
+                    Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]), dxdt.size()) *= -1;
+                }
+            }
         };
-
-        // Typedefs for the types
-        using namespace boost::numeric::odeint;
-
-        // Class for simple Euler integration
-        euler<state_type> eul;
-
-        typedef runge_kutta_cash_karp54< state_type > error_stepper_type;
-        typedef controlled_runge_kutta< error_stepper_type > controlled_stepper_type;
+        auto get_dxdt = [&](const state_type& x) {
+            auto dxdt = state_type(x.size());
+            xprime(x, dxdt, -1);
+            return dxdt;
+        };
+        // Pull out the drhodt from dxdt, just a convenience function
+        auto extract_drhodt = [](const state_type& dxdt) -> Eigen::ArrayXd {
+            return Eigen::Map<const Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
+        };
 
         // Define the tolerances
         double abs_err = options.abs_err, rel_err = options.rel_err, a_x = 1.0, a_dxdt = 1.0;
@@ -392,102 +412,92 @@ struct CriticalTracing {
 
         double t = 0, dt = options.init_dt;
 
-        // Build the initial state arrary, T, followed by rhovec
+        // Build the initial state array, with T followed by rhovec
         std::vector<double> x0(rhovec0.size() + 1); 
-        
         x0[0] = T0;
         Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 1, x0.size() - 1) = rhovec0;
+
+        // Make variables T and rhovec references to the contents of x0 vector
+        // The views are mutable (danger!)
+        double& T = x0[0];
+        auto rhovec = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 1, x0.size() - 1);
+
+        auto store_drhodt = [&](const state_type& x0) {
+            last_drhodt = extract_drhodt(get_dxdt(x0));
+        };
+
+        auto store_point = [&]() {
+
+            // Calculate some other parameters, for debugging, or scientific interest
+            auto rhotot = rhovec.sum();
+            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
+            double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
+            auto conditions = get_criticality_conditions(model, T, rhovec);
+            double splus = id::get_splus(model, T, rhovec);
+            auto dxdt = x0;
+            xprime(x0, dxdt, -1.0);
+
+            // Store the data in a JSON structure
+            nlohmann::json point = {
+                {"t", t},
+                {"T / K", T},
+                {"rho0 / mol/m^3", static_cast<double>(rhovec[0])},
+                {"rho1 / mol/m^3", static_cast<double>(rhovec[1])},
+                {"c", c},
+                {"s^+", splus},
+                {"p / Pa", p},
+                {"dT/dt", dxdt[0]},
+                {"drho0/dt", dxdt[1]},
+                {"drho1/dt", dxdt[2]},
+                {"lambda1", conditions[0]},
+                {"dirderiv(lambda1)/dalpha", conditions[1]},
+            };
+            JSONdata.push_back(point);
+        };
+
+        // Line writer
+        auto write_line = [&]() {
+            std::stringstream out;
+            auto rhotot = rhovec.sum();
+            double z0 = rhovec[0] / rhotot;
+            using id = IsochoricDerivatives<decltype(model)>;
+            auto conditions = get_criticality_conditions(model, T, rhovec);
+            out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << dt << "," << conditions(0) << "," << conditions(1) << std::endl;
+            std::string sout(out.str());
+            std::cout << sout;
+            if (ofs.is_open()) {
+                ofs << sout;
+            }
+        };
         
         int counter_T_converged = 0, retry_count = 0;
         ofs << "z0 / mole frac.,rho0 / mol/m^3,rho1 / mol/m^3,T / K,p / Pa,c,dt,condition(1),condition(2)" << std::endl;
+        
+        // Determine the initial direction of integration
+        {
+            const auto step = (rhovec + extract_drhodt(get_dxdt(x0))*dt).eval();
+            Eigen::ArrayX<bool> negativestepvals = (step < 0).eval();
+            // Flip the sign if the first step would yield any negative concentrations
+            if (negativestepvals.any()) {
+                c *= -1;
+            }
+        }
+        //store_drhodt(x0);
+        if (!filename.empty()) {
+            write_line();
+        }
+
         for (auto iter = 0; iter < options.max_step_count; ++iter) {
+            
+            // Calculate the derivatives at the beginning of the step
+            auto dxdt_start_step = get_dxdt(x0);
+            auto x_start_step = x0;
 
-            // Make T and rhovec references to the contents of x0 vector
-            // The views are mutable (danger!)
-            double& T = x0[0];
-            auto rhovec = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 1, x0.size() - 1);
-
-            auto store_point = [&]() {
-
-                // Calculate some other parameters, for debugging, or scientific interest
-                auto rhotot = rhovec.sum();
-                using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-                double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
-                auto conditions = get_criticality_conditions(model, T, rhovec);
-                double splus = id::get_splus(model, T, rhovec);
-
-                // Store the data in a JSON structure
-                nlohmann::json point = {
-                    {"t", t},
-                    {"T / K", T},
-                    {"rho0 / mol/m^3", static_cast<double>(rhovec[0])},
-                    {"rho1 / mol/m^3", static_cast<double>(rhovec[1])},
-                    {"c", c},
-                    {"s^+", splus},
-                    {"p / Pa", p},
-                    {"lambda1", conditions[0]},
-                    {"dirderiv(lambda1)/dalpha", conditions[1]},
-                };
-                JSONdata.push_back(point);
-            };
-
-            {
-                auto dxdt = x0;
-                xprime(x0, dxdt, -1.0);
-                const auto drhodt = Eigen::Map<const Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
-
-                // Flip the sign if the tracing wants to go backwards, or if the first step would yield any negative concentrations
-                const auto this_drhodt = drhodt.eval();
-                const auto step = rhovec + this_drhodt * dt;
-                Eigen::ArrayX<bool> negativestepvals = (step < 0).eval();
-                if (iter == 0 && retry_count == 0 && negativestepvals.any()) {
-                    c *= -1;
-                }
-                else if (iter > 1 && retry_count == 0 && dot(this_drhodt, last_drhodt) < 0) {
-                    c *= -1;
-                }
-            }
-
-            auto write_line = [&]() {
-                std::stringstream out;
-                auto rhotot = rhovec.sum();
-                double z0 = rhovec[0] / rhotot;
-                using id = IsochoricDerivatives<decltype(model)>;
-                auto conditions = get_criticality_conditions(model, T, rhovec);
-                out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << dt << "," << conditions(0) << "," << conditions(1) << std::endl;
-                std::string sout(out.str());
-                std::cout << sout;
-                if (ofs.is_open()) {
-                    ofs << sout;
-                }
-            };
-            if (iter == 0) {
-                if (!filename.empty()) {
-                    write_line();
-                }
-            }
-            if (iter == 0 && retry_count == 0) {
-                store_point();
-            }
-
-            double dtold = dt;
-            auto x0_previous = x0;
-
-            // Call the function to get drho/dt in order 
-            // to cache it at the *beginning* of the step
-            auto dxdt = x0;
-            try {
-                xprime(x0, dxdt, -1.0);
-            }
-            catch (const std::exception &e) {
-                std::cout << e.what() << std::endl;
-                break;
-            }
-            auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
-            last_drhodt = drhodt;
+            if (iter == 0 && retry_count == 0) { 
+                store_point(); }
             
             if (options.integration_order == 5) {
-                controlled_step_result res = controlled_step_result::fail;
+                auto res = controlled_step_result::fail;
                 try {
                     res = controlled_stepper.try_step(xprime, x0, t, dt);
                 }
@@ -504,6 +514,11 @@ struct CriticalTracing {
                 }
                 else {
                     retry_count = 0;
+                    /*auto dxdt = x0;
+                    xprime(x0, dxdt, -1.0);
+                    auto drhodt = Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
+                    auto rhodotproduct = dot(drhodt, last_drhodt);
+                    int rr = 0;*/
                 }
                 // Reduce step size if greater than the specified max step size
                 dt = std::min(dt, options.max_dt);
@@ -522,23 +537,37 @@ struct CriticalTracing {
                 throw std::invalid_argument("integration order is invalid:" + std::to_string(options.integration_order));
             }
 
-            auto conditions = get_criticality_conditions(model, T, rhovec);
             auto z0 = rhovec[0] / rhovec.sum();
             if (z0 < 0 || z0 > 1) {
                 break;
             }
             
-            try {
-                int i = 0;
-                auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
-                //int rrrr = 0;
-                T = Tnew; rhovec = rhovecnew;
-            }
-            catch (std::exception& e) {
-                std::cout << e.what() << std::endl;
+            if (options.polish) {
+                try {
+                    int i = 0;
+                    //auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
+                    auto [Tnew, rhovecnew] = critical_polish_molefrac(model, T, rhovec, z0);
+                    T = Tnew; rhovec = rhovecnew;
+                }
+                catch (std::exception& e) {
+                    //int i = 0;
+                    //auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
+                    std::cout << e.what() << std::endl;
+                }
             }
 
-            auto actualstep = (Eigen::Map<Eigen::ArrayXd>(&(x0[0]), x0.size()) - Eigen::Map<Eigen::ArrayXd>(&(x0_previous[0]), x0_previous.size())).eval();
+            // Store the derivative vector from the beginning of the step, before
+            // the actual step is taken.  We don't want to use the values at the end
+            // because otherwise simple Euler will never consider the possible change in direction
+            //
+            // Also, we only do this after two completed steps because sometimes the infinite
+            // dilution derivatives seem to be not quite right. There is still a risk that the first
+            // step will try to turn around...
+            if (iter >= options.skip_dircheck_count) {
+                store_drhodt(x_start_step); }
+
+            auto actualstep = (Eigen::Map<Eigen::ArrayXd>(&(x0[0]), x0.size()) - Eigen::Map<Eigen::ArrayXd>(&(x_start_step[0]), x_start_step.size())).eval();
+            
             // Check if T has stopped changing
             if (std::abs(actualstep[0]) < options.T_tol) {
                 counter_T_converged++;
@@ -553,16 +582,14 @@ struct CriticalTracing {
                 break;
             }
 
-
-            if (!filename.empty()) {
-                write_line();
-            }
+            if (!filename.empty()) { write_line(); }
             store_point();
 
             if (counter_T_converged > options.small_T_count) {
                 break;
             }
         }
+        auto N = JSONdata.size();
         return JSONdata;
     }
 
