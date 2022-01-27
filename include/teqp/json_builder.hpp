@@ -5,6 +5,8 @@
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/pcsaft.hpp"
 
+#include "teqp/exceptions.hpp"
+
 #include "nlohmann/json.hpp"
 
 namespace teqp {

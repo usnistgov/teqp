@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <script>
+    var Module = {
+      onRuntimeInitialized: function() {
+        var ret = Module.isotherm(
+          '{"kind": "PR", "model": {"Tcrit / K": [200,300], "pcrit / Pa": [4e6,5e6], "acentric": [0.3,0.4]}}',
+          '{"T / K": 270, "rhoL / m^3/mol":[3000, 0], "rhoV / m^3/mol":[300, 0]}');
+        console.log(ret);
+
+        // var expr = ex.expr;
+        // var variables = ex.variables;
+        // var args = new Object([
+        //   ['x', [1.0, 2.0, 3.0]],
+        //   ['y', 2.0],
+        //   ['z', 3.0],
+        // ]);
+        // var problem = new Object();
+        // problem.args = Object.fromEntries(args);
+        // var j = JSON.stringify(problem);
+        // var val = ex.callJSON(j);
+        // //ex.freeze();
+        // ex.delete();
+        // var ok = "ok";
+        // console.log('result: ' + val);
+      }
+    };
+  </script>
+  <script src="teqpbind.js"></script>
+</html>

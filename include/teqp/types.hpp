@@ -33,7 +33,7 @@ namespace teqp {
     {
         using namespace autodiff::detail;
         if constexpr (isDual<T> || isExpr<T>) {
-            return eval(expr);
+            return autodiff::detail::eval(expr);
         }
         else {
             return expr;
@@ -53,7 +53,7 @@ namespace teqp {
     {
         using namespace autodiff::detail;
         if constexpr (isDual<T> || isExpr<T>) {
-            return val(expr);
+            return autodiff::detail::val(expr);
         }
         else if constexpr (is_complex_t<T>()) {
             return expr.real();

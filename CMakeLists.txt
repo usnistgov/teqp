@@ -59,6 +59,10 @@ option (TEQP_JAVASCRIPT_HTML
         "Enable to generate HTML files rather than js with the emscripten engine"
         OFF)
 
+option (TEQP_JAVASCRIPT_EMBIND
+        "Build C++ <-> Javascript interface with embind"
+        OFF)
+
 if (TEQP_JAVASCRIPT_MODULE)
   # cmake -DTEQP_JAVASCRIPT_MODULE=ON
   #       -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
@@ -150,6 +154,23 @@ if (TEQP_SNIPPETS)
 else()
   message(STATUS "No snippets will be compiled, pass -DTEQP_SNIPPETS=ON to build them")
 endif()
+
+if (TEQP_EMBIND)
+    # If you want a monolithic file with no async memory loading, define EMSCRIPTEN_NO_MEMORY_INIT_FILE
+    if(EMSCRIPTEN_NO_MEMORY_INIT_FILE)
+      set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 0")
+    else()
+      set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 1")
+    endif()
+    add_definitions( -sDISABLE_EXCEPTION_CATCHING=0)
+    set(CMAKE_EXE_LINKER_FLAGS "--bind ${EMSCRIPTEN_INIT_FLAG} -sASSERTIONS=1 -sDISABLE_EXCEPTION_CATCHING=0")
+    set(CMAKE_BUILD_TYPE Release)
+    set(APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/interface/js/emscripten_interface.cxx")
+    add_executable(teqpbind ${APP_SOURCES})
+    target_link_libraries(teqpbind PRIVATE autodiff)
+    SET_TARGET_PROPERTIES(teqpbind PROPERTIES PREFIX "" SUFFIX .js)
+endif()
+
 
 if (TEQP_COVERAGE)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "This path")
