@@ -943,6 +943,46 @@ inline auto build_alias_map(const std::string& root) {
     return aliasmap;
 }
 
+/// Internal method for actually constructing the model with the provided JSON data structures
+inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON, const nlohmann::json& BIPcollection, const nlohmann::json& depcollection, const nlohmann::json& flags = {}) {
+
+    auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(pureJSON);
+    auto EOSs = get_EOSs(pureJSON);
+
+    // Extract the set of possible identifiers to be used to match parameters
+    auto identifierset = collect_identifiers(pureJSON);
+    // Decide which identifier is to be used (Name, CAS, REFPROP name)
+    auto identifiers = identifierset[select_identifier(BIPcollection, identifierset, flags)];
+
+    // Things related to the mixture
+    auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, identifiers, flags);
+    auto funcs = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
+    auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, identifiers, flags, Tc, vc);
+
+    auto redfunc = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
+
+    return MultiFluid(
+        std::move(redfunc),
+        std::move(CorrespondingStatesContribution(std::move(EOSs))),
+        std::move(DepartureContribution(std::move(F), std::move(funcs)))
+    );
+}
+
+/// A builder function where the JSON-formatted strings are provided explicitly rather than file paths
+inline auto build_multifluid_JSONstr(const std::vector<std::string>& componentJSON, const std::string& BIPJSON, const std::string& departureJSON, const nlohmann::json& flags = {}) {
+
+    // Mixture things
+    const auto BIPcollection = nlohmann::json::parse(BIPJSON);
+    const auto depcollection = nlohmann::json::parse(departureJSON);
+
+    // Pure fluids
+    std::vector<nlohmann::json> pureJSON;
+    for (auto& c : componentJSON) {
+        pureJSON.emplace_back(nlohmann::json::parse(c));
+    }
+    return _build_multifluid_model(pureJSON, BIPcollection, depcollection, flags);
+}
+
 inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
 
     std::string BIPpath = (BIPcollectionpath.empty()) ? coolprop_root + "/dev/mixtures/mixture_binary_pairs.json" : BIPcollectionpath;
@@ -973,27 +1013,10 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
         // Backup lookup with absolute paths resolved for each component
         pureJSON = collect_component_json(abspaths, coolprop_root);
     }
-    auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(pureJSON);
-    auto EOSs = get_EOSs(pureJSON); 
-
-    // Extract the set of possible identifiers to be used to match parameters
-    auto identifierset = collect_identifiers(pureJSON);
-    // Decide which identifier is to be used (Name, CAS, REFPROP name)
-    auto identifiers = identifierset[select_identifier(BIPcollection, identifierset, flags)];
-    
-    // Things related to the mixture
-    auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, identifiers, flags);
-    auto funcs = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
-    auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, identifiers, flags, Tc, vc);
-
-    auto redfunc = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
-
-    return MultiFluid(
-        std::move(redfunc),
-        std::move(CorrespondingStatesContribution(std::move(EOSs))),
-        std::move(DepartureContribution(std::move(F), std::move(funcs)))
-    );
+    return _build_multifluid_model(pureJSON, BIPcollection, depcollection, flags);
 }
+
+
 
 /**
 This class holds a lightweight reference to the core parts of the model
