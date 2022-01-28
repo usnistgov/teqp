@@ -2,7 +2,7 @@
 
 mkdir /bldbind
 cd /bldbind
-cmake /src -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DTEQP_NO_PYTHON=ON -DTEQP_EMBIND=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=OFF
+cmake /src -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DTEQP_NO_PYTHON=ON -DTEQP_EMBIND_MODULARIZE_ES6=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_BUILD_TYPE=Release -DTEQP_SNIPPETS=OFF
 cmake --build . --target teqpbind
 
 cp teqpbind.* /src/interface/js
