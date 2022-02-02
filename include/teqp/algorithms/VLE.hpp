@@ -116,6 +116,102 @@ Eigen::ArrayXd pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV
     return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
 }
 
+enum class VLE_return_code { unset, xtol_satisfied, functol_satisfied, maxiter_met };
+
+/***
+* \brief Do a vapor-liquid phase equilibrium problem for a mixture (binary only for now) with mole fractions specified in the liquid phase
+* \param model The model to operate on
+* \param T Temperature
+* \param rhovecL0 Initial values for liquid mole concentrations
+* \param rhovecV0 Initial values for vapor mole concentrations
+* \param xspec Specified mole fractions for all components
+* \param atol Absolute tolerance on function values
+* \param reltol Relative tolerance on function values
+* \param axtol Absolute tolerance on steps in independent variables
+* \param relxtol Relative tolerance on steps in independent variables
+* \param maxiter Maximum number of iterations permitted
+*/
+template<typename Model, typename Scalar, typename Vector>
+auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vector& rhovecV0, const Vector& xspec, double atol, double reltol, double axtol, double relxtol, int maxiter) {
+
+    const Eigen::Index N = rhovecL0.size();
+    Eigen::MatrixXd J(2 * N, 2 * N), r(2 * N, 1), x(2 * N, 1);
+    x.col(0).array().head(N) = rhovecL0;
+    x.col(0).array().tail(N) = rhovecV0;
+    using isochoric = IsochoricDerivatives<Model, Scalar, Vector>;
+
+    Eigen::Map<Eigen::ArrayXd> rhovecL(&(x(0)), N);
+    Eigen::Map<Eigen::ArrayXd> rhovecV(&(x(0 + N)), N);
+    auto RT = model.R(xspec) * T;
+
+    VLE_return_code return_code = VLE_return_code::unset;
+
+    for (int iter = 0; iter < maxiter; ++iter) {
+
+        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
+        auto rhoL = rhovecL.sum();
+        auto rhoV = rhovecV.sum();
+        Scalar pL = rhoL * RT - PsirL + (rhovecL.array() * PsirgradL.array()).sum(); // The (array*array).sum is a dot product
+        Scalar pV = rhoV * RT - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
+        auto dpdrhovecL = RT + (hessianL * rhovecL.matrix()).array();
+        auto dpdrhovecV = RT + (hessianV * rhovecV.matrix()).array();
+
+        r(0) = PsirgradL(0) + RT * log(rhovecL(0)) - (PsirgradV(0) + RT * log(rhovecV(0)));
+        r(1) = PsirgradL(1) + RT * log(rhovecL(1)) - (PsirgradV(1) + RT * log(rhovecV(1)));
+        r(2) = pL - pV;
+        r(3) = rhovecL(0) / rhovecL.sum() - xspec(0);
+
+        // Chemical potential contributions in Jacobian
+        J(0, 0) = hessianL(0, 0) + RT / rhovecL(0);
+        J(0, 1) = hessianL(0, 1);
+        J(1, 0) = hessianL(1, 0); // symmetric, so same as above
+        J(1, 1) = hessianL(1, 1) + RT / rhovecL(1);
+        J(0, 2) = -(hessianV(0, 0) + RT / rhovecV(0));
+        J(0, 3) = -(hessianV(0, 1));
+        J(1, 2) = -(hessianV(1, 0)); // symmetric, so same as above
+        J(1, 3) = -(hessianV(1, 1) + RT / rhovecV(1));
+        // Pressure contributions in Jacobian
+        J(2, 0) = dpdrhovecL(0);
+        J(2, 1) = dpdrhovecL(1);
+        J(2, 2) = -dpdrhovecV(0);
+        J(2, 3) = -dpdrhovecV(1);
+        // Mole fraction composition specification in Jacobian
+        J.row(3).array() = 0.0;
+        J(3, 0) = (rhoL - rhovecL(0)) / (rhoL * rhoL); // dxi/drhoj (j=i)
+        J(3, 1) = -rhovecL(0) / (rhoL * rhoL); // dxi/drhoj (j!=i)
+
+        // Solve for the step
+        Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-r);
+        x.array() += dx;
+
+        auto xtol_threshold = (axtol + relxtol * x.array().cwiseAbs()).eval();
+        if ((dx.array() < xtol_threshold).all()) {
+            return_code = VLE_return_code::xtol_satisfied;
+            break;
+        }
+
+        auto error_threshold = (atol + reltol * r.array().cwiseAbs()).eval();
+        if ((r.array().cwiseAbs() < error_threshold).all()) {
+            return_code = VLE_return_code::functol_satisfied;
+            break;
+        }
+
+        // If the solution has stopped improving, stop. The change in x is equal to dx in infinite precision, but 
+        // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
+        // the values are done changing
+        if (((x.array() - dx.array()).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
+            return_code = VLE_return_code::xtol_satisfied;
+            break;
+        }
+        if (iter == maxiter - 1){
+            return_code = VLE_return_code::maxiter_met;
+        }
+    }
+    Eigen::ArrayXd rhovecLfinal = rhovecL, rhovecVfinal = rhovecV;
+    return std::make_tuple(return_code, rhovecLfinal, rhovecVfinal);
+}
+
 template<typename Model, typename Scalar>
 Eigen::ArrayXd extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar rhoc, const Scalar T) {
     

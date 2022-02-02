@@ -78,15 +78,16 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
         return o;
     };
     double T = 120; 
+    // Derivative function with respect to pressure
     auto xprime = [&](const state_type& X, state_type& Xprime, double /*t*/) {
         REQUIRE(X.size() % 2 == 0);
         auto N = X.size() / 2;
         // Memory maps into the state vector for inputs and their derivatives
         auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
         auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0])+N, N);
-        auto drhovecdtL = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]), N);
-        auto drhovecdtV = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]) + N, N); 
-        std::tie(drhovecdtL, drhovecdtV) = get_drhovecdp_Tsat(model, T, rhovecL, rhovecV);
+        auto drhovecdpL = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]), N);
+        auto drhovecdpV = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]) + N, N); 
+        std::tie(drhovecdpL, drhovecdpV) = get_drhovecdp_Tsat(model, T, rhovecL, rhovecV);
     };
     auto get_p = [&](const state_type& X) {
         REQUIRE(X.size() % 2 == 0);
@@ -122,6 +123,15 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
                 write();
                 integrator.do_step(xprime, X0, p, dp);
                 p += dp;
+
+                // Try to polish the solution (but don't use the polished values)
+                {
+                    auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X0[0]), N).eval();
+                    auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X0[0 + N]), N).eval();
+                    auto x = (Eigen::ArrayXd(2) << rhovecL(0) / rhovecL.sum(), rhovecL(1) / rhovecL.sum()).finished();
+                    auto [return_code, rhoL, rhoV] = mix_VLE_Tx(model, T, rhovecL, rhovecV, x, 1e-10, 1e-8, 1e-10, 1e-8, 10);
+                }
+                
             }
             double diffs = 0;
             for (auto i = 0; i < X0.size(); ++i) {

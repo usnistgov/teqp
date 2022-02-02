@@ -443,6 +443,31 @@ struct IsochoricDerivatives{
     }
 
     /***
+    * \brief Calculate the function value, gradient, and Hessian of Psir = ar*rho w.r.t. the molar concentrations
+    *
+    * Uses autodiff to calculate the derivatives
+    */
+    static auto build_Psir_fgradHessian_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+        // Double derivatives in each component's concentration
+        // N^N matrix (symmetric)
+
+        dual2nd u; // the output scalar u = f(x), evaluated together with Hessian below
+        ArrayXdual g;
+        ArrayXdual2nd rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto hfunc = [&model, &T](const ArrayXdual2nd& rho_) {
+            auto rhotot_ = rho_.sum();
+            auto molefrac = (rho_ / rhotot_).eval();
+            return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
+        };
+        // Evaluate the function value u, its gradient, and its Hessian matrix H
+        Eigen::MatrixXd H = autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g); 
+        // Remove autodiff stuff from the numerical values
+        auto f = getbaseval(u);
+        auto gg = g.cast<double>().eval();
+        return std::make_tuple(f, gg, H);
+    }
+
+    /***
     * \brief Calculate the Hessian of Psi = a*rho w.r.t. the molar concentrations
     *
     * Uses autodiff derivatives to calculate second partial derivatives
