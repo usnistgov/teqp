@@ -53,6 +53,13 @@ void init_teqp(py::module& m) {
         .def_readwrite("integration_order", &TVLEOptions::integration_order)
         ;
 
+    py::enum_<VLE_return_code>(m, "VLE_return_code")
+        .value("unset", VLE_return_code::unset)
+        .value("xtol_satisfied", VLE_return_code::xtol_satisfied)
+        .value("functol_satisfied", VLE_return_code::functol_satisfied)
+        .value("maxiter_met", VLE_return_code::maxiter_met)
+        ;
+
     // Some functions for timing overhead of interface
     m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
     using RAX = Eigen::Ref<Eigen::ArrayXd>;
