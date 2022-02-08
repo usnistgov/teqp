@@ -243,24 +243,24 @@ struct CriticalTracing {
         auto eval = [](const auto& ex) { return ex.eval(); };
         if (all(eval(rhovec_minus > 0)) && all(eval(rhovec_plus > 0))) {
             // Conventional centered derivative
-            auto plus_sigma2 = get_derivs(model, T, rhovec_plus);
-            auto minus_sigma2 = get_derivs(model, T, rhovec_minus);
+            auto plus_sigma2 = get_derivs(model, T, rhovec_plus, ei.v0);
+            auto minus_sigma2 = get_derivs(model, T, rhovec_minus, ei.v0);
             deriv_sigma2 = (plus_sigma2.tot - minus_sigma2.tot) / (2.0 * sigma2);
             stepping_desc = "conventional centered";
         }
         else if (all(eval(rhovec_plus > 0))) {
             // Forward derivative in the direction of v1
-            auto plus_sigma2 = get_derivs(model, T, rhovec_plus);
+            auto plus_sigma2 = get_derivs(model, T, rhovec_plus, ei.v0);
             auto rhovec_2plus = (rhovec + 2 * ei.v1 * sigma2).eval();
-            auto plus2_sigma2 = get_derivs(model, T, rhovec_2plus);
+            auto plus2_sigma2 = get_derivs(model, T, rhovec_2plus, ei.v0);
             deriv_sigma2 = (-3 * derivs + 4 * plus_sigma2.tot - plus2_sigma2.tot) / (2.0 * sigma2);
             stepping_desc = "forward";
         }
         else if (all(eval(rhovec_minus > 0))) {
             // Negative derivative in the direction of v1
-            auto minus_sigma2 = get_derivs(model, T, rhovec_minus);
+            auto minus_sigma2 = get_derivs(model, T, rhovec_minus, ei.v0);
             auto rhovec_2minus = (rhovec - 2 * ei.v1 * sigma2).eval();
-            auto minus2_sigma2 = get_derivs(model, T, rhovec_2minus);
+            auto minus2_sigma2 = get_derivs(model, T, rhovec_2minus, ei.v0);
             deriv_sigma2 = (-3 * derivs + 4 * minus_sigma2.tot - minus2_sigma2.tot) / (-2.0 * sigma2);
             stepping_desc = "backwards";
         }
