@@ -277,18 +277,20 @@ struct CriticalTracing {
         Eigen::MatrixXd RHS(2, 1); RHS << -derivT[2], -derivT[3];
         Eigen::MatrixXd drhovec_dT = LHS.colPivHouseholderQr().solve(RHS);
 
-        //            if debug:
-        //        print('Conventional Psi^r derivs w.r.t. sigma_1:', all_derivs.psir)
-        //            print('Conventional Psi derivs w.r.t. sigma_1:', all_derivs.tot)
-        //            print('Derivs w.r.t. T', derivT)
-        //            print('sigma_2', sigma2)
-        //            print('Finite Psi derivs w.r.t. sigma_2:', deriv_sigma2)
-        //            print('stepping', stepping)
-        //            print("U (rows as eigenvalues)", ei.U_T.T)
-        //            print("LHS", LHS)
-        //            print("RHS", RHS)
-        //            print("drhovec_dT", drhovec_dT)
-
+#if defined(DEBUG_get_drhovec_dT_crit)
+        std::cout << "LHS: " << LHS << std::endl;
+        std::cout << "RHS: " << RHS << std::endl;
+        std::cout << "b: " << b << std::endl;
+        std::cout << "stepping_desc: " << stepping_desc << std::endl;
+        std::cout << "deriv_sigma2: " << deriv_sigma2 << std::endl;
+        std::cout << "rhovec_plus: " << rhovec_plus << std::endl;
+        std::cout << "all_derivs.tot:" << all_derivs.tot << std::endl;
+        std::cout << "all_derivs.psir:" << all_derivs.psir << std::endl; 
+        auto plus_sigma2 = get_derivs(model, T, rhovec_plus, ei.v0);
+        std::cout << "plus_sigma2.tot:" << plus_sigma2.tot << std::endl;
+        std::cout << "plus_sigma2.psir:" << plus_sigma2.psir << std::endl;
+        std::cout << "dot of v0: " << plus_sigma2.ei.v0 * ei.v0 << std::endl;
+#endif
         return drhovec_dT;
     }
 
