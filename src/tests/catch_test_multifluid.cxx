@@ -6,6 +6,71 @@
 
 using namespace teqp;
 
+TEST_CASE("Test infinite dilution critical locus derivatives for multifluid", "[crit]")
+{
+    std::string root = "../mycp";
+
+    const auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, root);
+    using ct = CriticalTracing<decltype(model), double, Eigen::ArrayXd>;
+
+    for (int i = 0; i < 2; ++i) {
+        auto rhoc0 = 1/model.redfunc.vc[i];
+        double T0 = model.redfunc.Tc[i];
+        Eigen::ArrayXd rhovec0(2); rhovec0.setZero(); rhovec0[i] = rhoc0;
+
+        // Values for infinite dilution
+        auto infdil = ct::get_drhovec_dT_crit(model, T0, rhovec0);
+        auto epinfdil = ct::eigen_problem(model, T0, rhovec0);
+
+        // Just slightly not infinite dilution, values should be very similar
+        Eigen::ArrayXd rhovec0almost = rhovec0; rhovec0almost[1 - i] = 1e-6;
+        auto dil = ct::get_drhovec_dT_crit(model, T0, rhovec0almost);
+        auto epdil = ct::eigen_problem(model, T0, rhovec0almost);
+        int rr = 0;
+
+    }
+}
+
+TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with both orders", "[crit]")
+{
+    std::string root = "../mycp";
+
+    auto pure_endpoint = [&](const std::vector < std::string> &fluids, int i) {
+        const auto model = build_multifluid_model(fluids, root);
+        using ct = CriticalTracing<decltype(model), double, Eigen::ArrayXd>;
+        auto rhoc0 = 1 / model.redfunc.vc[i];
+        double T0 = model.redfunc.Tc[i];
+        Eigen::ArrayXd rhovec0(2); rhovec0.setZero(); rhovec0[i] = rhoc0;
+        // Values for infinite dilution
+        auto infdil = ct::get_drhovec_dT_crit(model, T0, rhovec0);
+        auto epinfdil = ct::eigen_problem(model, T0, rhovec0);
+        auto der = ct::get_derivs(model, T0, rhovec0);
+        using tdx = TDXDerivatives<decltype(model), double, Eigen::ArrayXd>;
+        auto z = (rhovec0 / rhovec0.sum()).eval();
+        auto alphar = model.alphar(T0, rhoc0, z);
+        return std::make_tuple(T0, rhoc0, alphar, infdil, epinfdil, der);
+    };
+    std::cout << "-------------" << std::endl; 
+    auto [T0, rho0, alphar0, infdil0, eig0, der0] = pure_endpoint({ "Nitrogen", "Ethane" }, 0);
+    auto [T1, rho1, alphar1, infdil1, eig1, der1] = pure_endpoint({ "Ethane", "Nitrogen" }, 1);
+    CHECK(T0 == T1);
+    CHECK(rho0 == rho1);
+    CHECK(alphar0 == alphar1);
+    CHECK(infdil0(1) == infdil1(0));
+    CHECK(infdil0(0) == infdil1(1));
+
+    std::cout << "-------------" << std::endl;
+    auto [Ta, rhoa, alphara, infdila, eiga, dera] = pure_endpoint({ "Ethane", "Nitrogen" }, 0);
+    auto [Tb, rhob, alpharb, infdilb, eigb, derb] = pure_endpoint({ "Nitrogen", "Ethane" }, 1);
+    CHECK(Ta == Tb);
+    CHECK(rhoa == rhob);
+    CHECK(alphara == alpharb);
+    CHECK(infdila(1) == infdilb(0));
+    CHECK(infdila(0) == infdilb(1));
+
+    int rr = 0;
+}
+
 
 TEST_CASE("Confirm failure for missing files","[multifluid]") {
     CHECK_THROWS(build_multifluid_model({ "BADFLUID" }, "IMPOSSIBLE PATH", "IMPOSSIBLE PATH.json"));

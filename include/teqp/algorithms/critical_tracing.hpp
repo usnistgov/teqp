@@ -52,7 +52,7 @@ struct CriticalTracing {
         Eigen::MatrixXd eigenvectorscols;
     };
 
-    static auto eigen_problem(const Model& model, const Scalar T, const VecType& rhovec) {
+    static auto eigen_problem(const Model& model, const Scalar T, const VecType& rhovec, const VecType& alignment_v0 = {}) {
 
         EigenData ed;
 
@@ -80,6 +80,13 @@ struct CriticalTracing {
         if (zero_count == 0) {
             // Not an infinitely dilute mixture, nothing special
             std::tie(ed.eigenvalues, ed.eigenvectorscols) = sorted_eigen(H);
+
+            // Align with the eigenvector of the component with the smallest density, and make that one positive
+            Eigen::Index ind;
+            rhovec.minCoeff(&ind);
+            if (ed.eigenvectorscols.col(ind).minCoeff() < 0) {
+                ed.eigenvectorscols *= -1.0;
+            }
         }
         else if (zero_count == 1) {
             // Extract Hessian matrix without entries where rho is exactly zero
@@ -118,13 +125,10 @@ struct CriticalTracing {
         else {
             throw std::invalid_argument("More than one non-zero concentration value found; not currently supported");
         }
-        // Align with the eigenvector of the component with the smallest density, and make that one positive
-        Eigen::Index ind;
-        rhovec.minCoeff(&ind);
-        if (ed.eigenvectorscols.col(ind).minCoeff() < 0) {
-            ed.eigenvectorscols *= -1.0;
+        if (alignment_v0.size() > 0 && ed.eigenvectorscols.col(0).matrix().dot(alignment_v0.matrix()) < 0) {
+            ed.eigenvectorscols.col(0) *= -1;
         }
-
+        
         ed.v0 = ed.eigenvectorscols.col(0);
         ed.v1 = ed.eigenvectorscols.col(1);
         return ed;
@@ -139,12 +143,12 @@ struct CriticalTracing {
         return eigen_problem(model, T, rhovec).eigenvalues[0];
     }
 
-    static auto get_derivs(const Model& model, const Scalar T, const VecType& rhovec) {
+    static auto get_derivs(const Model& model, const Scalar T, const VecType& rhovec, const VecType& alignment_v0 = {}) {
         auto molefrac = rhovec / rhovec.sum();
         auto R = model.R(molefrac);
 
         // Solve the complete eigenvalue problem
-        auto ei = eigen_problem(model, T, rhovec);
+        auto ei = eigen_problem(model, T, rhovec, alignment_v0);
 
         // Ideal-gas contributions of psi0 w.r.t. sigma_1, in the same form as the residual part
         Eigen::ArrayXd psi0_derivs(5); psi0_derivs.setZero();
