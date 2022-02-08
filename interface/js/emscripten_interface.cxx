@@ -51,6 +51,6 @@ std::string VLE(const std::string &JSON_model_string, const std::string &JSON_pr
 }
 
 // Main binding code
-EMSCRIPTEN_BINDINGS(jexpr) {
+EMSCRIPTEN_BINDINGS(teqp) {
     function("isotherm", &VLE);
 }
