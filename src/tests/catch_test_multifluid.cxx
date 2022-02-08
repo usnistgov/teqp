@@ -50,7 +50,7 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with
         auto alphar = model.alphar(T0, rhoc0, z);
         return std::make_tuple(T0, rhoc0, alphar, infdil, epinfdil, der);
     };
-    std::cout << "-------------" << std::endl; 
+
     auto [T0, rho0, alphar0, infdil0, eig0, der0] = pure_endpoint({ "Nitrogen", "Ethane" }, 0);
     auto [T1, rho1, alphar1, infdil1, eig1, der1] = pure_endpoint({ "Ethane", "Nitrogen" }, 1);
     CHECK(T0 == T1);
@@ -59,7 +59,6 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with
     CHECK(infdil0(1) == infdil1(0));
     CHECK(infdil0(0) == infdil1(1));
 
-    std::cout << "-------------" << std::endl;
     auto [Ta, rhoa, alphara, infdila, eiga, dera] = pure_endpoint({ "Ethane", "Nitrogen" }, 0);
     auto [Tb, rhob, alpharb, infdilb, eigb, derb] = pure_endpoint({ "Nitrogen", "Ethane" }, 1);
     CHECK(Ta == Tb);
