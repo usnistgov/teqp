@@ -44,7 +44,7 @@ def upload():
 
 steps = ['build','upload']
 if not any([k in sys.argv for k in steps]):
-    raise ValueError("need to pass at least one step to do: '+str(steps)")
+    raise ValueError("need to pass at least one step to do: "+str(steps))
 
 if 'build' in sys.argv:
     build()
