@@ -51,6 +51,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("max_dt", &TVLEOptions::max_dt)
         .def_readwrite("max_steps", &TVLEOptions::max_steps)
         .def_readwrite("integration_order", &TVLEOptions::integration_order)
+        .def_readwrite("polish", &TVLEOptions::polish)
         ;
 
     py::enum_<VLE_return_code>(m, "VLE_return_code")

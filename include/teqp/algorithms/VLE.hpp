@@ -492,6 +492,20 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
         if (stop_requested()) {
             break;
         }
+        // Polish the solution
+        if (opt.polish) {
+            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), N).eval();
+            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0 + N]), N).eval();
+            auto x = (Eigen::ArrayXd(2) << rhovecL(0) / rhovecL.sum(), rhovecL(1) / rhovecL.sum()).finished(); // Mole fractions in the liquid phase (to be kept constant)
+            auto [return_code, rhovecLnew, rhovecVnew] = mix_VLE_Tx(model, T, rhovecL, rhovecV, x, 1e-10, 1e-8, 1e-10, 1e-8, 10);
+
+            // If the step is accepted, copy into x again ...
+            auto rhovecLview = Eigen::Map<Eigen::ArrayXd>(&(x0[0]), N);
+            auto rhovecVview = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + N, N);
+            rhovecLview = rhovecLnew;
+            rhovecVview = rhovecVnew;
+            std::cout << "[polish]: " << static_cast<int>(return_code) << ": " << rhovecLnew.sum() / rhovecL.sum() << " " << rhovecVnew.sum() / rhovecV.sum() << std::endl;
+        }
 
         store_point();
     }
