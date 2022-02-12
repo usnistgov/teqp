@@ -335,7 +335,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
         throw std::invalid_argument("Both molar concentration arrays must be of the same size");
     }
 
-    auto norm = [](const auto& v) { return sqrt((v * v).sum()); };
+    auto norm = [](const auto& v) { return (v * v).sum(); };
 
     // Define datatypes and functions for tracing tools
     auto JSONdata = nlohmann::json::array();
@@ -353,8 +353,17 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
     double abs_err = opt.abs_err, rel_err = opt.rel_err, a_x = 1.0, a_dxdt = 1.0;
     controlled_stepper_type controlled_stepper(default_error_checker< double, range_algebra, default_operations >(abs_err, rel_err, a_x, a_dxdt));
 
-
     double c = 1.0;
+
+    // Set up the initial state vector
+    state_type x0(2 * N), last_drhodt(2 * N), previous_drhodt(2 * N);
+    auto set_init_state = [&](state_type& X) {
+        auto rhovecL = Eigen::Map<Eigen::ArrayXd>(&(X[0]), N);
+        auto rhovecV = Eigen::Map<Eigen::ArrayXd>(&(X[0]) + N, N);
+        rhovecL = rhovecL0;
+        rhovecV = rhovecV0;
+    };
+    set_init_state(x0);
 
     // The function to be integrated by odeint
     auto xprime = [&](const state_type& X, state_type& Xprime, double /*t*/) {
@@ -371,17 +380,20 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
         // And finally the derivatives with respect to the tracing variable
         drhovecdtL = c*drhovecdpL*dpdt;
         drhovecdtV = c*drhovecdpV*dpdt;
-    };
 
-    // Set up the initial state vector
-    state_type x0(2*N), last_drhodt(2*N);
-    auto set_init_state = [&](state_type& X) {
-        auto rhovecL = Eigen::Map<Eigen::ArrayXd>(&(X[0]), N);
-        auto rhovecV = Eigen::Map<Eigen::ArrayXd>(&(X[0]) + N, N);
-        rhovecL = rhovecL0;
-        rhovecV = rhovecV0;
+        if (previous_drhodt.empty()) {
+            return;
+        }
+
+        // Flip the step if it changes direction from the smooth continuation of previous steps
+        auto get_const_view = [&](const auto& v, int N) {
+            return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), N);
+        };
+        if (get_const_view(Xprime, N).matrix().dot(get_const_view(previous_drhodt, N).matrix()) < 0) {
+            auto Xprimeview = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]), 2*N);
+            Xprimeview *= -1;
+        }
     };
-    set_init_state(x0);
     
     // Figure out which direction to trace initially
     double t = 0, dt = opt.init_dt;
@@ -409,21 +421,33 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             auto N = x0.size() / 2;
             auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), N);
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + N, N);
-            auto rhotot = rhovecL.sum();
+            auto rhototL = rhovecL.sum(), rhototV = rhovecV.sum();
             using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-            double pL = rhotot * model.R(rhovecL / rhovecL.sum())*T + id::get_pr(model, T, rhovecL);
+            double pL = rhototL * model.R(rhovecL / rhovecL.sum())*T + id::get_pr(model, T, rhovecL);
+            double pV = rhototV * model.R(rhovecV / rhovecV.sum())*T + id::get_pr(model, T, rhovecV);
+
+            // Store the derivative
+            try {
+                xprime(x0, last_drhodt, -1.0);
+            }
+            catch (...) {
+                std::cout << "Something bad happened; couldn't calculate xprime in store_point" << std::endl;
+            }
 
             // Store the data in a JSON structure
             nlohmann::json point = {
                 {"t", t},
+                {"dt", dt},
                 {"T / K", T},
                 {"pL / Pa", pL},
+                {"pV / Pa", pV},
                 {"c", c},
                 {"rhoL / mol/m^3", rhovecL},
                 {"rhoV / mol/m^3", rhovecV},
-                
+                {"drho/dt", last_drhodt}
             };
             JSONdata.push_back(point);
+            //std::cout << JSONdata.back().dump() << std::endl;
         };
         if (istep == 0 && retry_count == 0) {
             store_point();
@@ -431,17 +455,6 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
 
         double dtold = dt;
         auto x0_previous = x0;
-
-        // Call the derivative function to get drho/dt in order 
-        // to cache it at the *beginning* of the step
-        auto dxdt = x0;
-        try {
-            xprime(x0, dxdt, -1.0);
-        }
-        catch (...) {
-            break;
-        }
-        last_drhodt = dxdt;
 
         if (opt.integration_order == 5) {
             controlled_step_result res = controlled_step_result::fail;
@@ -467,6 +480,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
         else if (opt.integration_order == 1) {
             try {
                 eul.do_step(xprime, x0, t, dt);
+                t += dt;
             }
             catch (...) {
                 break;
@@ -507,7 +521,9 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             std::cout << "[polish]: " << static_cast<int>(return_code) << ": " << rhovecLnew.sum() / rhovecL.sum() << " " << rhovecVnew.sum() / rhovecV.sum() << std::endl;
         }
 
-        store_point();
+        std::swap(previous_drhodt, last_drhodt);
+        store_point(); // last_drhodt is updated;
+        
     }
     return JSONdata;
 }
