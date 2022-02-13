@@ -109,14 +109,20 @@ TEST_CASE("Test construction of mutant with invariant departure function", "[mut
     CHECK(Ar02base != Ar02mut);
 }
 
-TEST_CASE("Test infinite dilution critical locus derivatives for multifluid mutant with both orders", "[crit],[multifluid]")
+TEST_CASE("Test infinite dilution critical locus derivatives for multifluid mutant with both orders", "[crit],[multifluid],[xxx]")
 {
     std::string root = "../mycp";
 
     auto pure_endpoint = [&](const std::vector < std::string>& fluids, int i) {
         const auto model = build_multifluid_model(fluids, root);
-        std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {"type": "Exponential", "n": [], "t": [], "d": [], "l": []}}}})";
+
+        std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 0.0}, "departure": {"type": "Exponential", "n": [], "t": [], "d": [], "l": []}}}})";
         nlohmann::json j = nlohmann::json::parse(s0);
+        if (fluids[0] == "Ethane"){
+            double betaT = j["0"]["1"]["BIP"]["betaT"], betaV = j["0"]["1"]["BIP"]["betaV"];
+            j["0"]["1"]["BIP"]["betaT"] = 1.0/betaT;
+            j["0"]["1"]["BIP"]["betaV"] = 1.0/betaV;
+        }
         auto rhoc0 = 1 / model.redfunc.vc[i];
         double T0 = model.redfunc.Tc[i]; 
         Eigen::ArrayXd rhovec0(2); rhovec0.setZero(); rhovec0[i] = rhoc0; 
@@ -137,6 +143,6 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid muta
     CHECK(T0 == T1);
     CHECK(rho0 == rho1);
     CHECK(alphar0 == alphar1);
-    CHECK(infdil0(0) == infdil1(1));
-    CHECK(infdil0(1) == infdil1(0));
+    CHECK(infdil0(0) == Approx(infdil1(1)));
+    CHECK(infdil0(1) == Approx(infdil1(0)));
 }
