@@ -21,6 +21,8 @@
 using namespace boost::multiprecision;
 #include "teqp/finite_derivs.hpp"
 
+using namespace teqp;
+
 /// A standalone implementation to be more in control of type promotion.  
 /// In the end this standalone implementation gives the same answer
 /// This is for propane
