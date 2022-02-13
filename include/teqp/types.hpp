@@ -13,6 +13,7 @@
 
 // autodiff include
 #include <autodiff/forward/dual.hpp>
+#include <autodiff/forward/real.hpp>
 #include <autodiff/forward/dual/eigen.hpp>
 using namespace autodiff;
 
@@ -32,7 +33,10 @@ namespace teqp {
     auto forceeval(T&& expr)
     {
         using namespace autodiff::detail;
-        if constexpr (isDual<T> || isExpr<T>) {
+        if constexpr (isReal<T>) {
+            return expr;
+        }
+        else if constexpr (isDual<T> || isExpr<T>) {
             return autodiff::detail::eval(expr);
         }
         else {
@@ -48,11 +52,13 @@ namespace teqp {
     template<typename T> struct is_mcx_t : public std::false_type {};
     template<typename T> struct is_mcx_t<mcx::MultiComplex<T>> : public std::true_type {};
 
+    // Extract the underlying value from more complicated numerical types, like complex step types with
+    // a tiny increment in the imaginary direction
     template<typename T>
     auto getbaseval(const T& expr)
     {
         using namespace autodiff::detail;
-        if constexpr (isDual<T> || isExpr<T>) {
+        if constexpr (isDual<T> || isExpr<T> || isReal<T>) {
             return autodiff::detail::val(expr);
         }
         else if constexpr (is_complex_t<T>()) {
