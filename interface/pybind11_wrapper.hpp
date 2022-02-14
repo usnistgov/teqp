@@ -11,6 +11,7 @@
 #include "teqp/core.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/VLE.hpp"
+#include "teqp/algorithms/VLLE.hpp"
 
 namespace py = pybind11;
 using namespace teqp;
@@ -56,6 +57,9 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, Eigen::ArrayXd>);
     m.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
     m.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
+
+    m.def("mix_VLLE_T", &mix_VLLE_T<Model, double, Eigen::ArrayXd>);
+    m.def("find_VLLE_T_binary", &find_VLLE_T_binary<Model>, py::arg("model"), py::arg("traces"), py::arg_v("options", std::nullopt, "None"));
 
     //cls.def("get_Ar01", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar01(m, T, rhovec); });
     //cls.def("get_Ar10", [](const Model& m, const double T, const Eigen::ArrayXd& rhovec) { return id::get_Ar10(m, T, rhovec); });

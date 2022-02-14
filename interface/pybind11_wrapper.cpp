@@ -54,6 +54,13 @@ void init_teqp(py::module& m) {
         .def_readwrite("polish", &TVLEOptions::polish)
         ;
 
+    // The options class for the finder of VLLE solutions from VLE tracing, not tied to a particular model
+    py::class_<VLLEFinderOptions>(m, "VLLEFinderOptions")
+        .def(py::init<>())
+        .def_readwrite("max_steps", &VLLEFinderOptions::max_steps)
+        .def_readwrite("rho_trivial_threshold", &VLLEFinderOptions::rho_trivial_threshold)
+        ;
+
     py::enum_<VLE_return_code>(m, "VLE_return_code")
         .value("unset", VLE_return_code::unset)
         .value("xtol_satisfied", VLE_return_code::xtol_satisfied)
