@@ -518,7 +518,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             auto rhovecVview = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + N, N);
             rhovecLview = rhovecLnew;
             rhovecVview = rhovecVnew;
-            std::cout << "[polish]: " << static_cast<int>(return_code) << ": " << rhovecLnew.sum() / rhovecL.sum() << " " << rhovecVnew.sum() / rhovecV.sum() << std::endl;
+            //std::cout << "[polish]: " << static_cast<int>(return_code) << ": " << rhovecLnew.sum() / rhovecL.sum() << " " << rhovecVnew.sum() / rhovecV.sum() << std::endl;
         }
 
         std::swap(previous_drhodt, last_drhodt);
