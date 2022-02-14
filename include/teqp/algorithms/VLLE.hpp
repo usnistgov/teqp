@@ -176,18 +176,18 @@ namespace teqp {
             auto& trace = traces[0];
 
             auto process_intersection = [&](auto& trace, auto& i) {
-                auto rhoL1_j = traces[0][i.j].at("rhoL / mol/m^3").get<std::valarray<double>>();
-                auto rhoL1_jp1 = traces[0][i.j + 1].at("rhoL / mol/m^3").get<std::valarray<double>>();
+                auto rhoL1_j = traces[0][i.j].at("rhoL / mol/m^3").template get<std::valarray<double>>();
+                auto rhoL1_jp1 = traces[0][i.j + 1].at("rhoL / mol/m^3").template get<std::valarray<double>>();
                 auto rhoL1_ = rhoL1_j * i.s + rhoL1_jp1 * (1 - i.s);
                 Eigen::Map<Eigen::ArrayXd>(&(rhoL1[0]), rhoL1.size()) = Eigen::Map<Eigen::ArrayXd>(&(rhoL1_[0]), rhoL1_.size());
 
-                auto rhoL2_k = traces[0][i.k].at("rhoL / mol/m^3").get<std::valarray<double>>();
-                auto rhoL2_kp1 = traces[0][i.k + 1].at("rhoL / mol/m^3").get<std::valarray<double>>();
+                auto rhoL2_k = traces[0][i.k].at("rhoL / mol/m^3").template get<std::valarray<double>>();
+                auto rhoL2_kp1 = traces[0][i.k + 1].at("rhoL / mol/m^3").template get<std::valarray<double>>();
                 auto rhoL2_ = rhoL2_k * i.t + rhoL2_kp1 * (1 - i.t);
                 Eigen::Map<Eigen::ArrayXd>(&(rhoL2[0]), rhoL2.size()) = Eigen::Map<Eigen::ArrayXd>(&(rhoL2_[0]), rhoL2_.size());
 
-                auto rhoV_j = traces[0][i.j].at("rhoV / mol/m^3").get<std::valarray<double>>();
-                auto rhoV_jp1 = traces[0][i.j + 1].at("rhoV / mol/m^3").get<std::valarray<double>>();
+                auto rhoV_j = traces[0][i.j].at("rhoV / mol/m^3").template get<std::valarray<double>>();
+                auto rhoV_jp1 = traces[0][i.j + 1].at("rhoV / mol/m^3").template get<std::valarray<double>>();
                 auto rhoV_ = rhoV_j * i.s + rhoV_jp1 * (1 - i.s);
                 Eigen::Map<Eigen::ArrayXd>(&(rhoV[0]), rhoV.size()) = Eigen::Map<Eigen::ArrayXd>(&(rhoV_[0]), rhoV_.size());
 
