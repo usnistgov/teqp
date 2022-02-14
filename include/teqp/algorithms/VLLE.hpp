@@ -212,8 +212,8 @@ namespace teqp {
             for (auto& intersection : intersections) {
                 try {
                     auto soln = process_intersection(traces[0], intersection);
-                    auto rhovecL1 = soln.at("polished")[1].get<std::valarray<double>>();
-                    auto rhovecL2 = soln.at("polished")[2].get<std::valarray<double>>();
+                    auto rhovecL1 = soln.at("polished")[1].template get<std::valarray<double>>();
+                    auto rhovecL2 = soln.at("polished")[2].template get<std::valarray<double>>();
                     auto rhodiff = 100*(rhovecL1.sum() / rhovecL2.sum() - 1);
                     if (std::abs(rhodiff) > opt.rho_trivial_threshold) {
                         // Only keep non-trivial solutions
