@@ -253,7 +253,7 @@ public:
         SAFTCalc<TTYPE, TRHOType> c;
         c.m2_epsilon_sigma3_bar = 0;
         c.m2_epsilon2_sigma3_bar = 0;
-        c.d = sigma_Angstrom.template cast<TTYPE>()*(1.0 - 0.12*exp(-3.0*epsilon_over_k.template cast<TTYPE>()/T)); // [A]
+        c.d = sigma_Angstrom*(1.0 - 0.12*exp(-3.0*epsilon_over_k/T)); // [A]
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
                 // Eq. A.5
@@ -277,7 +277,7 @@ public:
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
             auto dn = c.d.pow(n).eval();
-            TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>()*m.template cast<TRHOType>()*dn).sum());
+            TRHOType xmdn = forceeval((mole_fractions*m*dn).sum());
             zeta[n] = forceeval(pi6*rho_A3*xmdn);
         }
 
