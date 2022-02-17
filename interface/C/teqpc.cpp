@@ -118,7 +118,7 @@ EXPORT_CODE int CONVENTION get_Arxy(const char* uuid, const int NT, const int ND
 TEST_CASE("Use of C interface","[teqpc]") {
 
     constexpr int errmsg_length = 300;
-    char uuid[33] = "", uuidPR[33] = "", errmsg[errmsg_length] = "";
+    char uuid[33] = "", uuidPR[33] = "", uuidMF[33] = "", errmsg[errmsg_length] = "";
     double val = -1;
     std::valarray<double> molefrac = { 1.0 };
 
@@ -133,6 +133,20 @@ TEST_CASE("Use of C interface","[teqpc]") {
             }
         )";
     build_model(j.c_str(), uuidPR, errmsg, errmsg_length);
+    {
+        nlohmann::json jmodel = nlohmann::json::object();
+        jmodel["departure"] = nlohmann::json::array();
+        jmodel["BIP"] = nlohmann::json::array();
+        jmodel["components"] = nlohmann::json::array();
+        jmodel["components"].push_back("../mycp/dev/fluids/Argon.json");
+
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", jmodel}
+        };
+        std::string js = j.dump(2);
+        int e1 = build_model(js.c_str(), uuidMF, errmsg, errmsg_length);
+    }
     
     BENCHMARK("vdW1") {
         std::string j = R"({"kind":"vdW1", "model":{"a":1.0, "b":2.0}})";
@@ -228,6 +242,55 @@ TEST_CASE("Use of C interface","[teqpc]") {
         REQUIRE(e1 == 0);
         REQUIRE(e2 == 0);
         REQUIRE(e3 == 0);
+        return val;
+    };
+
+    BENCHMARK("multifluid pure with fluid path") {
+        nlohmann::json jmodel = nlohmann::json::object();
+        jmodel["departure"] = nlohmann::json::array();
+        jmodel["BIP"] = nlohmann::json::array();
+        jmodel["components"] = nlohmann::json::array();
+        jmodel["components"].push_back("../mycp/dev/fluids/Argon.json");
+        
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", jmodel}
+        };
+        std::string js = j.dump(2);
+        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e3 = free_model(uuid, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
+        REQUIRE(e2 == 0);
+        REQUIRE(e3 == 0);
+        return val;
+    };
+
+    BENCHMARK("multifluid pure with fluid contents") {
+        nlohmann::json jmodel = nlohmann::json::object();
+        jmodel["components"] = nlohmann::json::array();
+        jmodel["components"].push_back(load_a_JSON_file("../mycp/dev/fluids/Argon.json")); 
+        jmodel["departure"] = nlohmann::json::array();
+        jmodel["BIP"] = nlohmann::json::array();
+        jmodel["flags"] = nlohmann::json::object();
+
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", jmodel}
+        };
+        std::string js = j.dump(2);
+        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e3 = free_model(uuid, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
+        REQUIRE(e2 == 0);
+        REQUIRE(e3 == 0);
+        return val;
+    };
+
+    BENCHMARK("multifluid call") {
+        int e2 = get_Arxy(uuidMF, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        REQUIRE(e2 == 0);
         return val;
     };
     

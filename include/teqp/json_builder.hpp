@@ -4,6 +4,7 @@
 #include "teqp/models/cubics.hpp"
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/pcsaft.hpp"
+#include "teqp/models/multifluid.hpp"
 
 #include "teqp/exceptions.hpp"
 
@@ -17,8 +18,9 @@ namespace teqp {
     using cub = decltype(canonical_PR(vad{}, vad{}, vad{}));
     using cpatype = decltype(CPA::CPAfactory(nlohmann::json{}));
     using pcsafttype = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
+    using multifluidtype = decltype(multifluidfactory(nlohmann::json{}));
 
-    using AllowedModels = std::variant<vdWEOS1, cub, cpatype, pcsafttype>;
+    using AllowedModels = std::variant<vdWEOS1, cub, cpatype, pcsafttype, multifluidtype>;
 
     AllowedModels build_model(const nlohmann::json& json) {
 
@@ -42,6 +44,9 @@ namespace teqp {
         }
         else if (kind == "PCSAFT") {
             return PCSAFT::PCSAFTfactory(spec);
+        }
+        else if (kind == "multifluid") {
+            return multifluidfactory(spec);
         }
         else {
             throw teqpcException(30, "Unknown kind:" + kind);

@@ -1016,7 +1016,42 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
     return _build_multifluid_model(pureJSON, BIPcollection, depcollection, flags);
 }
 
+/**
+* \brief Load a model from a JSON data structure
+* 
+* Required fields are: components, BIP, departure
+* 
+* BIP and departure can be either the data in JSON format, or a path to file with those contents
+* components is an array, which either contains the paths to the JSON data, or the file path
+*/
+inline auto multifluidfactory(const nlohmann::json& spec) {
+    
+    auto JSON_from_path_or_contents = [](const nlohmann::json &path_or_contents) -> nlohmann::json {
+        if (path_or_contents.is_string()) {
+            return load_a_JSON_file(path_or_contents.get<std::string>());
+        }
+        else {
+            return path_or_contents;
+        }
+    };
 
+    auto components = spec.at("components"); 
+    auto depcollection = JSON_from_path_or_contents(spec.at("departure"));
+    auto BIPcollection = JSON_from_path_or_contents(spec.at("BIP"));
+    nlohmann::json flags = (spec.contains("flags")) ? spec.at("flags") : nlohmann::json();
+
+    // Pure components
+    std::vector<nlohmann::json> pureJSON;
+    for (auto c : components) {
+        pureJSON.push_back(JSON_from_path_or_contents(c));
+    }
+
+    return _build_multifluid_model(pureJSON, BIPcollection, depcollection, flags);
+}
+/// An overload of multifluidfactory that takes in a string
+inline auto multifluidfactory(const std::string& specstring) {
+    return multifluidfactory(nlohmann::json::parse(specstring));
+}
 
 /**
 This class holds a lightweight reference to the core parts of the model
