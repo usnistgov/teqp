@@ -2,6 +2,7 @@
 
 #include <complex>
 #include <map>
+#include <tuple>
 
 #include "teqp/types.hpp"
 
@@ -55,6 +56,29 @@ typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const C
     return f(T, rhocom).imag() / h;
 }
 
+/// Helper function for build_duplicated_tuple
+template<typename T, size_t ... Indices>
+auto _GetDupedTuple(const T& val, std::index_sequence<Indices...>) {
+    return std::make_tuple((Indices, val)...);
+}
+
+/// A function to generate a tuple of N repeated copies of argument val at compile-time
+template<int N, typename T>
+auto build_duplicated_tuple(const T& val) {
+    return _GetDupedTuple(val, std::make_index_sequence<N>());
+}
+
+/// A class to help with the forwarding of arguments to wrt of autodiff.  std::apply cannot be applied to 
+/// wrt directly because the wrt uses perfect forwarding and the compiler cannot work out argument types
+/// but by making the struct with operator(), the compiler can figure out the argument types
+struct wrt_helper {
+    template<typename... Args>
+    auto operator()(Args&&... args) const
+    {
+        return Wrt<Args&&...>{ std::forward_as_tuple(std::forward<Args>(args)...) };
+    }
+};
+
 enum class ADBackends { autodiff, multicomplex, complex_step };
 
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
@@ -69,6 +93,8 @@ struct TDXDerivatives {
     * \f[
     * \Lambda^{\rm r}_{ij} = (1/T)^i\rho^j\left(\frac{\partial^{i+j}(\alpha^*)}{\partial(1/T)^i\partial\rho^j}\right)
     * \f]
+    * 
+    * Note: none of the intermediate derivatives are returned, although they are calculated
     */
     template<int iT, int iD, ADBackends be>
     static auto get_Arxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
@@ -88,9 +114,8 @@ struct TDXDerivatives {
             }
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
-                bool and_val = true;
                 fcn_t f = [&](const auto& rhomcx) { return model.alphar(T, rhomcx, molefrac); };
-                auto ders = diff_mcx1(f, rho, iD, and_val);
+                auto ders = diff_mcx1(f, rho, iD, true /* and_val */);
                 return powi(rho, iD)*ders[iD];
             }
             else {
@@ -98,30 +123,51 @@ struct TDXDerivatives {
             }
         }
         else if constexpr (iT > 0 && iD == 0) {
+            auto Trecip = 1.0 / T;
             if constexpr (be == ADBackends::autodiff) {
                 // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
-                autodiff::Real<iT, Scalar> Trecip = 1/T;
+                autodiff::Real<iT, Scalar> Trecipad = Trecip;
                 auto f = [&model, &rho, &molefrac](const auto& Trecip__) {return model.alphar(1.0/Trecip__, rho, molefrac); };
-                return powi(1/T, iT)*derivatives(f, along(1), at(Trecip))[iT];
+                return powi(Trecip, iT)*derivatives(f, along(1), at(Trecipad))[iT];
             }
             else if constexpr (iT == 1 && be == ADBackends::complex_step) {
                 double h = 1e-100;
-                auto Trecip = std::complex<Scalar>(1/T, h);
-                return powi(1/T, iT)*model.alphar(1/Trecip, rho, molefrac).imag()/h;
+                auto Trecipcsd = std::complex<Scalar>(Trecip, h);
+                return powi(Trecip, iT)*model.alphar(1/Trecipcsd, rho, molefrac).imag()/h;
             }
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
-                bool and_val = true;
                 fcn_t f = [&](const auto& Trecipmcx) { return model.alphar(1.0/Trecipmcx, rho, molefrac); };
-                auto ders = diff_mcx1(f, 1/T, iT, and_val);
-                return powi(1/T, iT)*ders[iT];
+                auto ders = diff_mcx1(f, Trecip, iT, true /* and_val */);
+                return powi(Trecip, iT)*ders[iT];
             }
             else {
                 throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Arxy for iD == 0");
             }
         }
         else { // iT > 0 and iD > 0
-            throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Arxy for iT > 0 & iD > 0");
+            if constexpr (be == ADBackends::autodiff) {
+                using adtype = autodiff::HigherOrderDual<iT + iD, double>;
+                adtype Trecipad = 1.0 / T, rhoad = rho;
+                auto f = [&model, &molefrac](const adtype& Trecip, const adtype& rho_) { return eval(model.alphar(eval(1.0/Trecip), rho_, molefrac)); };
+                auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)));
+                auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad));
+                return powi(1.0 / T, iT) * powi(rho, iD) * der[der.size() - 1];
+            }
+            else if constexpr (be == ADBackends::multicomplex) {
+                using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
+                const fcn_t func = [&model, &molefrac](const auto& zs) {
+                    auto Trecip = zs[0], rhomolar = zs[1];
+                    return model.alphar(1.0 / Trecip, rhomolar, molefrac);
+                };
+                std::vector<double> xs = { 1.0 / T, rho};
+                std::vector<int> order = { iT, iD };
+                auto der = mcx::diff_mcxN(func, xs, order);
+                return powi(1.0 / T, iT)*powi(rho, iD)*der;
+            }
+            else {
+                throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Arxy for iD > 0 and iT > 0");
+            }
         }
         return static_cast<Scalar>(-999999999*T); // This will never hit, only to make compiler happy because it doesn't know the return type
     }
@@ -144,6 +190,16 @@ struct TDXDerivatives {
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar20(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         return get_Arxy<2, 0, be>(model, T, rho, molefrac);
+    }
+
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar12(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        return get_Arxy<1, 2, be>(model, T, rho, molefrac);
+    }
+
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar11(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        return get_Arxy<1, 1, be>(model, T, rho, molefrac);
     }
 
     template<int Nderiv, ADBackends be = ADBackends::autodiff>
@@ -169,60 +225,6 @@ struct TDXDerivatives {
             return o;
         }
         throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar0n");
-    }
-
-    template<ADBackends be = ADBackends::autodiff>
-    static auto get_Ar11(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-
-        if constexpr (be == ADBackends::multicomplex) {
-            using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
-            const fcn_t func = [&model, &molefrac](const auto& zs) {
-                auto rhomolar = zs[0], Trecip = zs[1];
-                return model.alphar(1.0 / Trecip, rhomolar, molefrac);
-            };
-            std::vector<double> xs = { rho, 1.0 / T };
-            std::vector<int> order = { 1, 1 };
-            auto der = mcx::diff_mcxN(func, xs, order);
-            return (1.0 / T) * rho * der;
-        }
-        else if constexpr (be == ADBackends::autodiff) {
-            autodiff::dual2nd rhodual = rho, Trecipdual = 1 / T;
-            auto f = [&model, &molefrac](const autodiff::dual2nd& Trecip, const autodiff::dual2nd& rho_) { return eval(model.alphar(eval(1 / Trecip), rho_, molefrac)); };
-            //auto der = derivative(f, wrt(Trecipdual, rhodual), at(Trecipdual, rhodual)); // d^2alphar/drhod(1/T) // This should work, but gives instead 1,0 derivative
-            auto [u01, u10, u11] = derivatives(f, wrt(Trecipdual, rhodual), at(Trecipdual, rhodual)); // d^2alphar/drhod(1/T)
-            return (1.0 / T) * rho * u11;
-        }
-        else {
-            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar11");
-        }
-        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar11");
-    }
-
-    template<ADBackends be = ADBackends::autodiff>
-    static auto get_Ar12(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-
-        if constexpr (be == ADBackends::multicomplex) {
-            using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
-            const fcn_t func = [&model, &molefrac](const auto& zs) {
-                auto rhomolar = zs[0], Trecip = zs[1];
-                return model.alphar(1.0 / Trecip, rhomolar, molefrac);
-            };
-            std::vector<double> xs = { rho, 1.0 / T };
-            std::vector<int> order = { 1, 2 };
-            auto der = mcx::diff_mcxN(func, xs, order);
-            return (1.0 / T) * rho * rho * der;
-        }
-        else if constexpr (be == ADBackends::autodiff) {
-            //static_assert("bug in autodiff, can't use autodiff for cross derivative");
-            autodiff::dual3rd rhodual = rho, Trecipdual = 1 / T;
-            auto f = [&model, &molefrac](const auto& Trecip, const auto& rho_) { return eval(model.alphar(eval(1 / Trecip), rho_, molefrac)); };
-            auto ders = derivatives(f, wrt(Trecipdual, rhodual, rhodual), at(Trecipdual, rhodual));
-            return (1.0 / T) * rho * rho * ders.back();
-        }
-        else {
-            //static_assert(false, "algorithmic differentiation backend is invalid in get_Ar12");
-        }
-        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar12");
     }
 
     template<ADBackends be = ADBackends::autodiff>
