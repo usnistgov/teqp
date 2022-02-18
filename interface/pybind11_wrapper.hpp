@@ -41,6 +41,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("get_B2vir", &vd::get_B2vir, py::arg("model"), py::arg("T"), py::arg("molefrac").noconvert());
     cls.def("get_B2vir", [](const Model& m, const double T, const RAX molefrac) { return vd::get_B2vir(m, T, molefrac); }, py::arg("T"), py::arg("molefrac").noconvert());    
     cls.def("get_Bnvir", [](const Model& m, const int Nderiv, const double T, const RAX molefrac) { return vd::get_Bnvir_runtime(Nderiv, m, T, molefrac); }, py::arg("Nderiv"), py::arg("T"), py::arg("molefrac").noconvert());
+    cls.def("get_dmBnvirdTm", [](const Model& m, const int Nderiv, const int NTderiv, const double T, const RAX molefrac) { return vd::get_dmBnvirdTm_runtime(Nderiv, NTderiv, m, T, molefrac); }, py::arg("Nderiv"), py::arg("NTderiv"), py::arg("T"), py::arg("molefrac").noconvert());
     
     m.def("get_B12vir", &vd::get_B12vir, py::arg("model"), py::arg("T"), py::arg("molefrac").noconvert());
 

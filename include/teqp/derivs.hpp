@@ -354,6 +354,83 @@ struct VirialDerivatives {
         }
     }
 
+    /**
+    * \brief Temperature derivatives of a virial coefficient
+    * 
+    * \f$
+    * \left(\frac{\partial^m{B_n}}{\partial T^m}\right) = \frac{1}{(n-2)!} lim_{\rho\to 0} d^{(n-1)*m}alphar/dT^m d\rho^{n-1}|{T,z}
+    * \f$
+    * \param Nderiv The virial coefficient to return; e.g. 5: B_5
+    * \param NTderiv The number of temperature derivatives to calculate
+    * \param model The model providing the alphar function
+    * \param T Temperature
+    * \param molefrac The mole fractions
+    */
+    template <int Nderiv, int NTderiv, ADBackends be = ADBackends::autodiff>
+    static auto get_dmBnvirdTm(const Model& model, const Scalar& T, const VectorType& molefrac)
+    {
+        std::map<int, Scalar> o;
+        auto factorial = [](int N) {return tgamma(N + 1); };
+        if constexpr (be == ADBackends::multicomplex) {
+            using namespace mcx;
+            using fcn_t = std::function<MultiComplex<double>(const std::valarray<MultiComplex<double>>&)>;
+            fcn_t f = [&model, &molefrac](const auto& zs) { 
+                auto T_ = zs[0], rho_ = zs[1];
+                return model.alphar(T_, rho_, molefrac); 
+            };
+            std::valarray<double> at = { T, 0.0 };
+            auto deriv = diff_mcxN(f, at, { NTderiv, Nderiv-1});
+            return deriv / factorial(Nderiv - 2);
+        }
+        else if constexpr (be == ADBackends::autodiff) {
+            autodiff::HigherOrderDual<NTderiv + Nderiv-1, double> rhodual = 0.0, Tdual = T;
+            auto f = [&model, &molefrac](const auto& T_, const auto& rho_) { return model.alphar(T_, rho_, molefrac); };
+            auto wrts = std::tuple_cat(build_duplicated_tuple<NTderiv>(std::ref(Tdual)), build_duplicated_tuple<Nderiv-1>(std::ref(rhodual)));
+            auto derivs = derivatives(f, std::apply(wrt_helper(), wrts), at(Tdual, rhodual));
+            return derivs.back() / factorial(Nderiv - 2);
+        }
+        else {
+            //static_assert(false, "algorithmic differentiation backend is invalid");
+            throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Bnvir");
+        }
+    }
+
+    /// This version of the get_dmBnvirdTm takes the maximum number of derivatives as runtime arguments
+    /// and then forwards all arguments to the templated function
+    template <ADBackends be = ADBackends::autodiff>
+    static auto get_dmBnvirdTm_runtime(const int Nderiv, const int NTderiv, const Model& model, const Scalar& T, const VectorType& molefrac) {
+        if (Nderiv == 2) { // B_2
+            switch (NTderiv) {
+            case 0: return get_Bnvir<2, be>(model, T, molefrac)[2];
+            case 1: return get_dmBnvirdTm<2, 1, be>(model, T, molefrac);
+            case 2: return get_dmBnvirdTm<2, 2, be>(model, T, molefrac);
+            case 3: return get_dmBnvirdTm<2, 3, be>(model, T, molefrac);
+            default: throw std::invalid_argument("NTderiv is invalid in get_dmBnvirdTm_runtime");
+            }
+        }
+        else if (Nderiv == 3) { // B_3
+            switch (NTderiv) {
+            case 0: return get_Bnvir<3, be>(model, T, molefrac)[3];
+            case 1: return get_dmBnvirdTm<3, 1, be>(model, T, molefrac);
+            case 2: return get_dmBnvirdTm<3, 2, be>(model, T, molefrac);
+            case 3: return get_dmBnvirdTm<3, 3, be>(model, T, molefrac);
+            default: throw std::invalid_argument("NTderiv is invalid in get_dmBnvirdTm_runtime");
+            }
+        }
+        else if (Nderiv == 4) { // B_4
+            switch (NTderiv) {
+            case 0: return get_Bnvir<4, be>(model, T, molefrac)[4];
+            case 1: return get_dmBnvirdTm<4, 1, be>(model, T, molefrac);
+            case 2: return get_dmBnvirdTm<4, 2, be>(model, T, molefrac);
+            case 3: return get_dmBnvirdTm<4, 3, be>(model, T, molefrac);
+            default: throw std::invalid_argument("NTderiv is invalid in get_dmBnvirdTm_runtime");
+            }
+        }
+        else {
+            throw std::invalid_argument("Nderiv is invalid in get_dmBnvirdTm_runtime");
+        }
+    }
+
     static auto get_B12vir(const Model& model, const Scalar &T, const VectorType& molefrac) {
     
         auto B2 = get_B2vir(model, T, molefrac); // Overall B2 for mixture
