@@ -198,3 +198,26 @@ TEST_CASE("Check that all pure fluid models can be evaluated at zero density", "
         }
     }
 }
+
+TEST_CASE("Check that virial coefficients can be calculated with multiple derivative methods", "[multifluid],[virial]") {
+    std::string root = "../mycp";
+    std::string stem = "Argon";
+    CAPTURE(stem); 
+    
+    auto model = build_multifluid_model({ stem }, root);
+    std::valarray<double> z(1.0, 1);
+
+    using vd = VirialDerivatives<decltype(model), double, decltype(z)>;
+
+    auto BnAD = vd::get_Bnvir<4, ADBackends::autodiff>(model, 298.15, z);
+    auto Bnmcx = vd::get_Bnvir<4, ADBackends::multicomplex>(model, 298.15, z);
+    CHECK(BnAD[2] == Approx(Bnmcx[2]));
+    CHECK(BnAD[3] == Approx(Bnmcx[3]));
+    CHECK(BnAD[4] == Approx(Bnmcx[4]));
+    
+    auto derBnAD100 = vd::get_dmBnvirdTm<2, 1, ADBackends::autodiff>(model, 100.0, z);
+    auto derBnAD = vd::get_dmBnvirdTm<2, 1, ADBackends::autodiff>(model, 298.15, z);
+    auto derBnMCX = vd::get_dmBnvirdTm<2, 1, ADBackends::multicomplex>(model, 298.15, z);
+    CHECK(derBnAD == Approx(derBnMCX));
+
+}
