@@ -325,6 +325,18 @@ TEST_CASE("TEST B12", "") {
     auto B12 = vd::get_B12vir(model, T, molefrac);
 }
 
+TEST_CASE("Test failure of B12 for pure fluid", "") {
+
+    // Argon
+    std::valarray<double> Tc_K = { 150.687 };
+    std::valarray<double> pc_Pa = { 4863000.0 };
+    vdWEOS<double> model(Tc_K, pc_Pa);
+    const auto molefrac = (Eigen::ArrayXd(1) <<  1.0).finished();
+    using vd = VirialDerivatives<decltype(model)>;
+    CHECK_THROWS(vd::get_B12vir(model, 298.15, molefrac));
+}
+
+
 TEST_CASE("Test psir gradient", "") {
     const auto model = build_vdW();
     const double T = 298.15;

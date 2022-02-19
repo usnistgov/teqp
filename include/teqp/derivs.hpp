@@ -432,7 +432,7 @@ struct VirialDerivatives {
     }
 
     static auto get_B12vir(const Model& model, const Scalar &T, const VectorType& molefrac) {
-    
+        if (molefrac.size() != 2) { throw std::invalid_argument("length of mole fraction vector must be 2 in get_B12vir"); }
         auto B2 = get_B2vir(model, T, molefrac); // Overall B2 for mixture
         const auto xpure0 = (Eigen::ArrayXd(2) << 1,0).finished();
         const auto xpure1 = (Eigen::ArrayXd(2) << 0,1).finished();
