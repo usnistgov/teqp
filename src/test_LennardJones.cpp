@@ -5,6 +5,7 @@
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/derivs.hpp"
+#include "teqp/json_builder.hpp"
 
 #include <array>
 
@@ -79,8 +80,59 @@ int main() {
         {7.0, 1.0, 4.1531352e1, -6.2393078e-1, 7.3348579e-1, 1.4201978e1, 4.8074394e-1},
     };
     std::valarray<double> z(1.0, 1);
-    using tdx = teqp::TDXDerivatives<decltype(model), double, decltype(z)>;
 
+
+    std::cout << "**************** With general JSON interface **************" << std::endl;
+    std::cout << "All in L-J units:" << std::endl;
+    {
+        constexpr int errmsg_length = 300;
+        char uuid[33] = "", errmsg[errmsg_length] = "";
+        double val = -1, Ar01, Ar00;
+        auto molefrac = (Eigen::ArrayXd(1) <<  1.0).finished();
+
+        nlohmann::json jmodel = nlohmann::json::object();
+        jmodel["components"] = nlohmann::json::array();
+        jmodel["components"].push_back(nlohmann::json::parse(contents));
+        jmodel["departure"] = nlohmann::json::array();
+        jmodel["BIP"] = nlohmann::json::array();
+        jmodel["flags"] = nlohmann::json::object();
+
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", jmodel}
+        };
+        auto m = teqp::build_model(j);
+
+        for (auto& el : data) {
+            auto [T, rho, p, ur, cvr, w, a] = el; // I
+
+            auto NT = 0, ND = 0;
+
+            // Lambda function to extract the given derivative from the thing contained in the variant
+            auto f = [&](const auto& model) {
+                using tdx = teqp::TDXDerivatives<decltype(model), double, decltype(molefrac)>;
+                return tdx::get_Ar(NT, ND, model, T, rho, molefrac);
+            };
+
+            // Now call the visitor function to get the value
+            auto Ar00 = std::visit(f, m);
+            NT = 0; ND = 1; auto Ar01 = std::visit(f, m);
+            NT = 1; ND = 0; auto Ar10 = std::visit(f, m);
+            NT = 2; ND = 0; auto Ar20 = std::visit(f, m);
+
+            double pcalc = T * rho * (1 + Ar01);
+            double urcalc = T * Ar10;
+            double cvrcalc = -Ar20;
+
+            std::cout << "@ (T,rho): " << T << "," << rho << std::endl;
+            std::cout << "p: " << pcalc << ", " << p << std::endl;
+            std::cout << "ur: " << urcalc << ", " << ur << std::endl;
+            std::cout << "cvr: " << cvrcalc << ", " << cvr << std::endl;
+        }
+    }
+
+    std::cout << "**************** With normal interface **************" << std::endl;
+    using tdx = teqp::TDXDerivatives<decltype(model), double, decltype(z)>;
     std::cout << "All in L-J units:" << std::endl;
     for (auto &el : data) {
         auto [T, rho, p, ur, cvr, w, a] = el; // I
