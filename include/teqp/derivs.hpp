@@ -291,7 +291,7 @@ struct VirialDerivatives {
 
     /**
     * \f$
-    * B_n = \frac{1}{(n-2)!} lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|T,z
+    * B_n = \frac{1}{(n-2)!} lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|{T,z}
     * \f$
     * \param model The model providing the alphar function
     * \param Nderiv The maximum virial coefficient to return; e.g. 5: B_2, B_3, ..., B_5
@@ -307,16 +307,16 @@ struct VirialDerivatives {
             using namespace mcx;
             using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
             fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
-            auto derivs = diff_mcx1(f, 0.0, Nderiv+1, true /* and_val */);
-            for (auto n = 1; n <= Nderiv; ++n){
+            auto derivs = diff_mcx1(f, 0.0, Nderiv, true /* and_val */);
+            for (auto n = 1; n < Nderiv; ++n){
                 dnalphardrhon[n] = derivs[n];
             }
         }
         else if constexpr(be == ADBackends::autodiff){
-            autodiff::HigherOrderDual<Nderiv+1, double> rhodual = 0.0;
+            autodiff::HigherOrderDual<Nderiv, double> rhodual = 0.0;
             auto f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
             auto derivs = derivatives(f, wrt(rhodual), at(rhodual));
-            for (auto n = 1; n <= Nderiv; ++n){
+            for (auto n = 1; n < Nderiv; ++n){
                  dnalphardrhon[n] = derivs[n];
             }
         }
@@ -326,9 +326,9 @@ struct VirialDerivatives {
         }
         
         std::map<int, Scalar> o;
-        for (int n = 2; n < Nderiv+1; ++n) {
+        for (int n = 2; n <= Nderiv; ++n) {
             o[n] = dnalphardrhon[n-1];
-            // 0!=1, 1!=1, so only n>3 terms need factorial correction
+            // 0! = 1, 1! = 1, so only n>3 terms need factorial correction
             if (n > 3) {
                 auto factorial = [](int N) {return tgamma(N + 1); };
                 o[n] /= factorial(n-2);
