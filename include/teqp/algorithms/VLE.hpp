@@ -313,6 +313,85 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
     return std::make_tuple(drhodp_liq, drhodp_vap);
 }
 
+/***
+* \brief Derivative of molar concentration vectors w.r.t. T along an isobar of the phase envelope for binary mixtures
+*
+* \f[
+* \left(\frac{d \vec\rho' }{d T}\right)_{p,\sigma}
+* \f]
+*/
+template<class Model, class Scalar, class VecType>
+auto get_drhovecdT_psat(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
+    using id = IsochoricDerivatives<Model, Scalar, VecType>;
+    if (rhovecL.size() != 2) { throw std::invalid_argument("Binary mixtures only"); }
+    assert(rhovecL.size() == rhovecV.size());
+
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = id::build_Psi_Hessian_autodiff(model, T, rhovecV).eval();
+
+    auto N = rhovecL.size();
+    Eigen::MatrixXd A = decltype(Hliq)::Zero(N, N);
+    Eigen::MatrixXd R = decltype(Hliq)::Ones(N, 1);
+    Eigen::MatrixXd drhodT_liq, drhodT_vap;
+    
+    if ((rhovecL != 0).all() && (rhovecV != 0).all()) {
+        // Normal treatment for all concentrations not equal to zero
+        A(0, 0) = Hliq.row(0).dot(rhovecV.matrix());
+        A(0, 1) = Hliq.row(1).dot(rhovecV.matrix());
+        A(1, 0) = Hliq.row(0).dot(rhovecL.matrix());
+        A(1, 1) = Hliq.row(1).dot(rhovecL.matrix());
+
+        VecType deltas = (id::get_dchempotdT_autodiff(model, T, rhovecV) - id::get_dchempotdT_autodiff(model, T, rhovecL)).eval();
+
+        R(0,0) = (deltas.matrix().dot(rhovecV.matrix())-id::get_dpdT_constrhovec(model, T, rhovecV));
+        R(1,0) = -id::get_dpdT_constrhovec(model, T, rhovecL);
+
+        drhodT_liq = linsolve(A, R);
+        drhodT_vap = linsolve(Hvap, ((Hliq*drhodT_liq).array() - deltas.array()).eval());
+    }
+    else {
+        std::invalid_argument("Infinite dilution not yet supported");
+    }
+    return std::make_tuple(drhodT_liq, drhodT_vap);
+}
+
+/***
+* \brief Derivative of molar concentration vectors w.r.t. T along an isopleth of the phase envelope for binary mixtures
+* 
+* \f[
+* \left(\frac{d \vec\rho' }{d T}\right)_{x',\sigma} = \frac{\Delta s\dot \rho''-\Delta\beta_{\rho}}{(\Psi'\Delta\rho)\dot x')}x'
+* \f]
+* 
+* To keep the vapor mole fraction constant, just swap the input molar concentrations to this function, the first concentration 
+* vector is always the one with fixed molar concentrations
+*/
+template<class Model, class Scalar, class VecType>
+auto get_drhovecdT_xsat(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
+    using id = IsochoricDerivatives<Model, Scalar, VecType>;
+
+    if (rhovecL.size() != 2) { throw std::invalid_argument("Binary mixtures only"); }
+    assert(rhovecL.size() == rhovecV.size());
+
+    VecType molefracL = rhovecL / rhovecL.sum();
+    VecType deltas = (id::get_dchempotdT_autodiff(model, T, rhovecV) - id::get_dchempotdT_autodiff(model, T, rhovecL)).eval();
+    Scalar deltabeta = (id::get_dpdT_constrhovec(model, T, rhovecV)- id::get_dpdT_constrhovec(model, T, rhovecL));
+    VecType deltarho = (rhovecV - rhovecL).eval();
+
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = id::build_Psi_Hessian_autodiff(model, T, rhovecV).eval();
+    
+    Eigen::MatrixXd drhodT_liq, drhodT_vap;
+    if ((rhovecL != 0).all() && (rhovecV != 0).all()) {
+        auto num = (deltas.matrix().dot(rhovecV.matrix()) - deltabeta); // numerator, a scalar
+        auto den = (Hliq*(deltarho.matrix())).dot(molefracL.matrix()); // denominator, a scalar
+        drhodT_liq = num/den*molefracL;
+        drhodT_vap = linsolve(Hvap, ((Hliq * drhodT_liq).array() - deltas.array()).eval());
+    }
+    else {
+        throw std::invalid_argument("Infinite dilution not yet supported");
+    }
+    return std::make_tuple(drhodT_liq, drhodT_vap);
+}
 struct TVLEOptions {
     double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000;
     int max_steps = 1000, integration_order = 5;
