@@ -319,6 +319,8 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
 * \f[
 * \left(\frac{d \vec\rho' }{d T}\right)_{p,\sigma}
 * \f]
+* 
+* See Eq 13 and 14 of Deiters and Bell, AICHEJ: https://doi.org/10.1002/aic.16730
 */
 template<class Model, class Scalar, class VecType>
 auto get_drhovecdT_psat(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
@@ -363,6 +365,8 @@ auto get_drhovecdT_psat(const Model& model, const Scalar& T, const VecType& rhov
 * \f[
 * \left(\frac{d \vec\rho' }{d T}\right)_{x',\sigma} = \frac{\Delta s\dot \rho''-\Delta\beta_{\rho}}{(\Psi'\Delta\rho)\dot x')}x'
 * \f]
+* 
+* See Eq 15 and 16 of Deiters and Bell, AICHEJ: https://doi.org/10.1002/aic.16730
 * 
 * To keep the vapor mole fraction constant, just swap the input molar concentrations to this function, the first concentration 
 * vector is always the one with fixed mole fractions
