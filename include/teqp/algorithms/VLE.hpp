@@ -358,12 +358,14 @@ auto get_drhovecdT_psat(const Model& model, const Scalar& T, const VecType& rhov
 /***
 * \brief Derivative of molar concentration vectors w.r.t. T along an isopleth of the phase envelope for binary mixtures
 * 
+* The liquid phase will have its mole fractions held constant
+* 
 * \f[
 * \left(\frac{d \vec\rho' }{d T}\right)_{x',\sigma} = \frac{\Delta s\dot \rho''-\Delta\beta_{\rho}}{(\Psi'\Delta\rho)\dot x')}x'
 * \f]
 * 
 * To keep the vapor mole fraction constant, just swap the input molar concentrations to this function, the first concentration 
-* vector is always the one with fixed molar concentrations
+* vector is always the one with fixed mole fractions
 */
 template<class Model, class Scalar, class VecType>
 auto get_drhovecdT_xsat(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
