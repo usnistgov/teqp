@@ -505,6 +505,17 @@ struct IsochoricDerivatives{
     }
 
     /***
+    * \brief Calculate derivative Psir=ar*rho w.r.t. T at constant molar concentrations
+    */
+    static auto get_dPsirdT_constrhovec(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot_ = rhovec.sum();
+        auto molefrac = rhovec / rhotot_;
+        autodiff::Real<1, Scalar> Tad = T;
+        auto f = [&model, &rhotot_, &molefrac](const auto& T_) {return rhotot_*model.R(molefrac)*T_*model.alphar(T_, rhotot_, molefrac); };
+        return derivatives(f, along(1), at(Tad))[1];
+    }
+
+    /***
     * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations
     *
     * Requires the use of autodiff derivatives to calculate second partial derivatives
@@ -717,7 +728,17 @@ struct IsochoricDerivatives{
         auto rhotot = rhovec.sum();
         auto molefrac = (rhovec / rhotot).eval();
         auto rhorefideal = 1.0;
-        return build_d2PsirdTdrhoi_autodiff(model, T, rhovec) + model.R(molefrac)*(rhorefideal + log(rhovec/rhorefideal));
+        return (build_d2PsirdTdrhoi_autodiff(model, T, rhovec) + model.R(molefrac)*(rhorefideal + log(rhovec/rhorefideal))).eval();
+    }
+
+    /***
+    * \brief Calculate the temperature derivative of the pressure at constant molar concentrations
+    */
+    static auto get_dpdT_constrhovec(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = rhovec.sum();
+        auto molefrac = (rhovec / rhotot).eval();
+        auto dPsirdT = get_dPsirdT_constrhovec(model, T, rhovec);
+        return rhotot*model.R(molefrac) - dPsirdT + rhovec.matrix().dot(build_d2PsirdTdrhoi_autodiff(model, T, rhovec).matrix());
     }
 };
 
