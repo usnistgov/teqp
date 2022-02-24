@@ -436,7 +436,7 @@ auto get_dpsat_dTsat(const Model& model, const Scalar& T, const VecType& rhovecL
     double rhoL = rhovecL.sum();
     auto molefracL = rhovecL / rhoL;
     auto RT = model.R(molefracL) * T;
-    auto derivs = tdx::get_Ar0n<2>(model, T, rhoL, molefracL);
+    auto derivs = tdx::template get_Ar0n<2>(model, T, rhoL, molefracL);
     auto dpdrho = RT*(1 + 2 * derivs[1] + derivs[2]);
     Scalar dpdT = model.R(molefracL) * rhoL * (1 + derivs[1] - tdx::get_Ar11(model, T, rhoL, molefracL));
     auto der = dpdT + dpdrho * drhoLdT_sat;
