@@ -58,6 +58,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, Eigen::ArrayXd>);
     m.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
     m.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
+    m.def("get_dpsat_dTsat", &get_dpsat_dTsat<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
 
     m.def("mix_VLLE_T", &mix_VLLE_T<Model, double, Eigen::ArrayXd>);
     m.def("find_VLLE_T_binary", &find_VLLE_T_binary<Model>, py::arg("model"), py::arg("traces"), py::arg_v("options", std::nullopt, "None"));
