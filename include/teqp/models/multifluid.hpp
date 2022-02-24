@@ -829,6 +829,23 @@ inline auto get_EOSs(const std::vector<nlohmann::json>& pureJSON) {
     return EOSs;
 }
 
+/// Load a JSON file from a specified file
+inline nlohmann::json load_a_JSON_file(const std::string& path) {
+    if (!std::filesystem::is_regular_file(path)) {
+        throw std::invalid_argument("Path to be loaded does not exist: " + path);
+    }
+    auto stream = std::ifstream(path);
+    if (!stream) {
+        throw std::invalid_argument("File stream cannot be opened from: " + path);
+    }
+    try {
+        return nlohmann::json::parse(stream);
+    }
+    catch (...) {
+        throw std::invalid_argument("File at " + path + " is not valid JSON");
+    }
+}
+
 inline auto collect_component_json(const std::vector<std::string>& components, const std::string& root) 
 {
     std::vector<nlohmann::json> out;
@@ -837,15 +854,13 @@ inline auto collect_component_json(const std::vector<std::string>& components, c
         std::vector<std::filesystem::path> candidates = { c, root + "/dev/fluids/" + c + ".json" };
         std::filesystem::path selected_path = "";
         for (auto candidate : candidates) {
-            if (std::filesystem::exists(candidate)) {
+            if (std::filesystem::is_regular_file(candidate)) {
                 selected_path = candidate;
                 break;
             }
         }
         if (selected_path != "") {
-            std::ifstream ifs(selected_path);
-            auto j = nlohmann::json::parse(ifs);
-            out.push_back(j);
+            out.push_back(load_a_JSON_file(selected_path.string()));
         }
         else {
             throw std::invalid_argument("Could not load any of the candidates:" + c);
@@ -889,18 +904,6 @@ inline auto select_identifier(const nlohmann::json& BIPcollection, const mapvecs
         }
     }
     throw std::invalid_argument("Unable to match any of the identifier options");
-}
-
-/// Load a JSON file from a specified file
-inline nlohmann::json load_a_JSON_file(const std::string &path){
-    if (!std::filesystem::exists(path)){
-        throw std::invalid_argument("Path to be loaded does not exist: " + path);
-    }
-    auto stream = std::ifstream(path);
-    if (!stream) {
-        throw std::invalid_argument("File stream cannot be opened from: " + path);
-    }
-    return nlohmann::json::parse(stream);
 }
 
 /// Build a reverse-lookup map for finding a fluid JSON structure given a backup identifier
@@ -1003,7 +1006,7 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
         std::vector<std::string> abspaths;
         for (auto c : components) {
             // Allow matching of absolute paths first
-            if (std::filesystem::exists(c)) {
+            if (std::filesystem::is_regular_file(c)) {
                 abspaths.push_back(c);
             }
             else {
