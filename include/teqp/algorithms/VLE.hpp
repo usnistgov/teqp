@@ -398,6 +398,58 @@ auto get_drhovecdT_xsat(const Model& model, const Scalar& T, const VecType& rhov
     }
     return std::make_tuple(drhodT_liq, drhodT_vap);
 }
+
+/**
+* \brief Derivative of pressure w.r.t. temperature along the isopleth of a phase envelope (at constant composition of the bulk phase with the first concentration array)
+* 
+* Express \f$p(T,\rho,\vec x)\f$, so its total differential is
+* \f[
+* dp = \left(\frac{\partial p}{\partial T}\right)_{T,\vec x}dT + \left(\frac{\partial p}{\partial \rho}\right)_{T,\vec x} d\rho + \sum_{k} \left(\frac{\partial p}{\partial x_k}\right)_{T,\rho,x_{j\neq k}} dx_k
+* \f]
+* And for the derivative taken along the phase envelope at constant composition (along an isopleth so the composition part drops out):
+* \f[
+* \left(\frac{dp}{dT}\right)_{x, \sigma} = \left(\frac{\partial p}{\partial T}\right)_{T,\vec x}\frac{dT}{dT} + \left(\frac{\partial p}{\partial \rho}\right)_{T,\vec x} \left(\frac{d\rho}{dT}\right)_{\vec x,\sigma}
+* \f]
+* where
+* \f[
+\left(\frac{d\rho}{dT}\right)_{\vec x,\sigma} = \sum_k\left(\frac{d\rho_k}{dT}\right)_{\vec x,\sigma}
+* \f]
+*
+* In the isochoric framework, a similar analysis would apply, which yields the identical result. Express \f$p(T,\vec\rho)\f$, so its total differential is
+* \f[
+* dp = \left(\frac{\partial p}{\partial T}\right)_{\vec\rho}dT + \sum_k \left(\frac{\partial p}{\partial \rho_k}\right)_{T,\rho_{j\neq k}} d\rho_k
+* \f]
+* And for the derivative taken along the phase envelope at constant composition (along an isopleth):
+* \f[
+* \left(\frac{dp}{dT}\right)_{x, \sigma} = \left(\frac{\partial p}{\partial T}\right)_{\vec\rho}\frac{dT}{dT} + \sum_k \left(\frac{\partial p}{\partial \rho_k}\right)_{T,\rho_{j\neq k}} \left(\frac{\partial \rho_k}{\partial T}\right)_{x,\sigma}
+* \f]
+*/
+template<class Model, class Scalar, class VecType>
+auto get_dpsat_dTsat(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
+
+    // Derivative along phase envelope at constant composition (correct, tested)
+    auto [drhovecLdT_xsat, drhovecVdT_xsat] = get_drhovecdT_xsat(model, T, rhovecL, rhovecV);
+    // And the derivative of the total density 
+    auto drhoLdT_sat = drhovecLdT_xsat.sum();
+    
+    using tdx = TDXDerivatives<Model, Scalar, VecType>;
+    double rhoL = rhovecL.sum();
+    auto molefracL = rhovecL / rhoL;
+    auto RT = model.R(molefracL) * T;
+    auto derivs = tdx::get_Ar0n<2, ADBackends::autodiff>(model, T, rhoL, molefracL);
+    auto dpdrho = RT*(1 + 2 * derivs[1] + derivs[2]);
+    Scalar dpdT = model.R(molefracL) * rhoL * (1 + derivs[1] - tdx::get_Ar11(model, T, rhoL, molefracL));
+    auto der = dpdT + dpdrho * drhoLdT_sat;
+    return der;
+
+    // How to do this derivative with isochoric formalism
+    //using iso = IsochoricDerivatives<Model, Scalar, VecType>;
+    //auto [PsirL, PsirgradL, hessianL] = iso::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
+    //auto dpdrhovecL = (RT + (hessianL * rhovecL.matrix()).array()).eval();
+    //auto der = (dpdrhovecL * drhovecLdT_xsat.array()).sum() + dpdT;
+    //return der;
+}
+
 struct TVLEOptions {
     double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000;
     int max_steps = 1000, integration_order = 5;

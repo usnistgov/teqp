@@ -2,6 +2,7 @@
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
+#include "teqp/algorithms/VLE.hpp"
 #include "teqp/filesystem.hpp"
 
 using namespace teqp;
@@ -219,5 +220,19 @@ TEST_CASE("Check that virial coefficients can be calculated with multiple deriva
     auto derBnAD = vd::get_dmBnvirdTm<2, 1, ADBackends::autodiff>(model, 298.15, z);
     auto derBnMCX = vd::get_dmBnvirdTm<2, 1, ADBackends::multicomplex>(model, 298.15, z);
     CHECK(derBnAD == Approx(derBnMCX));
+}
 
+TEST_CASE("dpsat/dTsat", "[dpdTsat]") {
+    std::string root = "../mycp";
+    const auto model = build_multifluid_model({ "Methane", "Ethane" }, root);
+    using id = IsochoricDerivatives<decltype(model)>;
+    double T = 200;
+    auto rhovecL = (Eigen::ArrayXd(2) << 5431.76157173312, 12674.110334043948).finished();
+    auto rhovecV = (Eigen::ArrayXd(2) << 1035.298519871195, 162.03291757734976).finished();
+    
+    // Concentration derivatives w.r.t. T along the isopleth
+    auto [drhovecdTL, drhovecdTV] = get_drhovecdT_xsat(model, T, rhovecL, rhovecV);
+    
+    auto dpdT = get_dpsat_dTsat(model, T, rhovecL, rhovecV);
+    CHECK(dpdT == Approx(39348.33949198946).margin(0.01));
 }
