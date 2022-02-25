@@ -451,7 +451,7 @@ auto get_dpsat_dTsat(const Model& model, const Scalar& T, const VecType& rhovecL
 }
 
 struct TVLEOptions {
-    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000;
+    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0;
     int max_steps = 1000, integration_order = 5;
     bool polish = false;
 };
@@ -490,7 +490,8 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
     double abs_err = opt.abs_err, rel_err = opt.rel_err, a_x = 1.0, a_dxdt = 1.0;
     controlled_stepper_type controlled_stepper(default_error_checker< double, range_algebra, default_operations >(abs_err, rel_err, a_x, a_dxdt));
 
-    double c = 1.0;
+    // Start off with the direction determined by c
+    double c = opt.init_c;
 
     // Set up the initial state vector
     state_type x0(2 * N), last_drhodt(2 * N), previous_drhodt(2 * N);

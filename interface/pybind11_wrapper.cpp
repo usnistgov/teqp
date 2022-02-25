@@ -48,6 +48,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("abs_err", &TVLEOptions::abs_err)
         .def_readwrite("rel_err", &TVLEOptions::rel_err)
         .def_readwrite("init_dt", &TVLEOptions::init_dt)
+        .def_readwrite("init_c", &TVLEOptions::init_c)
         .def_readwrite("max_dt", &TVLEOptions::max_dt)
         .def_readwrite("max_steps", &TVLEOptions::max_steps)
         .def_readwrite("integration_order", &TVLEOptions::integration_order)
