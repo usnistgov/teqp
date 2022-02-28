@@ -37,6 +37,23 @@ namespace Eigen {
 
 namespace teqp{
 
+/// Load a JSON file from a specified file
+inline nlohmann::json load_a_JSON_file(const std::string& path) {
+    if (!std::filesystem::is_regular_file(path)) {
+        throw std::invalid_argument("Path to be loaded does not exist: " + path);
+    }
+    auto stream = std::ifstream(path);
+    if (!stream) {
+        throw std::invalid_argument("File stream cannot be opened from: " + path);
+    }
+    try {
+        return nlohmann::json::parse(stream);
+    }
+    catch (...) {
+        throw std::invalid_argument("File at " + path + " is not valid JSON");
+    }
+}
+
 template<typename EOSCollection>
 class CorrespondingStatesContribution {
 
@@ -363,6 +380,32 @@ public:
     template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, phiV, lambdaV, Yv); }
 };
 
+/***
+* \brief Get the JSON data structure for a given departure function
+* \param name The name (or alias) of the departure function to be looked up
+* \parm path The root path to the fluid data, or alternatively, the path to the json file directly
+*/
+inline auto get_departure_json(const std::string& name, const std::string& path) {
+    std::string filepath = std::filesystem::is_regular_file(path) ? path : path + "/dev/mixtures/mixture_departure_functions.json";
+    nlohmann::json j = load_a_JSON_file(filepath);
+    std::string js = j.dump(2);
+    // First pass, direct name lookup
+    for (auto& el : j) {
+        if (el.at("Name") == name) {
+            return el;
+        }
+    }
+    // Second pass, iterate over aliases
+    for (auto& el : j) {
+        for (auto &alias : el.at("aliases")) {
+            if (alias == name) {
+                return el;
+            }
+        }
+    }
+    throw std::invalid_argument("Could not match the name: " + name + "when looking up departure function");
+}
+    
 inline auto build_departure_function(const nlohmann::json& j) {
     auto build_power = [&](auto term, auto& dep) {
         std::size_t N = term["n"].size();
@@ -827,23 +870,6 @@ inline auto get_EOSs(const std::vector<nlohmann::json>& pureJSON) {
         EOSs.emplace_back(term);
     }
     return EOSs;
-}
-
-/// Load a JSON file from a specified file
-inline nlohmann::json load_a_JSON_file(const std::string& path) {
-    if (!std::filesystem::is_regular_file(path)) {
-        throw std::invalid_argument("Path to be loaded does not exist: " + path);
-    }
-    auto stream = std::ifstream(path);
-    if (!stream) {
-        throw std::invalid_argument("File stream cannot be opened from: " + path);
-    }
-    try {
-        return nlohmann::json::parse(stream);
-    }
-    catch (...) {
-        throw std::invalid_argument("File at " + path + " is not valid JSON");
-    }
 }
 
 inline auto collect_component_json(const std::vector<std::string>& components, const std::string& root) 

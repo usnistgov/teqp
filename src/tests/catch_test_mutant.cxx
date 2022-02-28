@@ -52,6 +52,17 @@ TEST_CASE("Crashing mutant construction", "[mutant]") {
     auto mutant = build_multifluid_mutant(model, j);
 }
 
+TEST_CASE("Mutant with predefined departure function", "[mutant]") {
+    std::string root = "../mycp";
+    nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
+    auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {"type": "lookup", "name": "KWR"}}}})";
+    nlohmann::json j = nlohmann::json::parse(s0);
+    j["0"]["1"]["departure"] = get_departure_json("KWT", root);
+    auto mutant = build_multifluid_mutant(model, j);
+}
+
 TEST_CASE("Test construction of mutant with invariant departure function", "[mutant][invariant]")
 {
 
