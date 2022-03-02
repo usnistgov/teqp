@@ -233,6 +233,6 @@ TEST_CASE("dpsat/dTsat", "[dpdTsat]") {
     // Concentration derivatives w.r.t. T along the isopleth
     auto [drhovecdTL, drhovecdTV] = get_drhovecdT_xsat(model, T, rhovecL, rhovecV);
     
-    auto dpdT = get_dpsat_dTsat(model, T, rhovecL, rhovecV);
+    auto dpdT = get_dpsat_dTsat_isopleth(model, T, rhovecL, rhovecV);
     CHECK(dpdT == Approx(39348.33949198946).margin(0.01));
 }
