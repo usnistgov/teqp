@@ -425,7 +425,7 @@ auto get_drhovecdT_xsat(const Model& model, const Scalar& T, const VecType& rhov
 * \f]
 */
 template<class Model, class Scalar, class VecType>
-auto get_dpsat_dTsat(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
+auto get_dpsat_dTsat_isopleth(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
 
     // Derivative along phase envelope at constant composition (correct, tested)
     auto [drhovecLdT_xsat, drhovecVdT_xsat] = get_drhovecdT_xsat(model, T, rhovecL, rhovecV);
