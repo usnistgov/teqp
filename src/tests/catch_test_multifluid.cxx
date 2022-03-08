@@ -236,3 +236,25 @@ TEST_CASE("dpsat/dTsat", "[dpdTsat]") {
     auto dpdT = get_dpsat_dTsat_isopleth(model, T, rhovecL, rhovecV);
     CHECK(dpdT == Approx(39348.33949198946).margin(0.01));
 }
+
+TEST_CASE("Trace a VLE isotherm for CO2 + water", "[isothermCO2water]") {
+    std::string root = "../mycp";
+    const auto model = build_multifluid_model({ "CarbonDioxide", "Water" }, root);
+    using id = IsochoricDerivatives<decltype(model)>;
+    double T = 308.15;
+    auto rhovecL = (Eigen::ArrayXd(2) << 0.0, 55174.92375117).finished();
+    auto rhovecV = (Eigen::ArrayXd(2) << 0.0, 2.20225704).finished();
+
+    auto o = trace_VLE_isotherm_binary(model, T, rhovecL, rhovecV);
+}
+
+TEST_CASE("Trace a VLE isotherm for acetone + water", "[isothermacetonebenzene]") {
+    std::string root = "../mycp";
+    const auto model = build_multifluid_model({ "Acetone", "Benzene" }, root);
+    using id = IsochoricDerivatives<decltype(model)>;
+    double T = 348.05;
+    auto rhovecL = (Eigen::ArrayXd(2) << 12502.86504072, 0.0).finished();
+    auto rhovecV = (Eigen::ArrayXd(2) << 69.20719534,  0.0).finished();
+
+    auto o = trace_VLE_isotherm_binary(model, T, rhovecL, rhovecV);
+}
