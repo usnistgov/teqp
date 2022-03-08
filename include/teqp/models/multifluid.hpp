@@ -508,6 +508,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
             e.d = eos.d.tail(Nlnonzero);
             e.c = eos.c.tail(Nlnonzero);
             e.l = eos.l.tail(Nlnonzero);
+            e.l_i = e.l.cast<int>();
             dep.add_term(e);
         }
         else {

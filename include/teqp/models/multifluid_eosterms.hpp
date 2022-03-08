@@ -43,6 +43,9 @@ public:
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
         result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        if (l_i.size() == 0) {
+            throw std::invalid_argument("l_i cannot be zero length");
+        }
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau - c[i] * powi(delta, l_i[i])) * powi(delta, d[i]);
