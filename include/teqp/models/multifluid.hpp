@@ -508,7 +508,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
             e.d = eos.d.tail(Nlnonzero);
             e.c = eos.c.tail(Nlnonzero);
             e.l = eos.l.tail(Nlnonzero);
-            e.l_i = e.l.cast<int>();
+            e.l_i = eos.l_i.tail(Nlnonzero);
             dep.add_term(e);
         }
         else {
@@ -749,7 +749,7 @@ inline auto get_EOS_terms(const nlohmann::json& j)
             e.d = eos.d.tail(Nlnonzero);
             e.c = eos.c.tail(Nlnonzero);
             e.l = eos.l.tail(Nlnonzero);
-            e.l_i = e.l.cast<int>();
+            e.l_i = eos.l_i.tail(Nlnonzero);
             container.add_term(e);
         }
         else {
