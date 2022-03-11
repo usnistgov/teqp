@@ -18,6 +18,7 @@
 #include "MultiComplex/MultiComplex.hpp"
 
 #include "multifluid_eosterms.hpp"
+#include <boost/algorithm/string/join.hpp>
 
 // See https://eigen.tuxfamily.org/dox/TopicCustomizing_CustomScalar.html
 namespace Eigen {
@@ -594,7 +595,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
         dep.add_term(e);
     };
 
-    std::string type = j["type"];
+    std::string type = j.at("type");
     DepartureTerms dep;
     if (type == "Exponential") {
         build_power(j, dep);
@@ -609,7 +610,9 @@ inline auto build_departure_function(const nlohmann::json& j) {
         dep.add_term(NullEOSTerm());
     }
     else {
-        throw std::invalid_argument("Bad departure term type: " + type);
+        
+        std::vector<std::string> options = { "Exponential","GERG-2004","GERG-2008","Gaussian+Exponential", "none" };
+        throw std::invalid_argument("Bad departure term type: " + type + ". Options are {" + boost::algorithm::join(options, ",") + "}");
     }
     return dep;
 }

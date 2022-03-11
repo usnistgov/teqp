@@ -63,6 +63,26 @@ TEST_CASE("Mutant with predefined departure function", "[mutant]") {
     auto mutant = build_multifluid_mutant(model, j);
 }
 
+TEST_CASE("Mutant with NULL departure function (error)", "[mutant]") {
+    std::string root = "../mycp";
+    nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
+    auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {"type": "NULL"}}}})";
+    nlohmann::json j = nlohmann::json::parse(s0);
+    CHECK_THROWS(build_multifluid_mutant(model, j));
+}
+
+TEST_CASE("Mutant with none departure function (ok)", "[mutant]") {
+    std::string root = "../mycp";
+    nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
+    auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 1.0, "gammaT": 1.0, "betaV": 1.0, "gammaV": 1.0, "Fij": 1.0}, "departure": {"type": "none"}}}})";
+    nlohmann::json j = nlohmann::json::parse(s0);
+    CHECK_NOTHROW(build_multifluid_mutant(model, j));
+}
+
 TEST_CASE("Test construction of mutant with invariant departure function", "[mutant][invariant]")
 {
 
