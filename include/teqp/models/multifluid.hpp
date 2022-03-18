@@ -14,6 +14,7 @@
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/filesystem.hpp"
+#include "teqp/json_tools.hpp"
 
 #include "MultiComplex/MultiComplex.hpp"
 
