@@ -215,7 +215,8 @@ public:
 
     static auto get_BIPdep(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags) {
 
-        if (flags.contains("estimate")) {
+        // If force-estimate is provided in flags, the estimation will over-ride the provided model(s)
+        if (flags.contains("force-estimate")) {
             std::string scheme = flags["estimate"];
             if (scheme == "Lorentz-Berthelot") {
                 return std::make_tuple(nlohmann::json({
@@ -254,7 +255,22 @@ public:
                 return std::make_tuple(el, true);
             }
         }
-        throw std::invalid_argument("Can't match the binary pair for: " + identifiers[0] + "/" + identifiers[1]);
+
+        // If estimate is provided in flags, it will be the fallback solution for filling in interaction parameters
+        if (flags.contains("estimate")) {
+            std::string scheme = flags["estimate"];
+            if (scheme == "Lorentz-Berthelot") {
+                return std::make_tuple(nlohmann::json({
+                    {"betaT", 1.0}, {"gammaT", 1.0}, {"betaV", 1.0}, {"gammaV", 1.0}, {"F", 0.0}
+                    }), false);
+            }
+            else {
+                throw std::invalid_argument("estimation scheme is not understood:" + scheme);
+            }
+        }
+        else {
+            throw std::invalid_argument("Can't match the binary pair for: " + identifiers[0] + "/" + identifiers[1]);
+        }
     }
 
     static auto get_binary_interaction_double(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags, const std::vector<double>&Tc, const std::vector<double>&vc) {
