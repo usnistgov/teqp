@@ -1,5 +1,7 @@
 #include "nlohmann/json.hpp"
 
+#include <set>
+
 namespace teqp{
     inline auto all_same_length(const nlohmann::json& j, const std::vector<std::string>& ks) {
         std::set<decltype(j[0].size())> lengths;
