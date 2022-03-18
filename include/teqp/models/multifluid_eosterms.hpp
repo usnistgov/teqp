@@ -87,6 +87,35 @@ public:
 };
 
 /**
+\f$ \alpha^{\rm r}=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\gamma_{d,i}\delta^{l_{d,i}}-\gamma_{t,i}\tau^{l_{t,i}})\f$
+*/
+class DoubleExponentialEOSTerm {
+public:
+    Eigen::ArrayXd n, t, d, gd, ld, gt, lt;
+    Eigen::ArrayXi ld_i;
+
+    template<typename TauType, typename DeltaType>
+    auto alphar(const TauType& tau, const DeltaType& delta) const {
+        using result = std::common_type_t<TauType, DeltaType>;
+        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        if (ld_i.size() == 0 && n.size() > 0) {
+            throw std::invalid_argument("ld_i cannot be zero length if some terms are provided");
+        }
+        if (getbaseval(delta) == 0) {
+            for (auto i = 0; i < n.size(); ++i) {
+                r = r + n[i] * powi(delta, d[i]) * exp(t[i] * lntau - gd[i]*powi(delta, ld_i[i]) - gt[i]*pow(tau, lt[i]));
+            }
+        }
+        else {
+            for (auto i = 0; i < n.size(); ++i) {
+                r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - gd[i]*powi(delta, ld_i[i]) - gt[i]*pow(tau, lt[i]));
+            }
+        }
+        return forceeval(r);
+    }
+};
+
+/**
 \f$ \alpha^{\rm r} = \displaystyle\sum_i n_i \tau^{t_i}\delta^ {d_i} \exp(-\eta_i(\delta-\epsilon_i)^2 -\beta_i(\tau-\gamma_i)^2 )\f$
 */
 class GaussianEOSTerm {
@@ -263,6 +292,6 @@ public:
 
 using EOSTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm>;
 
-using DepartureTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm>;
+using DepartureTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm, DoubleExponentialEOSTerm>;
 
 }; // namespace teqp

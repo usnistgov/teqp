@@ -534,6 +534,21 @@ inline auto build_departure_function(const nlohmann::json& j) {
         }
     };
 
+    auto build_doubleexponential = [&](auto& term, auto& dep) {
+        if (!all_same_length(term, { "n","t","d","ld","gd","lt","gt" })) {
+            throw std::invalid_argument("Lengths are not all identical in double exponential term");
+        }
+        DoubleExponentialEOSTerm eos;
+        eos.n = toeig(term.at("n"));
+        eos.t = toeig(term.at("t"));
+        eos.d = toeig(term.at("d"));
+        eos.ld = toeig(term.at("ld"));
+        eos.gd = toeig(term.at("gd"));
+        eos.lt = toeig(term.at("lt"));
+        eos.gt = toeig(term.at("gt"));
+        eos.ld_i = eos.ld.cast<int>();
+        dep.add_term(eos);
+    }; 
     auto build_gaussian = [&](auto& term) {
         GaussianEOSTerm eos;
         eos.n = toeig(term["n"]);
@@ -616,6 +631,9 @@ inline auto build_departure_function(const nlohmann::json& j) {
     if (type == "Exponential") {
         build_power(j, dep);
     }
+    else if (type == "DoubleExponential") {
+        build_doubleexponential(j, dep);
+    }
     else if (type == "GERG-2004" || type == "GERG-2008") {
         build_GERG2004(j, dep);
     }
@@ -627,7 +645,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
     }
     else {
         
-        std::vector<std::string> options = { "Exponential","GERG-2004","GERG-2008","Gaussian+Exponential", "none" };
+        std::vector<std::string> options = { "Exponential","GERG-2004","GERG-2008","Gaussian+Exponential", "none", "DoubleExponential"};
         throw std::invalid_argument("Bad departure term type: " + type + ". Options are {" + boost::algorithm::join(options, ",") + "}");
     }
     return dep;
