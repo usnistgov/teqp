@@ -7,7 +7,9 @@
 #include <set>
 #include <chrono>
 
+#if defined(TEQP_MULTIPRECISION_ENABLED)
 #include "boost/multiprecision/cpp_bin_float.hpp"
+#endif
 
 // autodiff include
 #include <autodiff/forward/dual.hpp>
@@ -65,9 +67,11 @@ namespace teqp {
         else if constexpr (is_mcx_t<T>()) {
             return expr.real();
         }
+#if defined(TEQP_MULTIPRECISION_ENABLED)
         else if constexpr (boost::multiprecision::is_number<T>()) {
             return static_cast<double>(expr);
         }
+#endif
         else {
             return expr;
         }
