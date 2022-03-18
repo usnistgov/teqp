@@ -5,6 +5,8 @@
 
 #include <type_traits>
 
+#include "multifluid_shared.hpp"
+
 void add_multifluid_mutant(py::module& m) {
 
     // A typedef for the base model
@@ -22,11 +24,10 @@ void add_multifluid_mutant(py::module& m) {
     using BIPmod = std::decay_t<MultiFluidAdapter<RedType, DepType, MultiFluid>>;
 
     // Define python wrapper of the mutant class
-    auto wMFBIP = py::class_<BIPmod>(m, "MultiFluidMutant")
-        .def("set_meta", [](BIPmod& c, const std::string &s) { return c.set_meta(s); })
-        .def("get_meta", [](const BIPmod& c) { return c.get_meta(); })
-        ;
+    auto wMFBIP = py::class_<BIPmod>(m, "MultiFluidMutant");
+    
     add_derivatives<BIPmod>(m, wMFBIP);
+    add_multifluid_methods<BIPmod>(wMFBIP);
 }
 
 void add_multifluid_mutant_invariant(py::module& m) {
@@ -41,9 +42,8 @@ void add_multifluid_mutant_invariant(py::module& m) {
     using Mutant = std::invoke_result_t<decltype(build_multifluid_mutant_invariant<MultiFluid>), MultiFluid&, nlohmann::json&>;
 
     // Define python wrapper of the mutant class
-    auto wMutant = py::class_<Mutant>(m, "MultiFluidMutantInvariant")
-        .def("set_meta", [](Mutant& c, const std::string& s) { return c.set_meta(s); })
-        .def("get_meta", [](const Mutant& c) { return c.get_meta(); })
-        ;
+    auto wMutant = py::class_<Mutant>(m, "MultiFluidMutantInvariant");
+
     add_derivatives<Mutant>(m, wMutant);
+    add_multifluid_methods<Mutant>(wMutant);
 }
