@@ -57,15 +57,16 @@ typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const C
 }
 
 /// Helper function for build_duplicated_tuple
-template<typename T, size_t ... Indices>
-auto _GetDupedTuple(const T& val, std::index_sequence<Indices...>) {
-    return std::make_tuple((Indices, val)...);
+/// See example here for the general concept https://en.cppreference.com/w/cpp/utility/integer_sequence
+template<typename T, size_t ... I>
+auto build_duplicated_tuple_impl(const T& val, std::index_sequence<I...>) {
+    return std::make_tuple((val+0*I)...);
 }
 
 /// A function to generate a tuple of N repeated copies of argument val at compile-time
 template<int N, typename T>
 auto build_duplicated_tuple(const T& val) {
-    return _GetDupedTuple(val, std::make_index_sequence<N>());
+    return build_duplicated_tuple_impl(val, std::make_index_sequence<N>());
 }
 
 /// A class to help with the forwarding of arguments to wrt of autodiff.  std::apply cannot be applied to 
