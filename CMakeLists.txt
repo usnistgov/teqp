@@ -10,16 +10,16 @@ endif()
 ####  SETUP
 set(CMAKE_CXX_STANDARD 17)
 
-set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/docker/boost_bcp_docker/boost_teqp.tar.gz")
+set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/docker/boost_bcp_docker/boost_teqp.tar.xz")
 set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp/boost/version.hpp")
 if (EXISTS ${ZIPFN})
     if(NOT EXISTS ${OUTFN})
-        execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xf ${ZIPFN}
+        execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xJf ${ZIPFN}
                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
         message(STATUS "Untarred boost headers")
     endif()
 else()
-    message(FATAL_ERROR "tar.gz of boost sources needed for teqp cannot be found")
+    message(FATAL_ERROR "tar.xz of boost sources needed for teqp cannot be found")
 endif()
 
 add_library(teqpinterface INTERFACE)
