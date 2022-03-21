@@ -4,4 +4,4 @@ Just a tiny docker container used to extract the necessary parts of ``boost`` wi
 
 To run: ``docker-compose up --build``
 
-The output will be a ``.tar.gz`` file in this folder with the bits and pieces needed to include.
+The output will be a ``.tar.xz`` file in this folder with the bits and pieces needed to include.
