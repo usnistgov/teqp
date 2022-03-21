@@ -60,7 +60,7 @@ typename ContainerType::value_type derivrhoi(const FuncType& f, TType T, const C
 /// See example here for the general concept https://en.cppreference.com/w/cpp/utility/integer_sequence
 template<typename T, size_t ... I>
 auto build_duplicated_tuple_impl(const T& val, std::index_sequence<I...>) {
-    return std::make_tuple(([[maybe_unused]] I, val)...);  // The comma operator (a,b) evaluates the first argument and discards it, and keeps the second argument 
+    return std::make_tuple((static_cast<void>(I), val)...);  // The comma operator (a,b) evaluates the first argument and discards it, and keeps the second argument 
 }
 
 /// A function to generate a tuple of N repeated copies of argument val at compile-time
