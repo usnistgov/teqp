@@ -65,6 +65,10 @@ option (TEQP_JAVASCRIPT_EMBIND
         "Build C++ <-> Javascript interface with embind"
         OFF)
 
+option (TEQP_MULTIPRECISION_ENABLED
+        "Enable the use of boost::multiprecision"
+        OFF)
+
 if (TEQP_JAVASCRIPT_MODULE)
   # cmake -DTEQP_JAVASCRIPT_MODULE=ON
   #       -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
@@ -75,6 +79,10 @@ if (TEQP_JAVASCRIPT_MODULE)
 
   #add_compile_options( -gsource-map -fsanitize=address)
   #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -gsource-map -fsanitize=address ")
+endif()
+
+if (TEQP_MULTIPRECISION_ENABLED)
+    add_definitions(-DTEQP_MULTIPRECISION_ENABLED)
 endif()
 
 if (NOT TEQP_NO_PYTHON)
