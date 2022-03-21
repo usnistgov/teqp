@@ -3806,7 +3806,7 @@ const auto PR_rhoV = SuperAncillary{
 }
 };
 
-static double supercubic(int EOS, int prop, double Ttilde){
+static inline double supercubic(int EOS, int prop, double Ttilde){
     switch(EOS){
         case 0:{
             switch(prop){
