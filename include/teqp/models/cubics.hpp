@@ -42,8 +42,8 @@ protected:
     std::valarray<NumType> ai, bi;
     std::valarray<std::valarray<NumType>> k;
     const NumType Delta1, Delta2, OmegaA, OmegaB;
+    int superanc_index; 
     const AlphaFunctions alphas;
-    int superanc_index;
 
     nlohmann::json meta;
 
