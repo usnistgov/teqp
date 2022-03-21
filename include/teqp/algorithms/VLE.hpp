@@ -582,6 +582,8 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
                 {"c", c},
                 {"rhoL / mol/m^3", rhovecL},
                 {"rhoV / mol/m^3", rhovecV},
+                {"xL_0 / mole frac.", rhovecL[0]/rhovecL.sum()},
+                {"xV_0 / mole frac.", rhovecV[0]/rhovecV.sum()},
                 {"drho/dt", last_drhodt}
             };
             JSONdata.push_back(point);
