@@ -1,6 +1,7 @@
 #include "catch/catch.hpp"
 
 #include "teqp/models/multifluid.hpp"
+#include "teqp/models/multifluid_mutant.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 
 using namespace teqp;
@@ -106,7 +107,7 @@ TEST_CASE("Test construction of mutant with invariant departure function", "[mut
         }
     }
     )");
-    CHECK_THROWS(build_multifluid_mutant_invariant(model, jbad));
+    CHECK_THROWS(build_multifluid_mutant(model, jbad));
 
     std::string s = R"({
         "0": {
@@ -126,7 +127,7 @@ TEST_CASE("Test construction of mutant with invariant departure function", "[mut
         }
     })";
     nlohmann::json j = nlohmann::json::parse(s);
-    auto mutant = build_multifluid_mutant_invariant(model, j);
+    auto mutant = build_multifluid_mutant(model, j);
 
     //for (auto x0 = 0.0; x0 < 1.0; x0 += 0.1) {
     //    std::vector<double> z = { x0, 1 - x0 };
