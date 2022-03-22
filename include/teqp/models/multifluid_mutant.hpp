@@ -83,9 +83,9 @@ namespace teqp {
                 mat phiT = mat::Zero(N, N), lambdaT = mat::Zero(N, N), phiV = mat::Zero(N, N), lambdaV = mat::Zero(N, N);
 
                 for (auto i = 0; i < N; ++i) {
-                    for (auto j = i; j < N; ++j) {
+                    for (auto j = i+1; j < N; ++j) {
                         // Extract the given entry
-                        auto entry = jj[std::to_string(i)][std::to_string(j)];
+                        auto entry = jj.at(std::to_string(i)).at(std::to_string(j));
 
                         auto BIP = entry.at("BIP");
                         // Set the reducing function parameters in the copy
@@ -107,9 +107,9 @@ namespace teqp {
                 mat betaT = mat::Zero(N, N), gammaT = mat::Zero(N, N), betaV = mat::Zero(N, N), gammaV = mat::Zero(N, N);
 
                 for (auto i = 0; i < N; ++i) {
-                    for (auto j = i; j < N; ++j) {
+                    for (auto j = i+1; j < N; ++j) {
                         // Extract the given entry
-                        auto entry = jj[std::to_string(i)][std::to_string(j)];
+                        auto entry = jj.at(std::to_string(i)).at(std::to_string(j));
                         auto BIP = entry.at("BIP");
                         // Set the reducing function parameters in the copy
                         betaT(i, j) = BIP.at("betaT");
@@ -123,7 +123,8 @@ namespace teqp {
                 return ReducingFunctions(MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc));
             }
         };
-        ReducingFunctions newred = get_reducing(jj.at("0").at("1"));
+        std::string deptype = (jj.at("0").at("1").contains("type")) ? jj.at("0").at("1")["type"] : "";
+        ReducingFunctions newred = get_reducing(deptype);
 
         auto newdep = DepartureContribution(std::move(F), std::move(funcs));
         auto mfa = MultiFluidAdapter(model, std::move(newred), std::move(newdep));
