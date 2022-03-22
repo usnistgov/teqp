@@ -784,7 +784,7 @@ inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON,
 
     // Things related to the mixture
     auto F = reducing::get_F_matrix(BIPcollection, identifiers, flags);
-    auto [funcs, funcsinfo] = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
+    auto funcs = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
     auto [betaT, gammaT, betaV, gammaV] = reducing::get_BIP_matrices(BIPcollection, identifiers, flags, Tc, vc);
 
     auto redfunc = ReducingFunctions(std::move(MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc)));
