@@ -264,8 +264,8 @@ namespace teqp {
     class ReducingTermContainer {
     private:
         const std::variant<Args...> term;
-        auto const& get_Tc() const { return std::visit([](const auto& t) { return std::cref(t.Tc); }, term); }
-        auto const& get_vc() const { return std::visit([](const auto& t) { return std::cref(t.vc); }, term); }
+        auto get_Tc() const { return std::visit([](const auto& t) { return std::cref(t.Tc); }, term); }
+        auto get_vc() const { return std::visit([](const auto& t) { return std::cref(t.vc); }, term); }
     public:
         const Eigen::ArrayXd Tc, vc;
 
