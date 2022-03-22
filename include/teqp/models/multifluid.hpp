@@ -19,6 +19,8 @@
 #include "MultiComplex/MultiComplex.hpp"
 
 #include "multifluid_eosterms.hpp"
+#include "multifluid_reducing.hpp"
+
 #include <boost/algorithm/string/join.hpp>
 
 // See https://eigen.tuxfamily.org/dox/TopicCustomizing_CustomScalar.html
@@ -109,13 +111,13 @@ public:
     }
 };
 
-template<typename ReducingFunction, typename CorrespondingTerm, typename DepartureTerm>
+template<typename CorrespondingTerm, typename DepartureTerm>
 class MultiFluid {  
 
 private:
     std::string meta = ""; ///< A string that can be used to store arbitrary metadata as needed
 public:
-    const ReducingFunction redfunc;
+    const ReducingFunctions redfunc;
     const CorrespondingTerm corr;
     const DepartureTerm dep;
 
@@ -129,7 +131,7 @@ public:
     /// Get the metadata stored in string form
     auto get_meta() const { return meta; }
 
-    MultiFluid(ReducingFunction&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep) : redfunc(redfunc), corr(corr), dep(dep) {};
+    MultiFluid(ReducingFunctions&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep) : redfunc(redfunc), corr(corr), dep(dep) {};
 
     template<typename TType, typename RhoType>
     auto alphar(TType T,
@@ -155,248 +157,6 @@ public:
     }
 };
 
-
-class MultiFluidReducingFunction {
-private:
-    Eigen::MatrixXd YT, Yv;
-
-    template <typename Num>
-    auto cube(Num x) const {
-        return forceeval(x*x*x);
-    }
-    template <typename Num>
-    auto square(Num x) const {
-        return forceeval(x*x);
-    }
-
-public:
-    const Eigen::MatrixXd betaT, gammaT, betaV, gammaV;
-    const Eigen::ArrayXd Tc, vc;
-
-    template<typename ArrayLike>
-    MultiFluidReducingFunction(
-        const Eigen::MatrixXd& betaT, const Eigen::MatrixXd& gammaT,
-        const Eigen::MatrixXd& betaV, const Eigen::MatrixXd& gammaV,
-        const ArrayLike& Tc, const ArrayLike& vc)
-        : betaT(betaT), gammaT(gammaT), betaV(betaV), gammaV(gammaV), Tc(Tc), vc(vc) {
-
-        auto N = Tc.size();
-
-        YT.resize(N, N); YT.setZero();
-        Yv.resize(N, N); Yv.setZero();
-        for (auto i = 0; i < N; ++i) {
-            for (auto j = i + 1; j < N; ++j) {
-                YT(i, j) = betaT(i, j) * gammaT(i, j) * sqrt(Tc[i] * Tc[j]);
-                YT(j, i) = betaT(j, i) * gammaT(j, i) * sqrt(Tc[i] * Tc[j]);
-                Yv(i, j) = 1.0 / 8.0 * betaV(i, j) * gammaV(i, j) * cube(cbrt(vc[i]) + cbrt(vc[j]));
-                Yv(j, i) = 1.0 / 8.0 * betaV(j, i) * gammaV(j, i) * cube(cbrt(vc[i]) + cbrt(vc[j]));
-            }
-        }
-    }
-
-    template <typename MoleFractions>
-    auto Y(const MoleFractions& z, const Eigen::ArrayXd& Yc, const Eigen::MatrixXd& beta, const Eigen::MatrixXd& Yij) const {
-
-        auto N = z.size();
-        typename MoleFractions::value_type sum1 = 0.0;
-        for (auto i = 0; i < N; ++i) {
-            sum1 = sum1 + square(z[i]) * Yc[i];
-        }
-        
-        typename MoleFractions::value_type sum2 = 0.0;
-        for (auto i = 0; i < N-1; ++i){
-            for (auto j = i+1; j < N; ++j) {
-                sum2 = sum2 + 2.0*z[i]*z[j]*(z[i] + z[j])/(square(beta(i, j))*z[i] + z[j])*Yij(i, j);
-            }
-        }
-
-        return forceeval(sum1 + sum2);
-    }
-
-
-    static auto get_BIPdep(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags) {
-
-        // If force-estimate is provided in flags, the estimation will over-ride the provided model(s)
-        if (flags.contains("force-estimate")) {
-            std::string scheme = flags["estimate"];
-            if (scheme == "Lorentz-Berthelot") {
-                return std::make_tuple(nlohmann::json({
-                    {"betaT", 1.0}, {"gammaT", 1.0}, {"betaV", 1.0}, {"gammaV", 1.0}, {"F", 0.0}
-                }), false);
-            }
-            else {
-                throw std::invalid_argument("estimation scheme is not understood:" + scheme);
-            }
-        }
-
-        // convert string to upper case
-        auto toupper = [](const std::string s){ auto data = s; std::for_each(data.begin(), data.end(), [](char& c) { c = ::toupper(c); }); return data;};
-
-        // First pass, check names
-        std::string comp0 = toupper(identifiers[0]);
-        std::string comp1 = toupper(identifiers[1]);
-        for (auto& el : collection) {
-            std::string name1 = toupper(el["Name1"]);
-            std::string name2 = toupper(el["Name2"]);
-            if (comp0 == name1 && comp1 == name2) {
-                return std::make_tuple(el, false);
-            }
-            if (comp0 == name2 && comp1 == name1) {
-                return std::make_tuple(el, true);
-            }
-        }
-        // Second pass, check CAS#
-        for (auto& el : collection) {
-            std::string CAS1 = el["CAS1"];
-            std::string CAS2 = el["CAS2"];
-            if (identifiers[0] == CAS1 && identifiers[1] == CAS2) {
-                return std::make_tuple(el, false);
-            }
-            if (identifiers[0] == CAS2 && identifiers[1] == CAS1) {
-                return std::make_tuple(el, true);
-            }
-        }
-
-        // If estimate is provided in flags, it will be the fallback solution for filling in interaction parameters
-        if (flags.contains("estimate")) {
-            std::string scheme = flags["estimate"];
-            if (scheme == "Lorentz-Berthelot") {
-                return std::make_tuple(nlohmann::json({
-                    {"betaT", 1.0}, {"gammaT", 1.0}, {"betaV", 1.0}, {"gammaV", 1.0}, {"F", 0.0}
-                    }), false);
-            }
-            else {
-                throw std::invalid_argument("estimation scheme is not understood:" + scheme);
-            }
-        }
-        else {
-            throw std::invalid_argument("Can't match the binary pair for: " + identifiers[0] + "/" + identifiers[1]);
-        }
-    }
-
-    static auto get_binary_interaction_double(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags, const std::vector<double>&Tc, const std::vector<double>&vc) {
-        auto [el, swap_needed] = get_BIPdep(collection, identifiers, flags);
-
-        double betaT, gammaT, betaV, gammaV;
-        if (el.contains("betaT") && el.contains("gammaT") && el.contains("betaV") & el.contains("gammaV")){
-            betaT = el["betaT"]; gammaT = el["gammaT"]; betaV = el["betaV"]; gammaV = el["gammaV"];
-            // Backwards order of components, flip beta values
-            if (swap_needed) {
-                betaT = 1.0 / betaT;
-                betaV = 1.0 / betaV;
-            }
-        }
-        else if (el.contains("xi") && el.contains("zeta")) {
-            double xi = el["xi"], zeta = el["zeta"];
-            gammaT = 0.5 * (Tc[0] + Tc[1] + xi) / (2 * sqrt(Tc[0] * Tc[1]));
-            gammaV =  4.0 * (vc[0] + vc[1] + zeta) / (0.25*pow(1 / pow(1 / vc[0], 1.0 / 3.0) + 1 / pow(1 / vc[1], 1.0 / 3.0), 3));
-            betaT = 1.0;
-            betaV = 1.0;
-        }
-        else {
-            throw std::invalid_argument("Could not understand what to do with this binary model specification: " + el.dump());
-        }
-        return std::make_tuple(betaT, gammaT, betaV, gammaV);
-    }
-    template <typename Tcvec, typename vcvec>
-    static auto get_BIP_matrices(const nlohmann::json& collection, const std::vector<std::string>& components, const nlohmann::json& flags, const Tcvec& Tc, const vcvec& vc) {
-        Eigen::MatrixXd betaT, gammaT, betaV, gammaV, YT, Yv;
-        auto N = components.size();
-        betaT.resize(N, N); betaT.setZero();
-        gammaT.resize(N, N); gammaT.setZero();
-        betaV.resize(N, N); betaV.setZero();
-        gammaV.resize(N, N); gammaV.setZero();
-        for (auto i = 0; i < N; ++i) {
-            for (auto j = i + 1; j < N; ++j) {
-                auto [betaT_, gammaT_, betaV_, gammaV_] = get_binary_interaction_double(collection, { components[i], components[j] }, flags, { Tc[i], Tc[j] }, { vc[i], vc[j] });
-                betaT(i, j) = betaT_;         betaT(j, i) = 1.0 / betaT(i, j);
-                gammaT(i, j) = gammaT_;       gammaT(j, i) = gammaT(i, j);
-                betaV(i, j) = betaV_;         betaV(j, i) = 1.0 / betaV(i, j);
-                gammaV(i, j) = gammaV_;       gammaV(j, i) = gammaV(i, j);
-            }
-        }
-        return std::make_tuple(betaT, gammaT, betaV, gammaV);
-    }
-    static auto get_Tcvc(const std::vector<nlohmann::json>& pureJSON) {
-        Eigen::ArrayXd Tc(pureJSON.size()), vc(pureJSON.size());
-        auto i = 0;
-        for (auto& j : pureJSON) {
-            auto red = j["EOS"][0]["STATES"]["reducing"];
-            double Tc_ = red.at("T");
-            double rhoc_ = red.at("rhomolar");
-            Tc[i] = Tc_;
-            vc[i] = 1.0 / rhoc_;
-            i++;
-        }
-        return std::make_tuple(Tc, vc);
-    }
-    static auto get_F_matrix(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags) {
-        auto N = identifiers.size(); 
-        Eigen::MatrixXd F(N, N);
-        for (auto i = 0; i < N; ++i) {
-            F(i, i) = 0.0;
-            for (auto j = i + 1; j < N; ++j) {
-                auto [el, swap_needed] = get_BIPdep(collection, { identifiers[i], identifiers[j] }, flags);
-                if (el.empty()) {
-                    F(i, j) = 0.0;
-                    F(j, i) = 0.0;
-                }
-                else{
-                    F(i, j) = el["F"];
-                    F(j, i) = el["F"];
-                }   
-            }
-        }
-        return F;
-    }
-    template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return Y(molefracs, Tc, betaT, YT); }
-    template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, vc, betaV, Yv); }
-};
-
-class MultiFluidInvariantReducingFunction {
-private:
-    Eigen::MatrixXd YT, Yv;
-    template <typename Num> auto cube(Num x) const { return x * x * x; }
-    template <typename Num> auto square(Num x) const { return x * x; }
-public:
-    const Eigen::MatrixXd phiT, lambdaT, phiV, lambdaV;
-    const Eigen::ArrayXd Tc, vc;
-
-    template<typename ArrayLike>
-    MultiFluidInvariantReducingFunction(
-        const Eigen::MatrixXd& phiT, const Eigen::MatrixXd& lambdaT,
-        const Eigen::MatrixXd& phiV, const Eigen::MatrixXd& lambdaV,
-        const ArrayLike& Tc, const ArrayLike& vc)
-        : phiT(phiT), lambdaT(lambdaT), phiV(phiV), lambdaV(lambdaV), Tc(Tc), vc(vc) {
-
-        auto N = Tc.size();
-
-        YT.resize(N, N); YT.setZero();
-        Yv.resize(N, N); Yv.setZero();
-        for (auto i = 0; i < N; ++i) {
-            for (auto j = 0; j < N; ++j) {
-                YT(i, j) = sqrt(Tc[i] * Tc[j]);
-                YT(j, i) = sqrt(Tc[i] * Tc[j]);
-                Yv(i, j) = 1.0 / 8.0 * cube(cbrt(vc[i]) + cbrt(vc[j]));
-                Yv(j, i) = 1.0 / 8.0 * cube(cbrt(vc[i]) + cbrt(vc[j]));
-            }
-        }
-    }
-    template <typename MoleFractions>
-    auto Y(const MoleFractions& z, const Eigen::MatrixXd& phi, const Eigen::MatrixXd& lambda, const Eigen::MatrixXd& Yij) const {
-        auto N = z.size();
-        typename MoleFractions::value_type sum = 0.0;
-        for (auto i = 0; i < N; ++i) {
-            for (auto j = 0; j < N; ++j) {
-                auto contrib = z[i] * z[j] * (phi(i, j) + z[j] * lambda(i, j)) * Yij(i, j);
-                sum += contrib;
-            }
-        }
-        return sum;
-    }
-    template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return Y(molefracs, phiT, lambdaT, YT); }
-    template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, phiV, lambdaV, Yv); }
-};
 
 /***
 * \brief Get the JSON data structure for a given departure function
@@ -668,7 +428,7 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
 
     for (auto i = 0; i < funcs.size(); ++i) {
         for (auto j = i + 1; j < funcs.size(); ++j) {
-            auto [BIP, swap_needed] = MultiFluidReducingFunction::get_BIPdep(BIPcollection, { components[i], components[j] }, flags);
+            auto [BIP, swap_needed] = reducing::get_BIPdep(BIPcollection, { components[i], components[j] }, flags);
             std::string funcname = BIP.contains("function") ? BIP["function"] : "";
             if (!funcname.empty()) {
                 auto jj = get_departure_json(funcname);
@@ -959,7 +719,7 @@ inline auto select_identifier(const nlohmann::json& BIPcollection, const mapvecs
             for (auto i = 0; i < identifiers.size(); ++i){
                 for (auto j = i+1; j < identifiers.size(); ++j){
                     const std::vector<std::string> pair = {identifiers[i], identifiers[j]};
-                    MultiFluidReducingFunction::get_BIPdep(BIPcollection, pair, flags);
+                    reducing::get_BIPdep(BIPcollection, pair, flags);
                 }
             }
             return key;
@@ -1014,7 +774,7 @@ inline auto build_alias_map(const std::string& root) {
 /// Internal method for actually constructing the model with the provided JSON data structures
 inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON, const nlohmann::json& BIPcollection, const nlohmann::json& depcollection, const nlohmann::json& flags = {}) {
 
-    auto [Tc, vc] = MultiFluidReducingFunction::get_Tcvc(pureJSON);
+    auto [Tc, vc] = reducing::get_Tcvc(pureJSON);
     auto EOSs = get_EOSs(pureJSON);
 
     // Extract the set of possible identifiers to be used to match parameters
@@ -1023,11 +783,11 @@ inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON,
     auto identifiers = identifierset[select_identifier(BIPcollection, identifierset, flags)];
 
     // Things related to the mixture
-    auto F = MultiFluidReducingFunction::get_F_matrix(BIPcollection, identifiers, flags);
+    auto F = reducing::get_F_matrix(BIPcollection, identifiers, flags);
     auto funcs = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
-    auto [betaT, gammaT, betaV, gammaV] = MultiFluidReducingFunction::get_BIP_matrices(BIPcollection, identifiers, flags, Tc, vc);
+    auto [betaT, gammaT, betaV, gammaV] = reducing::get_BIP_matrices(BIPcollection, identifiers, flags, Tc, vc);
 
-    auto redfunc = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
+    auto redfunc = ReducingFunctions(std::move(MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc)));
 
     return MultiFluid(
         std::move(redfunc),
@@ -1121,184 +881,37 @@ inline auto multifluidfactory(const std::string& specstring) {
     return multifluidfactory(nlohmann::json::parse(specstring));
 }
 
-/**
-This class holds a lightweight reference to the core parts of the model
-
-The reducing and departure functions are moved into this class, while the donor class is used for the corresponding states portion
-*/
-template<typename ReducingFunction, typename DepartureFunction, typename BaseClass>
-class MultiFluidAdapter {
-
-private:
-    std::string meta = "";
-
-public:
-    const BaseClass& base;
-    const ReducingFunction redfunc;
-    const DepartureFunction depfunc;
-
-    template<class VecType>
-    auto R(const VecType& molefrac) const { return base.R(molefrac); }
-
-    MultiFluidAdapter(const BaseClass& base, ReducingFunction&& redfunc, DepartureFunction &&depfunc) : base(base), redfunc(redfunc), depfunc(depfunc) {};
-
-    /// Store some sort of metadata in string form (perhaps a JSON representation of the model?)
-    void set_meta(const std::string& m) { meta = m; }
-    /// Get the metadata stored in string form
-    auto get_meta() const { return meta; }
-
-    template<typename TType, typename RhoType, typename MoleFracType>
-    auto alphar(const TType& T,
-        const RhoType& rho,
-        const MoleFracType& molefrac) const
-    {
-        auto Tred = forceeval(redfunc.get_Tr(molefrac));
-        auto rhored = forceeval(redfunc.get_rhor(molefrac));
-        auto delta = forceeval(rho / rhored);
-        auto tau = forceeval(Tred / T);
-        auto val = base.corr.alphar(tau, delta, molefrac) + depfunc.alphar(tau, delta, molefrac);
-        return forceeval(val);
-    }
-};
-
-template<class Model>
-auto build_multifluid_mutant(Model& model, const nlohmann::json& jj) {
-
-    auto red = model.redfunc;
-    auto N = red.Tc.size();
-
-    auto betaT = red.betaT, gammaT = red.gammaT, betaV = red.betaV, gammaV = red.gammaV;
-    auto Tc = red.Tc, vc = red.vc;
-
-    // Allocate the matrices of default models and F factors
-    Eigen::MatrixXd F(N, N); F.setZero();
-    std::vector<std::vector<DepartureTerms>> funcs(N);
-    for (auto i = 0; i < N; ++i) { funcs[i].resize(N); }
-
-    for (auto i = 0; i < N; ++i) {
-        for (auto j = i; j < N; ++j) {
-            if (i == j) {
-                funcs[i][i].add_term(NullEOSTerm());
-            }
-            else {
-                // Extract the given entry
-                auto entry = jj[std::to_string(i)][std::to_string(j)];
-
-                auto BIP = entry["BIP"];
-                // Set the reducing function parameters in the copy
-                betaT(i, j) = BIP.at("betaT");
-                betaT(j, i) = 1 / red.betaT(i, j);
-                betaV(i, j) = BIP.at("betaV");
-                betaV(j, i) = 1 / red.betaV(i, j);
-                gammaT(i, j) = BIP.at("gammaT"); gammaT(j, i) = gammaT(i, j);
-                gammaV(i, j) = BIP.at("gammaV"); gammaV(j, i) = gammaV(i, j);
-
-                // Build the matrix of F and departure functions
-                auto dep = entry["departure"];
-                F(i, j) = BIP.at("Fij");
-                F(j, i) = F(i, j);
-                funcs[i][j] = build_departure_function(dep);
-                funcs[j][i] = build_departure_function(dep);
-            }
-        }
-    }
-
-    auto newred = MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc);
-    auto newdep = DepartureContribution(std::move(F), std::move(funcs));
-    auto mfa = MultiFluidAdapter(model, std::move(newred), std::move(newdep));
-    /// Store the departure term in the adapted multifluid class
-    mfa.set_meta(jj.dump());
-    return mfa;
-}
-
-template<typename Model>
-auto build_multifluid_mutant_invariant(Model& model, const nlohmann::json& jj) {
-
-    auto red = model.redfunc;
-    auto N = red.Tc.size();
-    if (N != 2) {
-        throw std::invalid_argument("Only binary mixtures are currently supported with invariant departure functions");
-    }
-
-    auto phiT = red.betaT, lambdaT = red.gammaT, phiV = red.betaV, lambdaV = red.gammaV;
-    phiT.setOnes(); phiV.setOnes();
-    lambdaV.setZero(); lambdaV.setZero();
-    auto Tc = red.Tc, vc = red.vc;
-
-    // Allocate the matrices of default models and F factors
-    Eigen::MatrixXd F(N, N); F.setZero();
-    std::vector<std::vector<DepartureTerms>> funcs(N);
-    for (auto i = 0; i < N; ++i) { funcs[i].resize(N); }
-
-    for (auto i = 0; i < N; ++i) {
-        for (auto j = i; j < N; ++j) {
-            if (i == j) {
-                funcs[i][i].add_term(NullEOSTerm());
-            }
-            else {
-                // Extract the given entry
-                auto entry = jj[std::to_string(i)][std::to_string(j)];
-
-                auto BIP = entry["BIP"];
-                // Set the reducing function parameters in the copy
-                phiT(i, j) = BIP.at("phiT");
-                phiT(j, i) = phiT(i, j);
-                lambdaT(i, j) = BIP.at("lambdaT"); 
-                lambdaT(j, i) = -lambdaT(i, j);
-
-                phiV(i, j) = BIP.at("phiV");
-                phiV(j, i) = phiV(i, j);
-                lambdaV(i, j) = BIP.at("lambdaV"); 
-                lambdaV(j, i) = -lambdaV(i, j);
-
-                // Build the matrix of F and departure functions
-                auto dep = entry["departure"];
-                F(i, j) = BIP.at("Fij");
-                F(j, i) = F(i, j);
-                funcs[i][j] = build_departure_function(dep);
-                funcs[j][i] = build_departure_function(dep);
-            }
-        }
-    }
-
-    auto newred = MultiFluidInvariantReducingFunction(phiT, lambdaT, phiV, lambdaV, Tc, vc);
-    auto newdep = DepartureContribution(std::move(F), std::move(funcs));
-    auto mfa = MultiFluidAdapter(model, std::move(newred), std::move(newdep));
-    /// Store the departure term in the adapted multifluid class
-    mfa.set_meta(jj.dump());
-    return mfa;
-}
 
 
-class DummyEOS {
-public:
-    template<typename TType, typename RhoType> auto alphar(TType tau, const RhoType& delta) const { return tau * delta; }
-};
-class DummyReducingFunction {
-public:
-    template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return molefracs[0]; }
-    template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return molefracs[0]; }
-};
-inline auto build_dummy_multifluid_model(const std::vector<std::string>& components) {
-    std::vector<DummyEOS> EOSs(2);
-    std::vector<std::vector<DummyEOS>> funcs(2); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
-    std::vector<std::vector<double>> F(2); for (auto i = 0; i < F.size(); ++i) { F[i].resize(F.size()); }
-
-    struct Fwrapper {
-    private: 
-        const std::vector<std::vector<double>> F_;
-    public:
-        Fwrapper(const std::vector<std::vector<double>> &F) : F_(F){};
-        auto operator ()(std::size_t i, std::size_t j) const{ return F_[i][j]; }
-    };
-    auto ff = Fwrapper(F);
-    auto redfunc = DummyReducingFunction();
-    return MultiFluid(std::move(redfunc), std::move(CorrespondingStatesContribution(std::move(EOSs))), std::move(DepartureContribution(std::move(ff), std::move(funcs))));
-}
-inline void test_dummy() {
-    auto model = build_dummy_multifluid_model({ "A", "B" });
-    std::valarray<double> rhovec = { 1.0, 2.0 };
-    auto alphar = model.alphar(300.0, rhovec);
-}
+//class DummyEOS {
+//public:
+//    template<typename TType, typename RhoType> auto alphar(TType tau, const RhoType& delta) const { return tau * delta; }
+//};
+//class DummyReducingFunction {
+//public:
+//    template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return molefracs[0]; }
+//    template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return molefracs[0]; }
+//};
+//inline auto build_dummy_multifluid_model(const std::vector<std::string>& components) {
+//    std::vector<DummyEOS> EOSs(2);
+//    std::vector<std::vector<DummyEOS>> funcs(2); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
+//    std::vector<std::vector<double>> F(2); for (auto i = 0; i < F.size(); ++i) { F[i].resize(F.size()); }
+//
+//    struct Fwrapper {
+//    private: 
+//        const std::vector<std::vector<double>> F_;
+//    public:
+//        Fwrapper(const std::vector<std::vector<double>> &F) : F_(F){};
+//        auto operator ()(std::size_t i, std::size_t j) const{ return F_[i][j]; }
+//    };
+//    auto ff = Fwrapper(F);
+//    auto redfunc = DummyReducingFunction();
+//    return MultiFluid(std::move(redfunc), std::move(CorrespondingStatesContribution(std::move(EOSs))), std::move(DepartureContribution(std::move(ff), std::move(funcs))));
+//}
+//inline void test_dummy() {
+//    auto model = build_dummy_multifluid_model({ "A", "B" });
+//    std::valarray<double> rhovec = { 1.0, 2.0 };
+//    auto alphar = model.alphar(300.0, rhovec);
+//}
 
 }; // namespace teqp
