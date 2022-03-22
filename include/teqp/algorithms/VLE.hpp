@@ -2,6 +2,7 @@
 
 #include <optional>
 #include "teqp/derivs.hpp"
+#include "teqp/algorithms/critical_tracing.hpp"
 #include <Eigen/Dense>
 
 // Imports from boost for numerical integration
@@ -454,6 +455,7 @@ struct TVLEOptions {
     double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0;
     int max_steps = 1000, integration_order = 5;
     bool polish = true;
+    bool calc_criticality = false;
 };
 
 /***
@@ -586,6 +588,11 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
                 {"xV_0 / mole frac.", rhovecV[0]/rhovecV.sum()},
                 {"drho/dt", last_drhodt}
             };
+            if (opt.calc_criticality) {
+                using ct = CriticalTracing<Model, Scalar, VecType>;
+                point["crit. conditions L"] = ct::get_criticality_conditions(model, T, rhovecL);
+                point["crit. conditions V"] = ct::get_criticality_conditions(model, T, rhovecV);
+            }
             JSONdata.push_back(point);
             //std::cout << JSONdata.back().dump() << std::endl;
         };

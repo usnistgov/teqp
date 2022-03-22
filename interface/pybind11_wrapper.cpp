@@ -51,6 +51,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("max_steps", &TVLEOptions::max_steps)
         .def_readwrite("integration_order", &TVLEOptions::integration_order)
         .def_readwrite("polish", &TVLEOptions::polish)
+        .def_readwrite("calc_criticality", &TVLEOptions::calc_criticality)
         ;
 
     // The options class for the finder of VLLE solutions from VLE tracing, not tied to a particular model
