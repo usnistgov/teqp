@@ -304,7 +304,7 @@ struct CriticalTracing {
         auto polish_x_resid = [&model, &z0](const auto& x) {
             auto T = x[0];
             Eigen::ArrayXd rhovec(2); rhovec << z0*x[1], (1-z0)*x[1];
-            auto z0new = rhovec[0] / rhovec.sum();
+            //auto z0new = rhovec[0] / rhovec.sum();
             auto derivs = get_derivs(model, T, rhovec);
             // First two are residuals on critical point
             return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
@@ -325,7 +325,7 @@ struct CriticalTracing {
         auto polish_x_resid = [&model, &i, &rhoval](const auto& x) {
             auto T = x[0];
             Eigen::ArrayXd rhovec(2); rhovec << x[1], x[2];
-            auto z0new = rhovec[0] / rhovec.sum();
+            //auto z0new = rhovec[0] / rhovec.sum();
             auto derivs = get_derivs(model, T, rhovec);
             // First two are residuals on critical point, third is residual on the molar concentration to be held constant
             return (Eigen::ArrayXd(3) << derivs.tot[2], derivs.tot[3], rhovec[i] - rhoval).finished();
@@ -595,7 +595,7 @@ struct CriticalTracing {
                 break;
             }
         }
-        auto N = JSONdata.size();
+        //auto N = JSONdata.size();
         return JSONdata;
     }
 
