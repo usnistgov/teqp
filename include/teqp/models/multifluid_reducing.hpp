@@ -264,13 +264,13 @@ namespace teqp {
     class ReducingTermContainer {
     private:
         const std::variant<Args...> term;
-        auto const& get_Tc_ref() const { return std::visit([](auto& t) { return std::cref(t.Tc); }, term); }
-        auto const& get_vc_ref() const { return std::visit([](auto& t) { return std::cref(t.vc); }, term); }
+        auto const& get_Tc() const { return std::visit([](const auto& t) { return std::cref(t.Tc); }, term); }
+        auto const& get_vc() const { return std::visit([](const auto& t) { return std::cref(t.vc); }, term); }
     public:
-        const Eigen::ArrayXd& Tc, & vc;
+        const Eigen::ArrayXd Tc, vc;
 
         template<typename Instance>
-        ReducingTermContainer(const Instance& instance) : term(instance), Tc(get_Tc_ref()), vc(get_vc_ref()) {}
+        ReducingTermContainer(const Instance& instance) : term(instance), Tc(get_Tc()), vc(get_vc()) {}
 
         template <typename MoleFractions>
         auto get_Tr(const MoleFractions& molefracs) const {
