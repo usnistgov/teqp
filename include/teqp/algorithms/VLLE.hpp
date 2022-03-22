@@ -1,6 +1,7 @@
 #pragma once
 
 #include "teqp/derivs.hpp"
+#include "teqp/exceptions.hpp"
 
 namespace teqp {
 
@@ -228,7 +229,7 @@ namespace teqp {
             return solutions;
         }
         else {
-            throw std::invalid_argument("No cross intersection between traces implemented yet");
+            throw InvalidArgument("No cross intersection between traces implemented yet");
         }
     }
 
