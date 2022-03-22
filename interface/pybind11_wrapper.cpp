@@ -15,7 +15,6 @@ void add_PCSAFT(py::module& m);
 void add_CPA(py::module& m);
 void add_multifluid(py::module& m);
 void add_multifluid_mutant(py::module& m);
-void add_multifluid_mutant_invariant(py::module& m);
 void add_cubics(py::module& m);
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
@@ -25,7 +24,6 @@ void init_teqp(py::module& m) {
     add_CPA(m);
     add_multifluid(m);
     add_multifluid_mutant(m);
-    add_multifluid_mutant_invariant(m);
     add_cubics(m);
 
     // The options class for critical tracer, not tied to a particular model
