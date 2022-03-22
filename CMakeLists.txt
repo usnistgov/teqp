@@ -30,6 +30,8 @@ target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
+
 set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
 set(EIGEN3_VERSION_OK TRUE CACHE BOOL "Yes eigen is fine")
 set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen, for autodiff")
@@ -102,7 +104,7 @@ if (MSVC)
     target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
 target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
-target_link_libraries(catch_tests PRIVATE autodiff PRIVATE teqpinterface)
+target_link_libraries(catch_tests PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain)
 add_test(normal_tests catch_tests)
 
 if (TEQP_TEQPC)
@@ -130,7 +132,7 @@ if (TEQP_TEQPC)
 
   # And a little benchmarking harness for extern "C" library
   add_executable(teqpc_bench "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc_bench.cpp")
-  target_link_libraries(teqpc_bench PRIVATE teqpc PRIVATE teqpinterface)
+  target_link_libraries(teqpc_bench PRIVATE teqpc PRIVATE teqpinterface PRIVATE Catch2WithMain)
 endif()
 
 ### TARGETS from src folder
@@ -151,7 +153,7 @@ if (TEQP_SNIPPETS)
       target_sources(${snippet_exe} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
     endif()
 
-    target_link_libraries(${snippet_exe} PRIVATE autodiff PRIVATE teqpinterface)
+    target_link_libraries(${snippet_exe} PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain)
     if(UNIX)
       target_link_libraries (${snippet_exe} PRIVATE ${CMAKE_DL_LIBS})
     endif()

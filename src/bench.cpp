@@ -1,6 +1,5 @@
-#define CATCH_CONFIG_ENABLE_BENCHMARKING
-#define CATCH_CONFIG_MAIN
-#include <catch/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/benchmark/catch_benchmark_all.hpp>
 
 #include "teqp/models/vdW.hpp"
 #include "teqp/models/pcsaft.hpp"
