@@ -40,7 +40,7 @@ namespace teqp {
             return autodiff::detail::eval(expr);
         }
         else {
-            return expr;
+            return std::move(expr);
         }
     }
 

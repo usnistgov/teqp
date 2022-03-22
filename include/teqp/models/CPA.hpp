@@ -183,8 +183,8 @@ class CPAAssociation {
 private:
     const Cubic cubic;
     const std::vector<association_classes> classes;
-    const std::vector<int> N_sites;
     const std::valarray<double> epsABi, betaABi;
+    const std::vector<int> N_sites; 
     const double R_gas;
 
     auto get_N_sites(const std::vector<association_classes> &classes) {

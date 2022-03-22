@@ -310,20 +310,20 @@ inline auto build_departure_function(const nlohmann::json& j) {
         eos.ld_i = eos.ld.cast<int>();
         dep.add_term(eos);
     }; 
-    auto build_gaussian = [&](auto& term) {
-        GaussianEOSTerm eos;
-        eos.n = toeig(term["n"]);
-        eos.t = toeig(term["t"]);
-        eos.d = toeig(term["d"]);
-        eos.eta = toeig(term["eta"]);
-        eos.beta = toeig(term["beta"]);
-        eos.gamma = toeig(term["gamma"]);
-        eos.epsilon = toeig(term["epsilon"]);
-        if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
-            throw std::invalid_argument("Lengths are not all identical in Gaussian term");
-        }
-        return eos;
-    };
+    //auto build_gaussian = [&](auto& term) {
+    //    GaussianEOSTerm eos;
+    //    eos.n = toeig(term["n"]);
+    //    eos.t = toeig(term["t"]);
+    //    eos.d = toeig(term["d"]);
+    //    eos.eta = toeig(term["eta"]);
+    //    eos.beta = toeig(term["beta"]);
+    //    eos.gamma = toeig(term["gamma"]);
+    //    eos.epsilon = toeig(term["epsilon"]);
+    //    if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
+    //        throw std::invalid_argument("Lengths are not all identical in Gaussian term");
+    //    }
+    //    return eos;
+    //};
     auto build_GERG2004 = [&](const auto& term, auto& dep) {
         if (!all_same_length(term, { "n","t","d","eta","beta","gamma","epsilon" })) {
             throw std::invalid_argument("Lengths are not all identical in GERG term");
@@ -803,8 +803,8 @@ inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON,
 
     auto model = MultiFluid(
         std::move(redfunc),
-        std::move(CorrespondingStatesContribution(std::move(EOSs))),
-        std::move(DepartureContribution(std::move(F), std::move(funcs)))
+        CorrespondingStatesContribution(std::move(EOSs)),
+        DepartureContribution(std::move(F), std::move(funcs))
     );
     model.set_meta(meta.dump(1));
     return model;

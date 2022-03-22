@@ -208,7 +208,7 @@ TEST_CASE("Test all vdW derivatives good to numerical precision", "[vdW]")
     double T_ = 300;
     double rho = 2.3e-5;
     Eigen::ArrayXd z(1); z.fill(1.0);
-    my_float_type T = T_, D = rho, h = pow(my_float_type(10.0), -10);
+    my_float_type D = rho, h = pow(my_float_type(10.0), -10);
 
     auto fD = [&](const auto& x) { return model.alphar(T_, x, z); };
 
@@ -276,7 +276,7 @@ TEST_CASE("Test infinite dilution critical locus derivatives", "[vdWcrit]")
         Eigen::ArrayXd rhovec0almost = rhovec0; rhovec0almost[1 - i] = 1e-6;
         auto dil = ct::get_drhovec_dT_crit(vdW, T0, rhovec0almost);
         auto epdil = ct::eigen_problem(vdW, T0, rhovec0almost);
-        int rr = 0;
+        //int rr = 0;
         
     }
 }

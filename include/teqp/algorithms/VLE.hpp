@@ -44,7 +44,6 @@ public:
         const auto rhomolarL = rhovecL.sum(), rhomolarV = rhovecV.sum();
         const auto molefracs = (EigenArray1() << 1.0).finished();
 
-        using id = IsochoricDerivatives<Model,TYPE,EigenArray1>;
         using tdx = TDXDerivatives<Model,TYPE,EigenArray1>;
 
         const TYPE &T = m_T;

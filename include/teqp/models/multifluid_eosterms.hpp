@@ -243,7 +243,7 @@ public:
         auto delta_min1_sq = square(delta - 1.0);
 
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau);
+        result r = 0.0;
         for (auto i = 0; i < n.size(); ++i) {
             auto Psi = exp(-C[i]*delta_min1_sq - D[i]*square(tau - 1.0));
             auto k = 1.0 / (2.0 * beta[i]);
