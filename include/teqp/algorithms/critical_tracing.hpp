@@ -27,6 +27,8 @@ struct TCABOptions {
     int max_step_count = 1000; ///< Maximum number of steps allowed
     int skip_dircheck_count = 1; ///< Only start checking the direction dot product after this many steps
     bool polish = false; ///< If true, polish the solution at every step
+    bool calc_stability = false; ///< Calculate the local stability with the method of Deiters and Bell
+    double stability_rel_drho = 0.001; ///< The relative size of the step (relative to the sum of the molar concentration vector) to be used when taking the step in the direction of \f$\sigma_1\f$ when assessing local stability
 };
 
 template<typename Model, typename Scalar = double, typename VecType = Eigen::ArrayXd>
@@ -299,6 +301,53 @@ struct CriticalTracing {
         return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
     }
 
+    /**
+    * \brief The EigenVectorPath function of Algorithm 2 from Deiters and Bell: https://dx.doi.org/10.1021/acs.iecr.0c03667
+    * 
+    * There is a typo in the paper: the last step should be rho + 2*drho*dir
+    */
+    static auto EigenVectorPath(const Model& model, const Scalar T, const VecType& rhovec, const VecType &u1, Scalar drho) {
+        VecType dir = u1/6.0;
+        VecType rhoshift = rhovec + drho*u1;
+        auto e1 = eigen_problem(model, T, rhoshift, u1);
+        VecType u1new = e1.v0;
+
+        dir += u1/3.0;
+        rhoshift = rhovec + drho*u1new;
+        auto e2 = eigen_problem(model, T, rhoshift, u1);
+        u1new = e2.v0;
+
+        dir += u1/3.0;
+        rhoshift = rhovec + 2*drho*u1new;
+        auto e3 = eigen_problem(model, T, rhoshift, u1);
+        u1new = e3.v0;
+
+        dir += u1new/6.0;
+        rhoshift = rhovec + 2*drho*dir;
+
+        return rhoshift;
+    }
+
+    /**
+    * \brief The LocalStability function of Algorithm 2 from Deiters and Bell: https://dx.doi.org/10.1021/acs.iecr.0c03667
+    */
+    static auto is_locally_stable(const Model& model, const Scalar T, const VecType& rhovec, const Scalar stability_rel_drho) {
+        // At the critical point
+        auto ezero = eigen_problem(model, T, rhovec);
+        Scalar lambda1 = ezero.eigenvalues(0);
+
+        Scalar drho = stability_rel_drho * rhovec.sum();
+        // Towards positive density shift
+        VecType rhovecplus = EigenVectorPath(model, T, rhovec, ezero.v0, drho);
+        auto eplus = eigen_problem(model, T, rhovecplus, ezero.v0);
+        // Towards negative density shift
+        VecType rhovecminus = EigenVectorPath(model, T, rhovec, ezero.v0, -drho);
+        auto eminus = eigen_problem(model, T, rhovecminus, ezero.v0);
+
+        bool unstable = (eplus.eigenvalues(0) < lambda1 || eminus.eigenvalues(0) < lambda1);
+        return !unstable;
+    }
+
     /// Polish a critical point while keeping the overall composition constant and iterating for temperature and overall density
     static auto critical_polish_molefrac(const Model& model, const Scalar T, const VecType& rhovec, const Scalar z0) {
         auto polish_x_resid = [&model, &z0](const auto& x) {
@@ -458,6 +507,9 @@ struct CriticalTracing {
                 {"lambda1", conditions[0]},
                 {"dirderiv(lambda1)/dalpha", conditions[1]},
             };
+            if (options.calc_stability) {
+                point["locally stable"] = is_locally_stable(model, T, rhovec, options.stability_rel_drho);
+            }
             JSONdata.push_back(point);
         };
 
