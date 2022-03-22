@@ -7,6 +7,7 @@ import platform
 import subprocess
 import shutil
 import re
+import timeit
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -20,6 +21,8 @@ else:
     raise ValueError("Unable to parse version string from interface/teqpversion.hpp")
 
 here = os.path.dirname(os.path.abspath(__file__))
+
+tic = timeit.default_timer()
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
@@ -116,3 +119,7 @@ try:
     )
 finally:
     teardown()
+
+toc = timeit.default_timer()
+
+print('elapsed:', toc-tic, 'seconds')
