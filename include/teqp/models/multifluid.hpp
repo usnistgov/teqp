@@ -426,12 +426,19 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
         throw std::invalid_argument("Bad departure function name: "+Name);
     };
 
+    auto funcsmeta = nlohmann::json::object();
+
     for (auto i = 0; i < funcs.size(); ++i) {
+        std::string istr = std::to_string(i);
+        if (funcsmeta.contains(istr)) { funcsmeta[istr] = {}; }
         for (auto j = i + 1; j < funcs.size(); ++j) {
+            std::string jstr = std::to_string(j);
             auto [BIP, swap_needed] = reducing::get_BIPdep(BIPcollection, { components[i], components[j] }, flags);
             std::string funcname = BIP.contains("function") ? BIP["function"] : "";
             if (!funcname.empty()) {
                 auto jj = get_departure_json(funcname);
+                funcsmeta[istr][jstr] = { {"departure", jj}, {"BIP", BIP} };
+                funcsmeta[istr][jstr]["BIP"]["swap_needed"] = swap_needed;
                 funcs[i][j] = build_departure_function(jj);
                 funcs[j][i] = build_departure_function(jj);
             }
@@ -441,7 +448,7 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
             }
         }
     }
-    return funcs;
+    return std::make_tuple(funcs, funcsmeta);
 }
 
 inline auto get_EOS_terms(const nlohmann::json& j)
@@ -784,16 +791,23 @@ inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON,
 
     // Things related to the mixture
     auto F = reducing::get_F_matrix(BIPcollection, identifiers, flags);
-    auto funcs = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
+    auto [funcs, funcsmeta] = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
     auto [betaT, gammaT, betaV, gammaV] = reducing::get_BIP_matrices(BIPcollection, identifiers, flags, Tc, vc);
+
+    nlohmann::json meta = {
+        {"pures", pureJSON},
+        {"mix", funcsmeta},
+    };
 
     auto redfunc = ReducingFunctions(std::move(MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc)));
 
-    return MultiFluid(
+    auto model = MultiFluid(
         std::move(redfunc),
         std::move(CorrespondingStatesContribution(std::move(EOSs))),
         std::move(DepartureContribution(std::move(F), std::move(funcs)))
     );
+    model.set_meta(meta.dump(1));
+    return model;
 }
 
 /// A builder function where the JSON-formatted strings are provided explicitly rather than file paths
