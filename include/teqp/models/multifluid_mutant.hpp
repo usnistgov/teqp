@@ -123,7 +123,7 @@ namespace teqp {
                 return ReducingFunctions(MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc));
             }
         };
-        std::string deptype = (jj.at("0").at("1").contains("type")) ? jj.at("0").at("1")["type"] : "";
+        std::string deptype = (jj.at("0").at("1").at("BIP").contains("type")) ? jj.at("0").at("1").at("BIP")["type"] : "";
         ReducingFunctions newred = get_reducing(deptype);
 
         auto newdep = DepartureContribution(std::move(F), std::move(funcs));
