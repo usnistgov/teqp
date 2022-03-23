@@ -1,5 +1,4 @@
 #include "pybind11_wrapper.hpp"
-#include "teqp/algorithms/critical_tracing.hpp"
 
 #include "teqpversion.hpp"
 
@@ -35,11 +34,13 @@ void init_teqp(py::module& m) {
         .def_readwrite("init_c", &TCABOptions::init_c)
         .def_readwrite("max_dt", &TCABOptions::max_dt)
         .def_readwrite("max_step_count", &TCABOptions::max_step_count)
-        .def_readwrite("polish", &TCABOptions::polish)
         .def_readwrite("skip_dircheck_count", &TCABOptions::skip_dircheck_count)
         .def_readwrite("integration_order", &TCABOptions::integration_order)
         .def_readwrite("calc_stability", &TCABOptions::calc_stability)
         .def_readwrite("stability_rel_drho", &TCABOptions::stability_rel_drho)
+        .def_readwrite("verbosity", &TCABOptions::verbosity)
+        .def_readwrite("polish", &TCABOptions::polish)
+        .def_readwrite("polish_exception_on_fail", &TCABOptions::polish_exception_on_fail)
         ;
 
     // The options class for isotherm tracer, not tied to a particular model
