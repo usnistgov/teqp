@@ -24,9 +24,16 @@ namespace teqp {
         }
     };
 
+    // Exceptions related to arguments
     class InvalidArgument : public teqpException {
     public:
         InvalidArgument(const std::string& msg) : teqpException(1, msg) {};
+    };
+
+    // Exceptions related to calculations
+    class IterationFailure : public teqpException {
+    public:
+        IterationFailure(const std::string& msg) : teqpException(100, msg) {};
     };
 
 }; // namespace teqp
