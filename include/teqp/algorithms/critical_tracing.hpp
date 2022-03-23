@@ -7,6 +7,7 @@
 
 #include <Eigen/Dense>
 #include "teqp/algorithms/rootfinding.hpp"
+#include "teqp/exceptions.hpp"
 
 // Imports from boost
 #include <boost/numeric/odeint/stepper/controlled_runge_kutta.hpp>
@@ -29,6 +30,8 @@ struct TCABOptions {
     bool polish = false; ///< If true, polish the solution at every step
     bool calc_stability = false; ///< Calculate the local stability with the method of Deiters and Bell
     double stability_rel_drho = 0.001; ///< The relative size of the step (relative to the sum of the molar concentration vector) to be used when taking the step in the direction of \f$\sigma_1\f$ when assessing local stability
+    int verbosity = 0; ///< The greater the verbosity, the more output you will get, especially about polishing failures
+    bool polish_exception_on_fail = false; ///< If true, when polishing fails, throw an exception, otherwise, terminate tracing
 };
 
 template<typename Model, typename Scalar = double, typename VecType = Eigen::ArrayXd>
@@ -349,7 +352,7 @@ struct CriticalTracing {
     }
 
     /// Polish a critical point while keeping the overall composition constant and iterating for temperature and overall density
-    static auto critical_polish_molefrac(const Model& model, const Scalar T, const VecType& rhovec, const Scalar z0) {
+    static auto critical_polish_fixedmolefrac(const Model& model, const Scalar T, const VecType& rhovec, const Scalar z0) {
         auto polish_x_resid = [&model, &z0](const auto& x) {
             auto T = x[0];
             Eigen::ArrayXd rhovec(2); rhovec << z0*x[1], (1-z0)*x[1];
@@ -599,18 +602,59 @@ struct CriticalTracing {
             if (z0 < 0 || z0 > 1) {
                 break;
             }
+
+            // The polishers to be tried, in order, to polish the critical point
+            using PolisherType = std::function<std::tuple<double, VecType>(const Model, const Scalar, const VecType&)>;
+            std::vector<PolisherType> polishers = {
+                [&](const Model& model, const Scalar T, const VecType& rhovec) {
+                    auto [Tnew, rhovecnew] = critical_polish_fixedmolefrac(model, T, rhovec, z0);
+                    return std::make_tuple(Tnew, rhovecnew);
+                },
+                [&](const Model& model, const Scalar T, const VecType& rhovec) {
+                    auto rhovecnew = critical_polish_fixedT(model, T, rhovec);
+                    return std::make_tuple(T, rhovecnew);
+                },
+                [&](const Model& model, const Scalar T, const VecType& rhovec) {
+                    int i = 0;
+                    auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
+                    return std::make_tuple(Tnew, rhovecnew);
+                },
+                [&](const Model& model, const Scalar T, const VecType& rhovec) {
+                    int i = 1;
+                    auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
+                    return std::make_tuple(Tnew, rhovecnew);
+                },
+            };
             
             if (options.polish) {
-                try {
-                    int i = 0;
-                    //auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
-                    auto [Tnew, rhovecnew] = critical_polish_molefrac(model, T, rhovec, z0);
-                    T = Tnew; rhovec = rhovecnew;
+                bool polish_ok = false;
+                for (auto &polisher : polishers){
+                    try {
+                        auto [Tnew, rhovecnew] = polisher(model, T, rhovec);
+                        if (std::abs(T - Tnew)/T > 0.01) {
+                            throw IterationFailure("Polishing changed the temperature more than 1 %");
+                        }
+                        if (((rhovec-rhovecnew).cwiseAbs() > 0.05*rhovec).any()){
+                            throw IterationFailure("Polishing changed a molar concentration by more than 5 %");
+                        }
+                        polish_ok = true; 
+                        T = Tnew;
+                        rhovec = rhovecnew;
+                        break;
+                    }
+                    catch (std::exception& e) {
+                        if (options.verbosity > 10){
+                            std::cout << "Tracing problem: " << e.what() << std::endl;
+                        }
+                    }
                 }
-                catch (std::exception& e) {
-                    //int i = 0;
-                    //auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
-                    std::cout << e.what() << std::endl;
+                if (!polish_ok){
+                    if (options.polish_exception_on_fail){
+                        throw IterationFailure("Polishing was not successful");
+                    }
+                    else{
+                        break;
+                    }
                 }
             }
 
