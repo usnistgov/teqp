@@ -16,7 +16,6 @@
 #include <valarray>
 #include <random>
 #include <numeric>
-#include <sstream>
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/derivs.hpp"
@@ -31,7 +30,7 @@ void init_REFPROP() {
 
     // you may need to change this path to suit your installation
     // note: forward-slashes are recommended.
-    std::string path = std::getenv("rpprefix");
+    std::string path = std::getenv("RPPREFIX");
     std::string dll_name = "";
 
     // load the shared library and set up the fluid
@@ -102,13 +101,10 @@ TEST_CASE("Time fugacity coefficient"){
         auto diff = (phiteqp - Eigen::Map<const Eigen::ArrayXd>(&(u[0]), phiteqp.size())).eval();
         REQUIRE(diff.abs().minCoeff() < 1e-13);
     };
-    std::ostringstream ssteqp; ssteqp << Ncomp;
-    BENCHMARK("teqp" + ssteqp.str()) {
-        CAPTURE(Ncomp);
+    BENCHMARK(std::string("teqp") + std::to_string(Ncomp)) {
         return id::template get_fugacity_coefficients(model, T, rhovec);
     };
-    BENCHMARK("REFPROP" + ssteqp.str()) {
-        CAPTURE(Ncomp);
+    BENCHMARK(std::string("REFPROP") + std::to_string(Ncomp)) {
         FUGCOFdll(T, D_moldm3, &(z[0]), &(u[0]), ierr, herr, 255);
         return u;
     };
