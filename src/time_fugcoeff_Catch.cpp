@@ -16,6 +16,7 @@
 #include <valarray>
 #include <random>
 #include <numeric>
+#include <stringstream>
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/derivs.hpp"
@@ -95,16 +96,19 @@ TEST_CASE("Time fugacity coefficient"){
     std::valarray<double> u(20); u = 0.0;
     int ierr = 0; char herr[256];
 
-    SECTION("same[" + std::to_string(Ncomp) + "]") {
+    SECTION("same") {
         FUGCOFdll(T, D_moldm3, &(z[0]), &(u[0]), ierr, herr, 255);
         auto phiteqp = id::template get_fugacity_coefficients(model, T, rhovec);
         auto diff = (phiteqp - Eigen::Map<const Eigen::ArrayXd>(&(u[0]), phiteqp.size())).eval();
         REQUIRE(diff.abs().minCoeff() < 1e-13);
     };
-    BENCHMARK("teqp[" + std::to_string(Ncomp) + "]") {
+    std::ostringstream ssteqp; ssteqp << Ncomp;
+    BENCHMARK("teqp" + ssteqp.str()) {
+        CAPTURE(Ncomp);
         return id::template get_fugacity_coefficients(model, T, rhovec);
     };
-    BENCHMARK("REFPROP[" + std::to_string(Ncomp) + "]") {
+    BENCHMARK("REFPROP" + ssteqp.str()) {
+        CAPTURE(Ncomp);
         FUGCOFdll(T, D_moldm3, &(z[0]), &(u[0]), ierr, herr, 255);
         return u;
     };
