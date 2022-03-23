@@ -28,6 +28,7 @@ struct TCABOptions {
     int max_step_count = 1000; ///< Maximum number of steps allowed
     int skip_dircheck_count = 1; ///< Only start checking the direction dot product after this many steps
     bool polish = false; ///< If true, polish the solution at every step
+    bool terminate_negative_density = true; ///< Stop the tracing if the density is negative
     bool calc_stability = false; ///< Calculate the local stability with the method of Deiters and Bell
     double stability_rel_drho = 0.001; ///< The relative size of the step (relative to the sum of the molar concentration vector) to be used when taking the step in the direction of \f$\sigma_1\f$ when assessing local stability
     int verbosity = 0; ///< The greater the verbosity, the more output you will get, especially about polishing failures
@@ -437,6 +438,9 @@ struct CriticalTracing {
             // Unpack the inputs
             const double T = x[0];
             const auto rhovec = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 1, x.size() - 1);
+            if (options.terminate_negative_density && rhovec.minCoeff() < 0) {
+                throw std::invalid_argument("Density is negative");
+            }
             
             auto drhodT = get_drhovec_dT_crit(model, T, rhovec).array().eval();
             auto dTdt = 1.0 / norm(drhodT);
