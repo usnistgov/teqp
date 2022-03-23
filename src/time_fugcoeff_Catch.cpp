@@ -16,7 +16,7 @@
 #include <valarray>
 #include <random>
 #include <numeric>
-#include <stringstream>
+#include <sstream>
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/derivs.hpp"
