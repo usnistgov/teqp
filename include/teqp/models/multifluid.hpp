@@ -79,7 +79,6 @@ public:
 
     template<typename TauType, typename DeltaType>
     auto alphari(const TauType& tau, const DeltaType& delta, std::size_t i) const {
-        using resulttype = std::common_type_t<decltype(tau), decltype(delta)>; // Type promotion, without the const-ness
         return EOSs[i].alphar(tau, delta);
     }
 
