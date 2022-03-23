@@ -18,6 +18,18 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.7.0 Significant changes include:
+  
+  * ``get_Arxy`` generalized to allow for any derivative
+
+  * Local stability tests for critical points can be enabled
+
+  * Critical curve polishers much more reliable
+
+  * Add a method for dp/dT along isopleth of phase envelope of mixture.
+
+  * Estimation is not enabled by default by the ``estimation`` flag. If that is desired, use ``force-estimation``
+
 * 0.6.0 Add VLLE from VLE routine based upon https://pubs.acs.org/doi/abs/10.1021/acs.iecr.1c04703
 
 * 0.5.0 Add VLE polishing routine (https://github.com/usnistgov/teqp/commit/50b61af05697c01c0a2bf686b256724cc79f73d4), fix bug in critical curve tracing misalignment of eigenvectors(https://github.com/usnistgov/teqp/commit/f01ac7be43fcca4e1cd3c502be0259755396436b), assorted issue fixes, especially support for javascript
