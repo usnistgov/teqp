@@ -1,10 +1,6 @@
 #pragma once
 
-#include "teqp/models/vdW.hpp"
-#include "teqp/models/cubics.hpp"
-#include "teqp/models/CPA.hpp"
-#include "teqp/models/pcsaft.hpp"
-#include "teqp/models/multifluid.hpp"
+#include "teqp/models/fwd.hpp"
 
 #include "teqp/exceptions.hpp"
 
@@ -12,17 +8,7 @@
 
 namespace teqp {
 
-    using vad = std::valarray<double>;
-
-    // Define the EOS types by interrogating the types returned by the respective factory function
-    using cub = decltype(canonical_PR(vad{}, vad{}, vad{}));
-    using cpatype = decltype(CPA::CPAfactory(nlohmann::json{}));
-    using pcsafttype = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
-    using multifluidtype = decltype(multifluidfactory(nlohmann::json{}));
-
-    using AllowedModels = std::variant<vdWEOS1, cub, cpatype, pcsafttype, multifluidtype>;
-
-    AllowedModels build_model(const nlohmann::json& json) {
+    static AllowedModels build_model(const nlohmann::json& json) {
 
         // Extract the name of the model and the model parameters
         std::string kind = json.at("kind");
