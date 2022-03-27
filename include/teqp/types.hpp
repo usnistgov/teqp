@@ -11,9 +11,8 @@ namespace teqp {
 }
 
 // Everything inside this NO_TYPES_HEADER section involves slow and large headers
-// so if you are just defining types (but not their implementationa), you can avoid the 
+// so if you are just defining types (but not their implementations), you can avoid the 
 // compilation speed hit invoked by these headers
-
 #if !defined(NO_TYPES_HEADER)
 
 #include "MultiComplex/MultiComplex.hpp"
