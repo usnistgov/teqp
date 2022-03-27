@@ -219,11 +219,12 @@ public:
     auto get_sigma_Angstrom() { return sigma_Angstrom; }
     auto get_epsilon_over_k_K() { return epsilon_over_k; }
 
-    void print_info() {
-        std::cout << "i m sigma / A e/kB / K \n  ++++++++++++++" << std::endl;
+    auto print_info() {
+        std::string s = std::string("i m sigma / A e/kB / K \n  ++++++++++++++") + "\n";
         for (auto i = 0; i < m.size(); ++i) {
-            std::cout << i << " " << m[i] << " " << sigma_Angstrom[i] << " " << epsilon_over_k[i] << std::endl;
+            s += std::to_string(i) + " " + std::to_string(m[i]) + " " + std::to_string(sigma_Angstrom[i]) + " " + std::to_string(epsilon_over_k[i]) + "\n";
         }
+        return s;
     }
     template<typename VecType>
     double max_rhoN(double T, const VecType& mole_fractions) {
