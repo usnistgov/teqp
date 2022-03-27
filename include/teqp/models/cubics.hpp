@@ -29,7 +29,7 @@ public:
 
     template<typename TType>
     auto operator () (const TType& T) const {
-        return forceeval(powi(forceeval(1.0 + mi * (1.0 - sqrt(T / Tci))), 2));
+        return forceeval(pow2(forceeval(1.0 + mi * (1.0 - sqrt(T / Tci)))));
     }
 };
 
@@ -60,7 +60,7 @@ public:
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
         for (auto i = 0; i < Tc_K.size(); ++i) {
-            ai[i] = OmegaA * powi(Ru * Tc_K[i], 2) / pc_Pa[i];
+            ai[i] = OmegaA * pow2(Ru * Tc_K[i]) / pc_Pa[i];
             bi[i] = OmegaB * Ru * Tc_K[i] / pc_Pa[i];
         }
         k = std::valarray<std::valarray<NumType>>(std::valarray<NumType>(0.0, Tc_K.size()), Tc_K.size());
@@ -169,10 +169,10 @@ auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric) {
     std::vector<AlphaFunctionOptions> alphas; 
     for (auto i = 0; i < Tc_K.size(); ++i) {
         if (acentric[i] < 0.491) {
-            m[i] = 0.37464 + 1.54226*acentric[i] - 0.26992*powi(acentric[i], 2);
+            m[i] = 0.37464 + 1.54226*acentric[i] - 0.26992*pow2(acentric[i]);
         }
         else {
-            m[i] = 0.379642 + 1.48503*acentric[i] -0.164423*powi(acentric[i], 2) + 0.016666*powi(acentric[i], 3);
+            m[i] = 0.379642 + 1.48503*acentric[i] -0.164423*pow2(acentric[i]) + 0.016666*pow3(acentric[i]);
         }
         alphas.emplace_back(BasicAlphaFunction(Tc_K[i], m[i]));
     }
