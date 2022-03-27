@@ -41,14 +41,17 @@ set(AUTODIFF_BUILD_PYTHON FALSE CACHE BOOL "No autodiff python")
 set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 
-# Find eigen library
-# find_package(Eigen3 REQUIRED)
-
 # Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
 set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
 
+
+
 option (TEQP_NO_PYTHON
         "Enable to NOT build the Python interface"
+        OFF)
+
+option (TEQP_TESTTEQPCPP
+        "Enable to add a target with a test of the C++ interface"
         OFF)
 
 option (TEQP_TEQPC
@@ -70,6 +73,18 @@ option (TEQP_JAVASCRIPT_EMBIND
 option (TEQP_MULTIPRECISION_ENABLED
         "Enable the use of boost::multiprecision"
         OFF)
+
+# Add a static library with the C++ interface that uses only STL
+# types so that recompilation of a library that uses teqp 
+# doesn't require a full compile for a single LOC change
+add_library(teqpcpp STATIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/teqpcpp.cpp")
+target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
+
+
+if (TEQP_TESTTEQPCPP)
+  add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test_teqpcpp.cpp")
+  target_link_libraries(test_teqpcpp PUBLIC teqpcpp)
+endif()
 
 if (TEQP_JAVASCRIPT_MODULE)
   # cmake -DTEQP_JAVASCRIPT_MODULE=ON

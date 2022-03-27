@@ -1,10 +1,23 @@
 #pragma once
 
+#include <vector>
+#include "Eigen/Dense"
+
+namespace teqp {
+    template<typename T> inline T pow2(const T& x) { return x * x; }
+    template<typename T> inline T pow3(const T& x) { return x * x * x; }
+
+    inline auto toeig(const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); }
+}
+
+// Everything inside this NO_TYPES_HEADER section involves slow and large headers
+// so if you are just defining types (but not their implementations), you can avoid the 
+// compilation speed hit invoked by these headers
+#if !defined(NO_TYPES_HEADER)
+
 #include "MultiComplex/MultiComplex.hpp"
 
-#include <vector>
 #include <valarray>
-#include <set>
 #include <chrono>
 
 #if defined(TEQP_MULTIPRECISION_ENABLED)
@@ -16,8 +29,6 @@
 #include <autodiff/forward/real.hpp>
 #include <autodiff/forward/dual/eigen.hpp>
 using namespace autodiff;
-
-#include "Eigen/Dense"
 
 namespace teqp {
 
@@ -77,7 +88,7 @@ namespace teqp {
         }
     }
 
-    inline auto toeig (const std::vector<double>& v) -> Eigen::ArrayXd { return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), v.size()); }
+    
 
     class Timer {
     private:
@@ -176,3 +187,5 @@ namespace teqp {
     }
 
 }; // namespace teqp
+
+#endif

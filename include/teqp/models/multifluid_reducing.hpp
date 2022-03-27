@@ -157,15 +157,6 @@ namespace teqp {
     private:
         Eigen::MatrixXd YT, Yv;
 
-        template <typename Num>
-        auto cube(Num x) const {
-            return forceeval(x * x * x);
-        }
-        template <typename Num>
-        auto square(Num x) const {
-            return forceeval(x * x);
-        }
-
     public:
         const Eigen::MatrixXd betaT, gammaT, betaV, gammaV;
         const Eigen::ArrayXd Tc, vc;
@@ -185,8 +176,8 @@ namespace teqp {
                 for (auto j = i + 1; j < N; ++j) {
                     YT(i, j) = betaT(i, j) * gammaT(i, j) * sqrt(Tc[i] * Tc[j]);
                     YT(j, i) = betaT(j, i) * gammaT(j, i) * sqrt(Tc[i] * Tc[j]);
-                    Yv(i, j) = 1.0 / 8.0 * betaV(i, j) * gammaV(i, j) * cube(cbrt(vc[i]) + cbrt(vc[j]));
-                    Yv(j, i) = 1.0 / 8.0 * betaV(j, i) * gammaV(j, i) * cube(cbrt(vc[i]) + cbrt(vc[j]));
+                    Yv(i, j) = 1.0 / 8.0 * betaV(i, j) * gammaV(i, j) * pow3(cbrt(vc[i]) + cbrt(vc[j]));
+                    Yv(j, i) = 1.0 / 8.0 * betaV(j, i) * gammaV(j, i) * pow3(cbrt(vc[i]) + cbrt(vc[j]));
                 }
             }
         }
@@ -197,13 +188,13 @@ namespace teqp {
             auto N = z.size();
             typename MoleFractions::value_type sum1 = 0.0;
             for (auto i = 0; i < N; ++i) {
-                sum1 = sum1 + square(z[i]) * Yc[i];
+                sum1 = sum1 + pow2(z[i]) * Yc[i];
             }
 
             typename MoleFractions::value_type sum2 = 0.0;
             for (auto i = 0; i < N - 1; ++i) {
                 for (auto j = i + 1; j < N; ++j) {
-                    sum2 = sum2 + 2.0 * z[i] * z[j] * (z[i] + z[j]) / (square(beta(i, j)) * z[i] + z[j]) * Yij(i, j);
+                    sum2 = sum2 + 2.0 * z[i] * z[j] * (z[i] + z[j]) / (pow2(beta(i, j)) * z[i] + z[j]) * Yij(i, j);
                 }
             }
 
@@ -217,8 +208,7 @@ namespace teqp {
     class MultiFluidInvariantReducingFunction {
     private:
         Eigen::MatrixXd YT, Yv;
-        template <typename Num> auto cube(Num x) const { return x * x * x; }
-        template <typename Num> auto square(Num x) const { return x * x; }
+
     public:
         const Eigen::MatrixXd phiT, lambdaT, phiV, lambdaV;
         const Eigen::ArrayXd Tc, vc;
@@ -238,8 +228,8 @@ namespace teqp {
                 for (auto j = 0; j < N; ++j) {
                     YT(i, j) = sqrt(Tc[i] * Tc[j]);
                     YT(j, i) = sqrt(Tc[i] * Tc[j]);
-                    Yv(i, j) = 1.0 / 8.0 * cube(cbrt(vc[i]) + cbrt(vc[j]));
-                    Yv(j, i) = 1.0 / 8.0 * cube(cbrt(vc[i]) + cbrt(vc[j]));
+                    Yv(i, j) = 1.0 / 8.0 * pow3(cbrt(vc[i]) + cbrt(vc[j]));
+                    Yv(j, i) = 1.0 / 8.0 * pow3(cbrt(vc[i]) + cbrt(vc[j]));
                 }
             }
         }
