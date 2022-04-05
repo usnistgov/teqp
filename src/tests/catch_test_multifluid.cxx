@@ -261,3 +261,19 @@ TEST_CASE("Trace a VLE isotherm for acetone + water", "[isothermacetonebenzene]"
 
     auto o = trace_VLE_isotherm_binary(model, T, rhovecL, rhovecV);
 }
+
+TEST_CASE("Calculate partial molar volume for a CO2 containing mixture", "[partial_molar_volume]") {
+    std::string root = "../mycp";
+    const auto model = build_multifluid_model({ "CarbonDioxide", "Heptane" }, root);
+    using id = IsochoricDerivatives<decltype(model), double, Eigen::ArrayXd>;
+    
+    double T = 343.0;
+    Eigen::ArrayXd rhovec = (Eigen::ArrayXd(2) << 0.99999, 1.0-0.99999).finished();
+    rhovec *= 6690.19673875373;
+    
+    std::valarray<double> expected = {  0.000149479684800994, -0.000575458122621522 };
+    auto der = id::get_partial_molar_volumes(model, T, rhovec);
+    for (auto i = 0; i < expected.size(); ++i){
+        CHECK(expected[i] == der[i]);
+    }
+}
