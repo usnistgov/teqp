@@ -270,10 +270,10 @@ TEST_CASE("Calculate partial molar volume for a CO2 containing mixture", "[parti
     double T = 343.0;
     Eigen::ArrayXd rhovec = (Eigen::ArrayXd(2) << 0.99999, 1.0-0.99999).finished();
     rhovec *= 6690.19673875373;
-    
-    std::valarray<double> expected = {  0.000149479684800994, -0.000575458122621522 };
+
+    std::valarray<double> expected = { 0.000149479684800994, -0.000575458122621522 };
     auto der = id::get_partial_molar_volumes(model, T, rhovec);
     for (auto i = 0; i < expected.size(); ++i){
-        CHECK(expected[i] == der[i]);
+        CHECK(expected[i] == Approx(der[i]));
     }
 }
