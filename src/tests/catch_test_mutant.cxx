@@ -181,3 +181,15 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid muta
     CHECK(infdil0(0) == Approx(infdil1(1)));
     CHECK(infdil0(1) == Approx(infdil1(0)));
 }
+
+TEST_CASE("Mutant with Chebyshev departure function", "[mutant]") {
+    std::string root = "../mycp";
+    nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
+    auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 1.0, "gammaT": 1.0, "betaV": 1.0, "gammaV": 1.0, "Fij": 1.0}, 
+    "departure": {"type": "Chebyshev2D", "a":[1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4], "taumin": 1e-10, "taumax": 5, "deltamin": 1e-6, "deltamax": 4, "Ntau":3, "Ndelta":4
+    }}}})";
+    nlohmann::json j = nlohmann::json::parse(s0);
+    CHECK_NOTHROW(build_multifluid_mutant(model, j));
+}
