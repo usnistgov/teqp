@@ -741,6 +741,38 @@ struct IsochoricDerivatives{
         auto dPsirdT = get_dPsirdT_constrhovec(model, T, rhovec);
         return rhotot*model.R(molefrac) - dPsirdT + rhovec.matrix().dot(build_d2PsirdTdrhoi_autodiff(model, T, rhovec).matrix());
     }
+
+    /***
+    * \brief Calculate the molar concentration derivatives of the pressure at constant temperature
+    */
+    static auto get_dpdrhovec_constT(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = rhovec.sum();
+        auto molefrac = (rhovec / rhotot).eval();
+        auto RT = model.R(molefrac)*T;
+        auto [func, grad, hessian] = build_Psir_fgradHessian_autodiff(model, T, rhovec); // The hessian matrix
+        return (RT + (hessian*rhovec.matrix()).array()).eval(); // at constant temperature
+    }
+
+    /***
+    * \brief Calculate the partial molar volumes of each component
+    * 
+    * \f[
+    * \hat v_i = \left(\frac{\partial V}{\partial n_i}\right)_{T,V,n_{j \neq i}}
+    * \f]
+    */
+    static auto get_partial_molar_volumes(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = rhovec.sum();
+        auto molefrac = (rhovec / rhotot).eval();
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto RT = model.R(molefrac)*T;
+
+        auto dpdrhovec = get_dpdrhovec_constT(model, T, rhovec);
+        auto numerator = -rhotot*dpdrhovec;
+        
+        auto ders = tdx::template get_Ar0n<2>(model, T, rhotot, molefrac);
+        auto denominator = -pow2(rhotot)*RT*(1 + 2*ders[1] + ders[2]);
+        return (numerator/denominator).eval();
+    }
 };
 
 }; // namespace teqp
