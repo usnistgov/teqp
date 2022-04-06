@@ -313,7 +313,11 @@ inline auto build_departure_function(const nlohmann::json& j) {
         Chebyshev2DEOSTerm eos;
         int Ntau = term.at("Ntau"); // Degree in tau (there will be Ntau+1 coefficients in the tau direction)
         int Ndelta = term.at("Ndelta"); // Degree in delta (there will be Ndelta+1 coefficients in the delta direction)
-        eos.a = toeig(term.at("a")).reshaped(Ntau+1, Ndelta+1); // All in one long array, then reshaped
+        Eigen::ArrayXd c = toeig(term.at("a"));
+        if ((Ntau + 1)*(Ndelta + 1) != c.size()){
+            throw std::invalid_argument("Provided length [" + std::to_string(c.size()) + "] is not equal to (Ntau+1)*(Ndelta+1)");
+        }
+        eos.a = c.reshaped(Ntau+1, Ndelta+1).eval(); // All in one long array, then reshaped
         eos.taumin = term.at("taumin");
         eos.taumax = term.at("taumax");
         eos.deltamin = term.at("deltamin");

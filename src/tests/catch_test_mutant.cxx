@@ -187,9 +187,19 @@ TEST_CASE("Mutant with Chebyshev departure function", "[mutant]") {
     nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
     auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
     auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    
     std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 1.0, "gammaT": 1.0, "betaV": 1.0, "gammaV": 1.0, "Fij": 1.0}, 
-    "departure": {"type": "Chebyshev2D", "a":[1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4], "taumin": 1e-10, "taumax": 5, "deltamin": 1e-6, "deltamax": 4, "Ntau":3, "Ndelta":4
+    "departure": {"type": "Chebyshev2D", "a":[1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4], "taumin": 1e-10, "taumax": 5, "deltamin": 1e-6, "deltamax": 4, "Ntau":3, "Ndelta":3
     }}}})";
-    nlohmann::json j = nlohmann::json::parse(s0);
-    CHECK_NOTHROW(build_multifluid_mutant(model, j));
+    auto mutant0 = build_multifluid_mutant(model, nlohmann::json::parse(s0));
+
+    std::string s1 = R"({"0": {"1": {"BIP": {"betaT": 1.0, "gammaT": 1.0, "betaV": 1.0, "gammaV": 1.0, "Fij": 1.0}, 
+    "departure": {"type": "Chebyshev2D", "a":[1,2,3,5,1,2,3,4,1,2,3,4,1,2,3,4], "taumin": 1e-10, "taumax": 5, "deltamin": 1e-6, "deltamax": 4, "Ntau":3, "Ndelta":3
+    }}}})";
+    auto mutant1 = build_multifluid_mutant(model, nlohmann::json::parse(s1));
+    
+    double T = 340, rho = 300;
+    auto z = (Eigen::ArrayXd(2) << 0.4, 0.6).finished();
+    using tdx = TDXDerivatives<decltype(mutant0)>;
+    CHECK(tdx::get_Ar00(mutant0, T, rho, z) != tdx::get_Ar00(mutant1, T, rho, z));
 }
