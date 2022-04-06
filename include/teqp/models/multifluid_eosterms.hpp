@@ -226,7 +226,7 @@ The contribution is a Chebyshev expansion in two dimensions
 */
 class Chebyshev2DEOSTerm {
 public:
-    Eigen::ArrayXd a;
+    Eigen::ArrayXXd a;
     double taumin = -1, taumax = -1, deltamin = -1, deltamax = -1;
 
     /// Clenshaw evaluation of a Chebyshev expansion in 1D
@@ -253,7 +253,7 @@ public:
         using NumType = std::common_type_t<typename MatType::Scalar, XType>;
         static Eigen::Array<NumType, 1, Cols> u_k, u_kp1, u_kp2;
         // Not statically sized, need to resize
-        if constexpr (Cols != Eigen::Dynamic) {
+        if constexpr (Cols == Eigen::Dynamic) {
             int M = static_cast<int>(c.rows());
             u_k.resize(M); 
             u_kp1.resize(M);
