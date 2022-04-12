@@ -42,13 +42,9 @@ Written by Ian Bell, NIST.
 
 ## Install
 
-For windows and OSX, you should be able to install the most recent version from PYPI with
+For all users, you should be able to install the most recent version from PYPI with
 
 ``pip install teqp``
-
-For linux users, please build yourself following the instructions below.
-
-The windows wheels are built/pushed with the ``buildwheels.py`` script, the OSX wheels are built as part of github action
 
 ## Tests
 
