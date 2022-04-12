@@ -2,6 +2,7 @@
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/derivs.hpp"
+#include "teqp/models/mie/lennardjones.hpp"
 
 #include "multifluid_shared.hpp"
 
@@ -19,4 +20,6 @@ void add_multifluid(py::module& m) {
     m.def("build_alias_map", &build_alias_map, py::arg("root"));
     m.def("collect_component_json", &collect_component_json, py::arg("identifiers"), py::arg("root"));
     m.def("get_departure_json", &get_departure_json, py::arg("name"), py::arg("root"));
+
+    m.def("build_LJ126_TholJPCRD2016", &teqp::build_LJ126_TholJPCRD2016);
 }
