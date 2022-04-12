@@ -222,6 +222,76 @@ public:
 };
 
 /**
+The contribution is a Chebyshev expansion in two dimensions
+*/
+class Chebyshev2DEOSTerm {
+public:
+    Eigen::ArrayXXd a;
+    double taumin = -1, taumax = -1, deltamin = -1, deltamax = -1;
+
+    /// Clenshaw evaluation of a Chebyshev expansion in 1D
+    template<typename vectype, typename XType>
+    static auto Clenshaw1D(const vectype &c, const XType &ind){
+        int N = static_cast<int>(c.size()) - 1;
+        std::common_type_t<typename vectype::Scalar, XType> u_k = 0, u_kp1 = 0, u_kp2 = 0;
+        for (int k = N; k >= 0; --k){
+            // Do the recurrent calculation
+            u_k = 2.0*ind*u_kp1 - u_kp2 + c[k];
+            if (k > 0){
+                // Update the values
+                u_kp2 = u_kp1; u_kp1 = u_k;
+            }
+        }
+        return (u_k - u_kp2)/2.0;
+    }
+
+    /// Clenshaw evaluation of one dimensional flattening of the Chebyshev expansion
+    template<typename MatType, typename XType>
+    static auto Clenshaw1DByRow(const MatType& c, const XType &ind) {
+        int N = static_cast<int>(c.rows()) - 1;
+        constexpr int Cols = MatType::ColsAtCompileTime;
+        using NumType = std::common_type_t<typename MatType::Scalar, XType>;
+        static Eigen::Array<NumType, 1, Cols> u_k, u_kp1, u_kp2;
+        // Not statically sized, need to resize
+        if constexpr (Cols == Eigen::Dynamic) {
+            int M = static_cast<int>(c.rows());
+            u_k.resize(M); 
+            u_kp1.resize(M);
+            u_kp2.resize(M);
+        }
+        u_k.setZero(); u_kp1.setZero(); u_kp2.setZero();
+        
+        for (int k = N; k >= 0; --k) {
+            // Do the recurrent calculation
+            u_k = 2.0 * ind * u_kp1 - u_kp2 + c.row(k);
+            if (k > 0) {
+                // Update the values
+                u_kp2 = u_kp1; u_kp1 = u_k;
+            }
+        }
+        return (u_k - u_kp2) / 2.0;
+    }
+
+    /** Clenshaw evaluation of the complete expansion
+     * \param a Matrix
+     * \param x The first argument, in [-1,1]
+     * \param y The second argument, in [-1,1]
+     */
+    template<typename MatType, typename XType, typename YType>
+    static auto Clenshaw2DEigen(const MatType& a, const XType &x, const YType &y) {
+        auto b = Clenshaw1DByRow(a, y);
+        return Clenshaw1D(b.matrix(), x);
+    }
+
+    template<typename TauType, typename DeltaType>
+    auto alphar(const TauType& tau, const DeltaType& delta) const {
+        TauType x = (2.0*tau - (taumax + taumin)) / (taumax - taumin);
+        DeltaType y = (2.0*delta - (deltamax + deltamin)) / (deltamax - deltamin);
+        return forceeval(Clenshaw2DEigen(a, forceeval(x), forceeval(y)));
+    }
+};
+
+/**
 \f$ \alpha^r = 0\f$
 */
 class NullEOSTerm {
@@ -292,6 +362,6 @@ public:
 
 using EOSTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm>;
 
-using DepartureTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm, DoubleExponentialEOSTerm>;
+using DepartureTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm, DoubleExponentialEOSTerm,Chebyshev2DEOSTerm>;
 
 }; // namespace teqp

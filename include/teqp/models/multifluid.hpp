@@ -309,6 +309,21 @@ inline auto build_departure_function(const nlohmann::json& j) {
         eos.ld_i = eos.ld.cast<int>();
         dep.add_term(eos);
     }; 
+    auto build_Chebyshev2D = [&](auto& term, auto& dep) {
+        Chebyshev2DEOSTerm eos;
+        int Ntau = term.at("Ntau"); // Degree in tau (there will be Ntau+1 coefficients in the tau direction)
+        int Ndelta = term.at("Ndelta"); // Degree in delta (there will be Ndelta+1 coefficients in the delta direction)
+        Eigen::ArrayXd c = toeig(term.at("a"));
+        if ((Ntau + 1)*(Ndelta + 1) != c.size()){
+            throw std::invalid_argument("Provided length [" + std::to_string(c.size()) + "] is not equal to (Ntau+1)*(Ndelta+1)");
+        }
+        eos.a = c.reshaped(Ntau+1, Ndelta+1).eval(); // All in one long array, then reshaped
+        eos.taumin = term.at("taumin");
+        eos.taumax = term.at("taumax");
+        eos.deltamin = term.at("deltamin");
+        eos.deltamax = term.at("deltamax");
+        dep.add_term(eos);
+    };
     //auto build_gaussian = [&](auto& term) {
     //    GaussianEOSTerm eos;
     //    eos.n = toeig(term["n"]);
@@ -400,12 +415,15 @@ inline auto build_departure_function(const nlohmann::json& j) {
     else if (type == "Gaussian+Exponential") {
         build_GaussianExponential(j, dep);
     }
+    else if (type == "Chebyshev2D") {
+        build_Chebyshev2D(j, dep);
+    }
     else if (type == "none") {
         dep.add_term(NullEOSTerm());
     }
     else {
         
-        std::vector<std::string> options = { "Exponential","GERG-2004","GERG-2008","Gaussian+Exponential", "none", "DoubleExponential"};
+        std::vector<std::string> options = { "Exponential","GERG-2004","GERG-2008","Gaussian+Exponential", "none", "DoubleExponential","Chebyshev2D"};
         throw std::invalid_argument("Bad departure term type: " + type + ". Options are {" + boost::algorithm::join(options, ",") + "}");
     }
     return dep;
