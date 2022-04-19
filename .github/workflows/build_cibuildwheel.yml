@@ -1,5 +1,9 @@
 name: Build
 
+[[tool.cibuildwheel.overrides]]
+select = "*-musllinux*"
+before-all = "apk add clang"
+
 on: [push, pull_request]
 
 jobs:
@@ -28,7 +32,6 @@ jobs:
           CIBW_ARCHS: auto64
           CIBW_ARCHS_MACOS: universal2
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
-          CIBW_BEFORE_BUILD_LINUX: apt install clang++ | apk add clang | echo "ok"
           CIBW_ENVIRONMENT_LINUX: CXX=clang++
 
       - uses: actions/upload-artifact@v2
