@@ -1,9 +1,5 @@
 name: Build
 
-[[tool.cibuildwheel.overrides]]
-select = "*-musllinux*"
-before-all = "apk add clang"
-
 on: [push, pull_request]
 
 jobs:
