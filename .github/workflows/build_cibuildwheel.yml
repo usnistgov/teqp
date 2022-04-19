@@ -28,7 +28,7 @@ jobs:
           CIBW_ARCHS: auto64
           CIBW_ARCHS_MACOS: universal2
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
-          CIBW_BEFORE_BUILD_LINUX: apk add clang | echo "ok"
+          CIBW_BEFORE_BUILD_LINUX: apt-get install clang++ | apk add clang | echo "ok"
           CIBW_ENVIRONMENT_LINUX: CXX=clang++
 
       - uses: actions/upload-artifact@v2
