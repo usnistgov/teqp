@@ -1,4 +1,0 @@
-[[tool.cibuildwheel.overrides]]
-select = "*-musllinux*"
-before-all = "apk add clang"
-environment = {"CXX=c++"}
