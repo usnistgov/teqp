@@ -56,6 +56,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
 
     m.def("extrapolate_from_critical", &extrapolate_from_critical<Model, double>);
     m.def("pure_VLE_T", &pure_VLE_T<Model, double>);
+    m.def("solve_pure_critical", &solve_pure_critical<Model, double, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg_v("flags", std::nullopt, "None"));
     m.def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, Eigen::ArrayXd>);
     m.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
     m.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
