@@ -318,6 +318,26 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
     CHECK(max_spluses.min() > -log(1 - 1.0 / 3.0));
 }
 
+TEST_CASE("Check criticality conditions for vdW", "[vdW][crit]")
+{
+    // Argon
+    std::valarray<double> Tc_K = { 150.687 };
+    std::valarray<double> pc_Pa = { 4863000.0 };
+    const std::valarray<double> molefrac = { 1.0 };
+    vdWEOS<double> vdW(Tc_K, pc_Pa);
+    auto Zc = 3.0 / 8.0;
+    
+    auto rhoc = pc_Pa[0] / (vdW.R(molefrac) * Tc_K[0]) / Zc;
+    auto [resids, Jacobian] = get_pure_critical_conditions_Jacobian(vdW, Tc_K[0], rhoc);
+    REQUIRE(resids.size() == 2);
+    CHECK(resids[0] == Approx(0).margin(1e-13));
+    CHECK(resids[1] == Approx(0).margin(1e-13));
+
+    auto T0 = Tc_K[0] + 0.1;
+    auto [Tfinal, rhofinal] = solve_pure_critical(vdW, T0, rhoc);
+    CHECK(Tfinal == Approx(Tc_K[0]));
+}
+
 TEST_CASE("TEST B12", "") {
     const auto model = build_vdW();
     const double T = 298.15;
