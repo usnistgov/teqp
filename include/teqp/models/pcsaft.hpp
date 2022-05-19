@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nlohmann/json.hpp"
+#include "teqp/exceptions.hpp"
 
 namespace teqp {
 namespace PCSAFT {
@@ -177,10 +178,23 @@ private:
         sigma_Angstrom, ///< 
         epsilon_over_k; ///< depth of pair potential divided by Boltzman constant
     std::vector<std::string> names;
-    double k_ij; ///< binary interaction parameter
+    Eigen::ArrayXXd kmat; ///< binary interaction parameter matrix
+
+    void check_kmat(int N) {
+        if (kmat.cols() != kmat.rows()) {
+            throw teqp::InvalidArgument("kmat rows and columns are not identical");
+        }
+        if (kmat.cols() == 0) {
+            kmat.resize(N, N); kmat.setZero();
+        }
+        else if (kmat.cols() != N) {
+            throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components");
+        }
+    };
 public:
-    PCSAFTMixture(const std::vector<std::string> &names) : names(names)
+    PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : names(names), kmat(kmat)
     {
+        check_kmat(names.size());
         m.resize(names.size());
         mminus1.resize(names.size());
         sigma_Angstrom.resize(names.size());
@@ -195,10 +209,11 @@ public:
             epsilon_over_k[i] = coeff.epsilon_over_k;
             i++;
         }
-        k_ij = 0;
     };
-    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs) 
+    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : kmat(kmat)
     {
+        check_kmat(coeffs.size());
+
         m.resize(coeffs.size());
         mminus1.resize(coeffs.size());
         sigma_Angstrom.resize(coeffs.size());
@@ -213,7 +228,6 @@ public:
             names[i] = coeff.name;
             i++;
         }
-        k_ij = 0;
     };
     auto get_m(){ return m; }
     auto get_sigma_Angstrom() { return sigma_Angstrom; }
@@ -259,7 +273,7 @@ public:
             for (std::size_t j = 0; j < N; ++j) {
                 // Eq. A.5
                 auto sigma_ij = 0.5 * sigma_Angstrom[i] + 0.5 * sigma_Angstrom[j];
-                auto eij_over_k = sqrt(epsilon_over_k[i] * epsilon_over_k[j]) * (1.0 - k_ij);
+                auto eij_over_k = sqrt(epsilon_over_k[i] * epsilon_over_k[j]) * (1.0 - kmat(i,j));
                 c.m2_epsilon_sigma3_bar = c.m2_epsilon_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * eij_over_k / T * pow(sigma_ij, 3);
                 c.m2_epsilon2_sigma3_bar = c.m2_epsilon2_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * pow(eij_over_k / T, 2) * pow(sigma_ij, 3);
             }
