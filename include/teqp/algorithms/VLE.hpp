@@ -274,12 +274,12 @@ auto get_pure_critical_conditions_Jacobian(const Model& model, const Scalar T, c
     return std::make_tuple(resids, J);
 }
 
-template<typename Model, typename Scalar>
+template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
 auto solve_pure_critical(const Model& model, const Scalar T0, const Scalar rho0, const nlohmann::json& flags = {}) {
     auto x = (Eigen::ArrayXd(2) << T0, rho0).finished();
     int maxsteps = (flags.contains("maxsteps")) ? flags.at("maxsteps") : 10;
     for (auto counter = 0; counter < maxsteps; ++counter) {
-        auto [resids, Jacobian] = get_pure_critical_conditions_Jacobian(model, x[0], x[1]);
+        auto [resids, Jacobian] = get_pure_critical_conditions_Jacobian<Model, Scalar, backend>(model, x[0], x[1]);
         auto v = linsolve(Jacobian, -resids);
         x += v;
     }
