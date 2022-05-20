@@ -17,7 +17,7 @@ void add_PCSAFT(py::module& m) {
 	;
 
 	auto wPCSAFT = py::class_<PCSAFTMixture>(m, "PCSAFTEOS")
-	.def(py::init<const std::vector<std::string>&, const Eigen::ArrayXXd&>(), py::arg("names"), py::arg_v("kmat", Eigen::ArrayXXd(2,2).setZero(), "None"))
+	.def(py::init<const std::vector<std::string>&, const Eigen::ArrayXXd&>(), py::arg("names"), py::arg_v("kmat", Eigen::ArrayXXd(0,0), "None"))
 	.def(py::init<const std::vector<SAFTCoeffs>&>(), py::arg("coeffs"))
 	.def("print_info", &PCSAFTMixture::print_info)
 	.def("max_rhoN", &PCSAFTMixture::max_rhoN<Eigen::ArrayXd>)
