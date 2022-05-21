@@ -330,8 +330,8 @@ TEST_CASE("Check criticality conditions for vdW", "[vdW][crit]")
     auto rhoc = pc_Pa[0] / (vdW.R(molefrac) * Tc_K[0]) / Zc;
     auto [resids, Jacobian] = get_pure_critical_conditions_Jacobian(vdW, Tc_K[0], rhoc);
     REQUIRE(resids.size() == 2);
-    CHECK(resids[0] == Approx(0).margin(1e-13));
-    CHECK(resids[1] == Approx(0).margin(1e-13));
+    CHECK(resids[0] == Approx(0).margin(1e-10));
+    CHECK(resids[1] == Approx(0).margin(1e-10));
 
     auto T0 = Tc_K[0] + 0.1;
     auto [Tfinal, rhofinal] = solve_pure_critical(vdW, T0, rhoc);
