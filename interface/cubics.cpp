@@ -6,8 +6,8 @@ void add_cubics(py::module& m) {
 
     using va = std::valarray<double>;
     
-    m.def("canonical_PR", &canonical_PR<va,va,va>, py::arg("Tc_K"), py::arg("pc_Pa"), py::arg("acentric"));
-    m.def("canonical_SRK", &canonical_SRK<va, va, va>, py::arg("Tc_K"), py::arg("pc_Pa"), py::arg("acentric"));
+    m.def("canonical_PR", &canonical_PR<va,va,va>, py::arg("Tc_K"), py::arg("pc_Pa"), py::arg("acentric"), py::arg_v("kmat", Eigen::ArrayXXd(0, 0), "None"));
+    m.def("canonical_SRK", &canonical_SRK<va, va, va>, py::arg("Tc_K"), py::arg("pc_Pa"), py::arg("acentric"), py::arg_v("kmat", Eigen::ArrayXXd(0, 0), "None"));
 
     using cub = decltype(canonical_PR(va{}, va{}, va{}));
     auto wcub = py::class_<cub>(m, "GenericCubic")

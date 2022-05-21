@@ -35,6 +35,26 @@ TEST_CASE("Test construction of cubic", "[cubic]")
     int rr = 0;
 }
 
+TEST_CASE("Check SRK with kij setting", "[cubic]")
+{
+    // Values taken from http://dx.doi.org/10.6028/jres.121.011
+    std::valarray<double> Tc_K = { 190.564, 154.581, 150.687 },
+        pc_Pa = { 4599200, 5042800, 4863000 },
+        acentric = { 0.011, 0.022, -0.002 };
+    Eigen::ArrayXXd kij_right(3, 3); kij_right.setZero();
+    Eigen::ArrayXXd kij_bad(2, 20); kij_bad.setZero();
+
+    SECTION("No kij") {
+        CHECK_NOTHROW(canonical_SRK(Tc_K, pc_Pa, acentric));
+    }
+    SECTION("Correctly shaped kij matrix") {
+        CHECK_NOTHROW(canonical_SRK(Tc_K, pc_Pa, acentric, kij_right));
+    }
+    SECTION("Incorrectly shaped kij matrix") {
+        CHECK_THROWS(canonical_SRK(Tc_K, pc_Pa, acentric, kij_bad));
+    }
+}
+
 TEST_CASE("Check calling superancillary curves", "[cubic][superanc]") 
 {
     std::valarray<double> Tc_K = { 150.687 };

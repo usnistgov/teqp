@@ -14,6 +14,8 @@ Implementations of the canonical cubic equations of state
 
 #include "nlohmann/json.hpp"
 
+#include <Eigen/Dense>
+
 namespace teqp {
 
 /**
@@ -40,10 +42,10 @@ template <typename NumType, typename AlphaFunctions>
 class GenericCubic {
 protected:
     std::valarray<NumType> ai, bi;
-    std::valarray<std::valarray<NumType>> k;
     const NumType Delta1, Delta2, OmegaA, OmegaB;
     int superanc_index; 
     const AlphaFunctions alphas;
+    Eigen::ArrayXXd kmat;
 
     nlohmann::json meta;
 
@@ -53,9 +55,21 @@ protected:
     template<typename TType, typename IndexType>
     auto get_bi(TType T, IndexType i) const { return bi[i]; }
 
+    void check_kmat(int N) {
+        if (kmat.cols() != kmat.rows()) {
+            throw teqp::InvalidArgument("kmat rows [" + std::to_string(kmat.rows()) + "] and columns [" + std::to_string(kmat.cols()) + "] are not identical");
+        }
+        if (kmat.cols() == 0) {
+            kmat.resize(N, N); kmat.setZero();
+        }
+        else if (kmat.cols() != N) {
+            throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components [" + std::to_string(N) + "]");
+        }
+    };
+
 public:
-    GenericCubic(NumType Delta1, NumType Delta2, NumType OmegaA, NumType OmegaB, int superanc_index, const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas)
-        : Delta1(Delta1), Delta2(Delta2), OmegaA(OmegaA), OmegaB(OmegaB), superanc_index(superanc_index), alphas(alphas)
+    GenericCubic(NumType Delta1, NumType Delta2, NumType OmegaA, NumType OmegaB, int superanc_index, const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const Eigen::ArrayXXd& kmat)
+        : Delta1(Delta1), Delta2(Delta2), OmegaA(OmegaA), OmegaB(OmegaB), superanc_index(superanc_index), alphas(alphas), kmat(kmat)
     {
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
@@ -63,7 +77,7 @@ public:
             ai[i] = OmegaA * pow2(Ru * Tc_K[i]) / pc_Pa[i];
             bi[i] = OmegaB * Ru * Tc_K[i] / pc_Pa[i];
         }
-        k = std::valarray<std::valarray<NumType>>(std::valarray<NumType>(0.0, Tc_K.size()), Tc_K.size());
+        check_kmat(ai.size());
     };
 
     void set_meta(const nlohmann::json& j) { meta = j; }
@@ -101,7 +115,7 @@ public:
             for (auto j = 0; j < molefracs.size(); ++j) {
                 auto alphaj = forceeval(std::visit([&](auto& t) { return t(T); }, alphas[j]));
                 auto aj_ = ai[j] * alphaj;
-                auto aij = forceeval((1 - k[i][j]) * sqrt(ai_ * aj_));
+                auto aij = forceeval((1 - kmat(i,j)) * sqrt(ai_ * aj_));
                 a_ = a_ + molefracs[i] * molefracs[j] * aij;
             }
         }
@@ -134,7 +148,7 @@ public:
 };
 
 template <typename TCType, typename PCType, typename AcentricType>
-auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric) {
+auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen::ArrayXXd& kmat = {}) {
     double Delta1 = 1;
     double Delta2 = 0;
     auto m = 0.48 + 1.574 * acentric - 0.176 * acentric * acentric;
@@ -156,13 +170,13 @@ auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric) {
         {"kind", "Soave-Redlich-Kwong"}
     };
 
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::SRK_CODE, Tc_K, pc_K, std::move(alphas));
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::SRK_CODE, Tc_K, pc_K, std::move(alphas), kmat);
     cub.set_meta(meta);
     return cub;
 }
 
 template <typename TCType, typename PCType, typename AcentricType>
-auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric) {
+auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen::ArrayXXd& kmat = {}) {
     double Delta1 = 1+sqrt(2);
     double Delta2 = 1-sqrt(2);
     AcentricType m = acentric*0.0;
@@ -189,7 +203,7 @@ auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric) {
         {"kind", "Peng-Robinson"}
     };
 
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::PR_CODE, Tc_K, pc_K, std::move(alphas));
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::PR_CODE, Tc_K, pc_K, std::move(alphas), kmat);
     cub.set_meta(meta);
     return cub;
 }
