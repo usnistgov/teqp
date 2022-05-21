@@ -240,7 +240,7 @@ namespace teqp {
             for (auto i = 0; i < N; ++i) {
                 for (auto j = 0; j < N; ++j) {
                     auto contrib = z[i] * z[j] * (phi(i, j) + z[j] * lambda(i, j)) * Yij(i, j);
-                    sum += contrib;
+                    sum = sum + contrib;
                 }
             }
             return sum;
