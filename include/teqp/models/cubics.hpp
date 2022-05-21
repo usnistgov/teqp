@@ -10,6 +10,7 @@ Implementations of the canonical cubic equations of state
 
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
+#include "teqp/exceptions.hpp"
 #include "cubicsuperancillary.hpp"
 
 #include "nlohmann/json.hpp"
