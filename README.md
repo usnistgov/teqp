@@ -18,6 +18,20 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.8.0 Significant changes include:
+  
+  * kij can be set for PC-SAFT and cubics (PR & SRK)
+
+  * Added Lennard-Jones EOS from Thol et al.
+
+  * Partial molar volume is now an available output
+
+  * Added solver for pure fluid critical point
+
+  * Added 2D Chebyshev departure function
+
+  * Starting work on a C++ wrapper in the hopes of improving compile times for C++ integration
+
 * 0.7.0 Significant changes include:
   
   * ``get_Arxy`` generalized to allow for any derivative
