@@ -77,6 +77,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_Ar10", &(tdx::template get_Ar10<ADBackends::autodiff>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar11", &(tdx::template get_Ar11<ADBackends::autodiff>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar12", &(tdx::template get_Ar12<ADBackends::autodiff>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
+    cls.def("get_Ar20", &(tdx::template get_Ar20<ADBackends::autodiff>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
 
     cls.def("get_Ar01n", &(tdx::template get_Ar0n<1>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar02n", &(tdx::template get_Ar0n<2>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
