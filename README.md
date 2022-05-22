@@ -18,6 +18,10 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.8.1 :
+
+  * Replace the ``get_Ar20`` function that was erroneously removed
+
 * 0.8.0 Significant changes include:
   
   * kij can be set for PC-SAFT and cubics (PR & SRK)
