@@ -15,6 +15,7 @@
 #include "teqp/constants.hpp"
 #include "teqp/filesystem.hpp"
 #include "teqp/json_tools.hpp"
+#include "teqp/exceptions.hpp"
 
 #include "MultiComplex/MultiComplex.hpp"
 
@@ -107,6 +108,19 @@ public:
             }
         }
         return forceeval(alphar);
+    }
+
+    /// Call a single departure term at i,j 
+    template<typename TauType, typename DeltaType>
+    auto get_alpharij(const int i, const int j,     const TauType& tau, const DeltaType& delta) const {
+        int N = funcs.size();
+        if (i < 0 || j < 0){
+            throw teqp::InvalidArgument("i or j is negative");
+        }
+        if (i >= N || j >= N){
+            throw teqp::InvalidArgument("i or j is invalid; size is " + std::to_string(N));
+        }
+        return forceeval(funcs[i][j].alphar(tau, delta));
     }
 };
 

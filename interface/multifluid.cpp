@@ -14,6 +14,7 @@ void add_multifluid(py::module& m) {
     auto wMF = py::class_<MultiFluid>(m, "MultiFluid");
     add_derivatives<MultiFluid>(m, wMF);
     add_multifluid_methods<MultiFluid>(wMF);
+    wMF.def("get_alpharij", [](const MultiFluid& c, const int i, const int j, const double &tau, const double &delta) { return c.dep.get_alpharij(i, j, tau, delta); });
 
     // Expose some additional functions for working with the JSON data structures and resolving aliases
     m.def("get_BIPdep", &reducing::get_BIPdep, py::arg("BIPcollection"), py::arg("identifiers"), py::arg("flags") = nlohmann::json{});
