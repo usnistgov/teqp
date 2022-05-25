@@ -22,11 +22,12 @@ auto linsolve(const A& a, const B& b) {
     return a.matrix().colPivHouseholderQr().solve(b.matrix()).array().eval();
 }
 
-template<typename Model, typename TYPE = double>
+template<typename Model, typename TYPE = double, ADBackends backend = ADBackends::autodiff>
 class IsothermPureVLEResiduals  {
-    typedef Eigen::Array<TYPE, 2, 1> EigenArray;
-    typedef Eigen::Array<TYPE, 1, 1> EigenArray1;
-    typedef Eigen::Array<TYPE, 2, 2> EigenMatrix;
+public:
+    using EigenArray = Eigen::Array<TYPE, 2, 1>;
+    using EigenArray1 = Eigen::Array<TYPE, 1, 1>;
+    using EigenMatrix = Eigen::Array<TYPE, 2, 2>;
 private:
     const Model& m_model;
     TYPE m_T;
@@ -59,13 +60,13 @@ public:
         const TYPE R = m_model.R(molefracs);
         double R0_over_Rr = R0 / Rr;
         
-        auto derL = tdx::template get_Ar0n<2>(m_model, T, rhomolarL, molefracs);
+        auto derL = tdx::template get_Ar0n<2, backend>(m_model, T, rhomolarL, molefracs);
         auto pRTL = rhomolarL*(R0_over_Rr + derL[1]); // p/(R*T)
         auto dpRTLdrhoL = R0_over_Rr + 2*derL[1] + derL[2];
         auto hatmurL = derL[1] + derL[0] + R0_over_Rr*log(rhomolarL);
         auto dhatmurLdrho = (2*derL[1] + derL[2])/rhomolarL + R0_over_Rr/rhomolarL;
 
-        auto derV = tdx::template get_Ar0n<2>(m_model, T, rhomolarV, molefracs);
+        auto derV = tdx::template get_Ar0n<2, backend>(m_model, T, rhomolarV, molefracs);
         auto pRTV = rhomolarV*(R0_over_Rr + derV[1]); // p/(R*T)
         auto dpRTVdrhoV = R0_over_Rr + 2*derV[1] + derV[2];
         auto hatmurV = derV[1] + derV[0] + R0_over_Rr *log(rhomolarV);
@@ -97,8 +98,9 @@ public:
 };
 
 template<typename Residual, typename Scalar>
-Eigen::ArrayXd do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
-    auto rhovec = (Eigen::ArrayXd(2) << rhoL, rhoV).finished();
+auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
+    using EArray = Eigen::Array<Scalar, 2, 1>;
+    auto rhovec = (EArray() << rhoL, rhoV).finished();
     auto r0 = resid.call(rhovec);
     auto J = resid.Jacobian(rhovec);
     for (int iter = 0; iter < maxiter; ++iter){
@@ -108,21 +110,28 @@ Eigen::ArrayXd do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxi
         }
         auto v = J.matrix().colPivHouseholderQr().solve(-r0.matrix()).array().eval();
         auto rhovecnew = (rhovec + v).eval();
+        double r00 = static_cast<double>(r0[0]);
+        double r01 = static_cast<double>(r0[1]);
         
         // If the solution has stopped improving, stop. The change in rhovec is equal to v in infinite precision, but 
         // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
         // the values are done changing
-        if (((rhovecnew - rhovec).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
+        auto minval = std::numeric_limits<Scalar>::epsilon();
+        double minvaldbl = static_cast<double>(minval);
+        if (((rhovecnew - rhovec).cwiseAbs() < minval).all()) {
+            break;
+        }
+        if ((r0.cwiseAbs() < minval).all()) {
             break;
         }
         rhovec = rhovecnew;
     }
-    return (Eigen::ArrayXd(2) << rhovec[0], rhovec[1]).finished();
+    return rhovec;
 }
 
-template<typename Model, typename Scalar>
-Eigen::ArrayXd pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
-    auto res = IsothermPureVLEResiduals(model, T);
+template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
+auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
+    auto res = IsothermPureVLEResiduals<Model, Scalar, backend>(model, T);
     return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
 }
 

@@ -141,7 +141,7 @@ public:
             throw std::invalid_argument("Sizes do not match");
         }
         auto b = get_b(T, molefrac);
-        auto Psiminus = -log(1.0 - b * rho);
+        auto Psiminus = -1.0*log(1.0 - b * rho);
         auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
         auto val = Psiminus - get_a(T, molefrac) / (Ru * T) * Psiplus;
         return forceeval(val);
@@ -178,8 +178,8 @@ auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen:
 
 template <typename TCType, typename PCType, typename AcentricType>
 auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen::ArrayXXd& kmat = {}) {
-    double Delta1 = 1+sqrt(2);
-    double Delta2 = 1-sqrt(2);
+    double Delta1 = 1+sqrt(2.0);
+    double Delta2 = 1-sqrt(2.0);
     AcentricType m = acentric*0.0;
     std::vector<AlphaFunctionOptions> alphas; 
     for (auto i = 0; i < Tc_K.size(); ++i) {
