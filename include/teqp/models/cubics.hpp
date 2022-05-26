@@ -141,7 +141,7 @@ public:
             throw std::invalid_argument("Sizes do not match");
         }
         auto b = get_b(T, molefrac);
-        auto Psiminus = -1.0*log(1.0 - b * rho);
+        auto Psiminus = -log(1.0 - b * rho);
         auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
         auto val = Psiminus - get_a(T, molefrac) / (Ru * T) * Psiplus;
         return forceeval(val);
