@@ -296,9 +296,9 @@ auto solve_pure_critical(const Model& model, const Scalar T0, const Scalar rho0,
 }
 
 template<typename Model, typename Scalar>
-Eigen::ArrayXd extrapolate_from_critical(const Model& model, const Scalar Tc, const Scalar rhoc, const Scalar T) {
+Eigen::ArrayXd extrapolate_from_critical(const Model& model, const Scalar& Tc, const Scalar& rhoc, const Scalar& T) {
     
-    using tdx = TDXDerivatives<Model>;
+    using tdx = TDXDerivatives<Model, Scalar>;
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     auto R = model.R(z);
     auto ders = tdx::template get_Ar0n<4>(model, Tc, rhoc, z);

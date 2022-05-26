@@ -66,7 +66,7 @@ auto get_a(TYPE mbar) {
     static Eigen::ArrayXd a_0 = (Eigen::ArrayXd(7) << 0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084).finished();
     static Eigen::ArrayXd a_1 = (Eigen::ArrayXd(7) << -0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930).finished();
     static Eigen::ArrayXd a_2 = (Eigen::ArrayXd(7) << -0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368).finished();
-    return forceeval(a_0 + ((mbar - 1.0) / mbar) * a_1 + ((mbar - 1.0) / mbar * (mbar - 2.0) / mbar) * a_2).eval();
+    return forceeval(a_0.cast<TYPE>() + ((mbar - 1.0) / mbar) * a_1.cast<TYPE>() + ((mbar - 1.0) / mbar * (mbar - 2.0) / mbar) * a_2.cast<TYPE>()).eval();
 }
 /// Eqn. A.19
 template<typename TYPE>
@@ -75,7 +75,7 @@ auto get_b(TYPE mbar) {
     static Eigen::ArrayXd b_0 = (Eigen::ArrayXd(7) << 0.724094694, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612).finished();
     static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(7) << -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346).finished();
     static Eigen::ArrayXd b_2 = (Eigen::ArrayXd(7) << 0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585).finished();
-    return forceeval(b_0 + (mbar - 1.0) / mbar * b_1 + (mbar - 1.0) / mbar * (mbar - 2.0) / mbar * b_2).eval();
+    return forceeval(b_0.cast<TYPE>() + (mbar - 1.0) / mbar * b_1.cast<TYPE>() + (mbar - 1.0) / mbar * (mbar - 2.0) / mbar * b_2.cast<TYPE>()).eval();
 }
 /// Residual contribution to alphar from hard-sphere (Eqn. A.6)
 template<typename VecType>
@@ -180,7 +180,7 @@ private:
     std::vector<std::string> names;
     Eigen::ArrayXXd kmat; ///< binary interaction parameter matrix
 
-    void check_kmat(int N) {
+    void check_kmat(std::size_t N) {
         if (kmat.cols() != kmat.rows()) {
             throw teqp::InvalidArgument("kmat rows and columns are not identical");
         }
@@ -263,12 +263,15 @@ public:
             throw std::invalid_argument("Length of mole_fractions (" + std::to_string(mole_fractions.size()) + ") is not the length of components (" + std::to_string(N) + ")");
         }
 
-        using TRHOType = std::common_type_t<decltype(T), decltype(mole_fractions[0]), decltype(m[0])>;
+        using TRHOType = decltype(forceeval(T*rhomolar*mole_fractions[0]*m[0]));
 
         SAFTCalc<TTYPE, TRHOType> c;
-        c.m2_epsilon_sigma3_bar = 0;
-        c.m2_epsilon2_sigma3_bar = 0;
-        c.d = sigma_Angstrom*(1.0 - 0.12*exp(-3.0*epsilon_over_k/T)); // [A]
+        c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
+        c.m2_epsilon2_sigma3_bar = static_cast<TRHOType>(0.0);
+        c.d.resize(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            c.d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
+        }
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
                 // Eq. A.5
@@ -278,7 +281,7 @@ public:
                 c.m2_epsilon2_sigma3_bar = c.m2_epsilon2_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * pow(eij_over_k / T, 2) * pow(sigma_ij, 3);
             }
         }
-        auto mbar = (mole_fractions*m).sum();
+        auto mbar = (mole_fractions.cast<TRHOType>()*m.cast<TRHOType>()).sum();
 
         /// Convert from molar density to number density in molecules/Angstrom^3
         RhoType rho_A3 = rhomolar * N_A * 1e-30; //[molecules (not moles)/A^3]
@@ -292,7 +295,7 @@ public:
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
             auto dn = c.d.pow(n).eval();
-            TRHOType xmdn = forceeval((mole_fractions*m*dn).sum());
+            TRHOType xmdn = forceeval((mole_fractions.cast<TRHOType>()*m.cast<TRHOType>()*dn.cast<TRHOType>()).sum());
             zeta[n] = forceeval(pi6*rho_A3*xmdn);
         }
 
@@ -304,7 +307,7 @@ public:
 
         using tt = std::common_type_t<decltype(zeta[0]), decltype(c.d[0])>;
         Eigen::ArrayX<tt> lngii_hs(mole_fractions.size());
-        for (std::size_t i = 0; i < lngii_hs.size(); ++i) {
+        for (auto i = 0; i < lngii_hs.size(); ++i) {
             lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
         }
         auto alphar_hc = mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
