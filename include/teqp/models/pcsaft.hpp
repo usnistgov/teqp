@@ -263,7 +263,7 @@ public:
             throw std::invalid_argument("Length of mole_fractions (" + std::to_string(mole_fractions.size()) + ") is not the length of components (" + std::to_string(N) + ")");
         }
 
-        using TRHOType = decltype(forceeval(T*rhomolar*mole_fractions[0]*m[0]));
+        using TRHOType = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0]), decltype(m[0])>;
 
         SAFTCalc<TTYPE, TRHOType> c;
         c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
