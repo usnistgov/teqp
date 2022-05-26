@@ -268,7 +268,10 @@ public:
         SAFTCalc<TTYPE, TRHOType> c;
         c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
         c.m2_epsilon2_sigma3_bar = static_cast<TRHOType>(0.0);
-        c.d = sigma_Angstrom.template cast<TRHOType>()*(1.0 - 0.12 * exp(-3.0*epsilon_over_k.template cast<TRHOType>()/T)); // [A]
+        c.d.resize(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            c.d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
+        }
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
                 // Eq. A.5
