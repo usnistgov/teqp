@@ -268,10 +268,7 @@ public:
         SAFTCalc<TTYPE, TRHOType> c;
         c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
         c.m2_epsilon2_sigma3_bar = static_cast<TRHOType>(0.0);
-        c.d.resize(N);
-        for (std::size_t i = 0; i < N; ++i) {
-            c.d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
-        }
+        c.d = sigma_Angstrom.template cast<TRHOType>()*(1.0 - 0.12 * exp(-3.0*epsilon_over_k.template cast<TRHOType>()/T)); // [A]
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
                 // Eq. A.5
@@ -281,7 +278,7 @@ public:
                 c.m2_epsilon2_sigma3_bar = c.m2_epsilon2_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * pow(eij_over_k / T, 2) * pow(sigma_ij, 3);
             }
         }
-        auto mbar = (mole_fractions.cast<TRHOType>()*m.cast<TRHOType>()).sum();
+        auto mbar = (mole_fractions.template cast<TRHOType>()*m.template cast<TRHOType>()).sum();
 
         /// Convert from molar density to number density in molecules/Angstrom^3
         RhoType rho_A3 = rhomolar * N_A * 1e-30; //[molecules (not moles)/A^3]
@@ -295,7 +292,7 @@ public:
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
             auto dn = c.d.pow(n).eval();
-            TRHOType xmdn = forceeval((mole_fractions.cast<TRHOType>()*m.cast<TRHOType>()*dn.cast<TRHOType>()).sum());
+            TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>()*m.template cast<TRHOType>()*dn.template cast<TRHOType>()).sum());
             zeta[n] = forceeval(pi6*rho_A3*xmdn);
         }
 
