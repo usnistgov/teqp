@@ -207,9 +207,10 @@ struct TDXDerivatives {
     static auto get_Ar0n(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         std::valarray<Scalar> o(Nderiv+1);
         if constexpr (be == ADBackends::autodiff) {
-            autodiff::HigherOrderDual<Nderiv, double> rhodual = rho;
-            auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
-            auto ders = derivatives(f, wrt(rhodual), at(rhodual));
+            // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
+            autodiff::Real<Nderiv, Scalar> rho_ = rho;
+            auto f = [&model, &T, &molefrac](const auto& rho__) { return model.alphar(T, rho__, molefrac); };
+            auto ders = derivatives(f, along(1), at(rho_));
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = forceeval(powi(rho, n) * ders[n]);
             }
