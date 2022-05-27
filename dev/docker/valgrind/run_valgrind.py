@@ -16,7 +16,7 @@ EXE = '/teqp/build/catch_tests'
 
 # Collect the list of tags to be run
 all_tags = []
-output = subprocess.run(f'{EXE} -t', shell = True, stdout = subprocess.PIPE).stdout.decode('utf-8')
+output = subprocess.run(f'{EXE} --list-tags', shell = True, stdout = subprocess.PIPE).stdout.decode('utf-8')
 for il, line in enumerate(output.split('\n')[1::]):
     if not line or '[' not in line: continue
     tag = '[' + line.split('[')[1]
