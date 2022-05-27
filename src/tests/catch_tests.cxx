@@ -218,6 +218,30 @@ TEST_CASE("Check 0n derivatives", "[PCSAFT]")
     CHECK(std::abs(Ar01 - Ar01mp) < 1e-13);
     CHECK(std::abs(Ar01 - Ar01mcx) < 1e-13);
     CHECK(std::abs(Ar01 - Ar01csd) < 1e-13);
+
+    auto Ar03 = tdx::get_Arxy<0,3>(model, T, rho, molefrac);
+    auto Ar03n = tdx::get_Ar0n<3>(model, T, rho, molefrac)[3];
+    auto Ar03mp = static_cast<double>((D*D*D)*centered_diff<3, 4>(fD, D, h));
+    auto Ar03mcx = tdx::get_Ar0n<3,ADBackends::multicomplex>(model, T, rho, molefrac)[3];
+    CAPTURE(Ar03);
+    CAPTURE(Ar03n);
+    CAPTURE(Ar03mp);
+    CAPTURE(Ar03mcx);
+    CHECK(std::abs(Ar03 - Ar03n) < 1e-13);
+    CHECK(std::abs(Ar03 - Ar03mp) < 1e-13);
+    CHECK(std::abs(Ar03 - Ar03mcx) < 1e-13);
+
+    auto Ar04 = tdx::get_Arxy<0,4>(model, T, rho, molefrac);
+    auto Ar04n = tdx::get_Ar0n<4>(model, T, rho, molefrac)[4];
+    auto Ar04mp = static_cast<double>((D*D*D*D)*centered_diff<4, 4>(fD, D, h));
+    auto Ar04mcx = tdx::get_Ar0n<4,ADBackends::multicomplex>(model, T, rho, molefrac)[4];
+    CAPTURE(Ar04);
+    CAPTURE(Ar04n);
+    CAPTURE(Ar04mp);
+    CAPTURE(Ar04mcx);
+    CHECK(std::abs(Ar04 - Ar04n) < 1e-13);
+    CHECK(std::abs(Ar04 - Ar04mp) < 1e-13);
+    CHECK(std::abs(Ar04 - Ar04mcx) < 1e-13);
 }
 
 TEST_CASE("Test all vdW derivatives good to numerical precision", "[vdW]") 
