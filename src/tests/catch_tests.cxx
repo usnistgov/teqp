@@ -427,7 +427,7 @@ TEST_CASE("Test psir gradient", "") {
     CHECK(err1 < 1e-12);
 }
 
-TEST_CASE("Test extrapolate from critical point", "") {
+TEST_CASE("Test extrapolate from critical point", "[extrapolate_from_critical]") {
     std::valarray<double> Tc_K = { 150.687};
     std::valarray<double> pc_Pa = { 4863000.0};
     std::valarray<double> molefrac = { 1.0 };
@@ -450,10 +450,16 @@ TEST_CASE("Test extrapolate from critical point", "") {
         auto r0 = resid.call(rhosoln);
 
         auto errrhoL = SArhoL - rhosoln[0], errrhoV = SArhoV - rhosoln[1];
-        if (std::abs(errrhoL)/SArhoL > 1e-10) { 
-            throw std::range_error("rhoL error [" + std::to_string(errrhoL) + "] > 1e-10"); }
-        if (std::abs(errrhoV)/SArhoV > 1e-10) { 
-            throw std::range_error("rhoV error [" + std::to_string(errrhoV) + "] > 1e-10"); }
+        CAPTURE(SArhoL);
+        CAPTURE(SArhoV);
+        CAPTURE(rhovec[0]);
+        CAPTURE(rhovec[1]);
+        CAPTURE(rhosoln[0]);
+        CAPTURE(rhosoln[1]);
+        if (std::abs(errrhoL)/SArhoL > 5e-9) { 
+            throw std::range_error("rel rhoL error [" + std::to_string(std::abs(errrhoL)/SArhoL) + "] > 5e-9"); }
+        if (std::abs(errrhoV)/SArhoV > 5e-9) { 
+            throw std::range_error("rel rhoV error [" + std::to_string(std::abs(errrhoL)/SArhoL) + "] > 5e-9"); }
     };
     CHECK_NOTHROW(stepper(0.01));
     CHECK_NOTHROW(stepper(0.1));
