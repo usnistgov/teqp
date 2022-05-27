@@ -48,17 +48,17 @@ public:
 /// FORTRAN code
 template <typename Eta, typename Mbar>
 auto C1(const Eta& eta, Mbar mbar) {
-    return 1.0 / (1.0
+    return forceeval(1.0 / (1.0
         + mbar * (8.0 * eta - 2.0 * eta * eta) / pow(1.0 - eta, 4)
-        + (1.0 - mbar) * (20.0 * eta - 27.0 * eta * eta + 12.0 * pow(eta, 3) - 2.0 * pow(eta, 4)) / pow((1.0 - eta) * (2.0 - eta), 2));
+        + (1.0 - mbar) * (20.0 * eta - 27.0 * eta * eta + 12.0 * pow(eta, 3) - 2.0 * pow(eta, 4)) / pow((1.0 - eta) * (2.0 - eta), 2)));
 }
 /// Eqn. A.31
 template <typename Eta, typename Mbar>
 auto C2(const Eta& eta, Mbar mbar) {
-    return -pow(C1(eta, mbar), 2) * (
+    return forceeval(-pow(C1(eta, mbar), 2) * (
         mbar * (-4.0 * eta * eta + 20.0 * eta + 8.0) / pow(1.0 - eta, 5)
         + (1.0 - mbar) * (2.0 * eta * eta * eta + 12.0 * eta * eta - 48.0 * eta + 40.0) / pow((1.0 - eta) * (2.0 - eta), 3)
-        );
+        ));
 }
 /// Eqn. A.18
 template<typename TYPE>
@@ -268,11 +268,9 @@ public:
         SAFTCalc<TTYPE, TRHOType> c;
         c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
         c.m2_epsilon2_sigma3_bar = static_cast<TRHOType>(0.0);
-        c.d.resize(N);
+        c.d.resize(N); 
         for (std::size_t i = 0; i < N; ++i) {
             c.d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
-        }
-        for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
                 // Eq. A.5
                 auto sigma_ij = 0.5 * sigma_Angstrom[i] + 0.5 * sigma_Angstrom[j];
