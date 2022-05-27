@@ -9,9 +9,9 @@ namespace PCSAFT {
 /// Coefficients for one fluid
 struct SAFTCoeffs {
     std::string name; ///< Name of fluid
-    double m, ///< number of segments
-        sigma_Angstrom, ///< [A] segment diameter
-        epsilon_over_k; ///< [K] depth of pair potential divided by Boltzman constant
+    double m = -1, ///< number of segments
+        sigma_Angstrom = -1, ///< [A] segment diameter
+        epsilon_over_k = -1; ///< [K] depth of pair potential divided by Boltzman constant
     std::string BibTeXKey; ///< The BibTeXKey for the reference for these coefficients
 };
 
