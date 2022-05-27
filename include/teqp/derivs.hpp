@@ -211,7 +211,7 @@ struct TDXDerivatives {
             auto f = [&model, &T, &molefrac](const auto& rho_) { return eval(model.alphar(T, rho_, molefrac)); };
             auto ders = derivatives(f, wrt(rhodual), at(rhodual));
             for (auto n = 0; n <= Nderiv; ++n) {
-                o[n] = powi(rho, n) * ders[n];
+                o[n] = forceeval(powi(rho, n) * ders[n]);
             }
             return o;
         }
