@@ -451,9 +451,9 @@ TEST_CASE("Test extrapolate from critical point", "") {
 
         auto errrhoL = SArhoL - rhosoln[0], errrhoV = SArhoV - rhosoln[1];
         if (std::abs(errrhoL)/SArhoL > 1e-10) { 
-            throw std::range_error("rhoL error > 1e-10"); }
+            throw std::range_error("rhoL error [" + std::to_string(errrhoL) + "] > 1e-10"); }
         if (std::abs(errrhoV)/SArhoV > 1e-10) { 
-            throw std::range_error("rhoV error > 1e-10"); }
+            throw std::range_error("rhoV error [" + std::to_string(errrhoV) + "] > 1e-10"); }
     };
     CHECK_NOTHROW(stepper(0.01));
     CHECK_NOTHROW(stepper(0.1));
