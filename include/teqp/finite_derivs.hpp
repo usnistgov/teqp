@@ -32,7 +32,7 @@ auto centered_diff(const Function &f, const Scalar x, const Scalar h) {
 	using r = Scalar;
 	static std::map<std::tuple<int, int>, DiffCoeffs> CentralDiffCoeffs = {
 		{{1, 2}, {{-1,1},      {-r(1)/r(2), r(1)/r(2)}} },
-		{{1, 4}, {{-2,-1,1,2}, {r(1)/ r(1), -r(2)/r(3), r(2)/r(3), -r(1)/r(12)}} },
+		{{1, 4}, {{-2,-1,1,2}, {r(1)/ r(12), -r(2)/r(3), r(2)/r(3), -r(1)/r(12)}} },
 		{{1, 6}, {{-3,-2,-1,1,2,3}, {-r(1)/r(60), r(3)/r(20), -r(3)/r(4), r(3)/r(4), -r(3)/r(20), r(1)/r(60)}} },
 
 		{{2, 2}, {{-1,0,1}, {1, -2, 1} }},
