@@ -2,6 +2,7 @@
 
 #include "nlohmann/json.hpp"
 #include "teqp/exceptions.hpp"
+#include "teqp/constants.hpp"
 
 namespace teqp {
 namespace PCSAFT {
