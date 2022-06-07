@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nlohmann/json.hpp"
+#include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
 #include "teqp/constants.hpp"
 
