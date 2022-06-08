@@ -8,3 +8,5 @@
 /teqp
 /dev/docker/valgrind/output
 /dev/docker/gcov/output
+/**/.ipynb_checkpoints
+/doc/build
