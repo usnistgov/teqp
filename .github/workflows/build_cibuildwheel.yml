@@ -28,8 +28,13 @@ jobs:
           CIBW_ARCHS: auto64
           CIBW_ARCHS_MACOS: universal2
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
+          # max number of jobs, default eqs # logical processors
+          CIBW_ENVIRONMENT_WINDOWS: EnforceProcessCountAcrossBuilds=true MultiProcMaxCount=1 
           CIBW_SKIP: "*pypy*linux* *cp36*"
 
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
+
+
+set 
