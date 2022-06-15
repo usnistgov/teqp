@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "teqp/exceptions.hpp"
+#include "teqp/models/multifluid_ancillaries.hpp"
 
 template<typename Model, typename Wrapper>
 void add_multifluid_methods(Wrapper &wMF){
