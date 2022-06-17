@@ -1,3 +1,4 @@
+set(CMAKE_OSX_ARCHITECTURES arm64 x86_64)
 cmake_minimum_required(VERSION 3.16)
 project(teqp)
 enable_testing()
@@ -110,7 +111,7 @@ if (NOT TEQP_NO_PYTHON)
     target_include_directories(teqp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11_json/include")
     target_link_libraries(teqp PRIVATE autodiff PRIVATE teqpinterface)
     if (MSVC)
-      target_compile_options(teqp PRIVATE "/Zm10")
+      target_compile_options(teqp PRIVATE "/Zm1000")
     endif()
 endif()
 
