@@ -174,7 +174,7 @@ namespace teqp {
                 y.push_back(p);
             }
             auto intersections = get_self_intersections(x, y);
-            auto& trace = traces[0];
+            //auto& trace = traces[0];
 
             auto process_intersection = [&](auto& trace, auto& i) {
                 auto rhoL1_j = traces[0][i.j].at("rhoL / mol/m^3").template get<std::valarray<double>>();

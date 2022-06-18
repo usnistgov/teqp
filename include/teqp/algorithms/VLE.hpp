@@ -679,7 +679,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             store_point();
         }
 
-        double dtold = dt;
+        //double dtold = dt;
         auto x0_previous = x0;
 
         if (opt.integration_order == 5) {
