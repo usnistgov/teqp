@@ -74,7 +74,7 @@ auto get_a(TYPE mbar) {
 template<typename TYPE>
 auto get_b(TYPE mbar) {
     // See https://stackoverflow.com/a/35170514/1360263
-    static Eigen::ArrayXd b_0 = (Eigen::ArrayXd(7) << 0.724094694, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612).finished();
+    static Eigen::ArrayXd b_0 = (Eigen::ArrayXd(7) << 0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612).finished();
     static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(7) << -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346).finished();
     static Eigen::ArrayXd b_2 = (Eigen::ArrayXd(7) << 0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585).finished();
     return forceeval(b_0.cast<TYPE>() + (mbar - 1.0) / mbar * b_1.cast<TYPE>() + (mbar - 1.0) / mbar * (mbar - 2.0) / mbar * b_2.cast<TYPE>()).eval();
