@@ -16,16 +16,33 @@ int simple() {
     // Launch the pool with four threads.
     boost::asio::thread_pool pool(4);
 
-    std::size_t i = 0;
-    for (auto& num : numbers) {
-        auto& o = outputs[i];
-        // Submit a lambda object to the pool.
-        boost::asio::post(pool, [&num, &o]() {o = "as str: " + std::to_string(num); });
-        i++;
-    }
+    auto serial = [&numbers, &outputs]() {
+        std::size_t i = 0;
+        for (auto& num : numbers) {
+            outputs[i] = "as str: " + std::to_string(num);
+            i++;
+        }
+    };
+    
+    auto parallel = [&numbers, &outputs, &pool]() {
+        std::size_t i = 0;
+        for (auto& num : numbers) {
+            auto& o = outputs[i];
+            // Submit a lambda object to the pool.
+            boost::asio::post(pool, [&num, &o]() {o = "as str: " + std::to_string(num); });
+            i++;
+        }
+        // Wait for all tasks in the pool to complete.
+        pool.join();
+    };
 
-    // Wait for all tasks in the pool to complete.
-    pool.join();
+    auto tic = std::chrono::high_resolution_clock::now();
+    serial();
+    auto tic2 = std::chrono::high_resolution_clock::now();
+    parallel();
+    auto tic3 = std::chrono::high_resolution_clock::now();
+    std::cout << std::chrono::duration<double>(tic2 - tic).count() << std::endl;
+    std::cout << std::chrono::duration<double>(tic3 - tic2).count() << std::endl;
 
     for (auto& o : outputs) {
         std::cout << o << std::endl;
