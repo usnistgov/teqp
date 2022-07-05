@@ -18,6 +18,10 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.9.2 :
+
+  * Bugfix: ``kmat`` can be set also when specifying ``sigma`` and ``e/kB`` with PC-SAFT
+
 * 0.9.1 :
 
   * Transcription error in a coefficient of PC-SAFT
