@@ -7,3 +7,5 @@ Models
 
    cubics
    multifluid
+   CPA
+   PCSAFT

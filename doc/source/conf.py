@@ -4,6 +4,8 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import os, subprocess
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -25,6 +27,12 @@ author = 'Ian Bell'
 import teqp
 release = teqp.__version__
 
+# -- Exeucute all notebooks --------------------------------------------------
+
+for path, dirs, files in os.walk('.'):
+    for file in files:
+        if file.endswith('.ipynb'):
+            subprocess.check_output(f'jupyter nbconvert --ExecutePreprocessor.allow_errors=True --to notebook --output {file} --execute {file}', cwd=path)
 
 # -- General configuration ---------------------------------------------------
 

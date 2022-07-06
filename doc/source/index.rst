@@ -5,8 +5,9 @@ Welcome to teqp's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   derivs/index
+   getting_started/index
    models/index
+   derivs/index
    algorithms/index
 
 Indices and tables
