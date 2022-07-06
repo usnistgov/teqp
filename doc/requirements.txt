@@ -3,3 +3,4 @@ teqp
 numpy
 jupyter
 nbconvert
+nbsphinx
