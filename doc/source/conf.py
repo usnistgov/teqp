@@ -28,7 +28,7 @@ import teqp
 release = teqp.__version__
 
 # -- Exeucute all notebooks --------------------------------------------------
-subprocess.check_output(f'jupyter nbconvert --version', shell=True, cwd=path)
+subprocess.check_output(f'jupyter nbconvert --version', shell=True)
 for path, dirs, files in os.walk('.'):
     for file in files:
         if file.endswith('.ipynb'):
@@ -56,7 +56,11 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'insipid'
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if on_rtd:
+    html_theme = 'default'
+else:
+    html_theme = 'insipid'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
