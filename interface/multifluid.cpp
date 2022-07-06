@@ -1,12 +1,31 @@
 #include "pybind11_wrapper.hpp"
 
 #include "teqp/models/multifluid.hpp"
+#include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/models/mie/lennardjones.hpp"
 
 #include "multifluid_shared.hpp"
 
 void add_multifluid(py::module& m) {
+
+    // A single ancillary curve
+    py::class_<VLEAncillary>(m, "VLEAncillary")
+        .def(py::init<const nlohmann::json&>())
+        .def("__call__", &VLEAncillary::operator())
+        .def_readonly("T_r", &VLEAncillary::T_r)
+        .def_readonly("Tmax", &VLEAncillary::Tmax)
+        .def_readonly("Tmin", &VLEAncillary::Tmin)
+        ;
+
+    // The collection of VLE ancillary curves
+    py::class_<MultiFluidVLEAncillaries>(m, "MultiFluidVLEAncillaries")
+        .def(py::init<const nlohmann::json&>())
+        .def_readonly("rhoL", &MultiFluidVLEAncillaries::rhoL)
+        .def_readonly("rhoV", &MultiFluidVLEAncillaries::rhoV)
+        .def_readonly("pL", &MultiFluidVLEAncillaries::pL)
+        .def_readonly("pV", &MultiFluidVLEAncillaries::pV)
+        ;
 
     // Multifluid model
     m.def("build_multifluid_model", &build_multifluid_model, py::arg("components"), py::arg("coolprop_root"), py::arg("BIPcollectionpath") = "", py::arg("flags") = nlohmann::json{}, py::arg("departurepath") = "");

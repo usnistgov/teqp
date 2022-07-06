@@ -4,6 +4,7 @@
 using Catch::Approx;
 
 #include "teqp/models/multifluid.hpp"
+#include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/VLE.hpp"
 #include "teqp/filesystem.hpp"
@@ -137,6 +138,26 @@ TEST_CASE("Check that all pure fluid models can be instantiated", "[multifluid],
             model.alphar(300, 1.0, z);
         }
     }    
+}
+
+TEST_CASE("Check that all ancillaries can be instantiated and work properly", "[multifluid],[all]") {
+    std::string root = "../mycp";
+    SECTION("With absolute paths to json file") {
+        int counter = 0;
+        for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
+            if (path.filename().stem() == "Methanol") { continue; }
+            CAPTURE(path.string());
+            auto abspath = std::filesystem::absolute(path).string();
+            auto model = build_multifluid_model({ abspath }, root, root + "/dev/mixtures/mixture_binary_pairs.json");
+            auto jancillaries = nlohmann::json::parse(model.get_meta()).at("pures")[0].at("ANCILLARIES");
+            auto anc = teqp::MultiFluidVLEAncillaries(jancillaries);
+            double T = 0.9*anc.rhoL.T_r;
+            auto rhoV = anc.rhoV(T), rhoL = anc.rhoL(T);
+            auto rhovec = teqp::pure_VLE_T(model, T, rhoL, rhoV, 10);
+            counter += 1;
+        }
+        CHECK(counter > 100);
+    }
 }
 
 TEST_CASE("Check that mixtures can also do absolute paths", "[multifluid],[abspath]") {

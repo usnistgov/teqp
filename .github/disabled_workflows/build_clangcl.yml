@@ -1,0 +1,27 @@
+name: build and run with clang-cl
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+jobs:
+  Matrix-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: checkout submodules
+        run: git submodule update --init --recursive
+      - name: mkdir
+        run: mkdir build && cd build
+      - name: cmake config
+        run: cd build && cmake .. -DTEQP_SNIPPETS=ON -DTEQP_TEQPC=ON -T ClangCL
+      - name: build all Catch tests
+        run: cmake --build build --target catch_tests --config Release
+      - name: build teqpc shared library
+        run: cmake --build build --target teqpc --config Release
+      - name: run all the compiled Catch tests
+        run: cd build && ctest --verbose

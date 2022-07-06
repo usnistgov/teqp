@@ -57,7 +57,7 @@ public:
         using tdx = TDXDerivatives<Model,TYPE,EigenArray1>;
 
         const TYPE &T = m_T;
-        const TYPE R = m_model.R(molefracs);
+        //const TYPE R = m_model.R(molefracs);
         double R0_over_Rr = R0 / Rr;
         
         auto derL = tdx::template get_Ar0n<2, backend>(m_model, T, rhomolarL, molefracs);
@@ -110,14 +110,14 @@ auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
         }
         auto v = J.matrix().colPivHouseholderQr().solve(-r0.matrix()).array().eval();
         auto rhovecnew = (rhovec + v).eval();
-        double r00 = static_cast<double>(r0[0]);
-        double r01 = static_cast<double>(r0[1]);
+        //double r00 = static_cast<double>(r0[0]);
+        //double r01 = static_cast<double>(r0[1]);
         
         // If the solution has stopped improving, stop. The change in rhovec is equal to v in infinite precision, but 
         // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
         // the values are done changing
         auto minval = std::numeric_limits<Scalar>::epsilon();
-        double minvaldbl = static_cast<double>(minval);
+        //double minvaldbl = static_cast<double>(minval);
         if (((rhovecnew - rhovec).cwiseAbs() < minval).all()) {
             break;
         }
@@ -302,8 +302,8 @@ Eigen::ArrayXd extrapolate_from_critical(const Model& model, const Scalar& Tc, c
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     auto R = model.R(z);
     auto ders = tdx::template get_Ar0n<4>(model, Tc, rhoc, z);
-    auto dpdrho = R*Tc*(1 + 2 * ders[1] + ders[2]); // Should be zero
-    auto d2pdrho2 = R*Tc/rhoc*(2 * ders[1] + 4 * ders[2] + ders[3]); // Should be zero
+    //auto dpdrho = R*Tc*(1 + 2 * ders[1] + ders[2]); // Should be zero
+    //auto d2pdrho2 = R*Tc/rhoc*(2 * ders[1] + 4 * ders[2] + ders[3]); // Should be zero
     auto d3pdrho3 = R*Tc/(rhoc*rhoc)*(6 * ders[2] + 6 * ders[3] + ders[4]);
     auto Ar11 = tdx::template get_Ar11(model, Tc, rhoc, z);
     auto Ar12 = tdx::template get_Ar12(model, Tc, rhoc, z);
@@ -679,7 +679,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             store_point();
         }
 
-        double dtold = dt;
+        //double dtold = dt;
         auto x0_previous = x0;
 
         if (opt.integration_order == 5) {

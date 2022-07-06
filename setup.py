@@ -55,6 +55,7 @@ class CMakeBuild(build_ext):
 
         if platform.system() == "Windows":
             cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir)]
+            cmake_args += ['-T ClangCL']
             if sys.maxsize > 2**32:
                 cmake_args += ['-A', 'x64']
             build_args += ['--', '/m']
@@ -67,8 +68,17 @@ class CMakeBuild(build_ext):
                                                               self.distribution.get_version())
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
-        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.', '--target', 'teqp'] + build_args, cwd=self.build_temp)
+        
+        # Config
+        cmake_elements = ['cmake', ext.sourcedir] + cmake_args
+        print('cmake config command:', ' '.join(cmake_elements))
+        print('running from:', self.build_temp)
+        subprocess.check_call(cmake_elements, cwd=self.build_temp, env=env)
+
+        # Build
+        build_elements = ['cmake', '--build', '.', '--target', 'teqp'] + build_args
+        print('cmake build command:', ' '.join(build_elements))
+        subprocess.check_call(build_elements, cwd=self.build_temp)
 
 init_template  = r'''import os
 
