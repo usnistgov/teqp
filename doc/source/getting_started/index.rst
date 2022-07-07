@@ -4,7 +4,7 @@ Getting Started
 Introduction
 ------------
 
-teqp is a C++-based library with wrappers. It was written because implementing EOS (particularly working out the derivatives) is a painful, error-prone, and slow process.  The advent of open-source automatic differentiation libraries makes the implementation of EOS as fast as hand-written derivatives, and much easier to implement without errors.
+teqp (phonetically: tɛk pi) is a C++-based library with wrappers. It was written because implementing EOS (particularly working out the derivatives) is a painful, error-prone, and slow process.  The advent of open-source automatic differentiation libraries makes the implementation of EOS as fast as hand-written derivatives, and much easier to implement without errors.
 
 There is a paper about teqp: https://doi.org/10.1021/acs.iecr.2c00237
 
