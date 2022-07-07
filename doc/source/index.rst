@@ -9,7 +9,7 @@ Welcome to teqp's documentation!
    models/index
    derivs/index
    algorithms/index
-   api
+   api/modules
 
 Indices and tables
 ==================

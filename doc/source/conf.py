@@ -37,7 +37,7 @@ for path, dirs, files in os.walk('.'):
 
 ### -- Auto-generate API documentation -----------------------------------------
 here = os.path.dirname(__file__)
-subprocess.check_output(f'sphinx-apidoc -e -f -o api {os.path.dirname(teqp.__file__)}', shell=True, cwd=here)
+subprocess.check_output(f'sphinx-apidoc -f -o api {os.path.dirname(teqp.__file__)}', shell=True, cwd=here)
 
 # -- General configuration ---------------------------------------------------
 
