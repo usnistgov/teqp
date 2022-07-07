@@ -6,6 +6,6 @@ Models
    :caption: Contents:
 
    cubics
-   multifluid
    CPA
    PCSAFT
+   multifluid
