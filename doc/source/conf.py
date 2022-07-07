@@ -5,6 +5,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os, subprocess
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 # -- Path setup --------------------------------------------------------------
 
@@ -27,13 +28,14 @@ author = 'Ian Bell'
 import teqp
 release = teqp.__version__
 
-# -- Exeucute all notebooks --------------------------------------------------
-# subprocess.check_output(f'jupyter nbconvert --version', shell=True)
-for path, dirs, files in os.walk('.'):
-    for file in files:
-        if file.endswith('.ipynb') and '.ipynb_checkpoints' not in path:
-            subprocess.check_output(f'jupyter nbconvert  --to notebook --output {file} --execute {file}', shell=True, cwd=path)
-            # --ExecutePreprocessor.allow_errors=True      (this allows you to allow errors globally, but a raises-exception cell tag is better)
+# -- Execute all notebooks --------------------------------------------------
+if on_rtd:
+    # subprocess.check_output(f'jupyter nbconvert --version', shell=True)
+    for path, dirs, files in os.walk('.'):
+        for file in files:
+            if file.endswith('.ipynb') and '.ipynb_checkpoints' not in path:
+                subprocess.check_output(f'jupyter nbconvert  --to notebook --output {file} --execute {file}', shell=True, cwd=path)
+                # --ExecutePreprocessor.allow_errors=True      (this allows you to allow errors globally, but a raises-exception cell tag is better)
 
 ### -- Auto-generate API documentation -----------------------------------------
 here = os.path.dirname(__file__)
@@ -62,7 +64,6 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
     html_theme = 'default'
 else:
