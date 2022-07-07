@@ -28,12 +28,16 @@ import teqp
 release = teqp.__version__
 
 # -- Exeucute all notebooks --------------------------------------------------
-subprocess.check_output(f'jupyter nbconvert --version', shell=True)
+# subprocess.check_output(f'jupyter nbconvert --version', shell=True)
 for path, dirs, files in os.walk('.'):
     for file in files:
         if file.endswith('.ipynb') and '.ipynb_checkpoints' not in path:
             subprocess.check_output(f'jupyter nbconvert  --to notebook --output {file} --execute {file}', shell=True, cwd=path)
             # --ExecutePreprocessor.allow_errors=True      (this allows you to allow errors globally, but a raises-exception cell tag is better)
+
+### -- Auto-generate API documentation -----------------------------------------
+here = os.path.dirname(__file__)
+subprocess.check_output(f'sphinx-apidoc -e -f -o source/api {os.path.dirname(teqp.__file__)}', shell=True, cwd=here)
 
 # -- General configuration ---------------------------------------------------
 
@@ -41,7 +45,8 @@ for path, dirs, files in os.walk('.'):
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-'nbsphinx'
+'nbsphinx',
+'sphinx.ext.autodoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
