@@ -4,7 +4,7 @@ Getting Started
 Introduction
 ------------
 
-teqp is a C++-based library with wrappers. It was written because implementing EOS (particularly working out the derivatives) is a painful , error-prone, and slow process.  The advent of automatic differentiation makes the implementation of EOS as fast as hand-written derivatives, and much easier to implement without errors.
+teqp is a C++-based library with wrappers. It was written because implementing EOS (particularly working out the derivatives) is a painful, error-prone, and slow process.  The advent of open-source automatic differentiation libraries makes the implementation of EOS as fast as hand-written derivatives, and much easier to implement without errors.
 
 There is a paper about teqp: https://doi.org/10.1021/acs.iecr.2c00237
 
@@ -22,9 +22,9 @@ The library can be installed with:
 
    pip install teqp
 
-as the binary wheels for all major platforms are provided on pypi.
+because the binary wheels for all major platforms are provided on pypi.
 
-If you desire to build teqp yourself, it is recommended to pull from github and build a binary wheel:
+If you desire to build teqp yourself, it is recommended to pull from github and build a binary wheel, and then subsequently install that wheel:
 
 .. code::
 
