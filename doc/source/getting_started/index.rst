@@ -6,7 +6,9 @@ Introduction
 
 teqp is a C++-based library with wrappers. It was written because implementing EOS (particularly working out the derivatives) is a painful , error-prone, and slow process.  The advent of automatic differentiation makes the implementation of EOS as fast as hand-written derivatives, and much easier to implement without errors.
 
-The documentation is based on the Python wrapper because it can be readily integrated with the documentation tools and can be auto-generated at documentation build time.
+There is a paper about teqp: https://doi.org/10.1021/acs.iecr.2c00237
+
+The documentation is based on the Python wrapper because it can be readily integrated with the documentation tools (sphinx in this case) and can be auto-generated at documentation build time.
 
 Installation
 ------------
