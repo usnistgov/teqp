@@ -76,7 +76,18 @@ namespace teqp {
             return expr.real();
         }
         else if constexpr (is_mcx_t<T>()) {
+#if defined(TEQP_MULTIPRECISION_ENABLED)
+            // Argument is a multicomplex of a boost multiprecision
+            using contained_type = decltype(expr.real());
+            if constexpr (boost::multiprecision::is_number<contained_type>()) {
+                return static_cast<double>(expr.real());
+            }
+            else {
+                return expr.real();
+            }
+#else
             return expr.real();
+#endif
         }
 #if defined(TEQP_MULTIPRECISION_ENABLED)
         else if constexpr (boost::multiprecision::is_number<T>()) {
