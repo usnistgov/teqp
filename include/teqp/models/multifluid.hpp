@@ -254,7 +254,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
                 }
             }
         }
-        Nlnonzero = l.size() - Nlzero;
+        Nlnonzero = static_cast<int>(l.size()) - Nlzero;
 
         if ((l[0] != 0) && (l[l.size() - 1] == 0)) {
             throw std::invalid_argument("If l_i has zero and non-zero values, the zero values need to come first");
@@ -545,7 +545,7 @@ inline auto get_EOS_terms(const nlohmann::json& j)
                 }
             }
         }
-        Nlnonzero = l.size() - Nlzero;
+        Nlnonzero = static_cast<int>(l.size()) - Nlzero;
         
         eos.c = c;
         eos.l = l;

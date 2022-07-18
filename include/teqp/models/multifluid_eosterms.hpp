@@ -18,7 +18,7 @@ public:
         double base_delta = getbaseval(delta);
         if (base_delta == 0) {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau)*powi(delta, d[i]);
+                r = r + n[i] * exp(t[i] * lntau)*powi(delta, static_cast<int>(d[i]));
             }
         }
         else {
@@ -48,7 +48,7 @@ public:
         }
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau - c[i] * powi(delta, l_i[i])) * powi(delta, d[i]);
+                r = r + n[i] * exp(t[i] * lntau - c[i] * powi(delta, l_i[i])) * powi(delta, static_cast<int>(d[i]));
             }
         }
         else {
@@ -74,7 +74,7 @@ public:
         result r = 0.0, lntau = log(tau), lndelta = log(delta);
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau  - g[i] * powi(delta, l_i[i]))*powi(delta,d[i]);
+                r = r + n[i] * exp(t[i] * lntau  - g[i] * powi(delta, l_i[i]))*powi(delta,static_cast<int>(d[i]));
             }
         }
         else {
@@ -103,7 +103,7 @@ public:
         }
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * powi(delta, d[i]) * exp(t[i] * lntau - gd[i]*powi(delta, ld_i[i]) - gt[i]*pow(tau, lt[i]));
+                r = r + n[i] * powi(delta, static_cast<int>(d[i])) * exp(t[i] * lntau - gd[i]*powi(delta, ld_i[i]) - gt[i]*pow(tau, lt[i]));
             }
         }
         else {
@@ -129,7 +129,7 @@ public:
         auto square = [](auto x) { return x * x; };
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau - eta[i] * square(delta - epsilon[i]) - beta[i] * square(tau - gamma[i]))*powi(delta, d[i]);
+                r = r + n[i] * exp(t[i] * lntau - eta[i] * square(delta - epsilon[i]) - beta[i] * square(tau - gamma[i]))*powi(delta, static_cast<int>(d[i]));
             }
         }
         else {
@@ -155,7 +155,7 @@ public:
         auto square = [](auto x) { return x * x; };
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau - eta[i] * square(delta - epsilon[i]) - beta[i] * (delta - gamma[i]))*powi(delta, d[i]);
+                r = r + n[i] * exp(t[i] * lntau - eta[i] * square(delta - epsilon[i]) - beta[i] * (delta - gamma[i]))*powi(delta, static_cast<int>(d[i]));
             }
         }
         else {
@@ -182,12 +182,12 @@ public:
         result r = 0.0, lntau = log(tau), lndelta = log(delta);
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau - powi(delta, l[i]) - pow(tau, m[i]))*powi(delta, d[i]);
+                r = r + n[i] * exp(t[i] * lntau - powi(delta, l_i[i]) - pow(tau, m[i]))*powi(delta, static_cast<int>(d[i]));
             }
         }
         else {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - powi(delta, l[i]) - pow(tau, m[i]));
+                r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - powi(delta, l_i[i]) - pow(tau, m[i]));
             }
         }
         return forceeval(r);
@@ -209,7 +209,7 @@ public:
         auto square = [](auto x) { return x * x; };
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau - eta[i] * square(delta - epsilon[i]) + 1.0 / (beta[i] * square(tau - gamma[i]) + b[i]))*powi(delta, d[i]);
+                r = r + n[i] * exp(t[i] * lntau - eta[i] * square(delta - epsilon[i]) + 1.0 / (beta[i] * square(tau - gamma[i]) + b[i]))*powi(delta, static_cast<int>(d[i]));
             }
         }
         else {
