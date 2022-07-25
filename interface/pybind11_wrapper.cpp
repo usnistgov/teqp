@@ -33,6 +33,8 @@ void init_teqp(py::module& m) {
         .def_readwrite("init_dt", &TCABOptions::init_dt)
         .def_readwrite("init_c", &TCABOptions::init_c)
         .def_readwrite("max_dt", &TCABOptions::max_dt)
+        .def_readwrite("T_tol", &TCABOptions::T_tol)
+        .def_readwrite("small_T_count", &TCABOptions::small_T_count)
         .def_readwrite("max_step_count", &TCABOptions::max_step_count)
         .def_readwrite("skip_dircheck_count", &TCABOptions::skip_dircheck_count)
         .def_readwrite("integration_order", &TCABOptions::integration_order)

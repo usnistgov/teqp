@@ -657,6 +657,9 @@ struct CriticalTracing {
                         throw IterationFailure("Polishing was not successful");
                     }
                     else{
+                        if (options.verbosity > 10){
+                            std::cout << "Termination because polishing failed" << std::endl;
+                        }
                         break;
                     }
                 }
@@ -692,6 +695,9 @@ struct CriticalTracing {
             store_point();
 
             if (counter_T_converged > options.small_T_count) {
+                if (options.verbosity > 10){
+                    std::cout << "Termination because maximum number of small steps were taken" << std::endl;
+                }
                 break;
             }
         }
