@@ -71,6 +71,7 @@ void init_teqp(py::module& m) {
         .value("xtol_satisfied", VLE_return_code::xtol_satisfied)
         .value("functol_satisfied", VLE_return_code::functol_satisfied)
         .value("maxiter_met", VLE_return_code::maxiter_met)
+        .value("notfinite_step", VLE_return_code::notfinite_step)
         ;
 
     // Some functions for timing overhead of interface

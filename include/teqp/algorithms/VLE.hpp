@@ -135,7 +135,7 @@ auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxi
     return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
 }
 
-enum class VLE_return_code { unset, xtol_satisfied, functol_satisfied, maxiter_met };
+enum class VLE_return_code { unset, xtol_satisfied, functol_satisfied, maxiter_met, notfinite_step };
 
 /***
 * \brief Do a vapor-liquid phase equilibrium problem for a mixture (binary only for now) with mole fractions specified in the liquid phase
@@ -154,6 +154,10 @@ template<typename Model, typename Scalar, typename Vector>
 auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vector& rhovecV0, const Vector& xspec, double atol, double reltol, double axtol, double relxtol, int maxiter) {
 
     const Eigen::Index N = rhovecL0.size();
+    auto lengths = (Eigen::ArrayXi(3) << rhovecL0.size(), rhovecV0.size(), xspec.size()).finished();
+    if (lengths.minCoeff() != lengths.maxCoeff()){
+        throw InvalidArgument("lengths of rhovecs and xspec must be the same in mix_VLE_Tx");
+    }
     Eigen::MatrixXd J(2 * N, 2 * N), r(2 * N, 1), x(2 * N, 1);
     x.col(0).array().head(N) = rhovecL0;
     x.col(0).array().tail(N) = rhovecV0;
@@ -204,8 +208,13 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
         Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-r);
         x.array() += dx;
 
+        if ((!dx.isFinite()).all()){
+            return_code = VLE_return_code::notfinite_step;
+            break;
+        }
+
         auto xtol_threshold = (axtol + relxtol * x.array().cwiseAbs()).eval();
-        if ((dx.array() < xtol_threshold).all()) {
+        if ((dx.array().cwiseAbs() < xtol_threshold).all()) {
             return_code = VLE_return_code::xtol_satisfied;
             break;
         }
