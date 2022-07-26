@@ -13,6 +13,8 @@ void add_cubics(py::module& m) {
     auto wcub = py::class_<cub>(m, "GenericCubic")
         .def("get_meta", &cub::get_meta)
         .def("superanc_rhoLV", &cub::superanc_rhoLV)
+        .def("get_a", &cub::get_a<double, Eigen::ArrayXd>, py::arg("T"), py::arg("molefrac").noconvert())
+        .def("get_b", &cub::get_b<double, Eigen::ArrayXd>, py::arg("T"), py::arg("molefrac").noconvert())
         ;
     add_derivatives<cub>(m, wcub);
 }
