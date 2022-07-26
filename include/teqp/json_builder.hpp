@@ -8,7 +8,7 @@
 
 namespace teqp {
 
-    static AllowedModels build_model(const nlohmann::json& json) {
+    inline AllowedModels build_model(const nlohmann::json& json) {
 
         // Extract the name of the model and the model parameters
         std::string kind = json.at("kind");

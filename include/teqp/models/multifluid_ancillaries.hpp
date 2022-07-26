@@ -6,20 +6,21 @@
 namespace teqp{
 
 	struct VLEAncillary{
-		const double T_r, Tmax, Tmin, reducing_value;
+		const double T_r, Tmax, Tmin;
 		const std::string type, description;
 		const std::valarray<double> n, t;
+		const double reducing_value;
 		const bool using_tau_r, noexp;
 	
 		VLEAncillary(const nlohmann::json &j) :
 			T_r(j.at("T_r")),
             Tmax(j.at("Tmax")),
             Tmin(j.at("Tmin")),
+            type(j.at("type")),
             description(j.at("description")),
             n(j.at("n").get<std::valarray<double>>()),
             t(j.at("t").get<std::valarray<double>>()),
             reducing_value(j.at("reducing_value")),
-            type(j.at("type")),
             using_tau_r(j.at("using_tau_r")),
             noexp(type == "rhoLnoexp"){};
 
