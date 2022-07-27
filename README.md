@@ -18,6 +18,10 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.9.4 :
+
+  * Expose the a and b parameters of cubic EOS. See [84ebc0fb](https://github.com/usnistgov/teqp/commit/84ebc0fb258ff42af30b2521b02a2a4984b7e715)
+
 * 0.9.3 :
 
   * Bugfix: Fixed stopping condition in ``mix_VLE_Tx`` (if ``dx`` was negative, automatic stop, missing ``abs``).  See [d87e91e](https://github.com/usnistgov/teqp/commit/d87e91ea10bbbd936993edd02f85a53ccd42817d)
