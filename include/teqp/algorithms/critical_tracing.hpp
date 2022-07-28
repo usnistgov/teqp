@@ -233,8 +233,8 @@ struct CriticalTracing {
 
         // The temperature derivative of total Psi w.r.t.T from a centered finite difference in T
         auto dT = 1e-7;
-        auto plusT = get_derivs(model, T + dT, rhovec).tot;
-        auto minusT = get_derivs(model, T - dT, rhovec).tot;
+        auto plusT = get_derivs(model, T + dT, rhovec, all_derivs.ei.v0).tot;
+        auto minusT = get_derivs(model, T - dT, rhovec, all_derivs.ei.v0).tot;
         auto derivT = (plusT - minusT) / (2.0 * dT);
 
         // Solve the eigenvalue problem for the given T & rho
