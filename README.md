@@ -18,6 +18,10 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.9.5 :
+
+  * Bugfix: Fix the eigenvector orientiation as well when taking the temperature derivative. See [b70178f7](https://github.com/usnistgov/teqp/commit/b70178f79fe9f4950b3075b80fec4495313ffba5)
+
 * 0.9.4 :
 
   * Expose the a and b parameters of cubic EOS. See [84ebc0fb](https://github.com/usnistgov/teqp/commit/84ebc0fb258ff42af30b2521b02a2a4984b7e715)
