@@ -20,7 +20,7 @@ Written by Ian Bell, NIST.
 
 * 0.9.5 :
 
-  * Bugfix: Fix the eigenvector orientiation as well when taking the temperature derivative. See [b70178f7](https://github.com/usnistgov/teqp/commit/b70178f79fe9f4950b3075b80fec4495313ffba5)
+  * Bugfix: Fix the eigenvector orientiation as well when taking the temperature derivative in critical curve tracing. See [b70178f7](https://github.com/usnistgov/teqp/commit/b70178f79fe9f4950b3075b80fec4495313ffba5)
 
 * 0.9.4 :
 
