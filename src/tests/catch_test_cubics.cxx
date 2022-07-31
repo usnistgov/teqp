@@ -186,3 +186,59 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
         CHECK(std::abs(pfinal / pfinal_goal-1) < 1e-5);
     }
 }
+
+TEST_CASE("Check infinite dilution of subcritical VLE derivatives", "[cubic][isochoric][infdil]")
+{
+    // Values taken from http://dx.doi.org/10.6028/jres.121.011
+    std::valarray<double> Tc_K = { 190.564, 154.581 },
+        pc_Pa = { 4599200, 5042800 },
+        acentric = { 0.011, 0.022 };
+    auto model = canonical_PR(Tc_K, pc_Pa, acentric);
+    const auto N = Tc_K.size();
+    using state_type = std::valarray<double>;
+    REQUIRE(N == 2);
+    auto get_start = [&](double T, auto i) {
+        std::valarray<double> Tc_(Tc_K[i], 1), pc_(pc_Pa[i], 1), acentric_(acentric[i], 1);
+        auto PR = canonical_PR(Tc_, pc_, acentric_);
+        auto [rhoL, rhoV] = PR.superanc_rhoLV(T);
+        state_type o(N * 2);
+        o[i] = rhoL;
+        o[i + N] = rhoV;
+        return o;
+    };
+    int i = 1;
+    double T = 120;
+    auto rhostart_dil = get_start(T, i);
+    auto rhostart_notdil = rhostart_dil;
+    rhostart_notdil[1-i] += 1e-6;
+    rhostart_notdil[1-i+N] += 1e-6;
+
+    SECTION("Along isotherm") {
+        // Derivative function with respect to p
+        auto xprime = [&](const state_type& X) {
+            REQUIRE(X.size() % 2 == 0);
+            auto N = X.size() / 2;
+            // Memory maps into the state vector for inputs and their derivatives
+            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+            return get_drhovecdp_Tsat(model, T, rhovecL, rhovecV);
+        };
+        auto dernotdil = xprime(rhostart_notdil); 
+        auto derdil = xprime(rhostart_dil);
+        CHECK(true);
+    }
+    SECTION("Along isobar") {
+        // Derivative function with respect to T
+        auto xprime = [&](const state_type& X) {
+            REQUIRE(X.size() % 2 == 0);
+            auto N = X.size() / 2;
+            // Memory maps into the state vector for inputs and their derivatives
+            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+            return get_drhovecdT_psat(model, T, rhovecL.eval(), rhovecV.eval());
+        };
+        auto dernotdil = xprime(rhostart_notdil); 
+        auto derdil = xprime(rhostart_dil);
+        CHECK(true);
+    }
+}
