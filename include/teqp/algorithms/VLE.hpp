@@ -373,8 +373,8 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
                     auto Aij = (Hliq.row(j).array().cwiseProduct(((i == 0) ? rhovecV : rhovecL).array().transpose())).eval(); // coefficient - wise product
                     // A throwaway boolean for clarity
                     bool is_liq = (i == 1);
-                    // Apply correction to the j term (RT if liquid, RT*phi for vapor)
-                    Aij[j] = (is_liq) ? RL*T : RL*T*exp(-(murV[j] - murL[j])/(RL*T));
+                    // Apply correction to the divergent term
+                    Aij[j] = RL*T;  // Note not as given in Deiters
                     // Fill in entry
                     A(i, j) = Aij.sum();
                 }
@@ -402,17 +402,12 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
     return std::make_tuple(drhodp_liq, drhodp_vap);
 }
 
-/***
-* \brief Derivative of molar concentration vectors w.r.t. T along an isobar of the phase envelope for binary mixtures
-*
-* \f[
-* \left(\frac{d \vec\rho' }{d T}\right)_{p,\sigma}
-* \f]
-* 
-* See Eq 13 and 14 of Deiters and Bell, AICHEJ: https://doi.org/10.1002/aic.16730
+/**
+ * Derivative of molar concentration vectors w.r.t. p along an isobar of the phase envelope for binary mixtures
 */
 template<class Model, class Scalar, class VecType>
-auto get_drhovecdT_psat(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
+auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhovecL, const VecType& rhovecV) {
+    
     using id = IsochoricDerivatives<Model, Scalar, VecType>;
     if (rhovecL.size() != 2) { throw std::invalid_argument("Binary mixtures only"); }
     assert(rhovecL.size() == rhovecV.size());
@@ -422,9 +417,10 @@ auto get_drhovecdT_psat(const Model& model, const Scalar& T, const VecType& rhov
 
     auto N = rhovecL.size();
     Eigen::MatrixXd A = decltype(Hliq)::Zero(N, N);
-    Eigen::MatrixXd R = decltype(Hliq)::Ones(N, 1);
-    Eigen::MatrixXd drhodT_liq, drhodT_vap;
-    
+    Eigen::MatrixXd b = decltype(Hliq)::Ones(N, 1);
+    decltype(Hliq) drhovecdT_liq, drhovecdT_vap;
+    assert(rhovecL.size() == rhovecV.size());
+
     if ((rhovecL != 0).all() && (rhovecV != 0).all()) {
         // Normal treatment for all concentrations not equal to zero
         A(0, 0) = Hliq.row(0).dot(rhovecV.matrix());
@@ -432,18 +428,81 @@ auto get_drhovecdT_psat(const Model& model, const Scalar& T, const VecType& rhov
         A(1, 0) = Hliq.row(0).dot(rhovecL.matrix());
         A(1, 1) = Hliq.row(1).dot(rhovecL.matrix());
 
-        VecType deltas = (id::get_dchempotdT_autodiff(model, T, rhovecV) - id::get_dchempotdT_autodiff(model, T, rhovecL)).eval();
+        auto DELTAdmu_dT = (id::get_dchempotdT_autodiff(model, T, rhovecV) - id::get_dchempotdT_autodiff(model, T, rhovecL)).eval();
+        b(0) = DELTAdmu_dT.matrix().dot(rhovecV.matrix()) - id::get_dpdT_constrhovec(model, T, rhovecV);
+        b(1) = -id::get_dpdT_constrhovec(model, T, rhovecL);
+        // Calculate the derivatives of the liquid phase
+        drhovecdT_liq = linsolve(A, b);
 
-        R(0,0) = (deltas.matrix().dot(rhovecV.matrix())-id::get_dpdT_constrhovec(model, T, rhovecV));
-        R(1,0) = -id::get_dpdT_constrhovec(model, T, rhovecL);
+        // Calculate the derivatives of the vapor phase
+        drhovecdT_vap = linsolve(Hvap, ((Hliq*drhovecdT_liq).array() - DELTAdmu_dT.array()).eval());
+    }
+    else{
+        // Special treatment for infinite dilution
+        auto murL = id::build_Psir_gradient_autodiff(model, T, rhovecL);
+        auto murV = id::build_Psir_gradient_autodiff(model, T, rhovecV);
+        auto RL = model.R(rhovecL / rhovecL.sum());
+        auto RV = model.R(rhovecV / rhovecV.sum());
 
-        drhodT_liq = linsolve(A, R);
-        drhodT_vap = linsolve(Hvap, ((Hliq*drhodT_liq).array() - deltas.array()).eval());
+        // The dot product contains terms of the type:
+        // rho'_i (R ln(rho"_i /rho'_i) + d mu ^ r"_i/d T - d mu^r'_i/d T)
+
+        // Residual contribution to the difference in temperature derivative of chemical potential
+        // It should be fine to evaluate in with zero densities:
+        auto DELTAdmu_dT_res = (id::build_d2PsirdTdrhoi_autodiff(model, T, rhovecV) - id::build_d2PsirdTdrhoi_autodiff(model, T, rhovecL)).eval();
+        // Now the ideal-gas part causes trouble, so multiply by the rhovec, once with liquid, another with vapor
+        // Start off with the assumption that the rhovec is all positive (fix elements later)
+        auto DELTAdmu_dT_rhoV_ideal = (rhovecV*(RV*log(rhovecV/rhovecL))).eval();
+        auto DELTAdmu_dT_rhoL_ideal = (rhovecL*(RV*log(rhovecV/rhovecL))).eval();
+        // Zero out contributions where a concentration is zero
+        for (auto i = 0; i < rhovecV.size(); ++i) {
+            if (rhovecV[i] == 0) {
+                DELTAdmu_dT_rhoV_ideal(i) = 0;
+                DELTAdmu_dT_rhoL_ideal(i) = 0;
+            }
+        }
+        double DELTAdmu_dT_rhoV = rhovecV.matrix().dot(DELTAdmu_dT_res.matrix()) + DELTAdmu_dT_rhoV_ideal.sum();
+        double DELTAdmu_dT_rhoL = rhovecL.matrix().dot(DELTAdmu_dT_res.matrix()) + DELTAdmu_dT_rhoL_ideal.sum();
+        b(0) = DELTAdmu_dT_rhoV - id::get_dpdT_constrhovec(model, T, rhovecV);
+        b(1) = -id::get_dpdT_constrhovec(model, T, rhovecL);
+
+        // First, for the liquid part
+        for (auto i = 0; i < N; ++i) {
+            // A throwaway boolean for clarity
+            bool is_liq = (i == 1);
+            for (auto j = 0; j < N; ++j) {
+                auto rhovec = (is_liq) ? rhovecL : rhovecV;
+                // Initial values
+                auto Aij = (Hliq.row(j).array().cwiseProduct(rhovec.array().transpose())).eval(); // coefficient - wise product
+                // Only rows in H that have a divergent entry in a column need to be adjusted
+                if (!(Hliq.row(j)).array().isFinite().all()) { 
+                    // A correction is needed in the entry in Aij corresponding to entry for zero concentration
+                    if (rhovec[j] == 0) {
+                        Aij[j] = RL*T; // Note not as given in Deiters
+                    }
+                }
+                
+                // Fill in entry
+                A(i, j) = Aij.sum();
+            }
+        }
+        drhovecdT_liq = linsolve(A, b);
+
+        // Then, for the vapor part, also requiring special treatment
+        // Left-multiplication of both sides of equation by diagonal matrix with 
+        // liquid concentrations along diagonal, all others zero
+        auto diagrhovecL = rhovecL.matrix().asDiagonal();
+        auto Hvapstar = (diagrhovecL*Hvap).eval();
+        auto Hliqstar = (diagrhovecL*Hliq).eval();
+        for (auto j = 0; j < N; ++j) {
+            if (rhovecL[j] == 0) {
+                Hliqstar(j, j) = RL*T;
+                Hvapstar(j, j) = RV*T/exp(-(murV[j] - murL[j]) / (RV * T));
+            }
+        }
+        drhovecdT_vap = linsolve(Hvapstar.eval(), ((Hliqstar*drhovecdT_liq).array() - DELTAdmu_dT_rhoL).eval());
     }
-    else {
-        std::invalid_argument("Infinite dilution not yet supported");
-    }
-    return std::make_tuple(drhodT_liq, drhodT_vap);
+    return std::make_tuple(drhovecdT_liq, drhovecdT_vap);
 }
 
 /***
