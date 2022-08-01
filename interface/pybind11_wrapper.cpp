@@ -59,6 +59,20 @@ void init_teqp(py::module& m) {
         .def_readwrite("calc_criticality", &TVLEOptions::calc_criticality)
         ;
 
+    // The options class for isobar tracer, not tied to a particular model
+    py::class_<PVLEOptions>(m, "PVLEOptions")
+        .def(py::init<>())
+        .def_readwrite("abs_err", &PVLEOptions::abs_err)
+        .def_readwrite("rel_err", &PVLEOptions::rel_err)
+        .def_readwrite("init_dt", &PVLEOptions::init_dt)
+        .def_readwrite("init_c", &PVLEOptions::init_c)
+        .def_readwrite("max_dt", &PVLEOptions::max_dt)
+        .def_readwrite("max_steps", &PVLEOptions::max_steps)
+        .def_readwrite("integration_order", &PVLEOptions::integration_order)
+        .def_readwrite("polish", &PVLEOptions::polish)
+        .def_readwrite("calc_criticality", &PVLEOptions::calc_criticality)
+        ;
+
     // The options class for the finder of VLLE solutions from VLE tracing, not tied to a particular model
     py::class_<VLLEFinderOptions>(m, "VLLEFinderOptions")
         .def(py::init<>())

@@ -44,11 +44,9 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_B2vir", &vd::get_B2vir, py::arg("T"), py::arg("molefrac").noconvert());
     cls.def("get_Bnvir", [](const Model& m, const int Nderiv, const double T, const RAX molefrac) { return vd::get_Bnvir_runtime(Nderiv, m, T, molefrac); }, py::arg("Nderiv"), py::arg("T"), py::arg("molefrac").noconvert());
     cls.def("get_dmBnvirdTm", [](const Model& m, const int Nderiv, const int NTderiv, const double T, const RAX molefrac) { return vd::get_dmBnvirdTm_runtime(Nderiv, NTderiv, m, T, molefrac); }, py::arg("Nderiv"), py::arg("NTderiv"), py::arg("T"), py::arg("molefrac").noconvert());
-    
     m.def("get_B12vir", &vd::get_B12vir, py::arg("model"), py::arg("T"), py::arg("molefrac").noconvert());
 
     using ct = CriticalTracing<Model, double, Eigen::Array<double, Eigen::Dynamic, 1>>;
-    
     m.def("trace_critical_arclength_binary", &ct::trace_critical_arclength_binary, py::arg("model"), py::arg("T0"), py::arg("rhovec0").noconvert(), py::arg_v("path", std::nullopt, "None"), py::arg_v("options", std::nullopt, "None"));
     m.def("get_criticality_conditions", &ct::get_criticality_conditions);
     m.def("eigen_problem", &ct::eigen_problem);
@@ -64,8 +62,9 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("mixture_VLE_px", &mixture_VLE_px<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("p_spec"), py::arg("xmolar_spec").noconvert(), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("flags", std::nullopt, "None"));
 
     m.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
+    m.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None")); 
     m.def("get_drhovecdT_psat", &get_drhovecdT_psat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
-    m.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
+    m.def("trace_VLE_isobar_binary", &trace_VLE_isobar_binary<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("p"), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
     m.def("get_dpsat_dTsat_isopleth", &get_dpsat_dTsat_isopleth<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
 
     m.def("mix_VLLE_T", &mix_VLLE_T<Model, double, Eigen::ArrayXd>);
