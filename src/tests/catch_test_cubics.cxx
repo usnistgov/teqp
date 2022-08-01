@@ -187,7 +187,7 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
     }
 }
 
-TEST_CASE("Check infinite dilution of subcritical VLE derivatives", "[cubic][isochoric][infdil]")
+TEST_CASE("Check infinite dilution of isoline VLE derivatives", "[cubic][isochoric][infdil]")
 {
     // Values taken from http://dx.doi.org/10.6028/jres.121.011
     std::valarray<double> Tc_K = { 190.564, 154.581 },
@@ -208,10 +208,17 @@ TEST_CASE("Check infinite dilution of subcritical VLE derivatives", "[cubic][iso
     };
     int i = 1;
     double T = 120;
-    auto rhostart_dil = get_start(T, i);
-    auto rhostart_notdil = rhostart_dil;
+    std::valarray<double> rhostart_dil = get_start(T, i);
+    std::valarray<double> rhostart_notdil = rhostart_dil;
     rhostart_notdil[1-i] += 1e-6;
     rhostart_notdil[1-i+N] += 1e-6;
+    auto checker = [](auto & dernotdil, auto &derdil) {
+        auto err0 = (std::get<0>(dernotdil).array()/std::get<0>(derdil).array() - 1).cwiseAbs().maxCoeff();
+        auto err1 = (std::get<1>(dernotdil).array()/std::get<1>(derdil).array() - 1).cwiseAbs().maxCoeff();
+        CAPTURE(err0);
+        CAPTURE(err1);
+        return err0 < 1e-9 && err1 < 1e-9;
+    };
 
     SECTION("Along isotherm") {
         // Derivative function with respect to p
@@ -225,7 +232,7 @@ TEST_CASE("Check infinite dilution of subcritical VLE derivatives", "[cubic][iso
         };
         auto dernotdil = xprime(rhostart_notdil); 
         auto derdil = xprime(rhostart_dil);
-        CHECK(true);
+        CHECK(checker(dernotdil, derdil));
     }
     SECTION("Along isobar") {
         // Derivative function with respect to T
@@ -239,6 +246,6 @@ TEST_CASE("Check infinite dilution of subcritical VLE derivatives", "[cubic][iso
         };
         auto dernotdil = xprime(rhostart_notdil); 
         auto derdil = xprime(rhostart_dil);
-        CHECK(true);
+        CHECK(checker(dernotdil, derdil));
     }
 }

@@ -394,7 +394,7 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
         for (auto j = 0; j < N; ++j) {
             if (rhovecL[j] == 0) {
                 PSILstar(j, j) = RL*T;
-                PSIVstar(j, j) = RV*T/exp(-(murV[j] - murL[j]) / (RV * T));
+                PSIVstar(j, j) = RV*T;// / exp(-(murV[j] - murL[j]) / (RV * T)); // Note not as given in Deiters
             }
         }
         drhodp_vap = linsolve(PSIVstar, PSILstar*drhodp_liq);
@@ -433,7 +433,6 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
         b(1) = -id::get_dpdT_constrhovec(model, T, rhovecL);
         // Calculate the derivatives of the liquid phase
         drhovecdT_liq = linsolve(A, b);
-
         // Calculate the derivatives of the vapor phase
         drhovecdT_vap = linsolve(Hvap, ((Hliq*drhovecdT_liq).array() - DELTAdmu_dT.array()).eval());
     }
@@ -448,21 +447,21 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
         // rho'_i (R ln(rho"_i /rho'_i) + d mu ^ r"_i/d T - d mu^r'_i/d T)
 
         // Residual contribution to the difference in temperature derivative of chemical potential
-        // It should be fine to evaluate in with zero densities:
+        // It should be fine to evaluate with zero densities:
         auto DELTAdmu_dT_res = (id::build_d2PsirdTdrhoi_autodiff(model, T, rhovecV) - id::build_d2PsirdTdrhoi_autodiff(model, T, rhovecL)).eval();
         // Now the ideal-gas part causes trouble, so multiply by the rhovec, once with liquid, another with vapor
         // Start off with the assumption that the rhovec is all positive (fix elements later)
         auto DELTAdmu_dT_rhoV_ideal = (rhovecV*(RV*log(rhovecV/rhovecL))).eval();
-        auto DELTAdmu_dT_rhoL_ideal = (rhovecL*(RV*log(rhovecV/rhovecL))).eval();
+        auto DELTAdmu_dT_ideal = (RV*log(rhovecV/rhovecL)).eval();
         // Zero out contributions where a concentration is zero
         for (auto i = 0; i < rhovecV.size(); ++i) {
             if (rhovecV[i] == 0) {
                 DELTAdmu_dT_rhoV_ideal(i) = 0;
-                DELTAdmu_dT_rhoL_ideal(i) = 0;
+                DELTAdmu_dT_ideal(i) = 0;
             }
         }
         double DELTAdmu_dT_rhoV = rhovecV.matrix().dot(DELTAdmu_dT_res.matrix()) + DELTAdmu_dT_rhoV_ideal.sum();
-        double DELTAdmu_dT_rhoL = rhovecL.matrix().dot(DELTAdmu_dT_res.matrix()) + DELTAdmu_dT_rhoL_ideal.sum();
+        
         b(0) = DELTAdmu_dT_rhoV - id::get_dpdT_constrhovec(model, T, rhovecV);
         b(1) = -id::get_dpdT_constrhovec(model, T, rhovecL);
 
@@ -497,10 +496,12 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
         for (auto j = 0; j < N; ++j) {
             if (rhovecL[j] == 0) {
                 Hliqstar(j, j) = RL*T;
-                Hvapstar(j, j) = RV*T/exp(-(murV[j] - murL[j]) / (RV * T));
+                Hvapstar(j, j) = RV*T; // / exp((murL[j] - murV[j]) / (RV * T)); // Note not as given in Deiters
             }
         }
-        drhovecdT_vap = linsolve(Hvapstar.eval(), ((Hliqstar*drhovecdT_liq).array() - DELTAdmu_dT_rhoL).eval());
+        auto diagrhovecL_dot_DELTAdmu_dT = (diagrhovecL*(DELTAdmu_dT_res+DELTAdmu_dT_ideal).matrix()).array();
+        auto RHS = ((Hliqstar * drhovecdT_liq).array() - diagrhovecL_dot_DELTAdmu_dT).eval();
+        drhovecdT_vap = linsolve(Hvapstar.eval(), RHS);
     }
     return std::make_tuple(drhovecdT_liq, drhovecdT_vap);
 }
