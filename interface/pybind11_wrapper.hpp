@@ -61,7 +61,10 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("get_pure_critical_conditions_Jacobian", &get_pure_critical_conditions_Jacobian<Model, double, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"));
     m.def("solve_pure_critical", &solve_pure_critical<Model, double, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg_v("flags", std::nullopt, "None"));
     m.def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, Eigen::ArrayXd>);
+    m.def("mixture_VLE_px", &mixture_VLE_px<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("p_spec"), py::arg("xmolar_spec").noconvert(), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("flags", std::nullopt, "None"));
+
     m.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
+    m.def("get_drhovecdT_psat", &get_drhovecdT_psat<Model, double, RAX>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
     m.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
     m.def("get_dpsat_dTsat_isopleth", &get_dpsat_dTsat_isopleth<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
 
