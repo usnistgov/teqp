@@ -705,7 +705,7 @@ struct IsochoricDerivatives{
     }
 
     static auto build_d2PsirdTdrhoi_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
-        VectorType deriv(rho.size());
+        Eigen::ArrayXd deriv(rho.size());
         // d^2psir/dTdrho_i
         for (auto i = 0; i < rho.size(); ++i) {
             auto psirfunc = [&model, &rho, i](const auto& T, const auto& rhoi) {
