@@ -240,6 +240,149 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
     return std::make_tuple(return_code, rhovecLfinal, rhovecVfinal);
 }
 
+struct MixVLEPxFlags {
+    double atol = 1e-10,
+        reltol = 1e-10,
+        axtol = 1e-10,
+        relxtol = 1e-10;
+    int maxiter = 10;
+};
+
+/***
+* \brief Do vapor-liquid phase equilibrium problem at specified pressure and mole fractions in the bulk phase
+* \param model The model to operate on
+* \param p_spec Specified pressure
+* \param xmolar_spec Specified mole fractions for all components in the bulk phase
+* \param T0 Initial temperature
+* \param rhovecL0 Initial values for liquid mole concentrations
+* \param rhovecV0 Initial values for vapor mole concentrations
+
+* \param flags Additional flags
+*/
+template<typename Model, typename Scalar, typename Vector>
+auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec, Scalar T0, const Vector& rhovecL0, const Vector& rhovecV0, const MixVLEPxFlags& flags = {}) {
+
+    const Eigen::Index N = rhovecL0.size();
+    auto lengths = (Eigen::ArrayXi(3) << rhovecL0.size(), rhovecV0.size(), xmolar_spec.size()).finished();
+    if (lengths.minCoeff() != lengths.maxCoeff()) {
+        throw InvalidArgument("lengths of rhovecs and xspec must be the same in mixture_VLE_px");
+    }
+    if ((rhovecV0 == 0).any()) {
+        throw InvalidArgument("Infinite dilution is not allowed for rhovecV0 in mixture_VLE_px");
+    }
+    if ((rhovecL0 == 0).any()) {
+        throw InvalidArgument("Infinite dilution is not allowed for rhovecL0 in mixture_VLE_px");
+    }
+    Eigen::MatrixXd J(2*N+1, 2*N+1); J.setZero();
+    Eigen::VectorXd r(2*N + 1), x(2*N + 1);
+    x(0) = T0;
+    x.segment(1, N) = rhovecL0;
+    x.tail(N) = rhovecV0;
+    using isochoric = IsochoricDerivatives<Model, Scalar>;
+
+    Eigen::Map<Eigen::ArrayXd> rhovecL(&(x(1)), N);
+    Eigen::Map<Eigen::ArrayXd> rhovecV(&(x(1 + N)), N);
+
+    double T = T0;
+
+    VLE_return_code return_code = VLE_return_code::unset;
+
+    for (int iter = 0; iter < flags.maxiter; ++iter) {
+
+        auto RL = model.R(xmolar_spec);
+        auto RLT = RL * T;
+        auto RVT = RLT; // Note: this should not be exactly the same if you use mole-fraction-weighted gas constants
+        
+        // calculations from the EOS in the isochoric thermodynamics formalism
+        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
+        auto DELTAdmu_dT_res = (isochoric::build_d2PsirdTdrhoi_autodiff(model, T, rhovecL.eval()) 
+                              - isochoric::build_d2PsirdTdrhoi_autodiff(model, T, rhovecV.eval())).eval();
+
+        auto make_diag = [](const Eigen::ArrayXd& v) -> Eigen::ArrayXXd {
+            Eigen::MatrixXd A = Eigen::MatrixXd::Identity(v.size(), v.size());
+            A.diagonal() = v;
+            return A;
+        };
+        auto HtotL = (hessianL.array() + make_diag(RLT/rhovecL)).eval();
+        auto HtotV = (hessianV.array() + make_diag(RVT/rhovecV)).eval();
+
+        auto rhoL = rhovecL.sum();
+        auto rhoV = rhovecV.sum();
+        Scalar pL = rhoL * RLT - PsirL + (rhovecL.array() * PsirgradL.array()).sum(); // The (array*array).sum is a dot product
+        Scalar pV = rhoV * RVT - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
+        auto dpdrhovecL = RLT + (hessianL * rhovecL.matrix()).array();
+        auto dpdrhovecV = RVT + (hessianV * rhovecV.matrix()).array();
+        
+        auto DELTA_dchempot_dT = (DELTAdmu_dT_res + RL*log(rhovecL/rhovecV)).eval();
+
+        // First N equations are equalities of chemical potentials in both phases
+        r.head(N) = PsirgradL + RLT*log(rhovecL) - (PsirgradV + RVT*log(rhovecV));
+        // Next two are pressures in each phase equaling the specification
+        r(N) = pL/p_spec - 1;
+        r(N+1) = pV/p_spec - 1;
+        // Remainder are N-1 mole fraction equalities in the liquid phase
+        r.tail(N-1) = (rhovecL/rhovecL.sum()).head(N-1) - xmolar_spec.head(N-1);
+        // So in total we have N + 2 + (N-1) = 2*N+1 equations and 2*N+1 independent variables
+
+        // Columns in Jacobian are: [T, rhovecL, rhovecV]
+        // ...
+        // N Chemical potential contributions in Jacobian (indices 0 to N-1)
+        J.block(0, 0, N, 1) = DELTA_dchempot_dT; 
+        J.block(0, 1, N, N) = HtotL; // These are the concentration derivatives
+        J.block(0, N+1, N, N) = -HtotV; // These are the concentration derivatives
+        // Pressure contributions in Jacobian
+        J(N, 0) = isochoric::get_dpdT_constrhovec(model, T, rhovecL)/p_spec;
+        J.block(N, 1, 1, N) = dpdrhovecL.transpose()/p_spec;
+        // No vapor concentration derivatives
+        J(N+1, 0) = isochoric::get_dpdT_constrhovec(model, T, rhovecV)/p_spec;
+        // No liquid concentration derivatives
+        J.block(N+1, N+1, 1, N) = dpdrhovecV.transpose()/p_spec;
+        // Mole fraction contributions in Jacobian
+        // dxi/drhoj = (rho*Kronecker(i,j)-rho_i)/rho^2 since x_i = rho_i/rho
+        //
+        Eigen::ArrayXXd AA = rhovecL.matrix().reshaped(N, 1).replicate(1, N).array();
+        Eigen::MatrixXd M = ((rhoL * Eigen::MatrixXd::Identity(N, N).array() - AA) / (rhoL * rhoL));
+        J.block(N+2, 1, N-1, N) = M.block(0,0,N-1,N);
+
+        // Solve for the step
+        Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-r);
+
+        if ((!dx.isFinite()).all()) {
+            return_code = VLE_return_code::notfinite_step;
+            break;
+        }
+
+        T += dx(0);
+        x.tail(2*N).array() += dx.tail(2*N);
+
+        auto xtol_threshold = (flags.axtol + flags.relxtol * x.array().cwiseAbs()).eval();
+        if ((dx.array().cwiseAbs() < xtol_threshold).all()) {
+            return_code = VLE_return_code::xtol_satisfied;
+            break;
+        }
+
+        auto error_threshold = (flags.atol + flags.reltol * r.array().cwiseAbs()).eval();
+        if ((r.array().cwiseAbs() < error_threshold).all()) {
+            return_code = VLE_return_code::functol_satisfied;
+            break;
+        }
+
+        // If the solution has stopped improving, stop. The change in x is equal to dx in infinite precision, but 
+        // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
+        // the values are done changing
+        if (((x.array() - dx.array()).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
+            return_code = VLE_return_code::xtol_satisfied;
+            break;
+        }
+        if (iter == flags.maxiter - 1) {
+            return_code = VLE_return_code::maxiter_met;
+        }
+    }
+    Eigen::ArrayXd rhovecLfinal = rhovecL, rhovecVfinal = rhovecV;
+    return std::make_tuple(return_code, T, rhovecLfinal, rhovecVfinal);
+}
+
 /** 
 * Calculate the criticality conditions for a pure fluid and its Jacobian w.r.t. the temperature and density
 * for additional fine tuning with multi-variate rootfinding
