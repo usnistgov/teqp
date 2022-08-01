@@ -373,8 +373,8 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
                     auto Aij = (Hliq.row(j).array().cwiseProduct(((i == 0) ? rhovecV : rhovecL).array().transpose())).eval(); // coefficient - wise product
                     // A throwaway boolean for clarity
                     bool is_liq = (i == 1);
-                    // Apply correction to the divergent term
-                    Aij[j] = RL*T;  // Note not as given in Deiters
+                    // Apply correction to the j term (RT if liquid, RT*phi for vapor)
+                    Aij[j] = (is_liq) ? RL*T : RL*T*exp(-(murV[j] - murL[j])/(RL*T));
                     // Fill in entry
                     A(i, j) = Aij.sum();
                 }
@@ -394,7 +394,7 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
         for (auto j = 0; j < N; ++j) {
             if (rhovecL[j] == 0) {
                 PSILstar(j, j) = RL*T;
-                PSIVstar(j, j) = RV*T;// / exp(-(murV[j] - murL[j]) / (RV * T)); // Note not as given in Deiters
+                PSIVstar(j, j) = RV*T/exp(-(murV[j] - murL[j]) / (RV * T));
             }
         }
         drhodp_vap = linsolve(PSIVstar, PSILstar*drhodp_liq);
@@ -477,7 +477,8 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
                 if (!(Hliq.row(j)).array().isFinite().all()) { 
                     // A correction is needed in the entry in Aij corresponding to entry for zero concentration
                     if (rhovec[j] == 0) {
-                        Aij[j] = RL*T; // Note not as given in Deiters
+                        // Apply correction to the j term (RT if liquid, RT*phi for vapor)
+                        Aij[j] = (is_liq) ? RL * T : RL * T * exp(-(murV[j] - murL[j]) / (RL * T));
                     }
                 }
                 
@@ -496,7 +497,7 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
         for (auto j = 0; j < N; ++j) {
             if (rhovecL[j] == 0) {
                 Hliqstar(j, j) = RL*T;
-                Hvapstar(j, j) = RV*T; // / exp((murL[j] - murV[j]) / (RV * T)); // Note not as given in Deiters
+                Hvapstar(j, j) = RV*T/ exp((murL[j] - murV[j]) / (RV * T)); // Note not as given in Deiters
             }
         }
         auto diagrhovecL_dot_DELTAdmu_dT = (diagrhovecL*(DELTAdmu_dT_res+DELTAdmu_dT_ideal).matrix()).array();
