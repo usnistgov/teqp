@@ -80,7 +80,7 @@ TEST_CASE("Check calling superancillary curves", "[cubic][superanc]")
     }
 }
 
-TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixture", "[cubic][isochoric]")
+TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixture", "[cubic][isochoric][traceisotherm]")
 {
     using namespace boost::numeric::odeint;
     // Values taken from http://dx.doi.org/10.6028/jres.121.011
@@ -97,7 +97,9 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
         auto [rhoL, rhoV] = PR.superanc_rhoLV(T);
         state_type o(N*2);
         o[i] = rhoL;
+        o[1 - i] = 0;
         o[i + N] = rhoV;
+        o[1 - i + N] = 0;
         return o;
     };
     double T = 120; 
@@ -110,7 +112,7 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
         auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0])+N, N);
         auto drhovecdpL = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]), N);
         auto drhovecdpV = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]) + N, N); 
-        std::tie(drhovecdpL, drhovecdpV) = get_drhovecdp_Tsat(model, T, rhovecL, rhovecV);
+        std::tie(drhovecdpL, drhovecdpV) = get_drhovecdp_Tsat(model, T, rhovecL.eval(), rhovecV.eval());
     };
     auto get_p = [&](const state_type& X) {
         REQUIRE(X.size() % 2 == 0);
@@ -228,7 +230,7 @@ TEST_CASE("Check infinite dilution of isoline VLE derivatives", "[cubic][isochor
             // Memory maps into the state vector for inputs and their derivatives
             auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
-            return get_drhovecdp_Tsat(model, T, rhovecL, rhovecV);
+            return get_drhovecdp_Tsat(model, T, rhovecL.eval(), rhovecV.eval());
         };
         auto dernotdil = xprime(rhostart_notdil); 
         auto derdil = xprime(rhostart_dil);
@@ -248,4 +250,117 @@ TEST_CASE("Check infinite dilution of isoline VLE derivatives", "[cubic][isochor
         auto derdil = xprime(rhostart_dil);
         CHECK(checker(dernotdil, derdil));
     }
+}
+
+TEST_CASE("Check manual integration of subcritical VLE isobar for binary mixture", "[cubic][isochoric][traceisobar]")
+{
+    using namespace boost::numeric::odeint;
+    // Values taken from http://dx.doi.org/10.6028/jres.121.011
+    std::valarray<double> Tc_K = { 190.564, 154.581 },
+        pc_Pa = { 4599200, 5042800 },
+        acentric = { 0.011, 0.022 };
+    auto model = canonical_PR(Tc_K, pc_Pa, acentric);
+    const auto N = Tc_K.size();
+    using state_type = std::vector<double>;
+    REQUIRE(N == 2);
+
+    auto get_start = [&](double T, auto i) {
+        std::valarray<double> Tc_(Tc_K[i], 1), pc_(pc_Pa[i], 1), acentric_(acentric[i], 1);
+        auto PR = canonical_PR(Tc_, pc_, acentric_);
+        auto [rhoL, rhoV] = PR.superanc_rhoLV(T);
+        state_type o(N * 2);
+        o[i] = rhoL;
+        o[1 - i] = 0;
+        o[i + N] = rhoV;
+        o[(1 - i) + N] = 0;
+        return o;
+    };
+    double T0 = 120; // Just to get a pressure, start at this point
+
+    // Derivative function with respect to temperature at constant pressure
+    auto xprime = [&](const state_type& X, state_type& Xprime, double T) {
+        REQUIRE(X.size() % 2 == 0);
+        auto N = X.size() / 2;
+        // Memory maps into the state vector for inputs and their derivatives
+        auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+        auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+        auto drhovecdTL = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]), N);
+        auto drhovecdTV = Eigen::Map<Eigen::ArrayXd>(&(Xprime[0]) + N, N);
+        std::tie(drhovecdTL, drhovecdTV) = get_drhovecdT_psat(model, T, rhovecL.eval(), rhovecV.eval());
+    };
+    auto get_p = [&](const state_type& X, double T) {
+        REQUIRE(X.size() % 2 == 0);
+        auto N = X.size() / 2;
+        // Memory maps into the state vector for rho vector
+        auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+        auto rho = rhovecL.sum();
+        auto molefrac = rhovecL / rhovecL.sum();
+
+        using id = IsochoricDerivatives<decltype(model)>;
+        auto pfromderiv = rho * model.R(molefrac) * T + id::get_pr(model, T, rhovecL);
+        return pfromderiv;
+    };
+    SECTION("Manual integration") {
+
+        for (int i : { 0 }) {
+            state_type X0 = get_start(T0, i); // Starting point; liquid, then vapor
+            double Tfinal = T0 - 40;
+            double pinit = get_p(X0, T0);
+
+            //euler<state_type> integrator;
+            runge_kutta_cash_karp54< state_type > integrator;
+            int Nstep = 1000;
+            double T = T0, Tmax = Tfinal, dT = (Tmax - T0) / (Nstep - 1);
+
+            auto write = [&]() {
+                std::cout << T << " " << X0[0] / (X0[0] + X0[1]) << std::endl;
+            };
+            for (auto k = 0; k < Nstep; ++k) {
+                write();
+                integrator.do_step(xprime, X0, T, dT);
+                T += dT;
+
+                // Try to polish the solution (but don't use the polished values)
+                {
+                    Eigen::ArrayXd rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X0[0]), N).eval();
+                    Eigen::ArrayXd rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X0[0 + N]), N).eval();
+                    Eigen::ArrayXd x = (Eigen::ArrayXd(2) << rhovecL(0) / rhovecL.sum(), rhovecL(1) / rhovecL.sum()).finished();
+                    double p = get_p(X0, T);
+                    auto [return_code, Tnew, rhovecLnew, rhovecVnew] = mixture_VLE_px(model, p, x, T, rhovecL, rhovecV);
+                    int rr = 0;
+                }
+                if (X0[0] / (X0[0] + X0[1]) < 0.01) {
+                    break;
+                }
+            }
+            double pfinal = get_p(X0, T);
+
+            double diffs = 0;
+            for (auto i = 0; i < X0.size(); ++i) {
+                diffs += std::abs(pinit-pfinal);
+            }
+            CHECK(diffs < 0.1);
+        }
+    }
+    //SECTION("Parametric integration of isotherm") {
+    //    int i = 0;
+    //    auto X = get_start(T, 0);
+    //    state_type Xfinal = get_start(T, 1 - i); // Ending point; liquid, then vapor
+    //    double pfinal_goal = get_p(Xfinal);
+
+    //    auto N = X.size() / 2;
+    //    Eigen::ArrayXd rhovecL0 = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+    //    Eigen::ArrayXd rhovecV0 = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+    //    TVLEOptions opt;
+    //    opt.abs_err = 1e-10;
+    //    opt.rel_err = 1e-10;
+    //    opt.integration_order = 5;
+    //    auto J = trace_VLE_isotherm_binary(model, T, rhovecL0, rhovecV0, opt);
+    //    auto Nstep = J.size();
+
+    //    std::ofstream file("isoT.json"); file << J;
+
+    //    double pfinal = J.back().at("pL / Pa").back();
+    //    CHECK(std::abs(pfinal / pfinal_goal - 1) < 1e-5);
+    //}
 }
