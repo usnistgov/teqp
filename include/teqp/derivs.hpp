@@ -103,8 +103,8 @@ struct AlphaCallWrapper {
             return m_model.alphar(std::forward<const Args>(args)...);
         }
         else {
-            throw teqp::InvalidArgument("Missing implementation for alphaig");
-            //return m_model.alphaig(std::forward<Args>(args)...);
+            //throw teqp::InvalidArgument("Missing implementation for alphaig");
+            return m_model.alphaig(std::forward<const Args>(args)...);
         }
     }
 };
@@ -216,19 +216,19 @@ struct TDXDerivatives {
         return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
     }
 
-    ///**
-    //* Calculate the derivative \f$\Lambda^{\rm ig}_{xy}\f$, where
-    //* \f[
-    //* \Lambda^{\rm r}_{ij} = (1/T)^i\rho^j\left(\frac{\partial^{i+j}(\alpha^{\rm ig})}{\partial(1/T)^i\partial\rho^j}\right)
-    //* \f]
-    //*
-    //* Note: none of the intermediate derivatives are returned, although they are calculated
-    //*/
-    //template<int iT, int iD, ADBackends be>
-    //static auto get_Aigxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-    //    auto wrapper = CallWrapper<1, decltype(model)>(model);
-    //    return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
-    //}
+    /**
+    * Calculate the derivative \f$\Lambda^{\rm ig}_{xy}\f$, where
+    * \f[
+    * \Lambda^{\rm ig}_{ij} = (1/T)^i\rho^j\left(\frac{\partial^{i+j}(\alpha^{\rm ig})}{\partial(1/T)^i\partial\rho^j}\right)
+    * \f]
+    *
+    * Note: none of the intermediate derivatives are returned, although they are calculated
+    */
+    template<int iT, int iD, ADBackends be>
+    static auto get_Aigxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        auto wrapper = CallWrapper<1, decltype(model)>(model);
+        return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
+    }
 
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar10(const Model& model, const Scalar &T, const Scalar &rho, const VectorType& molefrac) {
