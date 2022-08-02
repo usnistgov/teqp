@@ -30,11 +30,11 @@ namespace teqp {
 
     using IdealHelmholtzTerms = std::variant<IdealHelmholtzLead>;
 
-    class IdealHelmholtz {
+    class PureIdealHelmholtz {
     public:
         std::vector<IdealHelmholtzTerms> contributions;
-        IdealHelmholtz(const nlohmann::json& j) {
-            for (auto& term : j) {
+        PureIdealHelmholtz(const nlohmann::json& jpure) {
+            for (auto& term : jpure) {
                 if (term.at("type") == "Lead") {
                     contributions.emplace_back(IdealHelmholtzLead(term.at("a_1"), term.at("a_2")));
                 }
@@ -43,8 +43,8 @@ namespace teqp {
                 }
             }
         }
-        template<typename TType, typename RhoType, typename MoleFrac>
-        auto alphaig(const TType& T, const RhoType &rho, const MoleFrac& /**/) const{
+        template<typename TType, typename RhoType>
+        auto alphaig(const TType& T, const RhoType &rho) const{
             std::common_type_t <TType, RhoType> ig = 0.0;
             for (const auto& term : contributions) {
                 auto contrib = std::visit([&](auto& t) { return t.alphaig(T, rho); }, term);
@@ -54,4 +54,43 @@ namespace teqp {
         }
     };
 
+    /**
+     * @brief Ideal-gas Helmholtz energy container
+     * 
+     * \f[ \alpha^{\rm ig} = \sum_i x_i[\alpha^{\rm ig}_{oi}(T,\rho) + x_i] \f]
+     *
+     * where x_i are mole fractions
+     * 
+     */
+    class IdealHelmholtz {
+        
+        public:
+        
+        std::vector<PureIdealHelmholtz> pures;
+        
+        IdealHelmholtz(const nlohmann::json &jpures){
+            for (auto &jpure : jpures){
+                pures.emplace_back(jpure);
+            }
+        }
+
+        template<typename TType, typename RhoType, typename MoleFrac>
+        auto alphaig(const TType& T, const RhoType &rho, const MoleFrac &molefrac) const {
+            std::common_type_t <TType, RhoType, decltype(molefrac[0])> ig = 0.0;
+            if (molefrac.size() != pures.size()){
+                throw teqp::InvalidArgument("molefrac and pures are not the same length");
+            }
+            std::size_t i = 0;
+            for (auto &pure : pures){
+                if (molefrac[i] != 0){
+                    ig += molefrac[i]*(pure.alphaig(T, rho) + log(molefrac[i]));
+                }
+                else{
+                    // lim_{x\to 0} x*ln(x) => 0
+                }
+                i++;
+            }
+            return ig;
+        }
+    };
 }
