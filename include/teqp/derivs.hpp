@@ -5,6 +5,7 @@
 #include <tuple>
 
 #include "teqp/types.hpp"
+#include "teqp/exceptions.hpp"
 
 #include "MultiComplex/MultiComplex.hpp"
 
@@ -80,6 +81,34 @@ struct wrt_helper {
     }
 };
 
+/**
+* \brief This class is used to wrap a model that exposes the generic 
+* functions alphar, alphaig, etc., and allow the desired member function to be
+* called at runtime via perfect forwarding
+* 
+* This class is needed because conventional binding methods (e.g., std::bind)
+* require the argument types to be known, and they are not known in this case
+* so we give the hard work of managing the argument types to the compiler
+*/
+template<int i, class Model>
+struct AlphaCallWrapper {
+    const Model& m_model;
+    AlphaCallWrapper(const Model& model) : m_model(model) {};
+
+    template <typename ... Args>
+    auto alpha(const Args& ... args) const {
+        if constexpr (i == 0) {
+            // The alphar method is REQUIRED to be implemented by all
+            // models, so can just call it via perfect fowarding
+            return m_model.alphar(std::forward<const Args>(args)...);
+        }
+        else {
+            throw teqp::InvalidArgument("Missing implementation for alphaig");
+            //return m_model.alphaig(std::forward<Args>(args)...);
+        }
+    }
+};
+
 enum class ADBackends { autodiff, multicomplex, complex_step };
 
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
@@ -97,30 +126,30 @@ struct TDXDerivatives {
     * 
     * Note: none of the intermediate derivatives are returned, although they are calculated
     */
-    template<int iT, int iD, ADBackends be>
-    static auto get_Arxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+    template<int iT, int iD, ADBackends be, class AlphaWrapper>
+    static auto get_Agenxy(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
 
         static_assert(iT > 0 || iD > 0);
         if constexpr (iT == 0 && iD > 0) {
             if constexpr (be == ADBackends::autodiff) {
                 // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
                 autodiff::Real<iD, Scalar> rho_ = rho;
-                auto f = [&model, &T, &molefrac](const auto& rho__) { return model.alphar(T, rho__, molefrac); };
+                auto f = [&w, &T, &molefrac](const auto& rho__) { return w.alpha(T, rho__, molefrac); };
                 return powi(rho, iD)*derivatives(f, along(1), at(rho_))[iD];
             }
             else if constexpr (iD == 1 && be == ADBackends::complex_step) {
                 double h = 1e-100;
                 auto rho_ = std::complex<Scalar>(rho, h);
-                return powi(rho, iD)*model.alphar(T, rho_, molefrac).imag()/h;
+                return powi(rho, iD) * w.alpha(T, rho_, molefrac).imag() / h;
             }
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
-                fcn_t f = [&](const auto& rhomcx) { return model.alphar(T, rhomcx, molefrac); };
+                fcn_t f = [&](const auto& rhomcx) { return w.alpha(T, rhomcx, molefrac); };
                 auto ders = diff_mcx1(f, rho, iD, true /* and_val */);
                 return powi(rho, iD)*ders[iD];
             }
             else {
-                throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Arxy for iT == 0");
+                throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iT == 0");
             }
         }
         else if constexpr (iT > 0 && iD == 0) {
@@ -128,38 +157,38 @@ struct TDXDerivatives {
             if constexpr (be == ADBackends::autodiff) {
                 // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
                 autodiff::Real<iT, Scalar> Trecipad = Trecip;
-                auto f = [&model, &rho, &molefrac](const auto& Trecip__) {return model.alphar(1.0/Trecip__, rho, molefrac); };
+                auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(1.0/Trecip__, rho, molefrac); };
                 return powi(Trecip, iT)*derivatives(f, along(1), at(Trecipad))[iT];
             }
             else if constexpr (iT == 1 && be == ADBackends::complex_step) {
                 double h = 1e-100;
                 auto Trecipcsd = std::complex<Scalar>(Trecip, h);
-                return powi(Trecip, iT)*model.alphar(1/Trecipcsd, rho, molefrac).imag()/h;
+                return powi(Trecip, iT)* w.alpha(1/Trecipcsd, rho, molefrac).imag()/h;
             }
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
-                fcn_t f = [&](const auto& Trecipmcx) { return model.alphar(1.0/Trecipmcx, rho, molefrac); };
+                fcn_t f = [&](const auto& Trecipmcx) { return w.alpha(1.0/Trecipmcx, rho, molefrac); };
                 auto ders = diff_mcx1(f, Trecip, iT, true /* and_val */);
                 return powi(Trecip, iT)*ders[iT];
             }
             else {
-                throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Arxy for iD == 0");
+                throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iD == 0");
             }
         }
         else { // iT > 0 and iD > 0
             if constexpr (be == ADBackends::autodiff) {
                 using adtype = autodiff::HigherOrderDual<iT + iD, double>;
                 adtype Trecipad = 1.0 / T, rhoad = rho;
-                auto f = [&model, &molefrac](const adtype& Trecip, const adtype& rho_) { return eval(model.alphar(eval(1.0/Trecip), rho_, molefrac)); };
+                auto f = [&w, &molefrac](const adtype& Trecip, const adtype& rho_) { return eval(w.alpha(eval(1.0/Trecip), rho_, molefrac)); };
                 auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)));
                 auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad));
                 return powi(1.0 / T, iT) * powi(rho, iD) * der[der.size() - 1];
             }
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
-                const fcn_t func = [&model, &molefrac](const auto& zs) {
+                const fcn_t func = [&w, &molefrac](const auto& zs) {
                     auto Trecip = zs[0], rhomolar = zs[1];
-                    return model.alphar(1.0 / Trecip, rhomolar, molefrac);
+                    return w.alpha(1.0 / Trecip, rhomolar, molefrac);
                 };
                 std::vector<double> xs = { 1.0 / T, rho};
                 std::vector<int> order = { iT, iD };
@@ -167,11 +196,39 @@ struct TDXDerivatives {
                 return powi(1.0 / T, iT)*powi(rho, iD)*der;
             }
             else {
-                throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Arxy for iD > 0 and iT > 0");
+                throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iD > 0 and iT > 0");
             }
         }
         return static_cast<Scalar>(-999999999*T); // This will never hit, only to make compiler happy because it doesn't know the return type
     }
+
+    /**
+    * Calculate the derivative \f$\Lambda^{\rm r}_{xy}\f$, where
+    * \f[
+    * \Lambda^{\rm r}_{ij} = (1/T)^i\rho^j\left(\frac{\partial^{i+j}(\alpha^r)}{\partial(1/T)^i\partial\rho^j}\right)
+    * \f]
+    *
+    * Note: none of the intermediate derivatives are returned, although they are calculated
+    */
+    template<int iT, int iD, ADBackends be>
+    static auto get_Arxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        auto wrapper = AlphaCallWrapper<0, decltype(model)>(model);
+        return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
+    }
+
+    ///**
+    //* Calculate the derivative \f$\Lambda^{\rm ig}_{xy}\f$, where
+    //* \f[
+    //* \Lambda^{\rm r}_{ij} = (1/T)^i\rho^j\left(\frac{\partial^{i+j}(\alpha^{\rm ig})}{\partial(1/T)^i\partial\rho^j}\right)
+    //* \f]
+    //*
+    //* Note: none of the intermediate derivatives are returned, although they are calculated
+    //*/
+    //template<int iT, int iD, ADBackends be>
+    //static auto get_Aigxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+    //    auto wrapper = CallWrapper<1, decltype(model)>(model);
+    //    return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
+    //}
 
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar10(const Model& model, const Scalar &T, const Scalar &rho, const VectorType& molefrac) {
