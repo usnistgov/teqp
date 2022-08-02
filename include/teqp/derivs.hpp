@@ -226,7 +226,7 @@ struct TDXDerivatives {
     */
     template<int iT, int iD, ADBackends be>
     static auto get_Aigxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = CallWrapper<1, decltype(model)>(model);
+        auto wrapper = AlphaCallWrapper<1, decltype(model)>(model);
         return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
     }
 
