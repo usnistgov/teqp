@@ -12,11 +12,26 @@ So far the following EOS are implemented:
 * cubic plus association (CPA) for pure fluids
 * multi-fluid model in the form of GERG
 
+Why?
+
+* Implementing an EOS is an error-prone and boring exercise. Automatic differentiation packages are a mature solution for calculating derivatives 
+* Algorithms can be implemented in a very generic way that is model-agnostic
+
+Docs are on ReadTheDocs: [![Documentation Status](https://readthedocs.org/projects/teqp/badge/?version=latest)](https://teqp.readthedocs.io/en/latest/?badge=latest)
+
 Written by Ian Bell, NIST.  
 
 ## Changelog
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
+
+* 0.10.0 :
+
+  * Add isobar tracing for VLE of binary mixtures (exposed to Python)
+
+  * Add ``IdealHelmholtz`` class for ideal-gas Helmholtz energy contribution (exposed to Python)
+
+  * Bugfix: Fix order of coeffients in one departure term. See [f1da57](https://github.com/usnistgov/teqp/commit/f1da57a586db9bda0a21f74c843cb263208fc110).  Has been wrong in CoolProp for many years.
 
 * 0.9.5 :
 
