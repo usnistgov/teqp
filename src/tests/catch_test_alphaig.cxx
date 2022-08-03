@@ -39,3 +39,25 @@ TEST_CASE("alphaig derivative", "[alphaig]") {
 		REQUIRE(tdx::get_Agenxy<2, 3, ADBackends::autodiff>(wih, T, rho, molefrac) == 0);
 	}
 }
+
+TEST_CASE("Ammonia derivative", "[alphaig][NH3]") {
+	double T = 300, rho = 10;
+	double c0 = 4;
+	double a1 = -6.59406093943886, a2 = 5.60101151987913;
+	double Tcrit = 405.56, rhocrit = 13696.0;
+	std::valarray<double> n = { 2.224, 3.148, 0.9579 }, theta = { 1646, 3965, 7231 };
+
+	using o = nlohmann::json::object_t;
+	nlohmann::json j = { {
+		  o{ {"type", "Lead"}, { "a_1", a1 - log(rhocrit)  }, { "a_2", a2 * Tcrit } },
+		  o{ {"type", "LogT"}, { "a", -(c0 - 1) } },
+		  o{ {"type", "Constant"}, { "a", (c0 - 1) * log(Tcrit) } }, // Term from ln(tau)
+		  o{ {"type", "PlanckEinstein"}, { "n",  n}, {"theta", theta}}
+	} };
+	IdealHelmholtz ih(j);
+	auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
+	auto wih = AlphaCallWrapper<1, decltype(ih)>(ih);
+	auto calc = wih.alpha(T, rho, molefrac);
+	auto expected = -5.3492909452728545;
+	REQUIRE(calc == Approx(expected));
+}

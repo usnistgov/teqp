@@ -1,6 +1,7 @@
 #include "pybind11_wrapper.hpp"
 
 #include "teqpversion.hpp"
+#include "teqp/ideal_eosterms.hpp"
 
 namespace py = pybind11;
 
@@ -15,6 +16,32 @@ void add_CPA(py::module& m);
 void add_multifluid(py::module& m);
 void add_multifluid_mutant(py::module& m);
 void add_cubics(py::module& m);
+
+template<typename Model, int iT, int iD, typename Class>
+void add_ig_deriv_impl(Class& cls) {
+    using idx = TDXDerivatives<Model>;
+    using RAX = Eigen::Ref<Eigen::ArrayXd>;
+    if constexpr (iT == 0 && iD == 0){
+        cls.def("get_Aig00", 
+            [](const Model& m, const double T, const double rho, const RAX molefrac) { return AlphaCallWrapper<1, decltype(m)>(m).alpha(T, rho, molefrac); }, 
+            py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert()
+        );
+    }
+    else{
+        const std::string fname = "get_Aig" + std::to_string(iT) + std::to_string(iD);
+        cls.def(fname.c_str(), 
+            [](const Model& m, const double T, const double rho, const RAX molefrac) { return idx::template get_Aigxy<iT, iD, ADBackends::autodiff>(m, T, rho, molefrac); }, 
+            py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert()
+        );
+    }
+}
+
+template<typename Model, typename Class>
+void add_ig_derivatives(py::module& m, Class& cls) {
+    add_ig_deriv_impl<Model, 0, 0>(cls); add_ig_deriv_impl<Model, 0, 1>(cls); add_ig_deriv_impl<Model, 0, 2>(cls); add_ig_deriv_impl<Model, 0, 3>(cls); add_ig_deriv_impl<Model, 0, 4>(cls);
+    add_ig_deriv_impl<Model, 1, 0>(cls); add_ig_deriv_impl<Model, 1, 1>(cls); add_ig_deriv_impl<Model, 1, 2>(cls); add_ig_deriv_impl<Model, 1, 3>(cls); add_ig_deriv_impl<Model, 1, 4>(cls);
+    add_ig_deriv_impl<Model, 2, 0>(cls); add_ig_deriv_impl<Model, 2, 1>(cls); add_ig_deriv_impl<Model, 2, 2>(cls); add_ig_deriv_impl<Model, 2, 3>(cls); add_ig_deriv_impl<Model, 2, 4>(cls);
+}
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {
@@ -87,6 +114,10 @@ void init_teqp(py::module& m) {
         .value("maxiter_met", VLE_return_code::maxiter_met)
         .value("notfinite_step", VLE_return_code::notfinite_step)
         ;
+
+    // The ideal gas Helmholtz energy class
+    auto alphaig = py::class_<IdealHelmholtz>(m, "IdealHelmholtz").def(py::init<const nlohmann::json&>());
+    add_ig_derivatives<IdealHelmholtz>(m, alphaig);
 
     // Some functions for timing overhead of interface
     m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
