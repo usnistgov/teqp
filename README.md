@@ -31,7 +31,7 @@ Written by Ian Bell, NIST.
 
   * Add ``IdealHelmholtz`` class for ideal-gas Helmholtz energy contribution (exposed to Python)
 
-  * Bugfix: Fix order of coeffients in one departure term. See [f1da57](https://github.com/usnistgov/teqp/commit/f1da57a586db9bda0a21f74c843cb263208fc110).  Has been wrong in CoolProp for many years.
+  * Bugfix: Fix order of coefficients in one departure term. See [f1da57](https://github.com/usnistgov/teqp/commit/f1da57a586db9bda0a21f74c843cb263208fc110).  Had been wrong in CoolProp for many years.
 
 * 0.9.5 :
 
