@@ -21,19 +21,11 @@ template<typename Model, int iT, int iD, typename Class>
 void add_ig_deriv_impl(Class& cls) {
     using idx = TDXDerivatives<Model>;
     using RAX = Eigen::Ref<Eigen::ArrayXd>;
-    if constexpr (iT == 0 && iD == 0){
-        cls.def("get_Aig00", 
-            [](const Model& m, const double T, const double rho, const RAX molefrac) { return AlphaCallWrapper<1, decltype(m)>(m).alpha(T, rho, molefrac); }, 
-            py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert()
-        );
-    }
-    else{
-        const std::string fname = "get_Aig" + std::to_string(iT) + std::to_string(iD);
-        cls.def(fname.c_str(), 
-            [](const Model& m, const double T, const double rho, const RAX molefrac) { return idx::template get_Aigxy<iT, iD, ADBackends::autodiff>(m, T, rho, molefrac); }, 
-            py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert()
-        );
-    }
+    const std::string fname = "get_Aig" + std::to_string(iT) + std::to_string(iD);
+    cls.def(fname.c_str(),
+        [](const Model& m, const double T, const double rho, const RAX molefrac) { return idx::template get_Aigxy<iT, iD, ADBackends::autodiff>(m, T, rho, molefrac); },
+        py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert()
+    );
 }
 
 template<typename Model, typename Class>

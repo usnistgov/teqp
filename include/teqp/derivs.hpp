@@ -213,7 +213,12 @@ struct TDXDerivatives {
     template<int iT, int iD, ADBackends be>
     static auto get_Arxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         auto wrapper = AlphaCallWrapper<0, decltype(model)>(model);
-        return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
+        if constexpr (iT == 0 && iD == 0) {
+            return wrapper.alpha(T, rho, molefrac);
+        }
+        else {
+            return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
+        }
     }
 
     /**
@@ -227,7 +232,12 @@ struct TDXDerivatives {
     template<int iT, int iD, ADBackends be>
     static auto get_Aigxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         auto wrapper = AlphaCallWrapper<1, decltype(model)>(model);
-        return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
+        if constexpr (iT == 0 && iD == 0) {
+            return wrapper.alpha(T, rho, molefrac);
+        }
+        else {
+            return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
+        }
     }
 
     template<ADBackends be = ADBackends::autodiff>
