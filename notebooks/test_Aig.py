@@ -20,7 +20,7 @@ a0 = teqp.IdealHelmholtz([jNH3])
 T = 300; rho = 10
 molefrac = np.array([1.0])
 print(dir(a0))
-print(-a0.get_Aig20(T, rho, molefrac)*8.3144 + 8.3144)
+print((-a0.get_Aig20(T, rho, molefrac)+1)*8.314462618153254)
 import CoolProp.CoolProp as CP
 print(CP.PropsSI('Cp0molar','T',T,'Dmolar',1e-10,'Ammonia'))
 print(CP.PropsSI('Cp0molar','T',T,'Dmolar',1e-10,'REFPROP::Ammonia'))
