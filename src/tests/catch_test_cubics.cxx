@@ -342,25 +342,20 @@ TEST_CASE("Check manual integration of subcritical VLE isobar for binary mixture
             CHECK(diffs < 0.1);
         }
     }
-    //SECTION("Parametric integration of isotherm") {
-    //    int i = 0;
-    //    auto X = get_start(T, 0);
-    //    state_type Xfinal = get_start(T, 1 - i); // Ending point; liquid, then vapor
-    //    double pfinal_goal = get_p(Xfinal);
+    SECTION("Parametric integration of isobar") {
+        auto X = get_start(T0, 0);
+        double pinit = get_p(X, T0);
 
-    //    auto N = X.size() / 2;
-    //    Eigen::ArrayXd rhovecL0 = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
-    //    Eigen::ArrayXd rhovecV0 = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
-    //    TVLEOptions opt;
-    //    opt.abs_err = 1e-10;
-    //    opt.rel_err = 1e-10;
-    //    opt.integration_order = 5;
-    //    auto J = trace_VLE_isotherm_binary(model, T, rhovecL0, rhovecV0, opt);
-    //    auto Nstep = J.size();
+        auto N = X.size() / 2;
+        Eigen::ArrayXd rhovecL0 = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+        Eigen::ArrayXd rhovecV0 = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+        PVLEOptions opt;
+        opt.abs_err = 1e-10;
+        opt.rel_err = 1e-10;
+        opt.integration_order = 5;
+        auto J = trace_VLE_isobar_binary(model, pinit, T0, rhovecL0, rhovecV0, opt);
+        auto Nstep = J.size();
 
-    //    std::ofstream file("isoT.json"); file << J;
-
-    //    double pfinal = J.back().at("pL / Pa").back();
-    //    CHECK(std::abs(pfinal / pfinal_goal - 1) < 1e-5);
-    //}
+        std::ofstream file("isoP.json"); file << J;
+    }
 }
