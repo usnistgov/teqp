@@ -189,68 +189,94 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
     }
 }
 
-//TEST_CASE("Check infinite dilution of isoline VLE derivatives", "[cubic][isochoric][infdil]")
-//{
-//    // Values taken from http://dx.doi.org/10.6028/jres.121.011
-//    std::valarray<double> Tc_K = { 190.564, 154.581 },
-//        pc_Pa = { 4599200, 5042800 },
-//        acentric = { 0.011, 0.022 };
-//    auto model = canonical_PR(Tc_K, pc_Pa, acentric);
-//    const auto N = Tc_K.size();
-//    using state_type = std::valarray<double>;
-//    REQUIRE(N == 2);
-//    auto get_start = [&](double T, auto i) {
-//        std::valarray<double> Tc_(Tc_K[i], 1), pc_(pc_Pa[i], 1), acentric_(acentric[i], 1);
-//        auto PR = canonical_PR(Tc_, pc_, acentric_);
-//        auto [rhoL, rhoV] = PR.superanc_rhoLV(T);
-//        state_type o(N * 2);
-//        o[i] = rhoL;
-//        o[i + N] = rhoV;
-//        return o;
-//    };
-//    int i = 1;
-//    double T = 120;
-//    std::valarray<double> rhostart_dil = get_start(T, i);
-//    std::valarray<double> rhostart_notdil = rhostart_dil;
-//    rhostart_notdil[1-i] += 1e-6;
-//    rhostart_notdil[1-i+N] += 1e-6;
-//    auto checker = [](auto & dernotdil, auto &derdil) {
-//        auto err0 = (std::get<0>(dernotdil).array()/std::get<0>(derdil).array() - 1).cwiseAbs().maxCoeff();
-//        auto err1 = (std::get<1>(dernotdil).array()/std::get<1>(derdil).array() - 1).cwiseAbs().maxCoeff();
-//        CAPTURE(err0);
-//        CAPTURE(err1);
-//        return err0 < 1e-9 && err1 < 1e-9;
-//    };
-//
-//    SECTION("Along isotherm") {
-//        // Derivative function with respect to p
-//        auto xprime = [&](const state_type& X) {
-//            REQUIRE(X.size() % 2 == 0);
-//            auto N = X.size() / 2;
-//            // Memory maps into the state vector for inputs and their derivatives
-//            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
-//            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
-//            return get_drhovecdp_Tsat(model, T, rhovecL.eval(), rhovecV.eval());
-//        };
-//        auto dernotdil = xprime(rhostart_notdil); 
-//        auto derdil = xprime(rhostart_dil);
-//        CHECK(checker(dernotdil, derdil));
-//    }
-//    SECTION("Along isobar") {
-//        // Derivative function with respect to T
-//        auto xprime = [&](const state_type& X) {
-//            REQUIRE(X.size() % 2 == 0);
-//            auto N = X.size() / 2;
-//            // Memory maps into the state vector for inputs and their derivatives
-//            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
-//            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
-//            return get_drhovecdT_psat(model, T, rhovecL.eval(), rhovecV.eval());
-//        };
-//        auto dernotdil = xprime(rhostart_notdil); 
-//        auto derdil = xprime(rhostart_dil);
-//        CHECK(checker(dernotdil, derdil));
-//    }
-//}
+TEST_CASE("Check infinite dilution of isoline VLE derivatives", "[cubic][isochoric][infdil]")
+{
+    // Methane + propane
+    std::valarray<double> Tc_K = { 190.564, 369.89 },
+        pc_Pa = { 4599200, 4251200.0 },
+        acentric = { 0.011, 0.1521 };
+    auto model = canonical_PR(Tc_K, pc_Pa, acentric);
+    const auto N = Tc_K.size();
+    
+    using state_type = std::valarray<double>;
+    REQUIRE(N == 2);
+    auto get_start = [&](double T, auto i) {
+        std::valarray<double> Tc_(Tc_K[i], 1), pc_(pc_Pa[i], 1), acentric_(acentric[i], 1);
+        auto PR = canonical_PR(Tc_, pc_, acentric_);
+        auto [rhoL, rhoV] = PR.superanc_rhoLV(T);
+        auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+        using tdx = TDXDerivatives<decltype(model)>;
+        auto p0 = rhoL * PR.R(z) * T * (1 + tdx::get_Ar01(PR, T, rhoL, z));
+        //std::cout << p << std::endl;
+        state_type o(N * 2);
+        o[i] = rhoL;
+        o[i + N] = rhoV;
+        return std::make_tuple(o, p0);
+    };
+    int i = 1;
+    double T = 250;
+    auto [rhostart_dil, p0] = get_start(T, i);
+
+    auto checker = [](auto & dernotdil, auto &derdil) {
+        auto err0 = (std::get<0>(dernotdil).array()/std::get<0>(derdil).array() - 1).cwiseAbs().maxCoeff();
+        auto err1 = (std::get<1>(dernotdil).array()/std::get<1>(derdil).array() - 1).cwiseAbs().maxCoeff();
+        CAPTURE(err0);
+        CAPTURE(err1);
+        return err0 < 1e-5 && err1 < 1e-5; // These are absolute fractional deviations
+    };
+
+    SECTION("Along isotherm") {
+        // Derivative function with respect to p
+        std::valarray<double> rhostart_notdil = rhostart_dil;
+        rhostart_notdil[1 - i] += 1e-3;
+        rhostart_notdil[1 - i + N] += 1e-3;
+        // Polish the pertubed solution
+        Eigen::ArrayXd rhoL0 = Eigen::Map<const Eigen::ArrayXd>(&(rhostart_notdil[0]), 2);
+        Eigen::ArrayXd rhoV0 = Eigen::Map<const Eigen::ArrayXd>(&(rhostart_notdil[0]) + N, N);
+        Eigen::ArrayXd xL0 = rhoL0 / rhoL0.sum();
+        auto [code, rhoL00, rhoV00] = mix_VLE_Tx(model, T, rhoL0, rhoV0, xL0, 1e-10, 1e-10, 1e-10, 1e-10, 10);
+        Eigen::Map<Eigen::ArrayXd>(&(rhostart_notdil[0]), 2) = rhoL00;
+        Eigen::Map<Eigen::ArrayXd>(&(rhostart_notdil[2]), 2) = rhoV00;
+
+        auto xprime = [&](const state_type& X) {
+            REQUIRE(X.size() % 2 == 0);
+            auto N = X.size() / 2;
+            // Memory maps into the state vector for inputs and their derivatives
+            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+            return get_drhovecdp_Tsat(model, T, rhovecL.eval(), rhovecV.eval());
+        };
+        auto dernotdil = xprime(rhostart_notdil); 
+        auto derdil = xprime(rhostart_dil);
+        CHECK(checker(dernotdil, derdil));
+    }
+    SECTION("Along isobar") {
+        std::valarray<double> rhostart_notdil = rhostart_dil;
+        rhostart_notdil[1 - i] += 1e-3;
+        rhostart_notdil[1 - i + N] += 1e-3;
+        // Polish the pertubed solution
+        Eigen::ArrayXd rhoL0 = Eigen::Map<const Eigen::ArrayXd>(&(rhostart_notdil[0]), 2);
+        Eigen::ArrayXd rhoV0 = Eigen::Map<const Eigen::ArrayXd>(&(rhostart_notdil[0]) + N, N);
+        Eigen::ArrayXd xL0 = rhoL0 / rhoL0.sum();
+        
+        auto [code, Tnew, rhoL00, rhoV00] = mixture_VLE_px(model, p0, xL0, T, rhoL0, rhoV0);
+        Eigen::Map<Eigen::ArrayXd>(&(rhostart_notdil[0]), 2) = rhoL00;
+        Eigen::Map<Eigen::ArrayXd>(&(rhostart_notdil[2]), 2) = rhoV00;
+
+        // Derivative function with respect to T
+        auto xprime = [&](double T, const state_type& X) {
+            REQUIRE(X.size() % 2 == 0);
+            auto N = X.size() / 2;
+            // Memory maps into the state vector for inputs and their derivatives
+            auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(X[0]), N);
+            auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X[0]) + N, N);
+            return get_drhovecdT_psat(model, T, rhovecL.eval(), rhovecV.eval());
+        };
+        auto dernotdil = xprime(Tnew, rhostart_notdil); 
+        auto derdil = xprime(T, rhostart_dil);
+        CHECK(checker(dernotdil, derdil));
+    }
+}
 
 TEST_CASE("Check manual integration of subcritical VLE isobar for binary mixture", "[cubic][isochoric][traceisobar]")
 {
