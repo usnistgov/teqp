@@ -61,16 +61,16 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with
     CHECK(T0 == T1);
     CHECK(rho0 == rho1);
     CHECK(alphar0 == alphar1);
-    CHECK(infdil0(1) == infdil1(0));
-    CHECK(infdil0(0) == infdil1(1));
+    CHECK(infdil0(1) == Approx(infdil1(0)));
+    CHECK(infdil0(0) == Approx(infdil1(1)));
 
     auto [Ta, rhoa, alphara, infdila, eiga, dera] = pure_endpoint({ "Ethane", "Nitrogen" }, 0);
     auto [Tb, rhob, alpharb, infdilb, eigb, derb] = pure_endpoint({ "Nitrogen", "Ethane" }, 1);
     CHECK(Ta == Tb);
     CHECK(rhoa == rhob);
     CHECK(alphara == alpharb);
-    CHECK(infdila(1) == infdilb(0));
-    CHECK(infdila(0) == infdilb(1));
+    CHECK(infdila(1) == Approx(infdilb(0)));
+    CHECK(infdila(0) == Approx(infdilb(1)));
 
     int rr = 0;
 }
