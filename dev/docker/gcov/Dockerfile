@@ -1,6 +1,6 @@
 ## Just use docker-compose up to run
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 RUN apt-get -y -m update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake g++ git zip nano gcovr ninja-build
 
