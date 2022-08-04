@@ -42,7 +42,7 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        result r = 0.0, lntau = log(tau);
         if (l_i.size() == 0 && n.size() > 0) {
             throw std::invalid_argument("l_i cannot be zero length if some terms are provided");
         }
@@ -52,6 +52,7 @@ public:
             }
         }
         else {
+            result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - c[i] * powi(delta, l_i[i]));
             }
@@ -71,13 +72,14 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        result r = 0.0, lntau = log(tau);
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau  - g[i] * powi(delta, l_i[i]))*powi(delta,static_cast<int>(d[i]));
             }
         }
         else {
+            result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - g[i] * powi(delta, l_i[i]));
             }
@@ -97,7 +99,7 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        result r = 0.0, lntau = log(tau);
         if (ld_i.size() == 0 && n.size() > 0) {
             throw std::invalid_argument("ld_i cannot be zero length if some terms are provided");
         }
@@ -107,6 +109,7 @@ public:
             }
         }
         else {
+            result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - gd[i]*powi(delta, ld_i[i]) - gt[i]*pow(tau, lt[i]));
             }
@@ -125,7 +128,7 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        result r = 0.0, lntau = log(tau);
         auto square = [](auto x) { return x * x; };
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
@@ -133,6 +136,7 @@ public:
             }
         }
         else {
+            result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - eta[i] * square(delta - epsilon[i]) - beta[i] * square(tau - gamma[i]));
             }
@@ -151,7 +155,7 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        result r = 0.0, lntau = log(tau);
         auto square = [](auto x) { return x * x; };
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
@@ -159,6 +163,7 @@ public:
             }
         }
         else {
+            result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - eta[i] * square(delta - epsilon[i]) - beta[i] * (delta - gamma[i]));
             }
@@ -179,13 +184,14 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        result r = 0.0, lntau = log(tau);
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau - powi(delta, l_i[i]) - pow(tau, m[i]))*powi(delta, static_cast<int>(d[i]));
             }
         }
         else {
+            result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - powi(delta, l_i[i]) - pow(tau, m[i]));
             }
@@ -205,7 +211,7 @@ public:
     auto alphar(const TauType& tau, const DeltaType& delta) const {
 
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau), lndelta = log(delta);
+        result r = 0.0, lntau = log(tau);
         auto square = [](auto x) { return x * x; };
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < n.size(); ++i) {
@@ -213,6 +219,7 @@ public:
             }
         }
         else {
+            result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
                 r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - eta[i] * square(delta - epsilon[i]) + 1.0 / (beta[i] * square(tau - gamma[i]) + b[i]));
             }
