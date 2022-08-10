@@ -74,7 +74,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     m.def("extrapolate_from_critical", &extrapolate_from_critical<Model, double>);
     m.def("pure_VLE_T", &pure_VLE_T<Model, double>);
     
-    m.def("get_pure_critical_conditions_Jacobian", &get_pure_critical_conditions_Jacobian<Model, double, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"));
+    m.def("get_pure_critical_conditions_Jacobian", &get_pure_critical_conditions_Jacobian<Model, double, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg_v("alternative_pure_index", -1), py::arg_v("alternative_length", 2));
     m.def("solve_pure_critical", &solve_pure_critical<Model, double, ADBackends::autodiff>, py::arg("model"), py::arg("T"), py::arg("rho"), py::arg_v("flags", std::nullopt, "None"));
     m.def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, Eigen::ArrayXd>);
     m.def("mixture_VLE_px", &mixture_VLE_px<Model, double, Eigen::ArrayXd>, py::arg("model"), py::arg("p_spec"), py::arg("xmolar_spec").noconvert(), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("flags", std::nullopt, "None"));

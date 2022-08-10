@@ -7,6 +7,7 @@
 
 #include <Eigen/Dense>
 #include "teqp/algorithms/rootfinding.hpp"
+#include "teqp/algorithms/critical_pure.hpp"
 #include "teqp/exceptions.hpp"
 
 // Imports from boost
@@ -33,6 +34,7 @@ struct TCABOptions {
     double stability_rel_drho = 0.001; ///< The relative size of the step (relative to the sum of the molar concentration vector) to be used when taking the step in the direction of \f$\sigma_1\f$ when assessing local stability
     int verbosity = 0; ///< The greater the verbosity, the more output you will get, especially about polishing failures
     bool polish_exception_on_fail = false; ///< If true, when polishing fails, throw an exception, otherwise, terminate tracing
+    bool pure_endpoint_polish = true; ///< If true, if the last step crossed into negative concentrations, try to interpolate to find the pure fluid endpoint hiding in the data
 };
 
 template<typename Model, typename Scalar = double, typename VecType = Eigen::ArrayXd>
@@ -467,6 +469,10 @@ struct CriticalTracing {
         auto extract_drhodt = [](const state_type& dxdt) -> Eigen::ArrayXd {
             return Eigen::Map<const Eigen::ArrayXd>(&(dxdt[0]) + 1, dxdt.size() - 1);
         };
+        // Pull out the dTdt from dxdt, just a convenience function
+        auto extract_dTdt = [](const state_type& dxdt) -> double {
+            return dxdt[0];
+        };
 
         // Define the tolerances
         double abs_err = options.abs_err, rel_err = options.rel_err, a_x = 1.0, a_dxdt = 1.0;
@@ -567,7 +573,9 @@ struct CriticalTracing {
                     res = controlled_stepper.try_step(xprime, x0, t, dt);
                 }
                 catch (const std::exception &e) {
-                    std::cout << e.what() << std::endl;
+                    if (options.verbosity > 0) {
+                        std::cout << e.what() << std::endl;
+                    }
                     break;
                 }
 
@@ -699,6 +707,43 @@ struct CriticalTracing {
                     std::cout << "Termination because maximum number of small steps were taken" << std::endl;
                 }
                 break;
+            }
+        }
+        // If the last step crosses a zero concentration, see if it corresponds to a pure fluid
+        // and if so, iterate to find the pure fluid endpoint
+        if (options.pure_endpoint_polish) {
+            // Simple Euler step t
+            auto dxdt = get_dxdt(x0);
+            auto drhodt = extract_drhodt(dxdt);
+            const auto step = (rhovec + drhodt*dt).eval();
+            if ((step * rhovec > 0).any()) {
+                // Calculate step sizes to take concentrations to zero
+                auto step_sizes = ((-rhovec) / drhodt).eval();
+                Eigen::Index ipure;
+                rhovec.maxCoeff(&ipure);
+                // Find new step size based on the pure we are heading towards
+                auto new_step_size = step_sizes(ipure);
+                // Take an Euler step of the new size
+                const auto new_rhovec = (rhovec + drhodt*new_step_size).eval();
+                const double new_T = T + extract_dTdt(dxdt)*new_step_size;
+                
+                // Solve for pure fluid critical point
+                // 
+                // A bit trickier here because we need to hack the pure fluid model to put the pure fluid 
+                // composition in an index other than the first if ipure != 0 because we don't want 
+                // to require that a pure fluid model is also provided since zero mole fractions
+                // should be fine
+                nlohmann::json flags = { {"alternative_pure_index", ipure}, {"alternative_length", 2} };
+                auto [TT, rhorho] = solve_pure_critical(model, new_T, new_rhovec.sum(), flags);
+
+                // Replace the values in T and rhovec
+                T = TT;
+                rhovec[ipure] = rhorho;
+                rhovec[1 - ipure] = 0;
+
+                // And store the polished values
+                if (!filename.empty()) { write_line(); }
+                store_point();
             }
         }
         //auto N = JSONdata.size();

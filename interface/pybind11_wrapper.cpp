@@ -61,6 +61,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("stability_rel_drho", &TCABOptions::stability_rel_drho)
         .def_readwrite("verbosity", &TCABOptions::verbosity)
         .def_readwrite("polish", &TCABOptions::polish)
+        .def_readwrite("pure_endpoint_polish", &TCABOptions::pure_endpoint_polish)
         .def_readwrite("polish_exception_on_fail", &TCABOptions::polish_exception_on_fail)
         ;
 

@@ -247,6 +247,9 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
     vdWEOS<double> vdW(Tc_K, pc_Pa);
     auto Zc = 3.0/8.0;
     std::valarray<double> max_spluses(Tc_K.size());
+    auto rhoc0 = pc_Pa[0] / (vdW.R(molefrac) * Tc_K[0]) / Zc;
+    auto rhoc1 = pc_Pa[1] / (vdW.R(molefrac) * Tc_K[1]) / Zc;
+
     for (auto ifluid = 0; ifluid < Tc_K.size(); ++ifluid) {
         auto rhoc0 = pc_Pa[ifluid] / (vdW.R(molefrac) * Tc_K[ifluid]) / Zc;
         double T0 = Tc_K[ifluid];
@@ -258,7 +261,7 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
         REQUIRE(splus == Approx(-log(1 - 1.0 / 3.0)));
 
         auto tic0 = std::chrono::steady_clock::now();
-        std::string filename = "";
+        std::string filename = "ArNe";
         using ct = CriticalTracing<decltype(vdW), double, Eigen::ArrayXd>;
         TCABOptions opt;
         opt.polish = true;
@@ -270,6 +273,8 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
             max_splus = std::max(max_splus, splus);
         }
         max_spluses[ifluid] = max_splus;
+
+        CHECK(trace.back().at("T / K") == Approx(Tc_K[1 - ifluid]));
     }
     CHECK(max_spluses.min() == Approx(max_spluses.max()).epsilon(0.01));
     CHECK(max_spluses.min() > -log(1 - 1.0 / 3.0));
