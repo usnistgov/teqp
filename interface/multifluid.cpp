@@ -1,11 +1,20 @@
 #include "pybind11_wrapper.hpp"
 
 #include "teqp/models/multifluid.hpp"
+#include "teqp/models/ammonia_water.hpp"
 #include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/models/mie/lennardjones.hpp"
 
 #include "multifluid_shared.hpp"
+
+void add_AmmoniaWaterTillnerRoth(py::module&m ){
+    auto wAW = py::class_<AmmoniaWaterTillnerRoth>(m, "AmmoniaWaterTillnerRoth")
+        .def_readonly("TcNH3", &AmmoniaWaterTillnerRoth::TcNH3)
+        .def_readonly("vcNH3", &AmmoniaWaterTillnerRoth::vcNH3)
+    ;
+    add_derivatives<AmmoniaWaterTillnerRoth>(m, wAW);
+}
 
 void add_multifluid(py::module& m) {
 
@@ -42,4 +51,5 @@ void add_multifluid(py::module& m) {
     m.def("get_departure_json", &get_departure_json, py::arg("name"), py::arg("root"));
 
     m.def("build_LJ126_TholJPCRD2016", &teqp::build_LJ126_TholJPCRD2016);
+    add_AmmoniaWaterTillnerRoth(m);
 }

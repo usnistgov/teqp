@@ -21,6 +21,9 @@ namespace teqp{
 
 		const std::vector<teqp::EOSTerms> pures;
 
+		const double TcNH3 = 405.40, TcH2O = 647.096, k_T = 0.9648407, alpha = 1.125455;
+		const double vcNH3 = 0.01703026/225, vcH2O = 0.018015268/322, k_V = 1.2395117, beta = 0.8978069;
+
 		AmmoniaWaterTillnerRoth() : pures(get_EOSs({ ammonia_TillnerRoth, water_Wagner })) {};
 
 		template<typename MoleFracType>
@@ -46,10 +49,8 @@ namespace teqp{
 				throw teqp::InvalidArgument("Wrong size of molefrac, should be 2");
 			}
 			auto xNH3 = molefrac[0];
-			double Tc02 = 405.40, Tc01 = 647.096, k_T = 0.9648407, alpha = 1.125455;
-			auto Tred = forceeval(Tc02*xNH3*xNH3 + Tc01*(1-xNH3)*(1-xNH3) + 2*xNH3*(1-pow(xNH3, alpha))*k_T/2*(Tc01+Tc02));
-			double vc02 = 0.01703026/225, vc01 = 0.018015268/322, k_V = 1.2395117, beta = 0.8978069;
-			auto vred = forceeval(vc02*xNH3*xNH3 + vc01*(1-xNH3)*(1-xNH3) + 2*xNH3*(1-pow(xNH3, beta))*k_V/2*(vc01+vc02));
+			auto Tred = forceeval(TcNH3*xNH3*xNH3 + TcH2O*(1-xNH3)*(1-xNH3) + 2*xNH3*(1-pow(xNH3, alpha))*k_T/2*(TcNH3+TcH2O));
+			auto vred = forceeval(vcNH3*xNH3*xNH3 + vcH2O*(1-xNH3)*(1-xNH3) + 2*xNH3*(1-pow(xNH3, beta))*k_V/2*(vcNH3+vcH2O));
 			auto rhored = 1 / vred;
 			auto delta = forceeval(rho / rhored);
 			auto tau = forceeval(Tred / T);
