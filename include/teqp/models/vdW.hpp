@@ -115,6 +115,9 @@ public:
         const RhoType& rho,
         const MoleFracType &molefrac) const
     {
+        if (molefrac.size() != ai.size()) {
+            throw teqp::InvalidArgument("mole fractions must be of size " + std::to_string(ai.size()) + " but are of size " + std::to_string(molefrac.size()));
+        }
         auto Psiminus = -log(1.0 - b(molefrac) * rho);
         auto Psiplus = rho;
         auto val = Psiminus - a(T, molefrac) / (Ru * T) * Psiplus;
