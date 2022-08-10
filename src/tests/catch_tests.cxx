@@ -265,6 +265,7 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
         using ct = CriticalTracing<decltype(vdW), double, Eigen::ArrayXd>;
         TCABOptions opt;
         opt.polish = true;
+        opt.pure_endpoint_polish = true;
         auto trace = ct::trace_critical_arclength_binary(vdW, T0, rhovec0, filename, opt);
         auto tic1 = std::chrono::steady_clock::now();
         double max_splus = 0;

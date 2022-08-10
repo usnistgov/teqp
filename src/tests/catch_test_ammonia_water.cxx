@@ -9,7 +9,7 @@ using Catch::Approx;
 
 using namespace teqp;
 
-TEST_CASE("Trace critical curve w/ Tillner-Roth", "[NHfty3H2O]") {
+TEST_CASE("Trace critical curve w/ Tillner-Roth", "[NH3H2O]") {
     auto model = AmmoniaWaterTillnerRoth();
     auto z = (Eigen::ArrayXd(2) <<  0.7, 0.3).finished();
     auto Ar01 = teqp::TDXDerivatives<decltype(model)>::get_Ar01(model, 300, 300, z);
@@ -20,7 +20,8 @@ TEST_CASE("Trace critical curve w/ Tillner-Roth", "[NHfty3H2O]") {
     auto pig0 = rhovec0.sum() * model.R(rhovec0/rhovec0.sum())*T0;
     REQUIRE(prc0 + pig0 == Approx(11.33e6).margin(0.01e6));
 
-    TCABOptions opt; opt.polish = true; opt.integration_order = 1; opt.init_dt = 100;
+    TCABOptions opt; opt.polish = true; opt.integration_order = 1; opt.init_dt = 100; 
+    opt.pure_endpoint_polish = false; // Doesn't work for pure water
     CriticalTracing<decltype(model)>::trace_critical_arclength_binary(model, T0, rhovec0, "TillnerRoth_crit.csv", opt);
 }
 
@@ -62,6 +63,6 @@ TEST_CASE("Bell et al. REFPROP 10", "[NH3H2O]") {
     auto pig0 = rhovec0.sum() * mutant.R(rhovec0 / rhovec0.sum()) * T0;
 
     TCABOptions opt; opt.polish = true; opt.integration_order = 1; opt.init_dt = 100; opt.verbosity = 1000;
-
+    opt.pure_endpoint_polish = false; // Doesn't work for pure water
     CriticalTracing<decltype(mutant)>::trace_critical_arclength_binary(mutant, T0, rhovec0, "BellREFPROP10_NH3.csv", opt);
 }

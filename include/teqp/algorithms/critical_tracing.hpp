@@ -34,7 +34,7 @@ struct TCABOptions {
     double stability_rel_drho = 0.001; ///< The relative size of the step (relative to the sum of the molar concentration vector) to be used when taking the step in the direction of \f$\sigma_1\f$ when assessing local stability
     int verbosity = 0; ///< The greater the verbosity, the more output you will get, especially about polishing failures
     bool polish_exception_on_fail = false; ///< If true, when polishing fails, throw an exception, otherwise, terminate tracing
-    bool pure_endpoint_polish = true; ///< If true, if the last step crossed into negative concentrations, try to interpolate to find the pure fluid endpoint hiding in the data
+    bool pure_endpoint_polish = false; ///< If true, if the last step crossed into negative concentrations, try to interpolate to find the pure fluid endpoint hiding in the data
 };
 
 template<typename Model, typename Scalar = double, typename VecType = Eigen::ArrayXd>
