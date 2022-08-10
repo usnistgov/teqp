@@ -12,10 +12,10 @@ using namespace teqp;
 TEST_CASE("Test construction of mutant", "[mutant]")
 {
 
-	std::string coolprop_root = "../mycp";
-	auto BIPcollection = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
+    std::string coolprop_root = "../mycp";
+    auto BIPcollection = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
 
-	auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, coolprop_root, BIPcollection);
+    auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, coolprop_root, BIPcollection);
 
     std::string s0 = R"({"0": {} })";
     nlohmann::json j0 = nlohmann::json::parse(s0);
@@ -36,7 +36,7 @@ TEST_CASE("Test construction of mutant", "[mutant]")
             }
         }
     })";
-	nlohmann::json j = nlohmann::json::parse(s);
+    nlohmann::json j = nlohmann::json::parse(s);
     auto mutant = build_multifluid_mutant(model, j);
 
     double T = 300, rho = 300;
