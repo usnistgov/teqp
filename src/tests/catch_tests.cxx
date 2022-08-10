@@ -261,7 +261,7 @@ TEST_CASE("Trace critical locus for vdW", "[vdW][crit]")
         REQUIRE(splus == Approx(-log(1 - 1.0 / 3.0)));
 
         auto tic0 = std::chrono::steady_clock::now();
-        std::string filename = "ArNe";
+        std::string filename = "";
         using ct = CriticalTracing<decltype(vdW), double, Eigen::ArrayXd>;
         TCABOptions opt;
         opt.polish = true;
