@@ -10,6 +10,7 @@
 
 void add_AmmoniaWaterTillnerRoth(py::module&m ){
     auto wAW = py::class_<AmmoniaWaterTillnerRoth>(m, "AmmoniaWaterTillnerRoth")
+        .def(py::init<>())
         .def_readonly("TcNH3", &AmmoniaWaterTillnerRoth::TcNH3)
         .def_readonly("vcNH3", &AmmoniaWaterTillnerRoth::vcNH3)
     ;
