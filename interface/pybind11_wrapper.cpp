@@ -35,6 +35,26 @@ void add_ig_derivatives(py::module& m, Class& cls) {
     add_ig_deriv_impl<Model, 2, 0>(cls); add_ig_deriv_impl<Model, 2, 1>(cls); add_ig_deriv_impl<Model, 2, 2>(cls); add_ig_deriv_impl<Model, 2, 3>(cls); add_ig_deriv_impl<Model, 2, 4>(cls);
 }
 
+/** 
+A redirector factory function. It is needed to at runtime select the desired attribute (method)
+that is available on the model and call it. Runtime overload resolution turns out
+to be much faster than overload resolution from a free function w/ pybind11. 
+
+First the function selects the desired attribute at runtime and forwards all 
+positional and keyword arguments to the method of interest.  The name of the method is captured by value
+inside the lambda
+*/
+inline auto call_method_factory(py::module &m, const std::string& attribute) {
+    
+    auto f = [attribute](const py::object& model, const py::args& args, const py::kwargs& kwargs) {
+        std::string warning_string = ("Calling the top-level function " + attribute + " is deprecated" +
+            " and much slower than calling the same-named method on the model instance");
+        PyErr_WarnEx(PyExc_DeprecationWarning, warning_string.c_str(), 1);
+        return model.attr(attribute.c_str())(*args, **kwargs);
+    };
+    m.def(attribute.c_str(), f);
+}
+
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {
     add_vdW(m);
@@ -43,6 +63,47 @@ void init_teqp(py::module& m) {
     add_multifluid(m);
     add_multifluid_mutant(m);
     add_cubics(m);
+
+    call_method_factory(m, "get_Ar00iso");
+    call_method_factory(m, "get_Ar10iso");
+    call_method_factory(m, "get_Psiriso"),
+
+    call_method_factory(m, "get_splus");
+    call_method_factory(m, "get_pr");
+    call_method_factory(m, "get_B2vir");
+    call_method_factory(m, "get_B12vir");
+    
+    call_method_factory(m, "pure_VLE_T");
+    call_method_factory(m, "extrapolate_from_critical");
+
+    call_method_factory(m, "build_Psir_Hessian_autodiff");
+    call_method_factory(m, "build_Psi_Hessian_autodiff");
+    call_method_factory(m, "build_Psir_gradient_autodiff");
+    call_method_factory(m, "build_d2PsirdTdrhoi_autodiff");
+    call_method_factory(m, "get_chempotVLE_autodiff");
+    call_method_factory(m, "get_dchempotdT_autodiff");
+    call_method_factory(m, "get_fugacity_coefficients");
+    call_method_factory(m, "get_partial_molar_volumes");
+
+    call_method_factory(m, "trace_critical_arclength_binary");
+    call_method_factory(m, "get_criticality_conditions");
+    call_method_factory(m, "eigen_problem");
+    call_method_factory(m, "get_minimum_eigenvalue_Psi_Hessian");
+    call_method_factory(m, "get_drhovec_dT_crit");
+
+    call_method_factory(m, "get_pure_critical_conditions_Jacobian");
+    call_method_factory(m, "solve_pure_critical");
+    call_method_factory(m, "mix_VLE_Tx");
+    call_method_factory(m, "mixture_VLE_px");
+
+    call_method_factory(m, "get_drhovecdp_Tsat");
+    call_method_factory(m, "trace_VLE_isotherm_binary");
+    call_method_factory(m, "get_drhovecdT_psat");
+    call_method_factory(m, "trace_VLE_isobar_binary");
+    call_method_factory(m, "get_dpsat_dTsat_isopleth");
+
+    call_method_factory(m, "mix_VLLE_T");
+    call_method_factory(m, "find_VLLE_T_binary");
 
     // The options class for critical tracer, not tied to a particular model
     py::class_<TCABOptions>(m, "TCABOptions")
