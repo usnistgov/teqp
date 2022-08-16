@@ -29,6 +29,8 @@ struct TCABOptions {
     int max_step_count = 1000; ///< Maximum number of steps allowed
     int skip_dircheck_count = 1; ///< Only start checking the direction dot product after this many steps
     bool polish = false; ///< If true, polish the solution at every step
+    double polish_reltol_T = 0.01; ///< The maximum allowed change in temperature when polishing
+    double polish_reltol_rho = 0.05; ///< The maximum allowed change in any molar concentration when polishing
     bool terminate_negative_density = true; ///< Stop the tracing if the density is negative
     bool calc_stability = false; ///< Calculate the local stability with the method of Deiters and Bell
     double stability_rel_drho = 0.001; ///< The relative size of the step (relative to the sum of the molar concentration vector) to be used when taking the step in the direction of \f$\sigma_1\f$ when assessing local stability
@@ -612,6 +614,9 @@ struct CriticalTracing {
 
             auto z0 = rhovec[0] / rhovec.sum();
             if (z0 < 0 || z0 > 1) {
+                if (options.verbosity > 10) {
+                    std::cout << "Termination because z0 of " + std::to_string(z0) + " is outside [0, 1]" << std::endl;
+                }
                 break;
             }
 
@@ -643,20 +648,27 @@ struct CriticalTracing {
                 for (auto &polisher : polishers){
                     try {
                         auto [Tnew, rhovecnew] = polisher(model, T, rhovec);
-                        if (std::abs(T - Tnew)/T > 0.01) {
-                            throw IterationFailure("Polishing changed the temperature more than 1 %");
+                        if (std::abs(T - Tnew) > options.polish_reltol_T*T) {
+                            throw IterationFailure("Polishing changed the temperature more than " + std::to_string(options.polish_reltol_T*100) + " %");
                         }
-                        if (((rhovec-rhovecnew).cwiseAbs() > 0.05*rhovec).any()){
-                            throw IterationFailure("Polishing changed a molar concentration by more than 5 %");
+                        if (((rhovec-rhovecnew).cwiseAbs() > options.polish_reltol_rho*rhovec).any()){
+                            throw IterationFailure("Polishing changed a molar concentration by more than "+std::to_string(options.polish_reltol_rho*100)+" %");
                         }
-                        polish_ok = true; 
+                        polish_ok = true;
                         T = Tnew;
                         rhovec = rhovecnew;
                         break;
                     }
                     catch (std::exception& e) {
-                        if (options.verbosity > 10){
+                        if (options.verbosity > 10) {
                             std::cout << "Tracing problem: " << e.what() << std::endl;
+                            std::cout << "Starting:: T:" << T << "; rhovec: " << rhovec << std::endl;
+                            auto conditions = get_criticality_conditions(model, T, rhovec);
+                            std::cout << "Starting crit. cond.: " << conditions << std::endl;
+                            try {
+                                auto [Tnew, rhovecnew] = polisher(model, T, rhovec);
+                                std::cout << "Ending:: T:" << Tnew << "; rhovec: " << rhovecnew << std::endl;
+                            } catch (...) {}
                         }
                     }
                 }
@@ -696,6 +708,9 @@ struct CriticalTracing {
             auto rhotot = rhovec.sum();
             z0 = rhovec[0] / rhotot;
             if (z0 < 0 || z0 > 1) {
+                if (options.verbosity > 10) {
+                    std::cout << "Termination because z0 of " + std::to_string(z0) + " is outside [0, 1]" << std::endl;
+                }
                 break;
             }
 
