@@ -19,6 +19,7 @@ namespace teqp {
         const int code;
         const std::string msg;
         teqpException(int code, const std::string& msg) : code(code), msg(msg) {};
+    public:
         const char* what() const noexcept override {
             return msg.c_str();
         }
