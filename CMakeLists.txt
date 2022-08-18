@@ -84,7 +84,9 @@ target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
 
 if (TEQP_TESTTEQPCPP)
   add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test_teqpcpp.cpp")
-  target_link_libraries(test_teqpcpp PUBLIC teqpcpp PRIVATE Catch2WithMain)
+  target_link_libraries(test_teqpcpp PUBLIC teqpcpp)
+  add_executable(bench_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/bench_teqpcpp.cpp")
+  target_link_libraries(bench_teqpcpp PUBLIC teqpcpp PRIVATE Catch2WithMain)
 endif()
 
 if (TEQP_JAVASCRIPT_MODULE)
