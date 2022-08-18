@@ -2,6 +2,7 @@
 
 #include "teqp/constants.hpp"
 #include "teqp/types.hpp"
+#include "teqp/exceptions.hpp"
 
 namespace teqp {
 /*
