@@ -10,7 +10,6 @@
 #include <variant>
 #include <filesystem>
 
-#include "teqp/derivs.hpp"
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/filesystem.hpp"
