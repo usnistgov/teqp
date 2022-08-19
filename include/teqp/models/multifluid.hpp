@@ -3,12 +3,10 @@
 #include "nlohmann/json.hpp"
 
 #include <Eigen/Dense>
-#include <fstream>
 #include <string>
 #include <cmath>
 #include <optional>
 #include <variant>
-#include <filesystem>
 
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
@@ -40,23 +38,6 @@ namespace Eigen {
 }
 
 namespace teqp{
-
-/// Load a JSON file from a specified file
-inline nlohmann::json load_a_JSON_file(const std::string& path) {
-    if (!std::filesystem::is_regular_file(path)) {
-        throw std::invalid_argument("Path to be loaded does not exist: " + path);
-    }
-    auto stream = std::ifstream(path);
-    if (!stream) {
-        throw std::invalid_argument("File stream cannot be opened from: " + path);
-    }
-    try {
-        return nlohmann::json::parse(stream);
-    }
-    catch (...) {
-        throw std::invalid_argument("File at " + path + " is not valid JSON");
-    }
-}
 
 template<typename EOSCollection>
 class CorrespondingStatesContribution {
