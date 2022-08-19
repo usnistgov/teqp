@@ -660,6 +660,7 @@ struct TVLEOptions {
     int max_steps = 1000, integration_order = 5;
     bool polish = true;
     bool calc_criticality = false;
+    bool terminate_unstable = false;
 };
 
 /***
@@ -847,6 +848,15 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + N, N);
             auto x = rhovecL / rhovecL.sum();
             auto y = rhovecV / rhovecV.sum();
+            // Check if the solution has gone mechanically unstable
+            if (opt.calc_criticality) {
+                using ct = CriticalTracing<Model, Scalar, VecType>;
+                auto condsL = ct::get_criticality_conditions(model, T, rhovecL);
+                auto condsV = ct::get_criticality_conditions(model, T, rhovecV);
+                if (condsL[0] < 1e-12 or condsV[0] < 1e-12){
+                    return true;
+                }
+            }
             if ((x < 0).any() || (x > 1).any() || (y < 0).any() || (y > 1).any() || (!rhovecL.isFinite()).any() || (!rhovecV.isFinite()).any()) {
                 return true;
             }
@@ -885,6 +895,7 @@ struct PVLEOptions {
     int max_steps = 1000, integration_order = 5;
     bool polish = true;
     bool calc_criticality = false;
+    bool terminate_unstable = false;
 };
 
 /***
@@ -1072,10 +1083,20 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
         auto stop_requested = [&]() {
             //// Calculate some other parameters, for debugging
             auto N = (x0.size()-1) / 2;
+            auto& T = x0[0];
             auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[1]), N);
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[1]) + N, N);
             auto x = rhovecL / rhovecL.sum();
             auto y = rhovecV / rhovecV.sum();
+            // Check if the solution has gone mechanically unstable
+            if (opt.calc_criticality) {
+                using ct = CriticalTracing<Model, Scalar, VecType>;
+                auto condsL = ct::get_criticality_conditions(model, T, rhovecL);
+                auto condsV = ct::get_criticality_conditions(model, T, rhovecV);
+                if (condsL[0] < 1e-12 or condsV[0] < 1e-12) {
+                    return true;
+                }
+            }
             if ((x < 0).any() || (x > 1).any() || (y < 0).any() || (y > 1).any() || (!rhovecL.isFinite()).any() || (!rhovecV.isFinite()).any()) {
                 return true;
             }

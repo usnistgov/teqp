@@ -140,6 +140,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("integration_order", &TVLEOptions::integration_order)
         .def_readwrite("polish", &TVLEOptions::polish)
         .def_readwrite("calc_criticality", &TVLEOptions::calc_criticality)
+        .def_readwrite("terminate_unstable", &TVLEOptions::terminate_unstable)
         ;
 
     // The options class for isobar tracer, not tied to a particular model
@@ -154,6 +155,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("integration_order", &PVLEOptions::integration_order)
         .def_readwrite("polish", &PVLEOptions::polish)
         .def_readwrite("calc_criticality", &PVLEOptions::calc_criticality)
+        .def_readwrite("terminate_unstable", &PVLEOptions::terminate_unstable)
         ;
 
     // The options class for the finder of VLLE solutions from VLE tracing, not tied to a particular model
