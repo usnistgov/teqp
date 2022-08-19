@@ -847,7 +847,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + N, N);
             auto x = rhovecL / rhovecL.sum();
             auto y = rhovecV / rhovecV.sum();
-            if ((x < 0).any() || (x > 1).any() || (y < 0).any() || (y > 1).any()) {
+            if ((x < 0).any() || (x > 1).any() || (y < 0).any() || (y > 1).any() || (!rhovecL.isFinite()).any() || (!rhovecV.isFinite()).any()) {
                 return true;
             }
             else {
@@ -1076,7 +1076,7 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[1]) + N, N);
             auto x = rhovecL / rhovecL.sum();
             auto y = rhovecV / rhovecV.sum();
-            if ((x < 0).any() || (x > 1).any() || (y < 0).any() || (y > 1).any()) {
+            if ((x < 0).any() || (x > 1).any() || (y < 0).any() || (y > 1).any() || (!rhovecL.isFinite()).any() || (!rhovecV.isFinite()).any()) {
                 return true;
             }
             else {
