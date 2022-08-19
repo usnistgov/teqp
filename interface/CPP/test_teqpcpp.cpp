@@ -8,11 +8,22 @@
 * all the templates every time this file is compiled
 */
 
-
 #include "teqpcpp.hpp"
+#include <iostream>
 
 int main() {
-    teqp::AllowedModels model = teqp::build_multifluid_model({ "Methane", "Ethane" }, "../mycp");
+    nlohmann::json j = { 
+        {"kind", "multifluid"}, 
+        {"model", {
+            {"components", {"../mycp/dev/fluids/Methane.json","../mycp/dev/fluids/Ethane.json"}},
+            {"BIP", "../mycp/dev/mixtures/mixture_binary_pairs.json"},
+            {"departure", "../mycp/dev/mixtures/mixture_departure_functions.json"}
+        }
+    }};
+    //std::cout << j.dump(2);
+    auto am = teqp::cppinterface::make_model(j);
+
     auto z = (Eigen::ArrayXd(2) << 0.5, 0.5).finished();
-    double Ar01 = teqp::cppinterface::get_Arxy(model, 0, 1, 300, 3, z);
+    double Ar01 = am->get_Arxy(0, 1, 300, 3, z);
+    std::cout << Ar01 << std::endl;
 }
