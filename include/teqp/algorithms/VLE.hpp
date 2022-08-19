@@ -853,7 +853,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
                 using ct = CriticalTracing<Model, Scalar, VecType>;
                 auto condsL = ct::get_criticality_conditions(model, T, rhovecL);
                 auto condsV = ct::get_criticality_conditions(model, T, rhovecV);
-                if (condsL[0] < 1e-12 or condsV[0] < 1e-12){
+                if (condsL[0] < 1e-12 || condsV[0] < 1e-12){
                     return true;
                 }
             }
@@ -1093,7 +1093,7 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
                 using ct = CriticalTracing<Model, Scalar, VecType>;
                 auto condsL = ct::get_criticality_conditions(model, T, rhovecL);
                 auto condsV = ct::get_criticality_conditions(model, T, rhovecV);
-                if (condsL[0] < 1e-12 or condsV[0] < 1e-12) {
+                if (condsL[0] < 1e-12 || condsV[0] < 1e-12) {
                     return true;
                 }
             }
