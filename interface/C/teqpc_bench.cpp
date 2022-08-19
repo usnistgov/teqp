@@ -4,6 +4,8 @@
 #define CATCH_CONFIG_MAIN
 #include <catch/catch.hpp>
 
+#include <unordered_map>
+
 // Prototypes of the functions exposed by the shared library
 extern "C" int build_model(const char* j, char* uuid, char* errmsg, int errmsg_length);
 extern "C" int free_model(const char* uid, char* errmsg, int errmsg_length);
