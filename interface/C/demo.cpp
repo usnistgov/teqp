@@ -3,7 +3,7 @@ extern "C" int build_model(const char* j, char* uuid, char* errmsg, int errmsg_l
 extern "C" int free_model(const char* uid, char* errmsg, int errmsg_length);
 extern "C" int get_Arxy(const char* uid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length);
 
-#include <valarray>;
+#include <valarray>
 
 int main(){
 	const char* model = R"(  
