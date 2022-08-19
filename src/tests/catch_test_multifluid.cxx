@@ -154,6 +154,8 @@ TEST_CASE("Check that all ancillaries can be instantiated and work properly", "[
             double T = 0.9*anc.rhoL.T_r;
             auto rhoV = anc.rhoV(T), rhoL = anc.rhoL(T);
             auto rhovec = teqp::pure_VLE_T(model, T, rhoL, rhoV, 10);
+            CHECK_THROWS(anc.rhoV(1.1*anc.rhoL.T_r));
+            CHECK_THROWS(anc.rhoL(1.1*anc.rhoL.T_r));
             counter += 1;
         }
         CHECK(counter > 100);

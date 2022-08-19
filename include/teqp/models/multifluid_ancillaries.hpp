@@ -2,6 +2,7 @@
 
 #include <valarray>
 #include "nlohmann/json.hpp"
+#include "teqp/exceptions.hpp"
 
 namespace teqp{
 
@@ -25,6 +26,9 @@ namespace teqp{
             noexp(type == "rhoLnoexp"){};
 
 		double operator() (double T) const{
+			if (T > T_r) {
+				throw teqp::InvalidArgument("Input temperature of " + std::to_string(T) + " K is above the reducing temperature of " + std::to_string(T_r) + " K");
+			}
 			auto Theta = 1-T/T_r;
 			auto RHS = (pow(Theta, t)*n).sum();
 			if (using_tau_r){
