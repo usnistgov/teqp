@@ -11,6 +11,7 @@ namespace teqp {
         public:
             virtual double get_Arxy(const int, const int, const double, const double, const Eigen::ArrayXd&) const = 0;
             virtual nlohmann::json trace_critical_arclength_binary(const double T0, const Eigen::ArrayXd& rhovec0) const = 0;
+            virtual ~AbstractModel() = default;
         };
         
         // Generic JSON-based interface where the model description is encoded as JSON
