@@ -81,7 +81,7 @@ option (TEQP_MULTIPRECISION_ENABLED
 add_library(teqpcpp STATIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/teqpcpp.cpp")
 target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
 target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
-
+set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 if (TEQP_TESTTEQPCPP)
   add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test_teqpcpp.cpp")
