@@ -7,9 +7,8 @@
 #include <variant>
 #include <atomic>
 
-#include "teqp/derivs.hpp"
+#include "teqpcpp.hpp"
 #include "teqp/exceptions.hpp"
-#include "teqp/json_builder.hpp"
 
 // Define empty macros so that no exporting happens
 #if defined(TEQPC_CATCH)
@@ -42,7 +41,7 @@ std::string get_uid(int N) {
     return std::string(N - s.size(), '0') + s;
 }
 
-std::unordered_map<std::string, AllowedModels> library;
+std::unordered_map<std::string, std::unique_ptr<teqp::cppinterface::AbstractModel>> library;
 
 void exception_handler(int& errcode, char* message_buffer, const int buffer_length)
 {
@@ -65,7 +64,7 @@ EXPORT_CODE int CONVENTION build_model(const char* j, char* uuid, char* errmsg, 
         nlohmann::json json = nlohmann::json::parse(j);
         std::string uid = get_uid(32);
         try {
-            library.emplace(std::make_pair(uid, build_model(json)));
+            library.emplace(std::make_pair(uid, cppinterface::make_model(json)));
         }
         catch (std::exception &e) {
             throw teqpcException(30, "Unable to load with error:" + std::string(e.what()));
@@ -94,15 +93,8 @@ EXPORT_CODE int CONVENTION get_Arxy(const char* uuid, const int NT, const int ND
     try {
         // Make an Eigen view of the double buffer
         Eigen::Map<const Eigen::ArrayXd> molefrac_(molefrac, Ncomp);
-
-        // Lambda function to extract the given derivative from the thing contained in the variant
-        auto f = [&](const auto& model) {
-            using tdx = TDXDerivatives<decltype(model), double, decltype(molefrac_)>;
-            return tdx::get_Ar(NT, ND, model, T, rho, molefrac_);
-        };
-
-        // Now call the visitor function to get the value
-        *val = std::visit(f, library.at(std::string(uuid)));
+        // Call the function
+        *val = library.at(std::string(uuid))->get_Arxy(NT, ND, T, rho, molefrac_);
     }
     catch (...) {
         exception_handler(errcode, errmsg, errmsg_length);

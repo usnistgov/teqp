@@ -80,6 +80,7 @@ option (TEQP_MULTIPRECISION_ENABLED
 # doesn't require a full compile for a single LOC change
 add_library(teqpcpp STATIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/teqpcpp.cpp")
 target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
+target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
 
 
 if (TEQP_TESTTEQPCPP)
@@ -125,7 +126,7 @@ if (MSVC)
     target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
 endif()
 target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
-target_link_libraries(catch_tests PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain)
+target_link_libraries(catch_tests PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain PUBLIC teqpcpp)
 add_test(normal_tests catch_tests)
 
 if (TEQP_TEQPC)
@@ -134,7 +135,7 @@ if (TEQP_TEQPC)
   if (MSVC)
       target_sources(teqpc PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
   endif()
-  target_link_libraries(teqpc PRIVATE autodiff PRIVATE teqpinterface)
+  target_link_libraries(teqpc PRIVATE autodiff PRIVATE teqpinterface PUBLIC teqpcpp)
   if (NOT UNIX)
     target_compile_definitions(teqpc PRIVATE -DEXTERN_C_DLLEXPORT)
   else()
