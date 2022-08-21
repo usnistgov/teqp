@@ -13,6 +13,8 @@ void add_AmmoniaWaterTillnerRoth(py::module&m ){
         .def(py::init<>())
         .def_readonly("TcNH3", &AmmoniaWaterTillnerRoth::TcNH3)
         .def_readonly("vcNH3", &AmmoniaWaterTillnerRoth::vcNH3)
+        .def("get_Tr", &AmmoniaWaterTillnerRoth::get_Treducing<Eigen::ArrayXd>)
+        .def("get_rhor", &AmmoniaWaterTillnerRoth::get_rhoreducing<Eigen::ArrayXd>)
         .def("alphar_departure", &AmmoniaWaterTillnerRoth::alphar_departure<double, double, double>, py::arg("tau"), py::arg("delta"), py::arg("xNH3"))
     ;
     add_derivatives<AmmoniaWaterTillnerRoth>(m, wAW);

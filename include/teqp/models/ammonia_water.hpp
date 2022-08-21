@@ -39,6 +39,26 @@ namespace teqp{
             double gamma = 0.5248379;
             return forceeval(xNH3 * (1 - pow(xNH3, gamma)) * summer);
         }
+        
+        template<typename MoleFracType>
+        auto get_Treducing(const MoleFracType& molefrac) const {
+            if (molefrac.size() != 2) {
+                throw teqp::InvalidArgument("Wrong size of molefrac, should be 2");
+            }
+            auto xNH3 = molefrac[0];
+            auto Tred = forceeval(TcNH3 * xNH3 * xNH3 + TcH2O * (1 - xNH3) * (1 - xNH3) + 2 * xNH3 * (1 - pow(xNH3, alpha)) * k_T / 2 * (TcNH3 + TcH2O));
+            return Tred;
+        }
+        
+        template<typename MoleFracType>
+        auto get_rhoreducing(const MoleFracType& molefrac) const {
+            if (molefrac.size() != 2) {
+                throw teqp::InvalidArgument("Wrong size of molefrac, should be 2");
+            }
+            auto xNH3 = molefrac[0];
+            auto vred = forceeval(vcNH3 * xNH3 * xNH3 + vcH2O * (1 - xNH3) * (1 - xNH3) + 2 * xNH3 * (1 - pow(xNH3, beta)) * k_V / 2 * (vcNH3 + vcH2O));
+            return 1/vred;
+        }
 
         template<typename TType, typename RhoType, typename MoleFracType>
         auto alphar(const TType& T,
@@ -49,9 +69,8 @@ namespace teqp{
                 throw teqp::InvalidArgument("Wrong size of molefrac, should be 2");
             }
             auto xNH3 = molefrac[0];
-            auto Tred = forceeval(TcNH3*xNH3*xNH3 + TcH2O*(1-xNH3)*(1-xNH3) + 2*xNH3*(1-pow(xNH3, alpha))*k_T/2*(TcNH3+TcH2O));
-            auto vred = forceeval(vcNH3*xNH3*xNH3 + vcH2O*(1-xNH3)*(1-xNH3) + 2*xNH3*(1-pow(xNH3, beta))*k_V/2*(vcNH3+vcH2O));
-            auto rhored = 1 / vred;
+            auto Tred = get_Treducing(molefrac);
+            auto rhored = get_rhoreducing(molefrac);
             auto delta = forceeval(rho / rhored);
             auto tau = forceeval(Tred / T);
             auto val_CS = pures[0].alphar(tau, delta)*xNH3 + pures[1].alphar(tau, delta)*(1-xNH3);
