@@ -37,6 +37,10 @@ namespace teqp{
             for (auto i=7; i <= 13; ++i){ summer = summer + xNH3*a[i]*pow(tau, t[i])*pow(delta, d[i])*exp(-pow(delta,e[i]));}
             for (auto i=14; i <= 14; ++i) { summer = summer + xNH3*xNH3 * a[i] * pow(tau, t[i]) * pow(delta, d[i]) * exp(-pow(delta, e[i])); }
             double gamma = 0.5248379;
+            // xNH3^gamma is not differentiable at xNH3=0, but limit when multiplied by zero is still zero
+            if (getbaseval(xNH3) == 0) {
+                return static_cast<decltype(summer)>(0.0);
+            }
             return forceeval(xNH3 * (1 - pow(xNH3, gamma)) * summer);
         }
         
@@ -46,7 +50,11 @@ namespace teqp{
                 throw teqp::InvalidArgument("Wrong size of molefrac, should be 2");
             }
             auto xNH3 = molefrac[0];
-            auto Tred = forceeval(TcNH3 * xNH3 * xNH3 + TcH2O * (1 - xNH3) * (1 - xNH3) + 2 * xNH3 * (1 - pow(xNH3, alpha)) * k_T / 2 * (TcNH3 + TcH2O));
+            if (getbaseval(xNH3) == 0) {
+                throw teqp::InvalidArgument("Tillner-Roth model cannot accept mole fraction of zero");
+                return static_cast<decltype(xNH3)>(TcH2O);
+            }
+            auto Tred = forceeval(TcNH3*xNH3*xNH3 + TcH2O*(1-xNH3)*(1-xNH3) + 2.0*xNH3*(1.0-pow(xNH3, alpha))*k_T/2.0*(TcNH3 + TcH2O));
             return Tred;
         }
         
@@ -56,8 +64,12 @@ namespace teqp{
                 throw teqp::InvalidArgument("Wrong size of molefrac, should be 2");
             }
             auto xNH3 = molefrac[0];
-            auto vred = forceeval(vcNH3 * xNH3 * xNH3 + vcH2O * (1 - xNH3) * (1 - xNH3) + 2 * xNH3 * (1 - pow(xNH3, beta)) * k_V / 2 * (vcNH3 + vcH2O));
-            return 1/vred;
+            if (getbaseval(xNH3) == 0) {
+                throw teqp::InvalidArgument("Tillner-Roth model cannot accept mole fraction of zero");
+                return static_cast<decltype(xNH3)>(forceeval(1/vcH2O));
+            }
+            auto vred = forceeval(vcNH3*xNH3*xNH3 + vcH2O*(1-xNH3)*(1-xNH3) + 2.0*xNH3*(1.0-pow(xNH3, beta))*k_V/2.0*(vcNH3 + vcH2O));
+            return forceeval(1/vred);
         }
 
         template<typename TType, typename RhoType, typename MoleFracType>

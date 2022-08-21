@@ -4,8 +4,17 @@ using Catch::Approx;
 
 #include "teqp/models/ammonia_water.hpp"
 #include "teqp/models/multifluid_mutant.hpp"
+#include "teqp/models/multifluid_ancillaries.hpp"
+
 #include "teqp/derivs.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
+#include "teqp/algorithms/VLE.hpp"
+
+#include "teqp/finite_derivs.hpp"
+
+#include <autodiff/forward/real.hpp>
+#include <autodiff/forward/dual.hpp>
+using namespace autodiff;
 
 using namespace teqp;
 
@@ -22,11 +31,11 @@ TEST_CASE("Trace critical curve w/ Tillner-Roth", "[NH3H2O]") {
 
     SECTION("simple Euler") {
         TCABOptions opt; opt.polish = true; opt.integration_order = 1; opt.init_dt = 100; opt.verbosity = 100;
-        CriticalTracing<decltype(model)>::trace_critical_arclength_binary(model, T0, rhovec0, "TillnerRoth_crit1.csv", opt);
+        CriticalTracing<decltype(model)>::trace_critical_arclength_binary(model, T0, rhovec0, "", opt);
     }
     SECTION("adaptive RK45") {
         TCABOptions opt; opt.polish = true; opt.integration_order = 5; opt.init_dt = 100; opt.verbosity = 100; opt.polish_reltol_T = 10000; opt.polish_reltol_rho = 100000;
-        CriticalTracing<decltype(model)>::trace_critical_arclength_binary(model, T0, rhovec0, "TillnerRoth_crit5.csv", opt);
+        CriticalTracing<decltype(model)>::trace_critical_arclength_binary(model, T0, rhovec0, "", opt);
     }
 }
 
@@ -69,5 +78,42 @@ TEST_CASE("Bell et al. REFPROP 10", "[NH3H2O]") {
 
     TCABOptions opt; opt.polish = true; opt.integration_order = 5; opt.init_dt = 100; opt.verbosity = 1000; opt.polish_reltol_T = 10000; opt.polish_reltol_rho = 100000;
     opt.pure_endpoint_polish = false; // Doesn't work for pure water
-    CriticalTracing<decltype(mutant)>::trace_critical_arclength_binary(mutant, T0, rhovec0, "BellREFPROP10_NH3.csv", opt);
+    CriticalTracing<decltype(mutant)>::trace_critical_arclength_binary(mutant, T0, rhovec0, "", opt);
+}
+
+TEST_CASE("pure water VLE should not crash for Tillner-Roth model","[NH3H2O]") {
+    auto pure = build_multifluid_model({ "Water" }, "../mycp");
+    auto jancillaries = nlohmann::json::parse(pure.get_meta()).at("pures")[0].at("ANCILLARIES");
+    auto anc = teqp::MultiFluidVLEAncillaries(jancillaries);
+    double T = 500;
+    auto rhoLV = pure_VLE_T(pure, T, anc.rhoL(T), anc.rhoV(T), 10);
+    auto rhoL = rhoLV[0], rhoV = rhoLV[1];
+
+    auto model = AmmoniaWaterTillnerRoth();
+    
+    int k = 1;
+    auto rhovecL = (Eigen::ArrayXd(2) << 0.0, 0).finished(); rhovecL(k) = rhoL;
+    auto rhovecV = (Eigen::ArrayXd(2) << 0.0, 0).finished(); rhovecV(k) = rhoV;
+    
+    auto z = (rhovecL/rhovecL.sum()).eval();
+    //auto alphar = model.alphar(T, rhovecL.sum(), z);
+    //auto psir = IsochoricDerivatives<decltype(model)>::get_Psir(model, T, rhovecL);
+    //auto [PsirL, PsirgradL, hessianL] = IsochoricDerivatives<decltype(model)>::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
+    //auto [code, rhovecLnew, rhovecVnew] = mix_VLE_Tx(model, T, rhovecL, rhovecV, z, 1e-10, 1e-10, 1e-10, 1e-10, 10);
+    CHECK_THROWS(mix_VLE_Tx(model, T, rhovecL, rhovecV, z, 1e-10, 1e-10, 1e-10, 1e-10, 10));
+}
+
+TEST_CASE("pure water derivatives ", "[NH3H2O]") {
+    auto f = [](const auto& x) { return forceeval(x*(1 - pow(x, 1.1))); }; 
+    
+    autodiff::Real<6, double> x_ = 0.0;
+    auto ders = derivatives(f, along(1), at(x_));
+    CHECK(ders[0] == 0);
+    CHECK(ders[1] == 1);
+
+    using adtype = autodiff::HigherOrderDual<5, double>;
+    adtype x__ = 0.0;
+    auto dersdu = derivatives(f, wrt(x__,x__,x__,x__), at(x__));
+    //CHECK(dersdu[0] = 0); // Bug in autodiff
+    //CHECK(dersdu[1] = 1);
 }
