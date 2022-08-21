@@ -150,6 +150,10 @@ enum class VLE_return_code { unset, xtol_satisfied, functol_satisfied, maxiter_m
 * \param axtol Absolute tolerance on steps in independent variables
 * \param relxtol Relative tolerance on steps in independent variables
 * \param maxiter Maximum number of iterations permitted
+* 
+* Note: if a mole fraction is zero in the provided vector, the molar concentrations in 
+* this component will not be allowed to change (they will stay zero, avoiding the possibility that 
+* they go to a negative value, which can cause trouble for some EOS)
 */
 template<typename Model, typename Scalar, typename Vector>
 auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vector& rhovecV0, const Vector& xspec, double atol, double reltol, double axtol, double relxtol, int maxiter) {
@@ -180,21 +184,32 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
         Scalar pV = rhoV * RT - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
         auto dpdrhovecL = RT + (hessianL * rhovecL.matrix()).array();
         auto dpdrhovecV = RT + (hessianV * rhovecV.matrix()).array();
+        
+        bool index0nonzero = rhovecL(0) > 0 && rhovecV(0) > 0;
+        bool index1nonzero = rhovecL(1) > 0 && rhovecV(1) > 0;
 
-        r(0) = PsirgradL(0) + RT * log(rhovecL(0)) - (PsirgradV(0) + RT * log(rhovecV(0)));
-        r(1) = PsirgradL(1) + RT * log(rhovecL(1)) - (PsirgradV(1) + RT * log(rhovecV(1)));
+        if (index0nonzero) {
+            r(0) = PsirgradL(0) + RT * log(rhovecL(0)) - (PsirgradV(0) + RT * log(rhovecV(0)));
+        } else {
+            r(0) = PsirgradL(0) - PsirgradV(0);
+        }
+        if (index1nonzero){
+            r(1) = PsirgradL(1) + RT * log(rhovecL(1)) - (PsirgradV(1) + RT * log(rhovecV(1)));
+        } else {
+            r(1) = PsirgradL(1) - PsirgradV(1);
+        }
         r(2) = pL - pV;
         r(3) = rhovecL(0) / rhovecL.sum() - xspec(0);
 
         // Chemical potential contributions in Jacobian
-        J(0, 0) = hessianL(0, 0) + RT / rhovecL(0);
+        J(0, 0) = hessianL(0, 0) + (index0nonzero ? RT / rhovecL(0) : 0);
         J(0, 1) = hessianL(0, 1);
         J(1, 0) = hessianL(1, 0); // symmetric, so same as above
-        J(1, 1) = hessianL(1, 1) + RT / rhovecL(1);
-        J(0, 2) = -(hessianV(0, 0) + RT / rhovecV(0));
+        J(1, 1) = hessianL(1, 1) + (index1nonzero ? RT / rhovecL(1) : 0);
+        J(0, 2) = -(hessianV(0, 0) + (index0nonzero ? RT / rhovecV(0) : 0));
         J(0, 3) = -(hessianV(0, 1));
         J(1, 2) = -(hessianV(1, 0)); // symmetric, so same as above
-        J(1, 3) = -(hessianV(1, 1) + RT / rhovecV(1));
+        J(1, 3) = -(hessianV(1, 1) + (index1nonzero ? RT / rhovecV(1) : 0));
         // Pressure contributions in Jacobian
         J(2, 0) = dpdrhovecL(0);
         J(2, 1) = dpdrhovecL(1);
@@ -207,6 +222,15 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
 
         // Solve for the step
         Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-r);
+
+        // Don't allow changes to components with input zero mole fractions
+        for (auto i = 0; i < 2; ++i) {
+            if (xspec[i] == 0) {
+                dx[i] = 0;
+                dx[i+2] = 0;
+            }
+        }
+
         x.array() += dx;
 
         if ((!dx.isFinite()).all()){
