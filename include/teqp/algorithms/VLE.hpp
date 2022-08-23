@@ -265,7 +265,7 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
     return std::make_tuple(return_code, rhovecLfinal, rhovecVfinal);
 }
 
-struct MixVLETPFlags {
+struct MixVLETpFlags {
     double atol = 1e-10,
         reltol = 1e-10,
         axtol = 1e-10,
@@ -286,7 +286,7 @@ struct MixVLETPFlags {
 * \param flags Flags controlling the iteration and stopping conditions
 */
 template<typename Model, typename Scalar, typename Vector>
-auto mix_VLE_TP(const Model& model, Scalar T, Scalar pgiven, const Vector& rhovecL0, const Vector& rhovecV0, const MixVLETPFlags& flags = {}) {
+auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhovecL0, const Vector& rhovecV0, const MixVLETpFlags& flags = {}) {
 
     const Eigen::Index N = rhovecL0.size();
     auto lengths = (Eigen::ArrayXi(2) << rhovecL0.size(), rhovecV0.size()).finished();
@@ -396,7 +396,7 @@ auto mix_VLE_TP(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
     return std::make_tuple(return_code, message, rhovecLfinal, rhovecVfinal);
 }
 
-struct MixVLEPxFlags {
+struct MixVLEpxFlags {
     double atol = 1e-10,
         reltol = 1e-10,
         axtol = 1e-10,
@@ -416,7 +416,7 @@ struct MixVLEPxFlags {
 * \param flags Additional flags
 */
 template<typename Model, typename Scalar, typename Vector>
-auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec, Scalar T0, const Vector& rhovecL0, const Vector& rhovecV0, const MixVLEPxFlags& flags = {}) {
+auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec, Scalar T0, const Vector& rhovecL0, const Vector& rhovecV0, const MixVLEpxFlags& flags = {}) {
 
     const Eigen::Index N = rhovecL0.size();
     auto lengths = (Eigen::ArrayXi(3) << rhovecL0.size(), rhovecV0.size(), xmolar_spec.size()).finished();

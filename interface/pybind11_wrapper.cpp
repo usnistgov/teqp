@@ -57,53 +57,6 @@ inline auto call_method_factory(py::module &m, const std::string& attribute) {
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {
-    add_vdW(m);
-    add_PCSAFT(m);
-    add_CPA(m);
-    add_multifluid(m);
-    add_multifluid_mutant(m);
-    add_cubics(m);
-
-    call_method_factory(m, "get_Ar00iso");
-    call_method_factory(m, "get_Ar10iso");
-    call_method_factory(m, "get_Psiriso"),
-
-    call_method_factory(m, "get_splus");
-    call_method_factory(m, "get_pr");
-    call_method_factory(m, "get_B2vir");
-    call_method_factory(m, "get_B12vir");
-    
-    call_method_factory(m, "pure_VLE_T");
-    call_method_factory(m, "extrapolate_from_critical");
-
-    call_method_factory(m, "build_Psir_Hessian_autodiff");
-    call_method_factory(m, "build_Psi_Hessian_autodiff");
-    call_method_factory(m, "build_Psir_gradient_autodiff");
-    call_method_factory(m, "build_d2PsirdTdrhoi_autodiff");
-    call_method_factory(m, "get_chempotVLE_autodiff");
-    call_method_factory(m, "get_dchempotdT_autodiff");
-    call_method_factory(m, "get_fugacity_coefficients");
-    call_method_factory(m, "get_partial_molar_volumes");
-
-    call_method_factory(m, "trace_critical_arclength_binary");
-    call_method_factory(m, "get_criticality_conditions");
-    call_method_factory(m, "eigen_problem");
-    call_method_factory(m, "get_minimum_eigenvalue_Psi_Hessian");
-    call_method_factory(m, "get_drhovec_dT_crit");
-
-    call_method_factory(m, "get_pure_critical_conditions_Jacobian");
-    call_method_factory(m, "solve_pure_critical");
-    call_method_factory(m, "mix_VLE_Tx");
-    call_method_factory(m, "mixture_VLE_px");
-
-    call_method_factory(m, "get_drhovecdp_Tsat");
-    call_method_factory(m, "trace_VLE_isotherm_binary");
-    call_method_factory(m, "get_drhovecdT_psat");
-    call_method_factory(m, "trace_VLE_isobar_binary");
-    call_method_factory(m, "get_dpsat_dTsat_isopleth");
-
-    call_method_factory(m, "mix_VLLE_T");
-    call_method_factory(m, "find_VLLE_T_binary");
 
     // The options class for critical tracer, not tied to a particular model
     py::class_<TCABOptions>(m, "TCABOptions")
@@ -165,6 +118,24 @@ void init_teqp(py::module& m) {
         .def_readwrite("rho_trivial_threshold", &VLLEFinderOptions::rho_trivial_threshold)
         ;
 
+    py::class_<MixVLETpFlags>(m, "MixVLETpFlags")
+        .def(py::init<>())
+        .def_readwrite("atol", &MixVLETpFlags::atol)
+        .def_readwrite("reltol", &MixVLETpFlags::reltol)
+        .def_readwrite("relaxtoltol", &MixVLETpFlags::axtol)
+        .def_readwrite("relxtol", &MixVLETpFlags::relxtol)
+        .def_readwrite("maxiter", &MixVLETpFlags::maxiter)
+        ;
+
+    py::class_<MixVLEpxFlags>(m, "MixVLEpxFlags")
+        .def(py::init<>())
+        .def_readwrite("atol", &MixVLEpxFlags::atol)
+        .def_readwrite("reltol", &MixVLEpxFlags::reltol)
+        .def_readwrite("relaxtoltol", &MixVLEpxFlags::axtol)
+        .def_readwrite("relxtol", &MixVLEpxFlags::relxtol)
+        .def_readwrite("maxiter", &MixVLEpxFlags::maxiter)
+        ;
+
     py::enum_<VLE_return_code>(m, "VLE_return_code")
         .value("unset", VLE_return_code::unset)
         .value("xtol_satisfied", VLE_return_code::xtol_satisfied)
@@ -176,6 +147,54 @@ void init_teqp(py::module& m) {
     // The ideal gas Helmholtz energy class
     auto alphaig = py::class_<IdealHelmholtz>(m, "IdealHelmholtz").def(py::init<const nlohmann::json&>());
     add_ig_derivatives<IdealHelmholtz>(m, alphaig);
+
+    add_vdW(m);
+    add_PCSAFT(m);
+    add_CPA(m);
+    add_multifluid(m);
+    add_multifluid_mutant(m);
+    add_cubics(m);
+
+    call_method_factory(m, "get_Ar00iso");
+    call_method_factory(m, "get_Ar10iso");
+    call_method_factory(m, "get_Psiriso"),
+
+    call_method_factory(m, "get_splus");
+    call_method_factory(m, "get_pr");
+    call_method_factory(m, "get_B2vir");
+    call_method_factory(m, "get_B12vir");
+    
+    call_method_factory(m, "pure_VLE_T");
+    call_method_factory(m, "extrapolate_from_critical");
+
+    call_method_factory(m, "build_Psir_Hessian_autodiff");
+    call_method_factory(m, "build_Psi_Hessian_autodiff");
+    call_method_factory(m, "build_Psir_gradient_autodiff");
+    call_method_factory(m, "build_d2PsirdTdrhoi_autodiff");
+    call_method_factory(m, "get_chempotVLE_autodiff");
+    call_method_factory(m, "get_dchempotdT_autodiff");
+    call_method_factory(m, "get_fugacity_coefficients");
+    call_method_factory(m, "get_partial_molar_volumes");
+
+    call_method_factory(m, "trace_critical_arclength_binary");
+    call_method_factory(m, "get_criticality_conditions");
+    call_method_factory(m, "eigen_problem");
+    call_method_factory(m, "get_minimum_eigenvalue_Psi_Hessian");
+    call_method_factory(m, "get_drhovec_dT_crit");
+
+    call_method_factory(m, "get_pure_critical_conditions_Jacobian");
+    call_method_factory(m, "solve_pure_critical");
+    call_method_factory(m, "mix_VLE_Tx");
+    call_method_factory(m, "mixture_VLE_px");
+
+    call_method_factory(m, "get_drhovecdp_Tsat");
+    call_method_factory(m, "trace_VLE_isotherm_binary");
+    call_method_factory(m, "get_drhovecdT_psat");
+    call_method_factory(m, "trace_VLE_isobar_binary");
+    call_method_factory(m, "get_dpsat_dTsat_isopleth");
+
+    call_method_factory(m, "mix_VLLE_T");
+    call_method_factory(m, "find_VLLE_T_binary");
 
     // Some functions for timing overhead of interface
     m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
