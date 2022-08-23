@@ -155,6 +155,11 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
                     auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(X0[0 + N]), N).eval();
                     auto x = (Eigen::ArrayXd(2) << rhovecL(0) / rhovecL.sum(), rhovecL(1) / rhovecL.sum()).finished();
                     auto [return_code, rhoL, rhoV] = mix_VLE_Tx(model, T, rhovecL, rhovecV, x, 1e-10, 1e-8, 1e-10, 1e-8, 10);
+
+                    // And the other way around just to test the routine for TP solving
+                    auto [return_code2, msg, rhoL_, rhoV_] = mix_VLE_TP(model, T, p, rhovecL, rhovecV);
+                    int rr = 0;
+
                 }
                 
             }

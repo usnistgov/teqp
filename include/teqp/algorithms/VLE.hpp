@@ -265,6 +265,137 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
     return std::make_tuple(return_code, rhovecLfinal, rhovecVfinal);
 }
 
+struct MixVLETPFlags {
+    double atol = 1e-10,
+        reltol = 1e-10,
+        axtol = 1e-10,
+        relxtol = 1e-10;
+    int maxiter = 10;
+};
+
+/***
+* \brief Do a vapor-liquid phase equilibrium problem for a mixture (binary only for now) with temperature and pressure specified
+* 
+* The mole concentrations are solved for to give the right pressure
+* 
+* \param model The model to operate on
+* \param T Temperature
+* \param pgiven Given pressure
+* \param rhovecL0 Initial values for liquid mole concentrations
+* \param rhovecV0 Initial values for vapor mole concentrations
+* \param flags Flags controlling the iteration and stopping conditions
+*/
+template<typename Model, typename Scalar, typename Vector>
+auto mix_VLE_TP(const Model& model, Scalar T, Scalar pgiven, const Vector& rhovecL0, const Vector& rhovecV0, const MixVLETPFlags& flags = {}) {
+
+    const Eigen::Index N = rhovecL0.size();
+    auto lengths = (Eigen::ArrayXi(2) << rhovecL0.size(), rhovecV0.size()).finished();
+    if (lengths.minCoeff() != lengths.maxCoeff()) {
+        throw InvalidArgument("lengths of rhovecs must be the same in mix_VLE_Tx");
+    }
+    Eigen::MatrixXd J(2 * N, 2 * N), r(2 * N, 1), x(2 * N, 1);
+    x.col(0).array().head(N) = rhovecL0;
+    x.col(0).array().tail(N) = rhovecV0;
+    using isochoric = IsochoricDerivatives<Model, Scalar, Vector>;
+
+    Eigen::Map<Eigen::ArrayXd> rhovecL(&(x(0)), N);
+    Eigen::Map<Eigen::ArrayXd> rhovecV(&(x(0 + N)), N);
+    
+    VLE_return_code return_code = VLE_return_code::unset;
+    std::string message = "";
+
+    for (int iter = 0; iter < flags.maxiter; ++iter) {
+
+        auto RT = model.R((rhovecL / rhovecL.sum()).eval())*T;
+
+        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
+        auto rhoL = rhovecL.sum();
+        auto rhoV = rhovecV.sum();
+        Scalar pL = rhoL * RT - PsirL + (rhovecL.array() * PsirgradL.array()).sum(); // The (array*array).sum is a dot product
+        Scalar pV = rhoV * RT - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
+        auto dpdrhovecL = RT + (hessianL * rhovecL.matrix()).array();
+        auto dpdrhovecV = RT + (hessianV * rhovecV.matrix()).array();
+
+        bool index0nonzero = rhovecL(0) > 0 && rhovecV(0) > 0;
+        bool index1nonzero = rhovecL(1) > 0 && rhovecV(1) > 0;
+
+        if (index0nonzero) {
+            r(0) = PsirgradL(0) + RT * log(rhovecL(0)) - (PsirgradV(0) + RT * log(rhovecV(0)));
+        }
+        else {
+            r(0) = PsirgradL(0) - PsirgradV(0);
+        }
+        if (index1nonzero) {
+            r(1) = PsirgradL(1) + RT * log(rhovecL(1)) - (PsirgradV(1) + RT * log(rhovecV(1)));
+        }
+        else {
+            r(1) = PsirgradL(1) - PsirgradV(1);
+        }
+        r(2) = pL - pV;
+        r(3) = (pL - pgiven)/pgiven;
+
+        // Chemical potential contributions in Jacobian
+        J(0, 0) = hessianL(0, 0) + (index0nonzero ? RT / rhovecL(0) : 0);
+        J(0, 1) = hessianL(0, 1);
+        J(1, 0) = hessianL(1, 0); // symmetric, so same as above
+        J(1, 1) = hessianL(1, 1) + (index1nonzero ? RT / rhovecL(1) : 0);
+        J(0, 2) = -(hessianV(0, 0) + (index0nonzero ? RT / rhovecV(0) : 0));
+        J(0, 3) = -(hessianV(0, 1));
+        J(1, 2) = -(hessianV(1, 0)); // symmetric, so same as above
+        J(1, 3) = -(hessianV(1, 1) + (index1nonzero ? RT / rhovecV(1) : 0));
+        // Pressure contributions in Jacobian
+        J(2, 0) = dpdrhovecL(0);
+        J(2, 1) = dpdrhovecL(1);
+        J(2, 2) = -dpdrhovecV(0);
+        J(2, 3) = -dpdrhovecV(1);
+        // Mole fraction composition specification in Jacobian
+        J.row(3).array() = 0.0;
+        J(3, 0) = dpdrhovecL(0)/pgiven;
+        J(3, 1) = dpdrhovecL(1)/pgiven;
+
+        // Solve for the step
+        Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-r);
+
+        x.array() += dx;
+
+        if ((!dx.isFinite()).all()) {
+            return_code = VLE_return_code::notfinite_step;
+            message = "Not finite step";
+            break;
+        }
+
+        auto xtol_threshold = (flags.axtol + flags.relxtol * x.array().cwiseAbs()).eval();
+        if ((dx.array().cwiseAbs() < xtol_threshold).all()) {
+            return_code = VLE_return_code::xtol_satisfied;
+            message = "X tolerance satisfied";
+            break;
+        }
+
+        auto error_threshold = (flags.atol + flags.reltol * r.array().cwiseAbs()).eval();
+        if ((r.array().cwiseAbs() < error_threshold).all()) {
+            return_code = VLE_return_code::functol_satisfied;
+            message = "func tolerance satisfied";
+            break;
+        }
+
+        // If the solution has stopped improving, stop. The change in x is equal to dx in infinite precision, but 
+        // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
+        // the values are done changing
+        if (((x.array() - dx.array()).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
+            return_code = VLE_return_code::xtol_satisfied;
+            message = "solution is not longer improving";
+            break;
+        }
+        if (iter == flags.maxiter - 1) {
+            return_code = VLE_return_code::maxiter_met;
+            message = "max iterations met";
+        }
+    }
+    Eigen::ArrayXd rhovecLfinal = rhovecL, rhovecVfinal = rhovecV;
+    return std::make_tuple(return_code, message, rhovecLfinal, rhovecVfinal);
+}
+
 struct MixVLEPxFlags {
     double atol = 1e-10,
         reltol = 1e-10,

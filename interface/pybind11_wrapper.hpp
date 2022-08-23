@@ -79,6 +79,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_pure_critical_conditions_Jacobian", &get_pure_critical_conditions_Jacobian<Model, double, ADBackends::autodiff>, py::arg("T"), py::arg("rho"), py::arg_v("alternative_pure_index", -1), py::arg_v("alternative_length", 2));
     cls.def("solve_pure_critical", &solve_pure_critical<Model, double, ADBackends::autodiff>, py::arg("T"), py::arg("rho"), py::arg_v("flags", std::nullopt, "None"));
     cls.def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, Eigen::ArrayXd>);
+    cls.def("mix_VLE_TP", &mix_VLE_TP<Model, double, Eigen::ArrayXd>);
     cls.def("mixture_VLE_px", &mixture_VLE_px<Model, double, Eigen::ArrayXd>, py::arg("p_spec"), py::arg("xmolar_spec").noconvert(), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("flags", std::nullopt, "None"));
 
     cls.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
