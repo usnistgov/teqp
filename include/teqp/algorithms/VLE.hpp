@@ -12,7 +12,38 @@
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
 #include <boost/numeric/odeint/stepper/euler.hpp>
 
+
+// Imports from Eigen unsupported for hybrj method
+#include <unsupported/Eigen/NonLinearOptimization>
+
 namespace teqp{
+
+    using namespace Eigen;
+
+    // Generic functor
+    template<typename _Scalar, int NX = Dynamic, int NY = Dynamic>
+    struct Functor
+    {
+        typedef _Scalar Scalar;
+        enum {
+            InputsAtCompileTime = NX,
+            ValuesAtCompileTime = NY
+        };
+        typedef Matrix<Scalar, InputsAtCompileTime, 1> InputType;
+        typedef Matrix<Scalar, ValuesAtCompileTime, 1> ValueType;
+        typedef Matrix<Scalar, ValuesAtCompileTime, InputsAtCompileTime> JacobianType;
+
+        const int m_inputs, m_values;
+
+        Functor() : m_inputs(InputsAtCompileTime), m_values(ValuesAtCompileTime) {}
+        Functor(int inputs, int values) : m_inputs(inputs), m_values(values) {}
+
+        int inputs() const { return m_inputs; }
+        int values() const { return m_values; }
+
+        // you should define that in the subclass :
+      //  void operator() (const InputType& x, ValueType* v, JacobianType* _j=0) const;
+    };
 
 // A convenience method to make linear system solving more concise with Eigen datatypes
 /*** 
@@ -269,12 +300,94 @@ struct MixVLETpFlags {
     double atol = 1e-10,
         reltol = 1e-10,
         axtol = 1e-10,
-        relxtol = 1e-10;
+        relxtol = 1e-10,
+        relaxation = 1.0;
     int maxiter = 10;
 };
 
+template<typename Model>
+struct hybrj_functor__mix_VLE_Tp : Functor<double>
+{
+    const Model& model;
+    const double T, p;
+
+    hybrj_functor__mix_VLE_Tp(const Model& model, const double T, const double p) : Functor<double>(4, 4), model(model), T(T), p(p) {}
+
+    int operator()(const VectorXd& x, VectorXd& r)
+    {
+        const VectorXd::Index n = x.size() / 2;
+        Eigen::Map<const Eigen::ArrayXd> rhovecL(&(x(0)), n);
+        Eigen::Map<const Eigen::ArrayXd> rhovecV(&(x(0 + n)), n);
+        auto RT = model.R((rhovecL / rhovecL.sum()).eval()) * T;
+        using isochoric = IsochoricDerivatives<Model, Scalar, VectorXd>;
+        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
+        auto rhoL = rhovecL.sum();
+        auto rhoV = rhovecV.sum();
+        Scalar pL = rhoL * RT - PsirL + (rhovecL.array() * PsirgradL.array()).sum(); // The (array*array).sum is a dot product
+        Scalar pV = rhoV * RT - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
+
+        bool index0nonzero = rhovecL(0) > 0 && rhovecV(0) > 0;
+        bool index1nonzero = rhovecL(1) > 0 && rhovecV(1) > 0;
+
+        if (index0nonzero) {
+            r(0) = PsirgradL(0) + RT * log(rhovecL(0)) - (PsirgradV(0) + RT * log(rhovecV(0)));
+        }
+        else {
+            r(0) = PsirgradL(0) - PsirgradV(0);
+        }
+        if (index1nonzero) {
+            r(1) = PsirgradL(1) + RT * log(rhovecL(1)) - (PsirgradV(1) + RT * log(rhovecV(1)));
+        }
+        else {
+            r(1) = PsirgradL(1) - PsirgradV(1);
+        }
+        r(2) = (pV - p) / p;
+        r(3) = (pL - p) / p;
+        return 0;
+    }
+    int df(const VectorXd& x, MatrixXd& J)
+    {
+        const VectorXd::Index n = x.size() / 2;
+        Eigen::Map<const Eigen::ArrayXd> rhovecL(&(x(0)), n);
+        Eigen::Map<const Eigen::ArrayXd> rhovecV(&(x(0 + n)), n);
+        assert(J.rows() == 2*n);
+        assert(J.cols() == 2*n);
+
+        auto RT = model.R((rhovecL / rhovecL.sum()).eval()) * T;
+        using isochoric = IsochoricDerivatives<Model, Scalar, VectorXd>;
+        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
+        auto dpdrhovecL = RT + (hessianL * rhovecL.matrix()).array();
+        auto dpdrhovecV = RT + (hessianV * rhovecV.matrix()).array();
+
+        bool index0nonzero = rhovecL(0) > 0 && rhovecV(0) > 0;
+        bool index1nonzero = rhovecL(1) > 0 && rhovecV(1) > 0;
+
+        // Chemical potential contributions in Jacobian
+        J(0, 0) = hessianL(0, 0) + (index0nonzero ? RT / rhovecL(0) : 0);
+        J(0, 1) = hessianL(0, 1);
+        J(1, 0) = hessianL(1, 0); // symmetric, so same as above
+        J(1, 1) = hessianL(1, 1) + (index1nonzero ? RT / rhovecL(1) : 0);
+        J(0, 2) = -(hessianV(0, 0) + (index0nonzero ? RT / rhovecV(0) : 0));
+        J(0, 3) = -(hessianV(0, 1));
+        J(1, 2) = -(hessianV(1, 0)); // symmetric, so same as above
+        J(1, 3) = -(hessianV(1, 1) + (index1nonzero ? RT / rhovecV(1) : 0));
+        // Pressure contributions in Jacobian
+        J(2, 0) = 0;
+        J(2, 1) = 0;
+        J(2, 2) = dpdrhovecV(0) / p;
+        J(2, 3) = dpdrhovecV(1) / p;
+        // Other pressure specification in Jacobian
+        J.row(3).array() = 0.0;
+        J(3, 0) = dpdrhovecL(0) / p;
+        J(3, 1) = dpdrhovecL(1) / p;
+        return 0;
+    }
+};
+
 /***
-* \brief Do a vapor-liquid phase equilibrium problem for a mixture (binary only for now) with temperature and pressure specified
+* \brief Do a vapor-liquid phase equilibrium problem for a binary mixture with temperature and pressure specified
 * 
 * The mole concentrations are solved for to give the right pressure
 * 
@@ -293,105 +406,36 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
     if (lengths.minCoeff() != lengths.maxCoeff()) {
         throw InvalidArgument("lengths of rhovecs must be the same in mix_VLE_Tx");
     }
-    Eigen::MatrixXd J(2 * N, 2 * N), r(2 * N, 1), x(2 * N, 1);
+    Eigen::VectorXd x(2*N, 1);
     x.col(0).array().head(N) = rhovecL0;
     x.col(0).array().tail(N) = rhovecV0;
-    using isochoric = IsochoricDerivatives<Model, Scalar, Vector>;
-
-    Eigen::Map<Eigen::ArrayXd> rhovecL(&(x(0)), N);
-    Eigen::Map<Eigen::ArrayXd> rhovecV(&(x(0 + N)), N);
     
     VLE_return_code return_code = VLE_return_code::unset;
     std::string message = "";
 
-    for (int iter = 0; iter < flags.maxiter; ++iter) {
+    using FunctorType = hybrj_functor__mix_VLE_Tp<Model>;
+    FunctorType functor(model, T, pgiven);
+    HybridNonLinearSolver<FunctorType> solver(functor);
+    solver.diag.setConstant(2*N, 1.);
+    solver.useExternalScaling = true;
+    auto info = solver.solve(x);
 
-        auto RT = model.R((rhovecL / rhovecL.sum()).eval())*T;
-
-        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
-        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
-        auto rhoL = rhovecL.sum();
-        auto rhoV = rhovecV.sum();
-        Scalar pL = rhoL * RT - PsirL + (rhovecL.array() * PsirgradL.array()).sum(); // The (array*array).sum is a dot product
-        Scalar pV = rhoV * RT - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
-        auto dpdrhovecL = RT + (hessianL * rhovecL.matrix()).array();
-        auto dpdrhovecV = RT + (hessianV * rhovecV.matrix()).array();
-
-        bool index0nonzero = rhovecL(0) > 0 && rhovecV(0) > 0;
-        bool index1nonzero = rhovecL(1) > 0 && rhovecV(1) > 0;
-
-        if (index0nonzero) {
-            r(0) = PsirgradL(0) + RT * log(rhovecL(0)) - (PsirgradV(0) + RT * log(rhovecV(0)));
-        }
-        else {
-            r(0) = PsirgradL(0) - PsirgradV(0);
-        }
-        if (index1nonzero) {
-            r(1) = PsirgradL(1) + RT * log(rhovecL(1)) - (PsirgradV(1) + RT * log(rhovecV(1)));
-        }
-        else {
-            r(1) = PsirgradL(1) - PsirgradV(1);
-        }
-        r(2) = pL - pV;
-        r(3) = (pL - pgiven)/pgiven;
-
-        // Chemical potential contributions in Jacobian
-        J(0, 0) = hessianL(0, 0) + (index0nonzero ? RT / rhovecL(0) : 0);
-        J(0, 1) = hessianL(0, 1);
-        J(1, 0) = hessianL(1, 0); // symmetric, so same as above
-        J(1, 1) = hessianL(1, 1) + (index1nonzero ? RT / rhovecL(1) : 0);
-        J(0, 2) = -(hessianV(0, 0) + (index0nonzero ? RT / rhovecV(0) : 0));
-        J(0, 3) = -(hessianV(0, 1));
-        J(1, 2) = -(hessianV(1, 0)); // symmetric, so same as above
-        J(1, 3) = -(hessianV(1, 1) + (index1nonzero ? RT / rhovecV(1) : 0));
-        // Pressure contributions in Jacobian
-        J(2, 0) = dpdrhovecL(0);
-        J(2, 1) = dpdrhovecL(1);
-        J(2, 2) = -dpdrhovecV(0);
-        J(2, 3) = -dpdrhovecV(1);
-        // Mole fraction composition specification in Jacobian
-        J.row(3).array() = 0.0;
-        J(3, 0) = dpdrhovecL(0)/pgiven;
-        J(3, 1) = dpdrhovecL(1)/pgiven;
-
-        // Solve for the step
-        Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-r);
-
-        x.array() += dx;
-
-        if ((!dx.isFinite()).all()) {
+    using e = Eigen::HybridNonLinearSolverSpace::Status;
+    switch (info) {
+        case e::ImproperInputParameters:
             return_code = VLE_return_code::notfinite_step;
-            message = "Not finite step";
-            break;
-        }
-
-        auto xtol_threshold = (flags.axtol + flags.relxtol * x.array().cwiseAbs()).eval();
-        if ((dx.array().cwiseAbs() < xtol_threshold).all()) {
-            return_code = VLE_return_code::xtol_satisfied;
-            message = "X tolerance satisfied";
-            break;
-        }
-
-        auto error_threshold = (flags.atol + flags.reltol * r.array().cwiseAbs()).eval();
-        if ((r.array().cwiseAbs() < error_threshold).all()) {
+        case e::RelativeErrorTooSmall:
             return_code = VLE_return_code::functol_satisfied;
-            message = "func tolerance satisfied";
-            break;
-        }
-
-        // If the solution has stopped improving, stop. The change in x is equal to dx in infinite precision, but 
-        // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
-        // the values are done changing
-        if (((x.array() - dx.array()).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
-            return_code = VLE_return_code::xtol_satisfied;
-            message = "solution is not longer improving";
-            break;
-        }
-        if (iter == flags.maxiter - 1) {
+        case e::TooManyFunctionEvaluation:
             return_code = VLE_return_code::maxiter_met;
-            message = "max iterations met";
-        }
+            //case e:: TolTooSmall = 3,
+            //NotMakingProgressJacobian = 4,
+            //NotMakingProgressIterations = 5,
+        //default:
     }
+
+    Eigen::Map<const Eigen::ArrayXd> rhovecL(&(x(0)), N);
+    Eigen::Map<const Eigen::ArrayXd> rhovecV(&(x(0 + N)), N);
     Eigen::ArrayXd rhovecLfinal = rhovecL, rhovecVfinal = rhovecV;
     return std::make_tuple(return_code, message, rhovecLfinal, rhovecVfinal);
 }

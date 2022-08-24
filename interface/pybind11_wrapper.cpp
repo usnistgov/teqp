@@ -122,7 +122,7 @@ void init_teqp(py::module& m) {
         .def(py::init<>())
         .def_readwrite("atol", &MixVLETpFlags::atol)
         .def_readwrite("reltol", &MixVLETpFlags::reltol)
-        .def_readwrite("relaxtoltol", &MixVLETpFlags::axtol)
+        .def_readwrite("axtol", &MixVLETpFlags::axtol)
         .def_readwrite("relxtol", &MixVLETpFlags::relxtol)
         .def_readwrite("maxiter", &MixVLETpFlags::maxiter)
         ;
