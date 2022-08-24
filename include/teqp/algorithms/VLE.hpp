@@ -167,7 +167,7 @@ auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxi
     return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
 }
 
-enum class VLE_return_code { unset, xtol_satisfied, functol_satisfied, maxiter_met, notfinite_step };
+enum class VLE_return_code { unset, xtol_satisfied, functol_satisfied, maxfev_met, maxiter_met, notfinite_step };
 
 /***
 * \brief Do a vapor-liquid phase equilibrium problem for a mixture (binary only for now) with mole fractions specified in the liquid phase
@@ -310,7 +310,7 @@ struct MixVLEReturn {
     std::string message;
     Eigen::ArrayXd rhovecL, rhovecV;
     VLE_return_code return_code;
-    int num_iter;
+    int num_iter, num_fev;
     double T;
     Eigen::ArrayXd r;
 };
@@ -439,9 +439,9 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
         case e::RelativeErrorTooSmall:
             return_code = VLE_return_code::functol_satisfied;
         case e::TooManyFunctionEvaluation:
-            return_code = VLE_return_code::maxiter_met;
+            return_code = VLE_return_code::maxfev_met;
         case e::TolTooSmall:
-            return_code = VLE_return_code::xtol_satisfied
+            return_code = VLE_return_code::xtol_satisfied;
             //NotMakingProgressJacobian = 4,
             //NotMakingProgressIterations = 5,
         default:
@@ -454,6 +454,7 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
     MixVLEReturn r;
     r.return_code = return_code;
     r.num_iter = solver.iter;
+    r.num_fev = solver.nfev;
     r.r = final_r;
     r.success = (info == e::RelativeErrorTooSmall || info == e::TolTooSmall);
     r.rhovecL = rhovecL;

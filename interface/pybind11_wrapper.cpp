@@ -141,6 +141,7 @@ void init_teqp(py::module& m) {
         .value("xtol_satisfied", VLE_return_code::xtol_satisfied)
         .value("functol_satisfied", VLE_return_code::functol_satisfied)
         .value("maxiter_met", VLE_return_code::maxiter_met)
+        .value("maxfev_met", VLE_return_code::maxfev_met)
         .value("notfinite_step", VLE_return_code::notfinite_step)
         ;
 
@@ -153,6 +154,7 @@ void init_teqp(py::module& m) {
         .def_readonly("return_code", &MixVLEReturn::return_code)
         .def_readonly("num_iter", &MixVLEReturn::num_iter)
         .def_readonly("T", &MixVLEReturn::T)
+        .def_readonly("num_fev", &MixVLEReturn::num_fev)
         .def_readonly("r", &MixVLEReturn::r)
         ;
 
