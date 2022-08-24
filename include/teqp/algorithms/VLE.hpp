@@ -305,6 +305,16 @@ struct MixVLETpFlags {
     int maxiter = 10;
 };
 
+struct MixVLEReturn {
+    bool success;
+    std::string message;
+    Eigen::ArrayXd rhovecL, rhovecV;
+    VLE_return_code return_code;
+    int num_iter;
+    double T;
+    Eigen::ArrayXd r;
+};
+
 template<typename Model>
 struct hybrj_functor__mix_VLE_Tp : Functor<double>
 {
@@ -419,6 +429,8 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
     solver.diag.setConstant(2*N, 1.);
     solver.useExternalScaling = true;
     auto info = solver.solve(x);
+    Eigen::VectorXd final_r(2 * N); final_r.setZero();
+    functor(x, final_r);
 
     using e = Eigen::HybridNonLinearSolverSpace::Status;
     switch (info) {
@@ -428,16 +440,26 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
             return_code = VLE_return_code::functol_satisfied;
         case e::TooManyFunctionEvaluation:
             return_code = VLE_return_code::maxiter_met;
-            //case e:: TolTooSmall = 3,
+        case e::TolTooSmall:
+            return_code = VLE_return_code::xtol_satisfied
             //NotMakingProgressJacobian = 4,
             //NotMakingProgressIterations = 5,
-        //default:
+        default:
+            return_code = VLE_return_code::unset;
     }
 
     Eigen::Map<const Eigen::ArrayXd> rhovecL(&(x(0)), N);
     Eigen::Map<const Eigen::ArrayXd> rhovecV(&(x(0 + N)), N);
-    Eigen::ArrayXd rhovecLfinal = rhovecL, rhovecVfinal = rhovecV;
-    return std::make_tuple(return_code, message, rhovecLfinal, rhovecVfinal);
+
+    MixVLEReturn r;
+    r.return_code = return_code;
+    r.num_iter = solver.iter;
+    r.r = final_r;
+    r.success = (info == e::RelativeErrorTooSmall || info == e::TolTooSmall);
+    r.rhovecL = rhovecL;
+    r.rhovecV = rhovecV;
+    r.T = T;
+    return r;
 }
 
 struct MixVLEpxFlags {

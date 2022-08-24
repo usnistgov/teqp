@@ -131,7 +131,7 @@ void init_teqp(py::module& m) {
         .def(py::init<>())
         .def_readwrite("atol", &MixVLEpxFlags::atol)
         .def_readwrite("reltol", &MixVLEpxFlags::reltol)
-        .def_readwrite("relaxtoltol", &MixVLEpxFlags::axtol)
+        .def_readwrite("axtol", &MixVLEpxFlags::axtol)
         .def_readwrite("relxtol", &MixVLEpxFlags::relxtol)
         .def_readwrite("maxiter", &MixVLEpxFlags::maxiter)
         ;
@@ -142,6 +142,18 @@ void init_teqp(py::module& m) {
         .value("functol_satisfied", VLE_return_code::functol_satisfied)
         .value("maxiter_met", VLE_return_code::maxiter_met)
         .value("notfinite_step", VLE_return_code::notfinite_step)
+        ;
+
+    py::class_<MixVLEReturn>(m, "MixVLEReturn")
+        .def(py::init<>())
+        .def_readonly("success", &MixVLEReturn::success)
+        .def_readonly("message", &MixVLEReturn::message)
+        .def_readonly("rhovecL", &MixVLEReturn::rhovecL)
+        .def_readonly("rhovecV", &MixVLEReturn::rhovecV)
+        .def_readonly("return_code", &MixVLEReturn::return_code)
+        .def_readonly("num_iter", &MixVLEReturn::num_iter)
+        .def_readonly("T", &MixVLEReturn::T)
+        .def_readonly("r", &MixVLEReturn::r)
         ;
 
     // The ideal gas Helmholtz energy class
