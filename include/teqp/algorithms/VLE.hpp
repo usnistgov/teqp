@@ -254,6 +254,21 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
         // Solve for the step
         Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-r);
 
+        if ((!dx.isFinite()).all()) {
+            return_code = VLE_return_code::notfinite_step;
+            break;
+        }
+
+        // Constrain the step to yield only positive densities
+        if ((x.array() + dx.array() < 0).any()) {
+            // The step that would take all the concentrations to zero
+            Eigen::ArrayXd dxmax = -x;
+            // Most limiting variable is the smallest allowed
+            // before going negative
+            auto f = (dx / dxmax).minCoeff();
+            dx *= f / 2; // Only allow a step half the way to most constraining molar concentrations at most
+        }
+
         // Don't allow changes to components with input zero mole fractions
         for (auto i = 0; i < 2; ++i) {
             if (xspec[i] == 0) {
@@ -263,11 +278,6 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
         }
 
         x.array() += dx;
-
-        if ((!dx.isFinite()).all()){
-            return_code = VLE_return_code::notfinite_step;
-            break;
-        }
 
         auto xtol_threshold = (axtol + relxtol * x.array().cwiseAbs()).eval();
         if ((dx.array().cwiseAbs() < xtol_threshold).all()) {
@@ -482,7 +492,7 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
                 // Most limiting variable is the smallest allowed
                 // before going negative
                 auto f = (dx/dxmax).minCoeff();
-                dx *= f/2; // Only allow a step half the way to zero molar concentrations at most
+                dx *= f/2; // Only allow a step half the way to most constraining molar concentrations at most
             }
             x.array() += dx.array();
             niter = iter;
