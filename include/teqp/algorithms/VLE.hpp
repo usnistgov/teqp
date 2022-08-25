@@ -306,13 +306,13 @@ struct MixVLETpFlags {
 };
 
 struct MixVLEReturn {
-    bool success;
-    std::string message;
+    bool success = false;
+    std::string message = "";
     Eigen::ArrayXd rhovecL, rhovecV;
     VLE_return_code return_code;
-    int num_iter, num_fev;
-    double T;
-    Eigen::ArrayXd r;
+    int num_iter=-1, num_fev=-1;
+    double T=-1;
+    Eigen::ArrayXd r, initial_r;
 };
 
 template<typename Model>
@@ -425,15 +425,35 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
 
     using FunctorType = hybrj_functor__mix_VLE_Tp<Model>;
     FunctorType functor(model, T, pgiven);
-    HybridNonLinearSolver<FunctorType> solver(functor);
-    solver.diag.setConstant(2*N, 1.);
-    solver.useExternalScaling = true;
-    auto info = solver.solve(x);
-    Eigen::VectorXd final_r(2 * N); final_r.setZero();
-    functor(x, final_r);
+    Eigen::VectorXd initial_r(2 * N); initial_r.setZero();
+    functor(x, initial_r);
 
-    using e = Eigen::HybridNonLinearSolverSpace::Status;
-    switch (info) {
+    bool success = false;
+    bool powell = false;
+    
+    /*Eigen::MatrixXd J(2*N, 2*N), J2(2*N, 2*N);
+    Eigen::VectorXd dxvec = 1e-4*final_r.array();
+    for (auto i = 0; i < 4; ++i){
+        Eigen::VectorXd xplus = x, rplus(4);
+        xplus[i] += 1e-4*x[i];
+        functor(xplus, rplus);
+        J2.col(i) = (rplus.array() - final_r.array()) / (1e-4*x[i]);
+    }
+    functor.df(x, J);
+    Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-final_r);*/
+
+    int niter = 0, nfev = 0;
+    Eigen::MatrixXd J(2 * N, 2 * N);
+    if (powell) {
+        HybridNonLinearSolver<FunctorType> solver(functor);
+        
+        solver.diag.setConstant(2 * N, 1.);
+        solver.useExternalScaling = true;
+        auto info = solver.solve(x);
+        
+        using e = Eigen::HybridNonLinearSolverSpace::Status;
+        success = (info == e::RelativeErrorTooSmall || info == e::TolTooSmall);
+        switch (info) {
         case e::ImproperInputParameters:
             return_code = VLE_return_code::notfinite_step;
         case e::RelativeErrorTooSmall:
@@ -446,17 +466,42 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
             //NotMakingProgressIterations = 5,
         default:
             return_code = VLE_return_code::unset;
+        }
+        niter = solver.iter;
+        nfev = solver.nfev;
     }
+    else {
+        for (auto iter = 0; iter < flags.maxiter; ++iter) {
+            Eigen::VectorXd rv(2 * N); rv.setZero();
+            functor(x, rv);
+            functor.df(x, J);
+            Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-rv);
+            if ((x.array() + dx.array() < 0).any()) {
+                // The step that would take all the concentrations to zero
+                Eigen::ArrayXd dxmax = -x;
+                // Most limiting variable is the smallest allowed
+                // before going negative
+                auto f = (dx/dxmax).minCoeff();
+                dx *= f/2; // Only allow a step half the way to zero molar concentrations at most
+            }
+            x.array() += dx.array();
+            niter = iter;
+            nfev = iter;
+        }
+    }
+    Eigen::VectorXd final_r(2 * N); final_r.setZero();
+    functor(x, final_r);
 
     Eigen::Map<const Eigen::ArrayXd> rhovecL(&(x(0)), N);
     Eigen::Map<const Eigen::ArrayXd> rhovecV(&(x(0 + N)), N);
 
     MixVLEReturn r;
     r.return_code = return_code;
-    r.num_iter = solver.iter;
-    r.num_fev = solver.nfev;
+    r.num_iter = niter;
+    r.num_fev = nfev;
     r.r = final_r;
-    r.success = (info == e::RelativeErrorTooSmall || info == e::TolTooSmall);
+    r.initial_r = initial_r;
+    r.success = success;
     r.rhovecL = rhovecL;
     r.rhovecV = rhovecV;
     r.T = T;

@@ -156,6 +156,7 @@ void init_teqp(py::module& m) {
         .def_readonly("T", &MixVLEReturn::T)
         .def_readonly("num_fev", &MixVLEReturn::num_fev)
         .def_readonly("r", &MixVLEReturn::r)
+        .def_readonly("initial_r", &MixVLEReturn::initial_r)
         ;
 
     // The ideal gas Helmholtz energy class
