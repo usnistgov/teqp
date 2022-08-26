@@ -765,6 +765,15 @@ struct CriticalTracing {
         return JSONdata;
     }
 
+    /**
+    * \brief Calculate dp/dT along the critical locus at given T, rhovec
+    */
+    static auto get_dp_dT_crit(const Model& model, const Scalar& T, const VecType& rhovec) {
+        using id = IsochoricDerivatives<Model, Scalar, VecType>;
+        auto dpdrhovec = id::get_dpdrhovec_constT(model, T, rhovec);
+        return id::get_dpdT_constrhovec(model, T, rhovec) + (dpdrhovec.matrix() * get_drhovec_dT_crit(model, T, rhovec).matrix()).array();
+    }
+
 }; // namespace VecType
 
 }; // namespace teqp

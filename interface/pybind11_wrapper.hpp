@@ -72,6 +72,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("eigen_problem", &ct::eigen_problem);
     cls.def("get_minimum_eigenvalue_Psi_Hessian", &ct::get_minimum_eigenvalue_Psi_Hessian);
     cls.def("get_drhovec_dT_crit", &ct::get_drhovec_dT_crit);
+    cls.def("get_dp_dT_crit", &ct::get_dp_dT_crit);
 
     cls.def("extrapolate_from_critical", &extrapolate_from_critical<Model, double>);
     cls.def("pure_VLE_T", &pure_VLE_T<Model, double>);
