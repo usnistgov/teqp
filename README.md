@@ -11,6 +11,7 @@ So far the following EOS are implemented:
 * PC-SAFT
 * cubic plus association (CPA) for pure fluids
 * multi-fluid model in the form of GERG
+* ammonia+water model of Tillner-Roth and Friend
 
 Why?
 
@@ -24,6 +25,20 @@ Written by Ian Bell, NIST.
 ## Changelog
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
+
+* 0.11.0 :
+
+  * Move all module-level free functions to bound methods of instances in Python
+
+  * Update the C++ packaged interface of teqp to enable almost-zero-cost rebuilds of the exposed methods of C++ interface
+
+  * Merge sphinx docs branch into main
+
+  * Add the hardcoded Tillner-Roth and Friend model for ammonia + water (see AmmoniaWaterTillnerRoth class)
+
+  * Add method for dp/dT along critical locus
+
+  * Add method for pure-fluid endpoint solving for critical locus (opt-in)
 
 * 0.10.0 :
 
