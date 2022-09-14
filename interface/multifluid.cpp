@@ -16,6 +16,11 @@ void add_AmmoniaWaterTillnerRoth(py::module&m ){
         .def("get_Tr", &AmmoniaWaterTillnerRoth::get_Treducing<Eigen::ArrayXd>)
         .def("get_rhor", &AmmoniaWaterTillnerRoth::get_rhoreducing<Eigen::ArrayXd>)
         .def("alphar_departure", &AmmoniaWaterTillnerRoth::alphar_departure<double, double, double>, py::arg("tau"), py::arg("delta"), py::arg("xNH3"))
+        .def("dalphar_departure_ddelta", [](const AmmoniaWaterTillnerRoth& c, const double& tau, const double& delta, const double& xNH3) {
+            autodiff::Real<1, double> delta_ = delta;
+            auto f = [&c, &tau, &xNH3](const auto& delta_) { return c.alphar_departure(tau, delta_, xNH3); };
+            return derivatives(f, along(1), at(delta_))[1];
+        }, py::arg("tau"), py::arg("delta"), py::arg("xNH3"))
     ;
     add_derivatives<AmmoniaWaterTillnerRoth>(m, wAW);
 }
