@@ -1,7 +1,9 @@
 
 # Intro
 
-This library implements advanced derivative techniques to allow for implementation of EOS without any hand-written derivatives.  The name TEQP comes from Templated Equation of State Package
+This library implements advanced derivative techniques to allow for implementation of EOS without any hand-written derivatives.  The name TEQP comes from Templated Equation of State Package.  A paper about teqp is published in [Ind. Eng. Chem. Res.](https://doi.org/10.1021/acs.iecr.2c00237):
+
+<img src="doc/source/getting_started/IECR_snip.PNG" alt="Screenshot of paper front page" style="width: 100px;"/>
 
 So far the following EOS are implemented:
 
