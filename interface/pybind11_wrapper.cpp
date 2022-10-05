@@ -16,6 +16,7 @@ void add_CPA(py::module& m);
 void add_multifluid(py::module& m);
 void add_multifluid_mutant(py::module& m);
 void add_cubics(py::module& m);
+void add_model_potentials(py::module& m);
 
 template<typename Model, int iT, int iD, typename Class>
 void add_ig_deriv_impl(Class& cls) {
@@ -169,6 +170,7 @@ void init_teqp(py::module& m) {
     add_multifluid(m);
     add_multifluid_mutant(m);
     add_cubics(m);
+    add_model_potentials(m);
 
     call_method_factory(m, "get_Ar00iso");
     call_method_factory(m, "get_Ar10iso");

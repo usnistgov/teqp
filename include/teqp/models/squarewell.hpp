@@ -7,6 +7,8 @@
 namespace teqp{
 namespace squarewell{
 
+#include "teqp/types.hpp"
+
 /**
  Rodolfo Espíndola-Heredia, Fernando del Río and Anatol Malijevsky
  Optimized equation of the state of the
@@ -122,7 +124,7 @@ private:
             den += thetai[n]*pow(lambda_, n-4);
         }
         den = 1.0 + rhostar*den;
-        return num/den;
+        return forceeval(num/den);
     }
     
     template<typename RhoType>
