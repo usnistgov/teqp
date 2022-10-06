@@ -14,6 +14,8 @@ So far the following EOS are implemented:
 * cubic plus association (CPA) for pure fluids
 * multi-fluid model in the form of GERG
 * ammonia+water model of Tillner-Roth and Friend
+* Exp-6 (modified Buckingham) from Kataoka
+* square-well from Espíndola-Heredia et al.
 
 Why?
 
@@ -27,6 +29,10 @@ Written by Ian Bell, NIST.
 ## Changelog
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
+
+* 0.12.0 :
+
+  * Added Exp-6 (modified Buckingham) from Kataoka and square-well from Espíndola-Heredia et al.
 
 * 0.11.0 :
 
