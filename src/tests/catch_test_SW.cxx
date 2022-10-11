@@ -5,7 +5,7 @@ using Catch::Approx;
 
 #include "teqp/algorithms/critical_pure.hpp"
 
-#include "teqp/models/squarewell.hpp"
+#include "teqp/models/model_potentials/squarewell.hpp"
 #include "teqp/derivs.hpp"
 #include <Eigen/Dense>
 

@@ -7,8 +7,8 @@
 
 #include "pybind11_wrapper.hpp"
 
-#include "teqp/models/squarewell.hpp"
-#include "teqp/models/exp6.hpp"
+#include "teqp/models/model_potentials/squarewell.hpp"
+#include "teqp/models/model_potentials/exp6.hpp"
 
 using namespace teqp;
 
