@@ -83,7 +83,7 @@ option (TEQP_MULTIPRECISION_ENABLED
         "Enable the use of boost::multiprecision"
         OFF)
 
-if (not TEQP_NO_TEQPCPP)
+if (NOT TEQP_NO_TEQPCPP)
   # Add a static library with the C++ interface that uses only STL
   # types so that recompilation of a library that uses teqp 
   # doesn't require a full compile for a single LOC change
