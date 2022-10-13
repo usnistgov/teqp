@@ -1,5 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/generators/catch_generators.hpp>
+#include <catch2/generators/catch_generators_adapters.hpp>
+#include <catch2/generators/catch_generators_range.hpp>
 
 using Catch::Approx;
 
@@ -8,6 +11,7 @@ using Catch::Approx;
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/VLE.hpp"
 #include "teqp/filesystem.hpp"
+#include "teqp/ideal_eosterms.hpp"
 
 using namespace teqp;
 
@@ -299,4 +303,13 @@ TEST_CASE("Calculate partial molar volume for a CO2 containing mixture", "[parti
     for (auto i = 0; i < expected.size(); ++i){
         CHECK(expected[i] == Approx(der[i]));
     }
+}
+
+TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multifluid],[all],[ideal]") {
+    std::string root = "../mycp";
+    auto paths = get_files_in_folder(root + "/dev/fluids", ".json");
+    auto p = GENERATE_REF(from_range(paths));
+    CHECK(std::filesystem::is_regular_file(p));
+    CAPTURE(p);
+    auto aig = convert_CoolProp_idealgas(p.string(), 0 /* index of EOS */);
 }
