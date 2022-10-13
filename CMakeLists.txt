@@ -51,6 +51,14 @@ option (TEQP_NO_PYTHON
         "Enable to NOT build the Python interface"
         OFF)
 
+option (TEQP_NO_TESTS
+        "Enable to NOT include the test targets at all"
+        OFF)
+
+option (TEQP_NO_TEQPCPP
+        "Enable to NOT include the teqp C++ wrapper"
+        OFF)
+
 option (TEQP_TESTTEQPCPP
         "Enable to add a target with a test of the C++ interface"
         OFF)
@@ -75,19 +83,21 @@ option (TEQP_MULTIPRECISION_ENABLED
         "Enable the use of boost::multiprecision"
         OFF)
 
-# Add a static library with the C++ interface that uses only STL
-# types so that recompilation of a library that uses teqp 
-# doesn't require a full compile for a single LOC change
-add_library(teqpcpp STATIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/teqpcpp.cpp")
-target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
-target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
-set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
+if (not TEQP_NO_TEQPCPP)
+  # Add a static library with the C++ interface that uses only STL
+  # types so that recompilation of a library that uses teqp 
+  # doesn't require a full compile for a single LOC change
+  add_library(teqpcpp STATIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/teqpcpp.cpp")
+  target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
+  target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
+  set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-if (TEQP_TESTTEQPCPP)
-  add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test_teqpcpp.cpp")
-  target_link_libraries(test_teqpcpp PUBLIC teqpcpp)
-  add_executable(bench_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/bench_teqpcpp.cpp")
-  target_link_libraries(bench_teqpcpp PUBLIC teqpcpp PRIVATE Catch2WithMain)
+  if (TEQP_TESTTEQPCPP)
+    add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test_teqpcpp.cpp")
+    target_link_libraries(test_teqpcpp PUBLIC teqpcpp)
+    add_executable(bench_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/bench_teqpcpp.cpp")
+    target_link_libraries(bench_teqpcpp PUBLIC teqpcpp PRIVATE Catch2WithMain)
+  endif()
 endif()
 
 if (TEQP_JAVASCRIPT_MODULE)
@@ -118,16 +128,18 @@ if (NOT TEQP_NO_PYTHON)
     endif()
 endif()
 
-file(GLOB catch_tests_files "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/*.cxx")
+if (NOT TEQP_NO_TESTS)
+  file(GLOB catch_tests_files "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/*.cxx")
 
-# Make all the catch and benchmarking tests
-add_executable(catch_tests "${catch_tests_files}" "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
-if (MSVC)
-    target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+  # Make all the catch and benchmarking tests
+  add_executable(catch_tests "${catch_tests_files}" "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc.cpp")
+  if (MSVC)
+      target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
+  endif()
+  target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
+  target_link_libraries(catch_tests PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain PUBLIC teqpcpp)
+  add_test(normal_tests catch_tests)
 endif()
-target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
-target_link_libraries(catch_tests PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain PUBLIC teqpcpp)
-add_test(normal_tests catch_tests)
 
 if (TEQP_TEQPC)
   # Make a shared extern "C" library
