@@ -19,7 +19,7 @@ namespace teqp {
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& rho) const {
             using otype = std::common_type_t <TType, RhoType>;
-            return static_cast<otype>(a);
+            return forceeval(static_cast<otype>(a));
         }
     };
 
@@ -183,13 +183,13 @@ namespace teqp {
 
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& rho) const {
-            std::common_type_t <TType, RhoType> summer = 0.0;
-            return forceeval(c*((T-T_0)/T-log(T/T_0)));
+            using otype = std::common_type_t <TType, RhoType>;
+            return forceeval(static_cast<otype>(c*((T-T_0)/T-log(T/T_0))));
         }
     };
 
     /**
-    \f$ \alpha^{\rm ig}= cT^{t}\left[\left(\frac{1}{t+1}-\frac{1}{t}\right)-\frac{T_0^{t+1}}{T(t+1)}+\frac{T_0^t}{t}\right] \f$
+    \f$ \alpha^{\rm ig}= c\left[T^{t}\left(\frac{1}{t+1}-\frac{1}{t}\right)-\frac{T_0^{t+1}}{T(t+1)}+\frac{T_0^t}{t}\right] \f$
      
     from a term that is like
 
