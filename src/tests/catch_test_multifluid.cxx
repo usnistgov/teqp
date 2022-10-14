@@ -311,6 +311,15 @@ TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multif
     auto p = GENERATE_REF(from_range(paths));
     CHECK(std::filesystem::is_regular_file(p));
     CAPTURE(p);
-    auto aig = convert_CoolProp_idealgas(p.string(), 0 /* index of EOS */);
-    auto aig2 = convert_CoolProp_idealgas(load_a_JSON_file(p.string()).dump(), 0 /* index of EOS */);
+    // Check can be loaded from both path and string contents
+    auto jig = convert_CoolProp_idealgas(p.string(), 0 /* index of EOS */);
+    auto jig2 = convert_CoolProp_idealgas(load_a_JSON_file(p.string()).dump(), 0 /* index of EOS */);
+    // Convert to json array
+    nlohmann::json jaig = nlohmann::json::array(); jaig.push_back(jig);
+    CHECK(jaig.is_array());
+    
+//    std::cout << jaig.dump() << std::endl;
+    
+    // Check that converted structures can be loaded
+    auto aig = IdealHelmholtz(jaig);
 }
