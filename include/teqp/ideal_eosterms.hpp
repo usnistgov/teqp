@@ -354,10 +354,12 @@ namespace teqp {
         nlohmann::json j;
         
         // Get the JSON structure to be parsed
-        if (std::filesystem::is_regular_file(s)){
+        try{
+            // First assume that the input argument is a path
+            std::filesystem::path p = s;
             j = load_a_JSON_file(s);
         }
-        else{
+        catch(std::exception &){
             j = nlohmann::json::parse(s);
         }
         

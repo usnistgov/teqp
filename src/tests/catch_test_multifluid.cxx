@@ -312,4 +312,5 @@ TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multif
     CHECK(std::filesystem::is_regular_file(p));
     CAPTURE(p);
     auto aig = convert_CoolProp_idealgas(p.string(), 0 /* index of EOS */);
+    auto aig2 = convert_CoolProp_idealgas(load_a_JSON_file(p.string()).dump(), 0 /* index of EOS */);
 }
