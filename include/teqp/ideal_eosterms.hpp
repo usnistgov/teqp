@@ -401,6 +401,38 @@ namespace teqp {
             double T_0 = term.at("T0");
             return {{{"type", "Cp0Constant"}, {"c", term.at("cp_over_R")}, {"T_0", T_0}, {"R", R}}};
         }
+        else if (term.at("type") == "IdealGasHelmholtzCP0AlyLee") {
+            // Was
+            nlohmann::json newterms = nlohmann::json::array();
+//            std::cout << term.dump() << std::endl;
+            std::valarray<double> constants = term.at("c");
+            double T_0 = term.at("T0");
+            
+            // Take the constant term if nonzero
+            if (std::abs(constants[0]) > 1e-14) {
+                newterms.push_back({{"type", "Cp0Constant"}, {"c", constants[0]}, {"T_0", T_0}, {"R", R}});
+            }
+            
+            std::vector<double> n, c, d, t;
+            if (std::abs(constants[1]) > 1e-14) {
+                // sinh term can be converted by setting  a_k = C, b_k = 2*D, c_k = -1, d_k = 1
+                n.push_back(constants[1]);
+                t.push_back(-2 * constants[2]);
+                c.push_back(1);
+                d.push_back(-1);
+            }
+            if (std::abs(constants[3]) > 1e-14) {
+                // cosh term can be converted by setting  a_k = C, b_k = 2*D, c_k = 1, d_k = 1
+                n.push_back(-constants[3]);
+                t.push_back(-2 * constants[4]);
+                c.push_back(1);
+                d.push_back(1);
+            }
+            newterms.push_back(
+                   {{"type", "PlanckEinsteinGeneralized"}, {"n", n}, {"c", c}, {"d", d}, {"theta", t}, {"R", R}}
+            );
+            return newterms;
+        }
 //        else if (term.at("type") == "GERG2004Cosh") {
 //            //contributions.emplace_back(IdealHelmholtzGERG2004Cosh(term.at("n"), term.at("theta")));
 //        }
