@@ -104,7 +104,7 @@ namespace teqp {
     };
 
     /**
-    \f$ \alpha^{\rm ig}= \sum_k n_k\ln(c_k+d_k\exp(-\theta_k/T)) \f$
+    \f$ \alpha^{\rm ig}= \sum_k n_k\ln(c_k+d_k\exp(\theta_k/T)) \f$
     */
     class IdealHelmholtzPlanckEinsteinGeneralized {
     public:
@@ -121,7 +121,7 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
-                summer = summer + n[i] * log(c[i] + d[i]*exp(-theta[i] / T));
+                summer = summer + n[i] * log(c[i] + d[i]*exp(theta[i] / T));
             }
             return forceeval(summer);
         }
@@ -367,7 +367,8 @@ namespace teqp {
             std::valarray<double> n = term.at("n");
             std::valarray<double> c = term.at("c");
             std::valarray<double> d = term.at("d");
-            std::valarray<double> theta = term.at("t").get<std::valarray<double>>();
+            std::valarray<double> theta = term.at("t").get<std::valarray<double>>()*Tri;
+//            std::cout << term.dump() << std::endl;
             return {{{"type", "PlanckEinsteinGeneralized"}, {"n", n}, {"c", c}, {"d", d}, {"theta", theta}, {"R", R}}};
         }
         else if (term.at("type") == "IdealGasHelmholtzPower") {
