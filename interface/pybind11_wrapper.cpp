@@ -162,6 +162,7 @@ void init_teqp(py::module& m) {
 
     // The ideal gas Helmholtz energy class
     auto alphaig = py::class_<IdealHelmholtz>(m, "IdealHelmholtz").def(py::init<const nlohmann::json&>());
+    alphaig.def_static("convert_CoolProp_format", [](const std::string &path, int index){return convert_CoolProp_idealgas(path, index);});
     add_ig_derivatives<IdealHelmholtz>(m, alphaig);
 
     add_vdW(m);
