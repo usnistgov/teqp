@@ -184,7 +184,9 @@ namespace teqp {
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& rho) const {
             using otype = std::common_type_t <TType, RhoType>;
-            return forceeval(static_cast<otype>(c*((T-T_0)/T-log(T/T_0))));
+            return forceeval(static_cast<otype>(
+                c*((T-T_0)/T-log(T/T_0))
+            ));
         }
     };
 
@@ -205,7 +207,9 @@ namespace teqp {
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& rho) const {
             using otype = std::common_type_t <TType, RhoType>;
-            return forceeval(static_cast<otype>(c*(pow(T,t)*(1/(t+1)-1/t)-pow(T_0,t+1)/(T*(t+1))+pow(T_0,t)/t)));
+            return forceeval(static_cast<otype>(
+                c*(pow(T,t)*(1/(t+1)-1/t) - pow(T_0,t+1)/(T*(t+1)) + pow(T_0,t)/t)
+            ));
         }
     };
 
