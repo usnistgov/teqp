@@ -314,34 +314,32 @@ namespace teqp {
         };
         template<typename TypePolarContribution>
         class Twocenterljf {
-        private:
-            double L, mu_sq;
         public:
             const ReducingDensity redD;
             const ReducingTemperature redT;
             const HardSphereContribution Hard;
             const AttractiveContribution Attr;
             const TypePolarContribution Pole;
-            const double L_in;
-            const double mu_sq_in;
+            const double L;
+            const double mu_sq;
 
-            Twocenterljf(ReducingDensity& redD, ReducingTemperature& redT, HardSphereContribution& Hard, const AttractiveContribution& Attr, const TypePolarContribution& Pole, const double& L_in, const double& mu_sq_in) : redD(redD), redT(redT), Hard(Hard), Attr(Attr), Pole(Pole), L_in(L_in), mu_sq_in(mu_sq_in), L(L_in), mu_sq(mu_sq_in) {};
+            Twocenterljf(ReducingDensity&& redD, ReducingTemperature&& redT, HardSphereContribution&& Hard, const AttractiveContribution&& Attr, const TypePolarContribution&& Pole, const double L, const double& mu_sq) : redD(redD), redT(redT), Hard(Hard), Attr(Attr), Pole(Pole), L(L), mu_sq(mu_sq) {};
 
             template<typename TType, typename RhoType, typename MoleFracType>
             auto alphar(const TType& T_star,
                 const RhoType& rho_dimer_star,
                 const MoleFracType& molefrac) const
             {
-                auto Tred = forceeval(redT.get_T_red(L_in));
-                auto Rred = forceeval(redD.get_rho_red(L_in));
-                auto eta_red = forceeval(redD.get_eta_over_rho(L_in));
-                auto alpha = forceeval(redD.get_alpha_star(L_in));
+                auto Tred = forceeval(redT.get_T_red(L));
+                auto Rred = forceeval(redD.get_rho_red(L));
+                auto eta_red = forceeval(redD.get_eta_over_rho(L));
+                auto alpha = forceeval(redD.get_alpha_star(L));
                 auto delta = forceeval(rho_dimer_star / Rred);
                 auto tau = forceeval(T_star / Tred);
                 auto delta_eta = rho_dimer_star * eta_red;
                 auto alphar_1 = Hard.alphar(tau, delta_eta, alpha);
                 auto alphar_2 = Attr.alphar(tau, delta, alpha);
-                auto alphar_3 = Pole.alphar(tau, delta, mu_sq_in);
+                auto alphar_3 = Pole.alphar(tau, delta, mu_sq);
                 auto val = alphar_1 + alphar_2 + alphar_3;
                 return forceeval(val);
             }
