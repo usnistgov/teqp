@@ -10,7 +10,7 @@ namespace teqp {
 
             // If force-estimate is provided in flags, the estimation will over-ride the provided model(s)
             if (flags.contains("force-estimate")) {
-                std::string scheme = flags["estimate"];
+                std::string scheme = flags.at("estimate");
                 if (scheme == "Lorentz-Berthelot") {
                     return std::make_tuple(nlohmann::json({
                         {"betaT", 1.0}, {"gammaT", 1.0}, {"betaV", 1.0}, {"gammaV", 1.0}, {"F", 0.0}
@@ -28,8 +28,8 @@ namespace teqp {
             std::string comp0 = toupper(identifiers[0]);
             std::string comp1 = toupper(identifiers[1]);
             for (auto& el : collection) {
-                std::string name1 = toupper(el["Name1"]);
-                std::string name2 = toupper(el["Name2"]);
+                std::string name1 = toupper(el.at("Name1"));
+                std::string name2 = toupper(el.at("Name2"));
                 if (comp0 == name1 && comp1 == name2) {
                     return std::make_tuple(el, false);
                 }
@@ -39,8 +39,8 @@ namespace teqp {
             }
             // Second pass, check CAS#
             for (auto& el : collection) {
-                std::string CAS1 = el["CAS1"];
-                std::string CAS2 = el["CAS2"];
+                std::string CAS1 = el.at("CAS1");
+                std::string CAS2 = el.at("CAS2");
                 if (identifiers[0] == CAS1 && identifiers[1] == CAS2) {
                     return std::make_tuple(el, false);
                 }
@@ -51,7 +51,7 @@ namespace teqp {
 
             // If estimate is provided in flags, it will be the fallback solution for filling in interaction parameters
             if (flags.contains("estimate")) {
-                std::string scheme = flags["estimate"];
+                std::string scheme = flags.at("estimate");
                 if (scheme == "Lorentz-Berthelot") {
                     return std::make_tuple(nlohmann::json({
                         {"betaT", 1.0}, {"gammaT", 1.0}, {"betaV", 1.0}, {"gammaV", 1.0}, {"F", 0.0}
