@@ -46,6 +46,8 @@ private:
     const EOSCollection EOSs;
 public:
     CorrespondingStatesContribution(EOSCollection&& EOSs) : EOSs(EOSs) {};
+    
+    auto size() const { return EOSs.size(); }
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
@@ -141,6 +143,9 @@ public:
         const RhoType &rho,
         const MoleFracType& molefrac) const
     {
+        if (molefrac.size() != corr.size()){
+            throw teqp::InvalidArgument("Wrong size of mole fractions; "+std::to_string(corr.size()) + " are loaded but "+std::to_string(molefrac.size()) + " were provided");
+        }
         auto Tred = forceeval(redfunc.get_Tr(molefrac));
         auto rhored = forceeval(redfunc.get_rhor(molefrac));
         auto delta = forceeval(rho / rhored);

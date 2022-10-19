@@ -323,3 +323,13 @@ TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multif
     // Check that converted structures can be loaded
     auto aig = IdealHelmholtz(jaig);
 }
+
+TEST_CASE("Check pure fluid throws with composition array of wrong length", "[virial]") {
+    std::string root = "../mycp";
+    const auto model = build_multifluid_model({ "CarbonDioxide" }, root);
+    double T = 300;
+    auto z = (Eigen::ArrayXd(2) << 0.3, 0.9).finished();
+    using vir = VirialDerivatives<decltype(model)>;
+    CHECK_THROWS(vir::get_dmBnvirdTm<2,1>(model, T, z));
+    CHECK_THROWS(vir::get_Bnvir<2>(model, T, z));
+}
