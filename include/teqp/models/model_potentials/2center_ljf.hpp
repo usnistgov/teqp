@@ -210,10 +210,6 @@ namespace teqp {
             };
         };
 
-
-
-
-
         // Reducing functions for density and temperature 
         class ReducingDensity {
         public:
@@ -235,7 +231,7 @@ namespace teqp {
             }
         };
 
-        class ReducingTemperatur {
+        class ReducingTemperature {
         public:
             std::valarray<double> p_t;
 
@@ -291,12 +287,12 @@ namespace teqp {
             std::valarray<double> c, m, n, k, o;
             // EQ(9): https://aip.scitation.org/doi/10.1063/1.472764
             template<typename TauType, typename DeltaType>
-            auto alphar(const TauType& tau, const DeltaType& delta, const double& mue_sq) const {
+            auto alphar(const TauType& tau, const DeltaType& delta, const double& mu_sq) const {
                 using result = std::common_type_t<TauType, DeltaType>;
 
                 result r = 0.0;
                 for (auto i = 0; i < c.size(); ++i) {
-                    r = r + c[i] * pow(tau, n[i] / 2.0) * pow(delta, m[i] / 2.0) * pow(mue_sq, k[i] / 4.0) * exp(-o[i] * pow(delta, 2.0));
+                    r = r + c[i] * pow(tau, n[i] / 2.0) * pow(delta, m[i] / 2.0) * pow(mu_sq, k[i] / 4.0) * exp(-o[i] * pow(delta, 2.0));
                 }
                 return forceeval(r);
             }
@@ -306,12 +302,12 @@ namespace teqp {
         public:
             std::valarray<double> c, m, n, k, o;
             template<typename TauType, typename DeltaType>
-            auto alphar(const TauType& tau, const DeltaType& delta, const double& mue_sq) const {
+            auto alphar(const TauType& tau, const DeltaType& delta, const double& mu_sq) const {
                 using result = std::common_type_t<TauType, DeltaType>;
 
                 result r = 0.0;
                 for (auto i = 0; i < c.size(); ++i) {
-                    r = r + c[i] * pow(tau, n[i] / 2.0) * pow(delta, m[i] / 2.0) * pow(mue_sq, k[i] / 4.0) * exp(-o[i] * pow(delta, 2.0));
+                    r = r + c[i] * pow(tau, n[i] / 2.0) * pow(delta, m[i] / 2.0) * pow(mu_sq, k[i] / 4.0) * exp(-o[i] * pow(delta, 2.0));
                 }
                 return forceeval(r);
             }
@@ -319,17 +315,17 @@ namespace teqp {
         template<typename TypePolarContribution>
         class Twocenterljf {
         private:
-            double L, mue_sq;
+            double L, mu_sq;
         public:
             const ReducingDensity redD;
-            const ReducingTemperatur redT;
+            const ReducingTemperature redT;
             const HardSphereContribution Hard;
             const AttractiveContribution Attr;
             const TypePolarContribution Pole;
             const double L_in;
-            const double mue_sq_in;
+            const double mu_sq_in;
 
-            Twocenterljf(ReducingDensity& redD, ReducingTemperatur& redT, HardSphereContribution& Hard, const AttractiveContribution& Attr, const TypePolarContribution& Pole, const double& L_in, const double& mue_sq_in) : redD(redD), redT(redT), Hard(Hard), Attr(Attr), Pole(Pole), L_in(L_in), mue_sq_in(mue_sq_in), L(L_in), mue_sq(mue_sq_in) {};
+            Twocenterljf(ReducingDensity& redD, ReducingTemperature& redT, HardSphereContribution& Hard, const AttractiveContribution& Attr, const TypePolarContribution& Pole, const double& L_in, const double& mu_sq_in) : redD(redD), redT(redT), Hard(Hard), Attr(Attr), Pole(Pole), L_in(L_in), mu_sq_in(mu_sq_in), L(L_in), mu_sq(mu_sq_in) {};
 
             template<typename TType, typename RhoType, typename MoleFracType>
             auto alphar(const TType& T_star,
@@ -345,7 +341,7 @@ namespace teqp {
                 auto delta_eta = rho_dimer_star * eta_red;
                 auto alphar_1 = Hard.alphar(tau, delta_eta, alpha);
                 auto alphar_2 = Attr.alphar(tau, delta, alpha);
-                auto alphar_3 = Pole.alphar(tau, delta, mue_sq_in);
+                auto alphar_3 = Pole.alphar(tau, delta, mu_sq_in);
                 auto val = alphar_1 + alphar_2 + alphar_3;
                 return forceeval(val);
             }
@@ -368,7 +364,7 @@ namespace teqp {
         };
 
         inline auto get_temperature_reducing(const std::string& name) {
-            ReducingTemperatur red_T;
+            ReducingTemperature red_T;
             red_T.p_t = pContainer.get_T_parameter(name);
             return red_T;
         };
@@ -412,7 +408,7 @@ namespace teqp {
         }
 
         // build the 2-center Lennard-Jones model with dipole
-        inline auto build_two_center_model_dipole(const std::string& model_version, const double& L = 0.0, const double& mue_sq = 0.0) {
+        inline auto build_two_center_model_dipole(const std::string& model_version, const double& L = 0.0, const double& mu_sq = 0.0) {
 
             // Get reducing for temperature and density
             auto DC_funcs = get_density_reducing(model_version);
@@ -424,25 +420,27 @@ namespace teqp {
             auto EOS_dipolar = get_Dipolar_contribution(model_version);
 
             // Build the 2-center Lennard-Jones model
-            auto model = Twocenterljf(std::move(DC_funcs), std::move(TC_func), std::move(EOS_hard), std::move(EOS_att), std::move(EOS_dipolar), L, mue_sq);
+            auto model = Twocenterljf(std::move(DC_funcs), std::move(TC_func), std::move(EOS_hard), std::move(EOS_att), std::move(EOS_dipolar), L, mu_sq);
 
             return model;
         }
 
         // build the 2-center Lennard-Jones model with quadrupol
-        inline auto build_two_center_model_quadrupole(const std::string& model_version, const double& L = 0.0, const double& mue_sq = 0.0) {
+        inline auto build_two_center_model_quadrupole(const std::string& model_version, const double& L = 0.0, const double& mu_sq = 0.0) {
 
             // Get reducing for temperature and density
             auto DC_funcs = get_density_reducing(model_version);
             auto TC_func = get_temperature_reducing(model_version);
 
-            //// Get contributions to EOS ( Attractive and regular part)
+            // Get contributions to EOS ( Attractive and regular part)
             auto EOS_hard = get_HardSphere_contribution();
             auto EOS_att = get_Attractive_contribution(model_version);
+
+            // Get contributions to EOS ( Attractive and regular part)
             auto EOS_quadrupolar = get_Quadrupolar_contribution(model_version);
 
             // Build the 2-center Lennard-Jones model
-            auto model = Twocenterljf(std::move(DC_funcs), std::move(TC_func), std::move(EOS_hard), std::move(EOS_att), std::move(EOS_quadrupolar), L, mue_sq);
+            auto model = Twocenterljf(std::move(DC_funcs), std::move(TC_func), std::move(EOS_hard), std::move(EOS_att), std::move(EOS_quadrupolar), L, mu_sq);
 
             return model;
         }

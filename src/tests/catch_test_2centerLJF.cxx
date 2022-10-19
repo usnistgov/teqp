@@ -27,9 +27,10 @@ TEST_CASE("Test for pressure / internal enery for 2-Center Lennard-Jones Model (
     for (size_t i = 0; i < T.size(); i++)
     {
         const auto model = build_two_center_model_dipole("2CLJF_Mecke", L[i]);
+        using tdx = TDXDerivatives<decltype(model)>;
         auto rhovec = (Eigen::ArrayXd(1) << rho[i]).finished();
-        auto p = rho[i]*T[i]*(1.0 + TDXDerivatives<decltype(model)>::get_Ar01(model, T[i], rho[i], rhovec));
-        auto u = T[i] * TDXDerivatives<decltype(model)>::get_Ar10(model, T[i], rho[i], rhovec);
+        auto p = rho[i]*T[i]*(1.0 + tdx::get_Ar01(model, T[i], rho[i], rhovec));
+        auto u = T[i] * tdx::get_Ar10(model, T[i], rho[i], rhovec);
         if (L[i] == 0.0)
         {
             // For an elongation of L = 0.0 the model is evaulated at T*/4, so for the correct result
@@ -59,8 +60,9 @@ TEST_CASE("Test for pressure for 2-Center Lennard-Jones Model (Lisal et al.)", "
     for (size_t i = 0; i < T.size(); i++)
     {
         const auto model = build_two_center_model_dipole("2CLJF_Lisal", L[i]);
+        using tdx = TDXDerivatives<decltype(model)>;
         auto rhovec = (Eigen::ArrayXd(1) << rho[i]).finished();
-        auto p = rho[i] * T[i] * (1.0 + TDXDerivatives<decltype(model)>::get_Ar01(model, T[i], rho[i], rhovec));
+        auto p = rho[i] * T[i] * (1.0 + tdx::get_Ar01(model, T[i], rho[i], rhovec));
         if (L[i] == 0.0)
         {
             // For an elongation of L = 0.0 the model is evaulated at T*/4, so for the correct result
@@ -85,14 +87,15 @@ TEST_CASE("Test for pressure for 2-Center Lennard-Jones Model (Lisal et al.) plu
     std::valarray<double> L = { 0.5 , 0.0};
 
     // The dipolar moment input here is the square of the dipole moment
-    std::valarray<double> mue_sq = { 2.0 , 4.0*2.0}; // if the elongation equals zero put in 4 times the square of the dipoler moment
+    std::valarray<double> mu_sq = { 2.0 , 4.0*2.0}; // if the elongation equals zero put in 4 times the square of the dipole moment
     std::valarray<double> p_eos = { 0.611721649982786 , 3.40675650036849};
     std::valarray<double> molefrac = { 1.0 };
     for (size_t i = 0; i < T.size(); i++)
     {
-        const auto model = build_two_center_model_dipole("2CLJF_Lisal", L[i], mue_sq[i]);
+        const auto model = build_two_center_model_dipole("2CLJF_Lisal", L[i], mu_sq[i]);
+        using tdx = TDXDerivatives<decltype(model)>;
         auto rhovec = (Eigen::ArrayXd(1) << rho[i]).finished();
-        auto p = rho[i] * T[i] * (1.0 + TDXDerivatives<decltype(model)>::get_Ar01(model, T[i], rho[i], rhovec));
+        auto p = rho[i] * T[i] * (1.0 + tdx::get_Ar01(model, T[i], rho[i], rhovec));
         if (L[i] == 0.0)
         {
             // For an elongation of L = 0.0 the model is evaulated at T*/4, so for the correct result
@@ -115,21 +118,24 @@ TEST_CASE("Test for pressure for 2-Center Lennard-Jones Model (Lisal et al.) plu
     std::valarray<double> T = { 3.0780 , 3.0780 , 2.1546 , 3.0780 };
     std::valarray<double> rho = { 0.06084 , 0.06084 , 0.46644 , 0.38532 };
     std::valarray<double> L = { 0.505 , 0.505 , 0.505 , 0.505 };
+
+    // Statistical errors of the simulation data given in Saager et al.
     std::valarray<double> eps_p = { 0.002 , 0.002 , 0.025 , 0.04 };
     std::valarray<double> eps_u = { 0.045 , 0.045 , 0.015 , 0.025 };
       
 
     // The dipolar moment input here is the square of the quadrupolar moment
-    std::valarray<double> mue_sq = { 0.0 , 0.5 , 1.0 , 4.0 };
+    std::valarray<double> mu_sq = { 0.0 , 0.5 , 1.0 , 4.0 };
     std::valarray<double> p_sim = { 0.146 , 0.145 , 0.153 , 0.286 };
     std::valarray<double> u_sim = { -1.598 , -1.621 , -11.75 , -11.465 };
     std::valarray<double> molefrac = { 1.0 };
     for (size_t i = 0; i < T.size(); i++)
     {
-        const auto model = build_two_center_model_quadrupole("2CLJF_Lisal", L[i], mue_sq[i]);
+        const auto model = build_two_center_model_quadrupole("2CLJF_Lisal", L[i], mu_sq[i]);
+        using tdx = TDXDerivatives<decltype(model)>;
         auto rhovec = (Eigen::ArrayXd(1) << rho[i]).finished();
-        auto p = rho[i] * T[i] * (1.0 + TDXDerivatives<decltype(model)>::get_Ar01(model, T[i], rho[i], rhovec));
-        auto u = T[i] * TDXDerivatives<decltype(model)>::get_Ar10(model, T[i], rho[i], rhovec);
+        auto p = rho[i] * T[i] * (1.0 + tdx::get_Ar01(model, T[i], rho[i], rhovec));
+        auto u = T[i] * tdx::get_Ar10(model, T[i], rho[i], rhovec);
             CHECK(p == Approx(p_sim[i]).margin(eps_p[i]));
             CHECK(u == Approx(u_sim[i]).margin(eps_u[i]));
 
