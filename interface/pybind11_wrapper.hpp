@@ -18,7 +18,7 @@ using namespace teqp;
 
 template<typename Model, int iT, int iD, typename Class>
 void add_res_deriv_impl(Class& cls) {
-    using RAX = Eigen::Ref<Eigen::ArrayXd>;
+    using RAX = Eigen::Ref<const Eigen::ArrayXd>;
     using idx = TDXDerivatives<Model, double, RAX>;
     const std::string fname = "get_Ar" + std::to_string(iT) + std::to_string(iD);
     cls.def(fname.c_str(),
@@ -41,7 +41,7 @@ void add_res_derivatives(Class& cls) {
 template<typename Model, typename Wrapper>
 void add_derivatives(py::module &m, Wrapper &cls) {
 
-    using RAX = Eigen::Ref<Eigen::ArrayXd>;
+    using RAX = Eigen::Ref<const Eigen::ArrayXd>;
 
     using id = IsochoricDerivatives<Model, double, RAX >;
     cls.def("get_Ar00iso", &id::get_Ar00, py::arg("T"), py::arg("rho").noconvert());
@@ -60,13 +60,13 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_fugacity_coefficients", &id::template get_fugacity_coefficients<ADBackends::autodiff>, py::arg("T"), py::arg("rho").noconvert());
     cls.def("get_partial_molar_volumes", &id::get_partial_molar_volumes, py::arg("T"), py::arg("rhovec").noconvert());
 
-    using vd = VirialDerivatives<Model, double, Eigen::Array<double,Eigen::Dynamic,1>>;
+    using vd = VirialDerivatives<Model, double, RAX>;
     cls.def("get_B2vir", &vd::get_B2vir, py::arg("T"), py::arg("molefrac").noconvert());
     cls.def("get_Bnvir", [](const Model& m, const int Nderiv, const double T, const RAX molefrac) { return vd::get_Bnvir_runtime(Nderiv, m, T, molefrac); }, py::arg("Nderiv"), py::arg("T"), py::arg("molefrac").noconvert());
     cls.def("get_dmBnvirdTm", [](const Model& m, const int Nderiv, const int NTderiv, const double T, const RAX molefrac) { return vd::get_dmBnvirdTm_runtime(Nderiv, NTderiv, m, T, molefrac); }, py::arg("Nderiv"), py::arg("NTderiv"), py::arg("T"), py::arg("molefrac").noconvert());
     cls.def("get_B12vir", &vd::get_B12vir, py::arg("T"), py::arg("molefrac").noconvert());
 
-    using ct = CriticalTracing<Model, double, Eigen::Array<double, Eigen::Dynamic, 1>>;
+    using ct = CriticalTracing<Model, double, RAX>;
     cls.def("trace_critical_arclength_binary", &ct::trace_critical_arclength_binary, py::arg("T0"), py::arg("rhovec0").noconvert(), py::arg_v("path", std::nullopt, "None"), py::arg_v("options", std::nullopt, "None"));
     cls.def("get_criticality_conditions", &ct::get_criticality_conditions);
     cls.def("eigen_problem", &ct::eigen_problem);
@@ -81,15 +81,15 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("solve_pure_critical", &solve_pure_critical<Model, double, ADBackends::autodiff>, py::arg("T"), py::arg("rho"), py::arg_v("flags", std::nullopt, "None"));
     cls.def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, RAX>);
     cls.def("mix_VLE_Tp", &mix_VLE_Tp<Model, double, RAX>, py::arg("T"), py::arg("p_given"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("flags", MixVLETpFlags{}, "None"));
-    cls.def("mixture_VLE_px", &mixture_VLE_px<Model, double, Eigen::ArrayXd>, py::arg("p_spec"), py::arg("xmolar_spec").noconvert(), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("flags", MixVLEpxFlags{}, "None"));
+    cls.def("mixture_VLE_px", &mixture_VLE_px<Model, double, RAX>, py::arg("p_spec"), py::arg("xmolar_spec").noconvert(), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("flags", MixVLEpxFlags{}, "None"));
 
     cls.def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
-    cls.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
+    cls.def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, RAX>, py::arg("T"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
     cls.def("get_drhovecdT_psat", &get_drhovecdT_psat<Model, double, RAX>, py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
-    cls.def("trace_VLE_isobar_binary", &trace_VLE_isobar_binary<Model, double, Eigen::ArrayXd>, py::arg("p"), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
-    cls.def("get_dpsat_dTsat_isopleth", &get_dpsat_dTsat_isopleth<Model, double, Eigen::ArrayXd>, py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
+    cls.def("trace_VLE_isobar_binary", &trace_VLE_isobar_binary<Model, double, RAX>, py::arg("p"), py::arg("T0"), py::arg("rhovecL0").noconvert(), py::arg("rhovecV0").noconvert(), py::arg_v("options", std::nullopt, "None"));
+    cls.def("get_dpsat_dTsat_isopleth", &get_dpsat_dTsat_isopleth<Model, double, RAX>, py::arg("T"), py::arg("rhovecL").noconvert(), py::arg("rhovecV").noconvert());
 
-    cls.def("mix_VLLE_T", &mix_VLLE_T<Model, double, Eigen::ArrayXd>);
+    cls.def("mix_VLLE_T", &mix_VLLE_T<Model, double, RAX>);
     cls.def("find_VLLE_T_binary", &find_VLLE_T_binary<Model>, py::arg("traces"), py::arg_v("options", std::nullopt, "None"));
 
     // Temperature, density, composition derivatives
