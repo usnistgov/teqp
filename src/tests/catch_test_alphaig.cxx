@@ -8,12 +8,16 @@ using Catch::Approx;
 
 using namespace teqp;
 
-TEST_CASE("Simplest case","[alphaig]") {
-    double a_1 = 1, a_2 = 2, T = 300;
+nlohmann::json demo_pure_term(double a_1, double a_2){
     nlohmann::json j0 = nlohmann::json::array();
     j0.push_back({ {"type", "Lead"}, { "a_1", 1 }, { "a_2", 2 } });
+    return {{"R", 8.31446261815324}, {"terms", j0}};
+}
+
+TEST_CASE("Simplest case","[alphaig]") {
+    double a_1 = 1, a_2 = 2, T = 300;
     nlohmann::json j = nlohmann::json::array();
-    j.push_back(j0);
+    j.push_back(demo_pure_term(a_1, a_2));
     IdealHelmholtz ih(j);
     std::valarray<double> molefrac{1.0};
     REQUIRE(ih.alphaig(T, 1, molefrac) == log(1) + a_1 + a_2 / T);
@@ -21,10 +25,8 @@ TEST_CASE("Simplest case","[alphaig]") {
 
 TEST_CASE("alphaig derivative", "[alphaig]") {
     double a_1 = 1, a_2 = 2, T = 300, rho = 1;
-    nlohmann::json j0 = nlohmann::json::array();
-    j0.push_back({ {"type", "Lead"}, { "a_1", 1 }, { "a_2", 2 } }); // For the first component
     nlohmann::json j = nlohmann::json::array();
-    j.push_back(j0);
+    j.push_back(demo_pure_term(a_1, a_2));
     IdealHelmholtz ih(j);
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
     auto wih = AlphaCallWrapper<1, decltype(ih)>(ih);
@@ -48,12 +50,13 @@ TEST_CASE("Ammonia derivative", "[alphaig][NH3]") {
     std::valarray<double> n = { 2.224, 3.148, 0.9579 }, theta = { 1646, 3965, 7231 };
 
     using o = nlohmann::json::object_t;
-    nlohmann::json j = { {
+    nlohmann::json j0terms = {
           o{ {"type", "Lead"}, { "a_1", a1 - log(rhocrit)  }, { "a_2", a2 * Tcrit } },
           o{ {"type", "LogT"}, { "a", -(c0 - 1) } },
           o{ {"type", "Constant"}, { "a", (c0 - 1) * log(Tcrit) } }, // Term from ln(tau)
           o{ {"type", "PlanckEinstein"}, { "n",  n}, {"theta", theta}}
-    } };
+    };
+    nlohmann::json j = {{ {"R", 8.31446261815324}, {"terms", j0terms} }};
     IdealHelmholtz ih(j);
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
     auto wih = AlphaCallWrapper<1, decltype(ih)>(ih);

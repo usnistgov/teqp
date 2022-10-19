@@ -305,7 +305,7 @@ TEST_CASE("Calculate partial molar volume for a CO2 containing mixture", "[parti
     }
 }
 
-TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multifluid],[all],[ideal]") {
+TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multifluid],[all],[alphaig]") {
     std::string root = "../mycp";
     auto paths = get_files_in_folder(root + "/dev/fluids", ".json");
     auto p = GENERATE_REF(from_range(paths));
