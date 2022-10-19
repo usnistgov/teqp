@@ -49,7 +49,7 @@ inline auto call_method_factory(py::module &m, const std::string& attribute) {
     
     auto f = [attribute](const py::object& model, const py::args& args, const py::kwargs& kwargs) {
         std::string warning_string = ("Calling the top-level function " + attribute + " is deprecated" +
-            " and much slower than calling the same-named method on the model instance");
+            " and much slower than calling the same-named method of the model instance");
         PyErr_WarnEx(PyExc_DeprecationWarning, warning_string.c_str(), 1);
         return model.attr(attribute.c_str())(*args, **kwargs);
     };
