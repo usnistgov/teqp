@@ -30,6 +30,12 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.13.0 :
+
+  * Added 2-center Lennard-Jones models to the C++ code (thanks to Sven Pohl)
+
+  * Added routine for converting the ideal-gas format of CoolProp. Exposed to Python as the ``convert_CoolProp_format`` method of the ``IdealHelmholtz`` class
+
 * 0.12.0 :
 
   * Added Exp-6 (modified Buckingham) from Kataoka and square-well from Espíndola-Heredia et al.
