@@ -126,7 +126,7 @@ struct TDXDerivatives {
     * 
     * Note: none of the intermediate derivatives are returned, although they are calculated
     */
-    template<int iT, int iD, ADBackends be, class AlphaWrapper>
+    template<int iT, int iD, ADBackends be = ADBackends::autodiff, class AlphaWrapper>
     static auto get_Agenxy(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
 
         static_assert(iT > 0 || iD > 0);
@@ -269,14 +269,19 @@ struct TDXDerivatives {
     static auto get_Ar11(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         return get_Arxy<1, 1, be>(model, T, rho, molefrac);
     }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Aig11(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        return get_Aigxy<1, 1, be>(model, T, rho, molefrac);
+    }
 
-    template<int Nderiv, ADBackends be = ADBackends::autodiff>
-    static auto get_Ar0n(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+    template<int Nderiv, ADBackends be = ADBackends::autodiff, class AlphaWrapper>
+    static auto get_Agen0n(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         std::valarray<Scalar> o(Nderiv+1);
         if constexpr (be == ADBackends::autodiff) {
             // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
             autodiff::Real<Nderiv, Scalar> rho_ = rho;
-            auto f = [&model, &T, &molefrac](const auto& rho__) { return model.alphar(T, rho__, molefrac); };
+            auto f = [&w, &T, &molefrac](const auto& rho__) { return w.alpha(T, rho__, molefrac); };
             auto ders = derivatives(f, along(1), at(rho_));
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = forceeval(powi(rho, n) * ders[n]);
@@ -286,7 +291,7 @@ struct TDXDerivatives {
         else {
             using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
             bool and_val = true;
-            fcn_t f = [&](const auto& rhomcx) { return model.alphar(T, rhomcx, molefrac); };
+            fcn_t f = [&w, &T, &molefrac](const auto& rhomcx) { return w.alpha(T, rhomcx, molefrac); };
             auto ders = diff_mcx1(f, rho, Nderiv, and_val);
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = powi(rho, n) * ders[n];
@@ -295,6 +300,62 @@ struct TDXDerivatives {
         }
         throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar0n");
     }
+    
+    template<int Nderiv, ADBackends be = ADBackends::autodiff, class AlphaWrapper>
+    static auto get_Agenn0(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        std::valarray<Scalar> o(Nderiv+1);
+        auto Trecip = 1.0 / T;
+        if constexpr (be == ADBackends::autodiff) {
+            // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
+            autodiff::Real<Nderiv, Scalar> Trecipad = Trecip;
+            auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(1.0/Trecip__, rho, molefrac); };
+            auto ders = derivatives(f, along(1), at(Trecipad));
+            for (auto n = 0; n <= Nderiv; ++n) {
+                o[n] = powi(Trecip, n) * ders[n];
+            }
+        }
+        else if constexpr (be == ADBackends::multicomplex) {
+            using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
+            fcn_t f = [&](const auto& Trecipmcx) { return w.alpha(1.0/Trecipmcx, rho, molefrac); };
+            auto ders = diff_mcx1(f, Trecip, Nderiv+1, true /* and_val */);
+            for (auto n = 0; n <= Nderiv; ++n) {
+                o[n] = powi(Trecip, n) * ders[n];
+            }
+        }
+        else {
+            throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenn0");
+        }
+        return o;
+    }
+    
+    /**
+    * Calculate the derivative \f$\Lambda^{\rm r}_{x0}\f$, where
+    * \f[
+    * \Lambda^{\rm r}_{ij} = (1/T)^i\\left(\frac{\partial^{j}(\alpha^r)}{\partial(1/T)^i}\right)
+    * \f]
+    *
+    * Note:The intermediate derivatives are returned
+    */
+    template<int iT, ADBackends be = ADBackends::autodiff>
+    static auto get_Arn0(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        auto wrapper = AlphaCallWrapper<0, decltype(model)>(model);
+        return get_Agenn0<iT, be>(wrapper, T, rho, molefrac);
+    }
+    
+    /**
+    * Calculate the derivative \f$\Lambda^{\rm ig}_{0y}\f$, where
+    * \f[
+    * \Lambda^{\rm ig}_{ij} = \rho^j\left(\frac{\partial^{j}(\alpha^{\rm ig})}{\partial\rho^j}\right)
+    * \f]
+    *
+    * Note:The intermediate derivatives are returned
+    */
+    template<int iD, ADBackends be = ADBackends::autodiff>
+    static auto get_Ar0n(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        auto wrapper = AlphaCallWrapper<0, decltype(model)>(model);
+        return get_Agen0n<iD, be>(wrapper, T, rho, molefrac);
+    }
+    
 
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar(const int itau, const int idelta, const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
