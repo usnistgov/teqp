@@ -58,7 +58,7 @@ TEST_CASE("PCSAFT derivatives", "[PCSAFT]")
     auto model = PCSAFTMixture(names);
 
     double T = 300, rho = 2;
-    Eigen::ArrayX<double> z(2); z.fill(1.0);
+    Eigen::ArrayX<double> z(2); z.fill(1.0/z.size());
     using tdx = TDXDerivatives<decltype(model), double, decltype(z)>;
 
     BENCHMARK("alphar") {
@@ -90,6 +90,34 @@ TEST_CASE("PCSAFT derivatives", "[PCSAFT]")
     };*/
 }
 
+
+TEST_CASE("PCSAFT more derivatives", "[PCSAFT]")
+{
+    using namespace PCSAFT;
+    std::vector<std::string> names = { "Methane", "Ethane", "Propane" };
+    auto model = PCSAFTMixture(names);
+
+    double T = 300, rho = 2;
+    Eigen::ArrayX<double> z(3); z.fill(1.0/3.0);
+    using tdx = TDXDerivatives<decltype(model), double, decltype(z)>;
+    Eigen::ArrayXd rhovec = rho*z;
+
+    BENCHMARK("alphar") {
+        return model.alphar(T, rho, z);
+    };
+    BENCHMARK("fugacity_coefficients w/ autodiff") {
+        return -IsochoricDerivatives<decltype(model)>::get_fugacity_coefficients(model, T, rhovec);
+    };
+    BENCHMARK("compressibility w/ autodiff") {
+        return 1.0+tdx::get_Ar01(model, T, rho, z);
+    };
+    BENCHMARK("c_vr/R w/ autodiff") {
+        return -tdx::get_Ar20(model, T, rho, z);
+    };
+    BENCHMARK("partial_molar_volumes w/ autodiff") {
+        return -IsochoricDerivatives<decltype(model)>::get_fugacity_coefficients(model, T, rhovec);
+    };
+}
 
 
 

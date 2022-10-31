@@ -24,6 +24,7 @@ public:
     PCSAFTLibrary() {
         insert_normal_fluid("Methane", 1.0000, 3.7039, 150.03, "Gross-IECR-2001");
         insert_normal_fluid("Ethane", 1.6069, 3.5206, 191.42, "Gross-IECR-2001");
+        insert_normal_fluid("Propane", 2.0020, 3.6184, 208.11, "Gross-IECR-2001");
     }
     void insert_normal_fluid(const std::string& name, double m, const double sigma_Angstrom, const double epsilon_over_k, const std::string& BibTeXKey) {
         SAFTCoeffs coeff;
