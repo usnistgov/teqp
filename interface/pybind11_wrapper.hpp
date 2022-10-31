@@ -12,6 +12,7 @@
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/VLE.hpp"
 #include "teqp/algorithms/VLLE.hpp"
+#include "teqp/ideal_eosterms.hpp"
 
 namespace py = pybind11;
 using namespace teqp;
@@ -108,5 +109,5 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_neff", &(tdx::template get_neff<ADBackends::autodiff>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     
     cls.def("get_deriv_mat2", [](const Model &model, double T, double rho, const Eigen::ArrayXd& z){return DerivativeHolderSquare<2, AlphaWrapperOption::residual>(model, T, rho, z).derivs;});
-
+    m.def("build_iteration_Jv", &build_iteration_Jv<Model, IdealHelmholtz, double, Eigen::ArrayXd>);
 }

@@ -136,6 +136,14 @@ void init_teqp(py::module& m) {
         .def_readwrite("relxtol", &MixVLEpxFlags::relxtol)
         .def_readwrite("maxiter", &MixVLEpxFlags::maxiter)
         ;
+    
+    // The Jacobian and value matrices for Newton-Raphson
+    py::class_<IterationMatrices>(m, "IterationMatrices")
+        .def(py::init<>())
+        .def_readonly("J", &IterationMatrices::J)
+        .def_readonly("v", &IterationMatrices::v)
+        .def_readonly("vars", &IterationMatrices::vars)
+        ;
 
     py::enum_<VLE_return_code>(m, "VLE_return_code")
         .value("unset", VLE_return_code::unset)

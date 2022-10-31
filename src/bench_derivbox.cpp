@@ -32,4 +32,9 @@ TEST_CASE("multifluid derivatives", "[mf]")
     BENCHMARK("All ideal-gas derivatives needed for first derivatives of h,s,u,p w.r.t. T&rho") {
         return DerivativeHolderSquare<2,AlphaWrapperOption::idealgas>(aig, T, rho, z).derivs;
     };
+    
+    BENCHMARK("IterationStepper matrix") {
+        std::vector<char> vars = {'P','S','T','D'};
+        return build_iteration_Jv(vars, model, aig, T, rho, z);
+    };
 }
