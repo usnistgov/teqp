@@ -29,7 +29,7 @@ TEST_CASE("alphaig derivative", "[alphaig]") {
     j.push_back(demo_pure_term(a_1, a_2));
     IdealHelmholtz ih(j);
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
-    auto wih = AlphaCallWrapper<1, decltype(ih)>(ih);
+    auto wih = AlphaCallWrapper<AlphaWrapperOption::idealgas, decltype(ih)>(ih);
     wih.alpha(T, rho, molefrac);
     using tdx = TDXDerivatives<decltype(ih), double, Eigen::ArrayXd>;
     SECTION("All cross derivatives should be zero") {
@@ -59,8 +59,10 @@ TEST_CASE("Ammonia derivative", "[alphaig][NH3]") {
     nlohmann::json j = {{ {"R", 8.31446261815324}, {"terms", j0terms} }};
     IdealHelmholtz ih(j);
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
-    auto wih = AlphaCallWrapper<1, decltype(ih)>(ih);
+    auto wih = AlphaCallWrapper<AlphaWrapperOption::idealgas, decltype(ih)>(ih);
     auto calc = wih.alpha(T, rho, molefrac);
     auto expected = -5.3492909452728545;
     REQUIRE(calc == Approx(expected));
+    
+    DerivativeHolderSquare<2, AlphaWrapperOption::idealgas> dhs(ih, T, rho, molefrac);
 }

@@ -8,32 +8,6 @@
 
 using namespace teqp;
 
-template<int Nderivsmax, int k>
-class DerivativeHolderSquare{
-    
-public:
-    Eigen::Array<double, Nderivsmax+1, Nderivsmax+1> derivs;
-    
-    template<typename Model, typename Scalar, typename VecType>
-    DerivativeHolderSquare(const Model& model, const Scalar& T, const Scalar& rho, const VecType& z) {
-        using tdx = TDXDerivatives<decltype(model), Scalar, VecType>;
-        static_assert(Nderivsmax == 2, "It's gotta be 2");
-        AlphaCallWrapper<k, Model> wrapper(model);
-        
-        auto AX02 = tdx::template get_Agen0n<2>(wrapper, T, rho, z);
-        derivs(0, 0) = AX02[0];
-        derivs(0, 1) = AX02[1];
-        derivs(0, 2) = AX02[2];
-        
-        auto AX20 = tdx::template get_Agenn0<2>(wrapper, T, rho, z);
-        derivs(0, 0) = AX20[0];
-        derivs(1, 0) = AX20[1];
-        derivs(2, 0) = AX20[2];
-        
-        derivs(1, 1) = tdx::template get_Agenxy<1,1>(wrapper, T, rho, z);
-    }
-};
-
 TEST_CASE("multifluid derivatives", "[mf]")
 {
     std::vector<std::string> names = { "Propane" };
@@ -52,10 +26,10 @@ TEST_CASE("multifluid derivatives", "[mf]")
     };
     
     BENCHMARK("All residual derivatives needed for first derivatives of h,s,u,p w.r.t. T&rho") {
-        return DerivativeHolderSquare<2,0>(model, T, rho, z).derivs;
+        return DerivativeHolderSquare<2,AlphaWrapperOption::residual>(model, T, rho, z).derivs;
     };
     
     BENCHMARK("All ideal-gas derivatives needed for first derivatives of h,s,u,p w.r.t. T&rho") {
-        return DerivativeHolderSquare<2,1>(aig, T, rho, z).derivs;
+        return DerivativeHolderSquare<2,AlphaWrapperOption::idealgas>(aig, T, rho, z).derivs;
     };
 }

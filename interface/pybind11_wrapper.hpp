@@ -106,5 +106,7 @@ void add_derivatives(py::module &m, Wrapper &cls) {
     cls.def("get_Ar05n", &(tdx::template get_Ar0n<5>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_Ar06n", &(tdx::template get_Ar0n<6>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
     cls.def("get_neff", &(tdx::template get_neff<ADBackends::autodiff>), py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert());
+    
+    cls.def("get_deriv_mat2", [](const Model &model, double T, double rho, const Eigen::ArrayXd& z){return DerivativeHolderSquare<2, AlphaWrapperOption::residual>(model, T, rho, z).derivs;});
 
 }

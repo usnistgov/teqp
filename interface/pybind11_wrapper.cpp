@@ -164,6 +164,7 @@ void init_teqp(py::module& m) {
     auto alphaig = py::class_<IdealHelmholtz>(m, "IdealHelmholtz").def(py::init<const nlohmann::json&>());
     alphaig.def_static("convert_CoolProp_format", [](const std::string &path, int index){return convert_CoolProp_idealgas(path, index);});
     add_ig_derivatives<IdealHelmholtz>(m, alphaig);
+    alphaig.def("get_deriv_mat2", [](const IdealHelmholtz &ig, double T, double rho, const Eigen::ArrayXd& z){return DerivativeHolderSquare<2, AlphaWrapperOption::idealgas>(ig, T, rho, z).derivs;});
 
     add_vdW(m);
     add_PCSAFT(m);

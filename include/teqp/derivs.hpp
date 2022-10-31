@@ -81,6 +81,7 @@ struct wrt_helper {
     }
 };
 
+enum class AlphaWrapperOption {residual, idealgas};
 /**
 * \brief This class is used to wrap a model that exposes the generic 
 * functions alphar, alphaig, etc., and allow the desired member function to be
@@ -90,14 +91,14 @@ struct wrt_helper {
 * require the argument types to be known, and they are not known in this case
 * so we give the hard work of managing the argument types to the compiler
 */
-template<int i, class Model>
+template<AlphaWrapperOption o, class Model>
 struct AlphaCallWrapper {
     const Model& m_model;
     AlphaCallWrapper(const Model& model) : m_model(model) {};
 
     template <typename ... Args>
     auto alpha(const Args& ... args) const {
-        if constexpr (i == 0) {
+        if constexpr (o == AlphaWrapperOption::residual) {
             // The alphar method is REQUIRED to be implemented by all
             // models, so can just call it via perfect fowarding
             return m_model.alphar(std::forward<const Args>(args)...);
@@ -212,7 +213,7 @@ struct TDXDerivatives {
     */
     template<int iT, int iD, ADBackends be>
     static auto get_Arxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = AlphaCallWrapper<0, decltype(model)>(model);
+        auto wrapper = AlphaCallWrapper<AlphaWrapperOption::residual, decltype(model)>(model);
         if constexpr (iT == 0 && iD == 0) {
             return wrapper.alpha(T, rho, molefrac);
         }
@@ -231,7 +232,7 @@ struct TDXDerivatives {
     */
     template<int iT, int iD, ADBackends be>
     static auto get_Aigxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = AlphaCallWrapper<1, decltype(model)>(model);
+        auto wrapper = AlphaCallWrapper<AlphaWrapperOption::idealgas, decltype(model)>(model);
         if constexpr (iT == 0 && iD == 0) {
             return wrapper.alpha(T, rho, molefrac);
         }
@@ -338,7 +339,7 @@ struct TDXDerivatives {
     */
     template<int iT, ADBackends be = ADBackends::autodiff>
     static auto get_Arn0(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = AlphaCallWrapper<0, decltype(model)>(model);
+        auto wrapper = AlphaCallWrapper<AlphaWrapperOption::residual, decltype(model)>(model);
         return get_Agenn0<iT, be>(wrapper, T, rho, molefrac);
     }
     
@@ -352,7 +353,7 @@ struct TDXDerivatives {
     */
     template<int iD, ADBackends be = ADBackends::autodiff>
     static auto get_Ar0n(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = AlphaCallWrapper<0, decltype(model)>(model);
+        auto wrapper = AlphaCallWrapper<AlphaWrapperOption::residual, decltype(model)>(model);
         return get_Agen0n<iD, be>(wrapper, T, rho, molefrac);
     }
     
@@ -901,6 +902,32 @@ struct IsochoricDerivatives{
         auto ders = tdx::template get_Ar0n<2>(model, T, rhotot, molefrac);
         auto denominator = -pow2(rhotot)*RT*(1 + 2*ders[1] + ders[2]);
         return (numerator/denominator).eval();
+    }
+};
+
+template<int Nderivsmax, AlphaWrapperOption opt>
+class DerivativeHolderSquare{
+    
+public:
+    Eigen::Array<double, Nderivsmax+1, Nderivsmax+1> derivs;
+    
+    template<typename Model, typename Scalar, typename VecType>
+    DerivativeHolderSquare(const Model& model, const Scalar& T, const Scalar& rho, const VecType& z) {
+        using tdx = TDXDerivatives<decltype(model), Scalar, VecType>;
+        static_assert(Nderivsmax == 2, "It's gotta be 2 for now");
+        AlphaCallWrapper<opt, Model> wrapper(model);
+        
+        auto AX02 = tdx::template get_Agen0n<2>(wrapper, T, rho, z);
+        derivs(0, 0) = AX02[0];
+        derivs(0, 1) = AX02[1];
+        derivs(0, 2) = AX02[2];
+        
+        auto AX20 = tdx::template get_Agenn0<2>(wrapper, T, rho, z);
+        derivs(0, 0) = AX20[0];
+        derivs(1, 0) = AX20[1];
+        derivs(2, 0) = AX20[2];
+        
+        derivs(1, 1) = tdx::template get_Agenxy<1,1>(wrapper, T, rho, z);
     }
 };
 
