@@ -26,4 +26,14 @@ int main() {
     auto z = (Eigen::ArrayXd(2) << 0.5, 0.5).finished();
     double Ar01 = am->get_Arxy(0, 1, 300, 3, z);
     std::cout << Ar01 << std::endl;
+    
+    auto fugcoeff = am->get_fugacity_coefficients(300.0, z*300.0);
+    std::cout << fugcoeff << std::endl;
+    
+    try{
+        std::cout << am->get_m() << std::endl;
+    }
+    catch(...){
+        std::cout << "This fails, as it should because the model is not a PCSAFT one" << std::endl;
+    }
 }

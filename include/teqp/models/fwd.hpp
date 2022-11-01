@@ -21,12 +21,14 @@ namespace teqp {
 
 	using vad = std::valarray<double>;
 
+    using PCSAFTType = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
+
 	// Define the EOS types by interrogating the types returned by the respective factory function
 	using AllowedModels = std::variant<
 		vdWEOS1,
 		decltype(canonical_PR(vad{}, vad{}, vad{})),
 		decltype(CPA::CPAfactory(nlohmann::json{})),
-		decltype(PCSAFT::PCSAFTfactory(nlohmann::json{})),
+        PCSAFTType,
 		decltype(multifluidfactory(nlohmann::json{}))
 	>;
 }
