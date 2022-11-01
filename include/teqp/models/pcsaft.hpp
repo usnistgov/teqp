@@ -232,9 +232,9 @@ public:
             i++;
         }
     };
-    auto get_m(){ return m; }
-    auto get_sigma_Angstrom() { return sigma_Angstrom; }
-    auto get_epsilon_over_k_K() { return epsilon_over_k; }
+    auto get_m() const { return m; }
+    auto get_sigma_Angstrom() const { return sigma_Angstrom; }
+    auto get_epsilon_over_k_K() const { return epsilon_over_k; }
 
     auto print_info() {
         std::string s = std::string("i m sigma / A e/kB / K \n  ++++++++++++++") + "\n";
@@ -244,9 +244,9 @@ public:
         return s;
     }
     template<typename VecType>
-    double max_rhoN(double T, const VecType& mole_fractions) {
+    double max_rhoN(const double T, const VecType& mole_fractions) const {
         auto N = mole_fractions.size();
-        Eigen::ArrayX<decltype(T)> d(N);
+        Eigen::ArrayX<double> d(N);
         for (auto i = 0; i < N; ++i) {
             d[i] = sigma_Angstrom[i] * (1.0 - 0.12 * exp(-3.0 * epsilon_over_k[i] / T));
         }
