@@ -17,6 +17,7 @@
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/multifluid_mutant.hpp"
+#include "teqp/ideal_eosterms.hpp"
 
 namespace teqp {
 
@@ -29,6 +30,8 @@ namespace teqp {
     using multifluid_t = decltype(multifluidfactory(nlohmann::json{}));
     //using multifluidmutant_t = decltype(build_multifluid_mutant(multifluid_t{}, nlohmann::json{})); // need to figure out how to get this to work
 
+    using idealgas_t = IdealHelmholtz;
+
 	// The set of these models is exposed in the variant
 	using AllowedModels = std::variant<
 		vdWEOS1,
@@ -36,6 +39,7 @@ namespace teqp {
         PCSAFT_t,
         CPA_t,
         multifluid_t
+        ,idealgas_t
         //multifluidmutant_t
 	>;
 }

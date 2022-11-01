@@ -97,7 +97,7 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
-                summer = summer + n[i] * log(1 - exp(-theta[i] / T));
+                summer = summer + n[i] * log(1.0 - exp(-theta[i] / T));
             }
             return forceeval(summer);
         }
@@ -329,6 +329,20 @@ namespace teqp {
             }
             return ig;
         }
+        
+        /// This pass-through function is required to allow this model to sit in the AllowedModels variant
+        /// which allows the ideal-gas Helmholtz terms to be treated just the same as the residual terms
+        template<typename TType, typename RhoType, typename MoleFrac>
+        auto alphar(const TType& T, const RhoType &rho, const MoleFrac &molefrac) const {
+            return alphaig(T, rho, molefrac);
+        }
+        
+        /** For now this is a placeholder, but it should be the "correct" R, however that is ultimately decided upon */
+        template<typename MoleFrac>
+        auto R(const MoleFrac &molefrac) const{
+            return 8.31446261815324; // J/mol/K
+        }
+        
     };
 
     inline nlohmann::json CoolProp2teqp_alphaig_term_reformatter(const nlohmann::json &term, double Tri, double rhori, double R){
