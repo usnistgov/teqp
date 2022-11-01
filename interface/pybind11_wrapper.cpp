@@ -223,12 +223,12 @@ void init_teqp(py::module& m) {
     call_method_factory(m, "mix_VLLE_T");
     call_method_factory(m, "find_VLLE_T_binary");
 
-    // Some functions for timing overhead of interface
-    m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
-    using RAX = Eigen::Ref<const Eigen::ArrayXd>;
-    using namespace pybind11::literals; // for "arg"_a
-    m.def("___mysummerref", [](const double& c, const RAX x) { return c * x.sum(); }, "c"_a, "x"_a.noconvert());
-    m.def("___myadder", [](const double& c, const double& d) { return c+d; });
+//    // Some functions for timing overhead of interface
+//    m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
+//    using RAX = Eigen::Ref<const Eigen::ArrayXd>;
+//    using namespace pybind11::literals; // for "arg"_a
+//    m.def("___mysummerref", [](const double& c, const RAX x) { return c * x.sum(); }, "c"_a, "x"_a.noconvert());
+//    m.def("___myadder", [](const double& c, const double& d) { return c+d; });
 }
 
 PYBIND11_MODULE(teqp, m) {
