@@ -187,7 +187,7 @@ if (TEQP_SNIPPETS)
       target_sources(${snippet_exe} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
     endif()
 
-    target_link_libraries(${snippet_exe} PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain)
+    target_link_libraries(${snippet_exe} PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain PRIVATE teqpcpp)
     if(UNIX)
       target_link_libraries (${snippet_exe} PRIVATE ${CMAKE_DL_LIBS})
     endif()

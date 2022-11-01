@@ -16,19 +16,26 @@
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/multifluid.hpp"
+#include "teqp/models/multifluid_mutant.hpp"
 
 namespace teqp {
 
 	using vad = std::valarray<double>;
 
-    using PCSAFTType = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
+    // Define the EOS types by interrogating the types returned by the respective factory function
+    using canonical_cubic_t = decltype(canonical_PR(vad{}, vad{}, vad{}));
+    using PCSAFT_t = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
+    using CPA_t = decltype(CPA::CPAfactory(nlohmann::json{}));
+    using multifluid_t = decltype(multifluidfactory(nlohmann::json{}));
+    //using multifluidmutant_t = decltype(build_multifluid_mutant(multifluid_t{}, nlohmann::json{})); // need to figure out how to get this to work
 
-	// Define the EOS types by interrogating the types returned by the respective factory function
+	// The set of these models is exposed in the variant
 	using AllowedModels = std::variant<
 		vdWEOS1,
-		decltype(canonical_PR(vad{}, vad{}, vad{})),
-		decltype(CPA::CPAfactory(nlohmann::json{})),
-        PCSAFTType,
-		decltype(multifluidfactory(nlohmann::json{}))
+        canonical_cubic_t,
+        PCSAFT_t,
+        CPA_t,
+        multifluid_t
+        //multifluidmutant_t
 	>;
 }

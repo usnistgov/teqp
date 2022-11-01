@@ -22,6 +22,7 @@ int main() {
     }};
     //std::cout << j.dump(2);
     auto am = teqp::cppinterface::make_model(j);
+    auto am2 = teqp::cppinterface::make_vdW1(2, 3);
 
     auto z = (Eigen::ArrayXd(2) << 0.5, 0.5).finished();
     double Ar01 = am->get_Arxy(0, 1, 300, 3, z);
@@ -29,6 +30,9 @@ int main() {
     
     auto fugcoeff = am->get_fugacity_coefficients(300.0, z*300.0);
     std::cout << fugcoeff << std::endl;
+    
+    auto vhat = am->get_partial_molar_volumes(300.0, z*300.0);
+    std::cout << vhat << std::endl;
     
     try{
         std::cout << am->get_m() << std::endl;

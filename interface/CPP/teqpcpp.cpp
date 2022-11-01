@@ -40,20 +40,26 @@ namespace teqp {
                     return id::get_fugacity_coefficients(model, T, rhovec);
                 }, m_model);
             }
+            EArrayd get_partial_molar_volumes(const double T, const EArrayd& rhovec) const override {
+                return std::visit([&](const auto& model) {
+                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>;
+                    return id::get_partial_molar_volumes(model, T, rhovec);
+                }, m_model);
+            }
             
             
             // Methods only available for PC-SAFT
             EArrayd get_m() const override {
-                return std::get<PCSAFTType>(m_model).get_m();
+                return std::get<PCSAFT_t>(m_model).get_m();
             }
             EArrayd get_sigma_Angstrom() const override {
-                return std::get<PCSAFTType>(m_model).get_sigma_Angstrom();
+                return std::get<PCSAFT_t>(m_model).get_sigma_Angstrom();
             }
             EArrayd get_epsilon_over_k_K() const override {
-                return std::get<PCSAFTType>(m_model).get_m();
+                return std::get<PCSAFT_t>(m_model).get_m();
             }
             double max_rhoN(const double T, const EArrayd& z) const override {
-                return std::get<PCSAFTType>(m_model).max_rhoN(T, z);
+                return std::get<PCSAFT_t>(m_model).max_rhoN(T, z);
             }
         };
 
@@ -63,6 +69,10 @@ namespace teqp {
 
         std::unique_ptr<AbstractModel> make_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags, const std::string& departurepath) {
             return std::make_unique<ModelImplementer>(build_multifluid_model(components, coolprop_root, BIPcollectionpath, flags, departurepath));
+        }
+        std::unique_ptr<AbstractModel> make_vdW1(double a, double b){
+            nlohmann::json j = {{"kind", "vdW1"}, {"model", {{"a", a}, {"b", b}}}};
+            return std::make_unique<ModelImplementer>(build_model(j));
         }
     }
 }
