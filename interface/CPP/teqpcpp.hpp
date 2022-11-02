@@ -16,10 +16,15 @@ namespace teqp {
     namespace cppinterface {
 
         /**
-        This class defines the public interface for a model.  Only C++ types are passed through this inferface
+        This class defines the public interface for a model.  Only native C++ types are passed through this inferface
          (as well as Eigen types and JSON data structures). Thus all the advanced derivative things can be hidden behind the C++ wall,
-         yielding an interface that is still powerful, but compilation times can be reduced to something more reasonable. Also,
-         interfacing with other programming languages becomes much more convenient.
+         yielding an interface that is still powerful, and very fast, but compilation times can be reduced to something more reasonable. Also,
+         interfacing with other programming languages becomes much more convenient with this layer.  All the complicated
+         routines are still available in the lower-level C++ code.
+         
+         Not allowed are:
+         * Templated arguments to functions
+         * Other numerical types (complex, multicomplex, autodiff, etc.)
          
         */
         class AbstractModel {
@@ -30,6 +35,12 @@ namespace teqp {
             virtual EArrayd get_fugacity_coefficients(const double T, const EArrayd& rhovec) const = 0;
             virtual EArrayd get_partial_molar_volumes(const double T, const EArrayd& rhovec) const = 0;
             virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z) const = 0;
+            
+            // Virial derivatives
+            virtual double get_B2vir(const double T, const EArrayd& z) const = 0;
+            virtual std::map<int, double> get_Bnvir(const int Nderiv, const double T, const EArrayd& z) const = 0;
+            virtual double get_B12vir(const double T, const EArrayd& z) const = 0;
+            virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& z) const = 0;
             
             // Methods only available for PC-SAFT
             virtual EArrayd get_m() const = 0;

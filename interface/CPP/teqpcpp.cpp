@@ -23,6 +23,7 @@ namespace teqp {
             }
         protected:
             const AllowedModels m_model;
+            using RAX = Eigen::Ref<const Eigen::ArrayXd>;
             
         public:
             ModelImplementer(AllowedModels&& model) : m_model(model) {};
@@ -63,6 +64,30 @@ namespace teqp {
                     // ideal-gas term is required to implement alphar which just redirects
                     // to alphaig
                     return DerivativeHolderSquare<2, AlphaWrapperOption::residual>(model, T, rho, z).derivs;
+                }, m_model);
+            }
+            double get_B2vir(const double T, const EArrayd& molefrac) const override {
+                return std::visit([&](const auto& model) {
+                    using vd = VirialDerivatives<decltype(model), double, RAX>;
+                    return vd::get_B2vir(model, T, molefrac);
+                }, m_model);
+            }
+            double get_B12vir(const double T, const EArrayd& molefrac) const override {
+                return std::visit([&](const auto& model) {
+                    using vd = VirialDerivatives<decltype(model), double, RAX>;
+                    return vd::get_B12vir(model, T, molefrac);
+                }, m_model);
+            }
+            std::map<int, double> get_Bnvir(const int Nderiv, const double T, const EArrayd& molefrac) const override {
+                return std::visit([&](const auto& model) {
+                    using vd = VirialDerivatives<decltype(model), double, RAX>;
+                    return vd::get_Bnvir_runtime(Nderiv, model, T, molefrac);
+                }, m_model);
+            }
+            double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& molefrac) const override {
+                return std::visit([&](const auto& model) {
+                    using vd = VirialDerivatives<decltype(model), double, RAX>;
+                    return vd::get_dmBnvirdTm_runtime(Nderiv, NTderiv, model, T, molefrac);
                 }, m_model);
             }
             
