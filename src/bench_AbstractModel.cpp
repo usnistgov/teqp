@@ -2,16 +2,16 @@
 #include <catch2/benchmark/catch_benchmark_all.hpp>
 
 #include "../interface/CPP/teqpcpp.hpp"
+#include "teqp/cpp/derivs.hpp"
 
 using namespace teqp;
 
 TEST_CASE("multifluid derivatives", "[mf]")
 {
-    
     nlohmann::json j = {
         {"kind", "multifluid"},
         {"model", {
-            {"components", {"../mycp/dev/fluids/Methane.json","../mycp/dev/fluids/Ethane.json"}},
+            {"components", {"../mycp/dev/fluids/Methane.json"}},
             {"BIP", "../mycp/dev/mixtures/mixture_binary_pairs.json"},
             {"departure", "../mycp/dev/mixtures/mixture_departure_functions.json"}
         }
@@ -20,7 +20,7 @@ TEST_CASE("multifluid derivatives", "[mf]")
     auto am = teqp::cppinterface::make_model(j);
     auto am2 = teqp::cppinterface::make_vdW1(2, 3);
 
-    auto z = (Eigen::ArrayXd(2) << 0.5, 0.5).finished();
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     auto rhovec = 300.0*z;
     
     BENCHMARK("alphar") {
@@ -34,5 +34,14 @@ TEST_CASE("multifluid derivatives", "[mf]")
     };
     BENCHMARK("partial_molar_volumes") {
         return am->get_partial_molar_volumes(300.0, rhovec);
+    };
+    BENCHMARK("get_deriv_mat2") {
+        return am->get_deriv_mat2(300.0, 3.0, z);
+    };
+    BENCHMARK("build_iteration_Jv") {
+        auto mat = am->get_deriv_mat2(300.0, 3.0, z);
+        auto mat2 = am->get_deriv_mat2(300.0, 3.0, z);
+        const std::vector<char> vars = {'T','D','P','S'};
+        return teqp::cppinterface::build_iteration_Jv(vars, mat, mat2, 8.3144, 300.0, 300.0, z);
     };
 }

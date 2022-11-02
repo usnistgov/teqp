@@ -10,6 +10,7 @@
 
 #include "teqpcpp.hpp"
 #include <iostream>
+#include "teqp/cpp/derivs.hpp"
 
 int main() {
     nlohmann::json j = { 
@@ -34,10 +35,18 @@ int main() {
     auto vhat = am->get_partial_molar_volumes(300.0, z*300.0);
     std::cout << vhat << std::endl;
     
+    auto mat = am->get_deriv_mat2(300.0, 300.0, z);
+    std::cout << mat << std::endl;
+    
+    const std::vector<char> vars = {'T','D','P','S'};
+    auto im = teqp::cppinterface::build_iteration_Jv(vars, mat, mat, 8.3144, 300.0, 300.0, z);
+    std::cout << im.J << std::endl;
+    
     try{
         std::cout << am->get_m() << std::endl;
     }
-    catch(...){
+    catch(std::exception&e){
+        std::cout << e.what() << std::endl;
         std::cout << "This fails, as it should because the model is not a PCSAFT one" << std::endl;
     }
 }
