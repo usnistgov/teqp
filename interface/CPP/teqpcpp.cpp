@@ -11,6 +11,16 @@ namespace teqp {
     namespace cppinterface {
 
         class ModelImplementer : public AbstractModel {
+        private:
+            template<typename cls>
+            const cls& get_or_fail(const std::string& typestr) const{
+                if (std::holds_alternative<cls>(m_model)){
+                    return std::get<cls>(m_model);
+                }
+                else{
+                    throw std::invalid_argument("This method is only available for models of the type " + std::string(typestr));
+                }
+            }
         protected:
             const AllowedModels m_model;
             
@@ -46,20 +56,28 @@ namespace teqp {
                     return id::get_partial_molar_volumes(model, T, rhovec);
                 }, m_model);
             }
-            
+            EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z) const override {
+                return std::visit([&](const auto& model) {
+                    // Although the template argument suggests that only residual terms
+                    // are returned, also the ideal-gas ones are returned because the
+                    // ideal-gas term is required to implement alphar which just redirects
+                    // to alphaig
+                    return DerivativeHolderSquare<2, AlphaWrapperOption::residual>(model, T, rho, z).derivs;
+                }, m_model);
+            }
             
             // Methods only available for PC-SAFT
             EArrayd get_m() const override {
-                return std::get<PCSAFT_t>(m_model).get_m();
+                return get_or_fail<PCSAFT_t>("PCSAFT").get_m();
             }
             EArrayd get_sigma_Angstrom() const override {
-                return std::get<PCSAFT_t>(m_model).get_sigma_Angstrom();
+                return get_or_fail<PCSAFT_t>("PCSAFT").get_sigma_Angstrom();
             }
             EArrayd get_epsilon_over_k_K() const override {
-                return std::get<PCSAFT_t>(m_model).get_m();
+                return get_or_fail<PCSAFT_t>("PCSAFT").get_m();
             }
             double max_rhoN(const double T, const EArrayd& z) const override {
-                return std::get<PCSAFT_t>(m_model).max_rhoN(T, z);
+                return get_or_fail<PCSAFT_t>("PCSAFT").max_rhoN(T, z);
             }
         };
 

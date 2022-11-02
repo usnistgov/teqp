@@ -10,6 +10,7 @@
 
 using EArray2 = Eigen::Array<double, 2, 1>;
 using EArrayd = Eigen::ArrayX<double>;
+using EArray33d = Eigen::Array<double, 3, 3>;
 
 namespace teqp {
     namespace cppinterface {
@@ -20,7 +21,6 @@ namespace teqp {
          yielding an interface that is still powerful, but compilation times can be reduced to something more reasonable. Also,
          interfacing with other programming languages becomes much more convenient.
          
-         In particular, this AbstractModel is just for the residual part
         */
         class AbstractModel {
         public:
@@ -29,12 +29,17 @@ namespace teqp {
             virtual EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const = 0;
             virtual EArrayd get_fugacity_coefficients(const double T, const EArrayd& rhovec) const = 0;
             virtual EArrayd get_partial_molar_volumes(const double T, const EArrayd& rhovec) const = 0;
+            virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z) const = 0;
             
             // Methods only available for PC-SAFT
             virtual EArrayd get_m() const = 0;
             virtual EArrayd get_sigma_Angstrom() const = 0;
             virtual EArrayd get_epsilon_over_k_K() const = 0;
             virtual double max_rhoN(const double, const EArrayd&) const = 0;
+            
+            // Methods only available for canonical cubics
+            
+            // Methods only available for multifluid
             
             virtual ~AbstractModel() = default;
         };
