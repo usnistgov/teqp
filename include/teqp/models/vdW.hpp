@@ -17,6 +17,10 @@ private:
 public:
     /// Intializer, taking the a and b constants directly
     vdWEOS1(double a, double b) : a(a), b(b) {};
+    
+    /// Accessor functions
+    double get_a(){ return a; }
+    double get_b(){ return b; }
 
     const double Ru = 1.380649e-23 * 6.02214076e23; ///< Exact value, given by k_B*N_A
 
