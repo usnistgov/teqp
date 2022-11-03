@@ -18,6 +18,7 @@
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/multifluid_mutant.hpp"
 #include "teqp/ideal_eosterms.hpp"
+#include "teqp/models/ammonia_water.hpp"
 
 namespace teqp {
 
@@ -29,6 +30,7 @@ namespace teqp {
     using CPA_t = decltype(CPA::CPAfactory(nlohmann::json{}));
     using multifluid_t = decltype(multifluidfactory(nlohmann::json{}));
     //using multifluidmutant_t = decltype(build_multifluid_mutant(multifluid_t{}, nlohmann::json{})); // need to figure out how to get this to work
+    using ammonia_water_TillnerRoth_t = AmmoniaWaterTillnerRoth;
 
     using idealgas_t = IdealHelmholtz;
 
@@ -38,8 +40,9 @@ namespace teqp {
         canonical_cubic_t,
         PCSAFT_t,
         CPA_t,
-        multifluid_t
-        ,idealgas_t
+        multifluid_t,
+        idealgas_t,
+        ammonia_water_TillnerRoth_t
         //multifluidmutant_t
 	>;
 }
