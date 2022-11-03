@@ -13,6 +13,7 @@
 #include "teqp/algorithms/VLE.hpp"
 #include "teqp/algorithms/VLLE.hpp"
 #include "teqp/ideal_eosterms.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 
 namespace py = pybind11;
 using namespace teqp;

@@ -2,8 +2,11 @@
 
 #include "teqpversion.hpp"
 #include "teqp/ideal_eosterms.hpp"
+#include "teqp/cpp/derivs.hpp"
 
 namespace py = pybind11;
+
+#define stringify(A) #A
 
 // The implementation of each prototype are in separate files to move the compilation into 
 // multiple compilation units so that multiple processors can be used
@@ -137,6 +140,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("maxiter", &MixVLEpxFlags::maxiter)
         ;
     
+    using namespace teqp::cppinterface;
     // The Jacobian and value matrices for Newton-Raphson
     py::class_<IterationMatrices>(m, "IterationMatrices")
         .def(py::init<>())
@@ -222,6 +226,25 @@ void init_teqp(py::module& m) {
 
     call_method_factory(m, "mix_VLLE_T");
     call_method_factory(m, "find_VLLE_T_binary");
+    
+    using am = teqp::cppinterface::AbstractModel;
+    py::class_<AbstractModel, std::shared_ptr<AbstractModel>>(m, "AbstractModel")
+        .def("trace_critical_arclength_binary", &am::trace_critical_arclength_binary)
+        .def("pure_VLE_T", &am::pure_VLE_T)
+        .def("get_fugacity_coefficients", &am::get_fugacity_coefficients)
+        .def("get_partial_molar_volumes", &am::get_partial_molar_volumes)
+        .def("get_deriv_mat2", &am::get_deriv_mat2)
+        .def("get_Arxy", &am::get_Arxy)
+        // Here XMacros are used to create functions like get_Ar00, get_Ar01, ....
+        #define X(i,j) .def(stringify(get_Ar ## i ## j), &am::get_Ar ## i ## j)
+            ARXY_args
+        #undef X
+        // And like get_Ar01n, get_Ar02n, ....
+        #define X(i) .def(stringify(get_Ar0 ## i ## n), &am::get_Ar0 ## i ## n)
+            AR0N_args
+        #undef X
+    ;
+    
 
 //    // Some functions for timing overhead of interface
 //    m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });

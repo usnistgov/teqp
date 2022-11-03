@@ -1,4 +1,4 @@
-#include "teqpcpp.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/json_builder.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
