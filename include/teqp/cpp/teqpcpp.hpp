@@ -95,20 +95,21 @@ namespace teqp {
         };
         
         // Generic JSON-based interface where the model description is encoded as JSON
-        std::unique_ptr<AbstractModel> make_model(const nlohmann::json &);
+        std::shared_ptr<AbstractModel> make_model(const nlohmann::json &);
 
         // Expose specialized factory functions for different models
         // Mostly these are just adapter functions that prepare some
         // JSON and pass it to the make_model function
         // ....
-        std::unique_ptr<AbstractModel> make_multifluid_model(
+        std::shared_ptr<AbstractModel> make_multifluid_model(
             const std::vector<std::string>& components, 
             const std::string& coolprop_root, 
             const std::string& BIPcollectionpath = {}, 
             const nlohmann::json& flags = {}, 
             const std::string& departurepath = {}
         );
-        std::unique_ptr<AbstractModel> make_vdW1(double a, double b);
-//        std::unique_ptr<AbstractModel> make_canonical_PR(Tcrit, pcrit);
+        std::shared_ptr<AbstractModel> make_vdW1(double a, double b);
+        std::shared_ptr<AbstractModel> make_canonical_PR(const std::valarray<double>& Tcrit, const std::valarray<double>&pcrit, const std::valarray<double>&acentric, const std::valarray<std::valarray<double>>& kmat);
+        std::shared_ptr<AbstractModel> make_canonical_SRK(const std::valarray<double>&Tcrit, const std::valarray<double>&pcrit, const std::valarray<double>& acentric, const std::valarray<std::valarray<double>>& kmat);
     }
 }

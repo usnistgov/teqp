@@ -244,6 +244,10 @@ void init_teqp(py::module& m) {
             AR0N_args
         #undef X
     ;
+    m.def("make_model", &teqp::cppinterface::make_model);
+    m.def("make_vdW1", &teqp::cppinterface::make_vdW1);
+    m.def("make_canonical_PR", &teqp::cppinterface::make_canonical_PR);
+    m.def("make_canonical_SRK", &teqp::cppinterface::make_canonical_SRK);
     
 
 //    // Some functions for timing overhead of interface
