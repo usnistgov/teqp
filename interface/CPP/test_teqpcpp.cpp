@@ -8,8 +8,8 @@
 * all the templates every time this file is compiled
 */
 
-#include "teqpcpp.hpp"
 #include <iostream>
+#include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/cpp/derivs.hpp"
 
 int main() {
