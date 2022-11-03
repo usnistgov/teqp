@@ -130,7 +130,7 @@ namespace teqp {
         };
 
         std::shared_ptr<AbstractModel> make_model(const nlohmann::json& j) {
-            return std::make_unique<ModelImplementer>(build_model(j));
+            return std::make_shared<ModelImplementer>(build_model(j));
         }
 
         std::shared_ptr<AbstractModel> make_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags, const std::string& departurepath) {
@@ -140,7 +140,7 @@ namespace teqp {
             nlohmann::json j = {{"kind", "vdW1"}, {"model", {{"a", a}, {"b", b}}}};
             return std::make_shared<ModelImplementer>(build_model(j));
         }
-    std::shared_ptr<AbstractModel> make_canonical_PR(const std::valarray<double>& Tc_K, const std::valarray<double>& pc_Pa, const std::valarray<double>& acentric, const std::valarray<std::valarray<double>> &kmat = {}){
+        std::shared_ptr<AbstractModel> make_canonical_PR(const std::valarray<double>& Tc_K, const std::valarray<double>& pc_Pa, const std::valarray<double>& acentric, const std::valarray<std::valarray<double>> &kmat = {}){
             nlohmann::json j{
                 {"kind", "PR"},
                 {"model", {
@@ -152,7 +152,7 @@ namespace teqp {
             };
             return std::make_shared<ModelImplementer>(build_model(j));
         }
-    std::shared_ptr<AbstractModel> make_canonical_SRK(const std::valarray<double>& Tc_K, const std::valarray<double>& pc_Pa, const std::valarray<double>& acentric, const std::valarray<std::valarray<double>> &kmat = {}){
+        std::shared_ptr<AbstractModel> make_canonical_SRK(const std::valarray<double>& Tc_K, const std::valarray<double>& pc_Pa, const std::valarray<double>& acentric, const std::valarray<std::valarray<double>> &kmat = {}){
             nlohmann::json j{
                 {"kind", "SRK"},
                 {"model", {
