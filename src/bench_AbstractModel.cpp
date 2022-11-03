@@ -21,10 +21,16 @@ TEST_CASE("multifluid derivatives", "[mf]")
     auto am2 = teqp::cppinterface::make_vdW1(2, 3);
 
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
-    auto rhovec = 300.0*z;
+    auto rhovec = 300.0* z;
     
     BENCHMARK("alphar") {
         return am->get_Arxy(0, 0, 300, 3.0, z);
+    };
+    BENCHMARK("Ar20") {
+        return am->get_Ar20(300, 3.0, z);
+    };
+    BENCHMARK("get_Ar02n") {
+        return am->get_Ar02n(300, 3.0, z);
     };
     BENCHMARK("fugacity coefficients") {
         return am->get_fugacity_coefficients(300.0, rhovec);

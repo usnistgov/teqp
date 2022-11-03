@@ -211,7 +211,7 @@ struct TDXDerivatives {
     *
     * Note: none of the intermediate derivatives are returned, although they are calculated
     */
-    template<int iT, int iD, ADBackends be>
+    template<int iT, int iD, ADBackends be = ADBackends::autodiff>
     static auto get_Arxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         auto wrapper = AlphaCallWrapper<AlphaWrapperOption::residual, decltype(model)>(model);
         if constexpr (iT == 0 && iD == 0) {
@@ -230,7 +230,7 @@ struct TDXDerivatives {
     *
     * Note: none of the intermediate derivatives are returned, although they are calculated
     */
-    template<int iT, int iD, ADBackends be>
+    template<int iT, int iD, ADBackends be = ADBackends::autodiff>
     static auto get_Aigxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         auto wrapper = AlphaCallWrapper<AlphaWrapperOption::idealgas, decltype(model)>(model);
         if constexpr (iT == 0 && iD == 0) {
