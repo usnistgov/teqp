@@ -42,6 +42,9 @@ int main() {
     auto im = teqp::cppinterface::build_iteration_Jv(vars, mat, mat, 8.3144, 300.0, 300.0, z);
     std::cout << im.J << std::endl;
     
+    const auto& p = std::get<teqp::multifluid_t>(am->get_model());
+    std::cout << p.get_meta() << std::endl;
+    
     try{
         std::cout << am->get_m() << std::endl;
     }

@@ -27,6 +27,10 @@ namespace teqp {
             
         public:
             ModelImplementer(AllowedModels&& model) : m_model(model) {};
+            
+            const AllowedModels& get_model() const override{
+                return m_model;
+            }
 
             double get_Arxy(const int NT, const int ND, const double T, const double rho, const EArrayd& molefracs) const override {
                 return std::visit([&](const auto& model) {

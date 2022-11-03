@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include "nlohmann/json.hpp"
+#include "teqp/models/fwd.hpp"
 
 // The only headers that can be included here are
 // ones that define and use POD (plain ole' data) types
@@ -53,6 +54,8 @@ namespace teqp {
          * Templated arguments to functions
          * Other numerical types (complex, multicomplex, autodiff, etc.)
          
+         X-Macros can be used to wrap functions that take template arguments and expand them as multiple functions
+         
         */
         class AbstractModel {
         public:
@@ -80,6 +83,11 @@ namespace teqp {
             virtual std::map<int, double> get_Bnvir(const int Nderiv, const double T, const EArrayd& z) const = 0;
             virtual double get_B12vir(const double T, const EArrayd& z) const = 0;
             virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& z) const = 0;
+            
+            // This method allows for access to the contained variant in the subclass
+            // You can access all its methods after the appropriate std::get call
+            // with the right type
+            virtual const AllowedModels& get_model() const = 0;
             
             // Methods only available for PC-SAFT
             virtual EArrayd get_m() const = 0;
