@@ -243,13 +243,16 @@ void init_teqp(py::module& m) {
         #define X(i) .def(stringify(get_Ar0 ## i ## n), &am::get_Ar0 ## i ## n)
             AR0N_args
         #undef X
+    
+        .def_property_readonly("PCSAFT", [](const AbstractModel* am) -> const PCSAFT_t& {return std::get<PCSAFT_t>(am->get_model());})
+        .def_property_readonly("vdWEOS1", [](const AbstractModel* am) -> const vdWEOS1& {return std::get<vdWEOS1>(am->get_model());})
     ;
     m.def("make_model", &teqp::cppinterface::make_model);
     m.def("make_vdW1", &teqp::cppinterface::make_vdW1);
     m.def("make_canonical_PR", &teqp::cppinterface::make_canonical_PR);
     m.def("make_canonical_SRK", &teqp::cppinterface::make_canonical_SRK);
     
-
+    
 //    // Some functions for timing overhead of interface
 //    m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });
 //    using RAX = Eigen::Ref<const Eigen::ArrayXd>;
