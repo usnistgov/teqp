@@ -56,7 +56,8 @@ namespace teqp {
             }
             std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tnew) const override {
                 return std::visit([&](const auto& model) {
-                    return teqp::extrapolate_from_critical(model, Tc, rhoc, Tnew);
+                    auto mat = teqp::extrapolate_from_critical(model, Tc, rhoc, Tnew);
+                    return std::make_tuple(mat[0], mat[1]);
                 }, m_model);
             }
             
