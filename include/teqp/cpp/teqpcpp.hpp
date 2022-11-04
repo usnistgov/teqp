@@ -94,11 +94,11 @@ namespace teqp {
             virtual double get_Arxy(const int, const int, const double, const double, const EArrayd&) const = 0;
             
             // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
-            #define X(i,j) virtual double get_Ar ## i ## j(const double T, const double rho, const EArrayd& molefrac) const = 0;
+            #define X(i,j) virtual double get_Ar ## i ## j(const double T, const double rho, const REArrayd& molefrac) const = 0;
                 ARXY_args
             #undef X
             // And like get_Ar01n, get_Ar02n, ....
-            #define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const EArrayd& molefrac) const = 0;
+            #define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefrac) const = 0;
                 AR0N_args
             #undef X
             virtual double get_neff(const double, const double, const EArrayd&) const = 0;
