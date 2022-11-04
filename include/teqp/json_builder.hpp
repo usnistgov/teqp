@@ -1,6 +1,7 @@
 #pragma once
 
 #include "teqp/models/fwd.hpp"
+#include "teqp/models/mie/lennardjones.hpp"
 
 #include "teqp/exceptions.hpp"
 
