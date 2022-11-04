@@ -60,8 +60,8 @@ void attach_model_specific_methods(py::object& obj){
         setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<canonical_cubic_t>(o).superanc_rhoLV(T); }), obj));
     }
     else if (std::holds_alternative<AmmoniaWaterTillnerRoth>(model)){
-        setattr("TcNH3", MethodType(py::cpp_function([](py::object& o){ return get_typed<AmmoniaWaterTillnerRoth>(o).TcNH3; }), obj));
-        setattr("vcNH3", MethodType(py::cpp_function([](py::object& o){ return get_typed<AmmoniaWaterTillnerRoth>(o).vcNH3; }), obj));
+        setattr("TcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).TcNH3);
+        setattr("vcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).vcNH3);
         setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_Treducing(molefrac); }), obj));
         setattr("get_rhor", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_rhoreducing(molefrac); }), obj));
         setattr("alphar_departure", MethodType(py::cpp_function([](py::object& o, const double tau, const double delta, const double xNH3){ return get_typed<AmmoniaWaterTillnerRoth>(o).alphar_departure(tau, delta, xNH3); }), obj));
