@@ -125,6 +125,16 @@ def make_model(*args):
     AS = _make_model(*args)
     attach_model_specific_methods(AS)
     return AS
+
+def vdWEOS(Tc_K, pc_Pa):
+    j = {
+        "kind": "vdW",
+        "model": {
+            "Tcrit / K": tolist(Tc_K),
+            "pcrit / Pa": tolist(pc_Pa)
+        }
+    }
+    return make_model(j)
     
 def canonical_PR(Tc_K, pc_Pa, acentric, kmat=[]):
     j = {
@@ -157,20 +167,20 @@ def CPAfactory(spec):
     }
     return make_model(j)
     
-def PCSAFTEOS(names_or_coeffs, kmat = []):
-    if isinstance(names_or_coeffs[0], SAFTCoeffs):
-        coeffs = []
-        for c in names_or_coeffs:
-            coeffs.append({
+def PCSAFTEOS(coeffs, kmat = []):
+    if isinstance(coeffs[0], SAFTCoeffs):
+        coeffs_ = []
+        for c in coeffs:
+            coeffs_.append({
                 'name': c.name,
                 'm': c.m,
                 'sigma_Angstrom': c.sigma_Angstrom,
                 'epsilon_over_k': c.epsilon_over_k,
                 'BibTeXKey': c.BibTeXKey
             })
-        spec = {'coeffs': coeffs, 'kmat': tolist(kmat)}
+        spec = {'coeffs': coeffs_, 'kmat': tolist(kmat)}
     else:
-        spec = {'names': names_or_coeffs, 'kmat': tolist(kmat)}
+        spec = {'names': coeffs, 'kmat': tolist(kmat)}
     
     j = {
         "kind": "PCSAFT",
