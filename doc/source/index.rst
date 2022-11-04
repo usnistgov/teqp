@@ -10,6 +10,7 @@ Welcome to teqp's documentation!
    derivs/index
    algorithms/index
    api/modules
+   examples/index
 
 Indices and tables
 ==================
