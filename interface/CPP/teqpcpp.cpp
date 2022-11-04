@@ -3,6 +3,7 @@
 #include "teqp/json_builder.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/VLE.hpp"
+#include "teqp/algorithms/VLLE.hpp"
 
 using namespace teqp;
 using namespace teqp::cppinterface;
@@ -237,6 +238,18 @@ namespace teqp {
             std::tuple<VLE_return_code,double,EArrayd,EArrayd> mixture_VLE_px(const double p_spec, const REArrayd& xmolar_spec, const double T0, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLEpxFlags>& flags ) const override{
                 return std::visit([&](const auto& model) {
                     return teqp::mixture_VLE_px(model, p_spec, xmolar_spec, T0, rhovecL0, rhovecV0, flags);
+                }, m_model);
+            }
+            
+            std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const override{
+                return std::visit([&](const auto& model) {
+                    return teqp::VLLE::mix_VLLE_T(model, T, rhovecVinit, rhovecL1init, rhovecL2init, atol, reltol, axtol, relxtol, maxiter);
+                }, m_model);
+            }
+            
+            std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options) const override{
+                return std::visit([&](const auto& model) {
+                    return teqp::VLLE::find_VLLE_T_binary(model, traces, options);
                 }, m_model);
             }
         };

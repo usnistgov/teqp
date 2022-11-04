@@ -2,11 +2,10 @@
 
 #include "teqp/derivs.hpp"
 #include "teqp/exceptions.hpp"
+#include "teqp/algorithms/VLLE_types.hpp"
 
 namespace teqp {
-
-    enum class VLLE_return_code { unset, xtol_satisfied, functol_satisfied, maxiter_met };
-
+namespace VLLE {
     /***
     * \brief Do a vapor-liquid-liquid phase equilibrium problem for a mixture (binary only for now)
     * \param model The model to operate on
@@ -27,13 +26,13 @@ namespace teqp {
         Eigen::MatrixXd J(3 * N, 3 * N); J.setZero();
         Eigen::VectorXd r(3 * N), x(3 * N);
 
-        x.head(N) = rhovecVinit; 
+        x.head(N) = rhovecVinit;
         x.segment(N, N) = rhovecL1init;
         x.tail(N) = rhovecL2init;
         
         using isochoric = IsochoricDerivatives<Model, Scalar, Vector>;
 
-        Eigen::Map<Eigen::ArrayXd> rhovecV (&(x(0)), N); 
+        Eigen::Map<Eigen::ArrayXd> rhovecV (&(x(0)), N);
         Eigen::Map<Eigen::ArrayXd> rhovecL1(&(x(0+N)), N);
         Eigen::Map<Eigen::ArrayXd> rhovecL2(&(x(0+2*N)), N);
 
@@ -41,7 +40,7 @@ namespace teqp {
 
         for (int iter = 0; iter < maxiter; ++iter) {
 
-            auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV); 
+            auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
             auto [PsirL1, PsirgradL1, hessianL1] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL1);
             auto [PsirL2, PsirgradL2, hessianL2] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL2);
             
@@ -98,7 +97,7 @@ namespace teqp {
                 break;
             }
 
-            // If the solution has stopped improving, stop. The change in x is equal to dx in infinite precision, but 
+            // If the solution has stopped improving, stop. The change in x is equal to dx in infinite precision, but
             // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
             // the values are done changing
             if (((x.array() - dx.array()).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
@@ -112,16 +111,6 @@ namespace teqp {
         Eigen::ArrayXd rhovecVfinal = rhovecV, rhovecL1final = rhovecL1, rhovecL2final = rhovecL2;
         return std::make_tuple(return_code, rhovecVfinal, rhovecL1final, rhovecL2final);
     }
-
-    struct SelfIntersectionSolution {
-        std::size_t
-            j, ///< The index on one side of the intersection, j and j+1 bracket the intersection, s is the fraction between j and j+1
-            k; ///< The index on one side of the intersection, k and k+1 bracket the intersection, t is the fraction between k and k+1
-        double s, ///< The fraction of the way between j and j+1
-            t, ///< The raction of the way between k and k+1
-            x, ///< The x coordinate of the estimated intersection
-            y; ///< The y coordinate of the estimated intersection
-    };
 
     /**
     Derived from https://stackoverflow.com/a/17931809
@@ -147,11 +136,6 @@ namespace teqp {
         }
         return solns;
     }
-
-    struct VLLEFinderOptions {
-        int max_steps = 20; ///< The maximum number of steps allowed in polisher
-        double rho_trivial_threshold = 1e-16; ///< The relative difference between densities of liquid solutions that indicates a non-trivial solution has been found
-    };
 
     /**
     * \brief Given an isothermal VLE trace for a binary mixture, obtain the VLLE solution
@@ -232,5 +216,5 @@ namespace teqp {
             throw InvalidArgument("No cross intersection between traces implemented yet");
         }
     }
-
+}
 }

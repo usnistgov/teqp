@@ -118,10 +118,10 @@ void init_teqp(py::module& m) {
         ;
 
     // The options class for the finder of VLLE solutions from VLE tracing, not tied to a particular model
-    py::class_<VLLEFinderOptions>(m, "VLLEFinderOptions")
+    py::class_<VLLE::VLLEFinderOptions>(m, "VLLEFinderOptions")
         .def(py::init<>())
-        .def_readwrite("max_steps", &VLLEFinderOptions::max_steps)
-        .def_readwrite("rho_trivial_threshold", &VLLEFinderOptions::rho_trivial_threshold)
+        .def_readwrite("max_steps", &VLLE::VLLEFinderOptions::max_steps)
+        .def_readwrite("rho_trivial_threshold", &VLLE::VLLEFinderOptions::rho_trivial_threshold)
         ;
 
     py::class_<MixVLETpFlags>(m, "MixVLETpFlags")
@@ -253,8 +253,8 @@ void init_teqp(py::module& m) {
         .def("mix_VLE_Tp", &am::mix_VLE_Tp, "T"_a, "p_given"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
         .def("mixture_VLE_px", &am::mixture_VLE_px, "p_spec"_a, "xmolar_spec"_a.noconvert(), "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
     
-//        .def("mix_VLLE_T", &mix_VLLE_T<Model, double, RAX>);
-//        .def("find_VLLE_T_binary", &am::find_VLLE_T_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"));
+        .def("mix_VLLE_T", &am::mix_VLLE_T, "T"_a, "rhovecVinit"_a.noconvert(), "rhovecL1init"_a.noconvert(), "rhovecL2init"_a.noconvert(), "atol"_a, "reltol"_a, "axtol"_a, "relxtol"_a, "maxiter"_a)
+        .def("find_VLLE_T_binary", &am::find_VLLE_T_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"))
     ;
     
     m.def("_make_model", &teqp::cppinterface::make_model);

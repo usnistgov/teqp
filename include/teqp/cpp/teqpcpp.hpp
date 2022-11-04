@@ -9,6 +9,7 @@
 // ones that define and use POD (plain ole' data) types
 #include "teqp/algorithms/critical_tracing_types.hpp"
 #include "teqp/algorithms/VLE_types.hpp"
+#include "teqp/algorithms/VLLE_types.hpp"
 
 using EArray2 = Eigen::Array<double, 2, 1>;
 using EArrayd = Eigen::ArrayX<double>;
@@ -132,6 +133,9 @@ namespace teqp {
             virtual std::tuple<VLE_return_code,EArrayd,EArrayd> mix_VLE_Tx(const double T, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const REArrayd& xspec, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const = 0;
             virtual MixVLEReturn mix_VLE_Tp(const double T, const double pgiven, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLETpFlags> &flags) const = 0;
             virtual std::tuple<VLE_return_code,double,EArrayd,EArrayd> mixture_VLE_px(const double p_spec, const REArrayd& xmolar_spec, const double T0, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLEpxFlags>& flags) const = 0;
+            
+            virtual std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const = 0;
+            virtual std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options = std::nullopt) const = 0;
             
             virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> &) const = 0;
             virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const = 0;
