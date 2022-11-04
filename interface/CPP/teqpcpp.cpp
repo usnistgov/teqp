@@ -42,10 +42,10 @@ namespace teqp {
                 }, m_model);
             }
             
-            nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>& filename_, const std::optional<TCABOptions> &options_) const override {
+            nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>& filename, const std::optional<TCABOptions> &options) const override {
                 return std::visit([&](const auto& model) {
                     using crit = teqp::CriticalTracing<decltype(model), double, std::decay_t<decltype(rhovec0)>>;
-                    return crit::trace_critical_arclength_binary(model, T0, rhovec0, "");
+                    return crit::trace_critical_arclength_binary(model, T0, rhovec0, filename , options);
                 }, m_model);
             }
             EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const override {

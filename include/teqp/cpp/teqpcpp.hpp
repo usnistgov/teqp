@@ -138,7 +138,7 @@ namespace teqp {
             virtual std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const = 0;
             virtual std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options = std::nullopt) const = 0;
             
-            virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> &) const = 0;
+            virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> & = std::nullopt) const = 0;
             virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const = 0;
             virtual double get_dp_dT_crit(const double T, const REArrayd& rhovec) const = 0;
             virtual EArray2 get_criticality_conditions(const double T, const REArrayd& rhovec) const = 0;
