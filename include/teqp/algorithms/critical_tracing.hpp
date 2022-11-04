@@ -109,7 +109,7 @@ struct CriticalTracing {
         else {
             throw std::invalid_argument("More than one non-zero concentration value found; not currently supported");
         }
-        if (alignment_v0 && ed.eigenvectorscols.col(0).matrix().dot(alignment_v0.value().matrix()) < 0) {
+        if (alignment_v0 && alignment_v0.value().size() > 0 && ed.eigenvectorscols.col(0).matrix().dot(alignment_v0.value().matrix()) < 0) {
             ed.eigenvectorscols.col(0) *= -1;
         }
         
