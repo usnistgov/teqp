@@ -83,13 +83,63 @@ class CMakeBuild(build_ext):
 init_template  = r'''import os
 
 # Bring all entities from the extension module into this namespace
-from .teqp import * 
+from .teqp import *
+from .teqp import _make_model
 
 def get_datapath():
     """Get the absolute path to the folder containing the root of multi-fluid data"""
     return os.path.abspath(os.path.dirname(__file__)+"/fluiddata")
 
 from .teqp import __version__
+
+# for factory_function in ['_make_vdW1']:
+
+def tolist(a):
+    if isinstance(a, list):
+        return a
+    else:
+        try:
+            return a.tolist()
+        except:
+            return a
+        
+def make_vdW1(a, b):
+    AS = _make_model({"kind": "vdW1", "model": {"a": a, "b": b}})
+    attach_model_specific_methods(AS)
+    return AS
+    
+def vdWEOS1(*args):
+    return make_vdW1(*args)
+    
+def make_model(*args):
+    AS = _make_model(*args)
+    attach_model_specific_methods(AS)
+    return AS
+    
+def canonical_PR(Tc_K, pc_Pa, acentric, kmat=[]):
+    j = {
+        "kind": "PR",
+        "model": {
+            "Tcrit / K": tolist(Tc_K),
+            "pcrit / Pa": tolist(pc_Pa),
+            "acentric": tolist(acentric),
+            "kmat": tolist(kmat)
+        }
+    }
+    return make_model(j)
+    
+def canonical_SRK(Tc_K, pc_Pa, acentric, kmat=[]):
+    j = {
+        "kind": "SRK",
+        "model": {
+            "Tcrit / K": tolist(Tc_K),
+            "pcrit / Pa": tolist(pc_Pa),
+            "acentric": tolist(acentric),
+            "kmat": tolist(kmat)
+        }
+    }
+    return make_model(j)
+
 '''
 
 def prepare():
