@@ -140,6 +140,13 @@ def canonical_SRK(Tc_K, pc_Pa, acentric, kmat=[]):
     }
     return make_model(j)
 
+def CPAfactory(spec):
+    j = {
+        "kind": "CPA",
+        "model": spec
+    }
+    return make_model(j)
+    
 '''
 
 def prepare():
