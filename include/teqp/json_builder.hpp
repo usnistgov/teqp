@@ -11,16 +11,19 @@ namespace teqp {
     inline AllowedModels build_model(const nlohmann::json& json) {
         
         auto build_square_matrix = [](const std::valarray<std::valarray<double>>& m){
-            Eigen::ArrayXXd mat;
             // First assume that the matrix is square, resize
-            mat.resize(m.size(), m.size());
+            Eigen::ArrayXXd mat(m.size(), m.size());
+            if (m.size() == 0){
+                return mat;
+            }
             // Then copy elements over
             for (auto i = 0; i < m.size(); ++i){
-                if (m[i].size() != mat.rows()){
+                auto row = m[i];
+                if (row.size() != mat.rows()){
                     throw std::invalid_argument("provided matrix is not square");
                 }
-                for (auto j = 0; i < m[i].size(); ++j){
-                    mat(i,j) = m[i][j];
+                for (auto j = 0; j < row.size(); ++j){
+                    mat(i, j) = row[j];
                 }
             }
             return mat;
@@ -35,7 +38,7 @@ namespace teqp {
         }
         else if (kind == "PR") {
             std::valarray<double> Tc_K = spec.at("Tcrit / K"), pc_Pa = spec.at("pcrit / Pa"), acentric = spec.at("acentric");
-            Eigen::ArrayXXd kmat;
+            Eigen::ArrayXXd kmat(0, 0);
             if (spec.contains("kmat")){
                 kmat = build_square_matrix(spec["kmat"]);
             }
@@ -43,7 +46,7 @@ namespace teqp {
         }
         else if (kind == "SRK") {
             std::valarray<double> Tc_K = spec.at("Tcrit / K"), pc_Pa = spec.at("pcrit / Pa"), acentric = spec.at("acentric");
-            Eigen::ArrayXXd kmat;
+            Eigen::ArrayXXd kmat(0, 0);
             if (spec.contains("kmat")){
                 kmat = build_square_matrix(spec["kmat"]);
             }
