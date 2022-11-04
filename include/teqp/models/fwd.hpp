@@ -31,7 +31,7 @@ namespace teqp {
     using PCSAFT_t = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
     using CPA_t = decltype(CPA::CPAfactory(nlohmann::json{}));
     using multifluid_t = decltype(multifluidfactory(nlohmann::json{}));
-    //using multifluidmutant_t = decltype(build_multifluid_mutant(multifluid_t{}, nlohmann::json{})); // need to figure out how to get this to work
+    using multifluidmutant_t = decltype(build_multifluid_mutant(multifluidfactory(nlohmann::json{}), nlohmann::json{}));
     using ammonia_water_TillnerRoth_t = AmmoniaWaterTillnerRoth;
     using SW_EspindolaHeredia2009_t = squarewell::EspindolaHeredia2009;
     using EXP6_Kataoka1992_t = exp6::Kataoka1992;
@@ -47,10 +47,10 @@ namespace teqp {
         PCSAFT_t,
         CPA_t,
         multifluid_t,
+        multifluidmutant_t,
         idealgas_t,
         ammonia_water_TillnerRoth_t,
         SW_EspindolaHeredia2009_t,
         EXP6_Kataoka1992_t
-        //multifluidmutant_t
 	>;
 }

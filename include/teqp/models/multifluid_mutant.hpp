@@ -44,7 +44,7 @@ namespace teqp {
     };
 
     template<class Model>
-    auto build_multifluid_mutant(Model& model, const nlohmann::json& jj) {
+    auto build_multifluid_mutant(const Model& model, const nlohmann::json& jj) {
 
         auto N = model.redfunc.Tc.size();
 
