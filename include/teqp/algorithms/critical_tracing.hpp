@@ -36,12 +36,7 @@ struct CriticalTracing {
         return std::make_tuple(es.eigenvalues(), es.eigenvectors());
     }
 
-    struct EigenData {
-        Eigen::ArrayXd v0, v1, eigenvalues;
-        Eigen::MatrixXd eigenvectorscols;
-    };
-
-    static auto eigen_problem(const Model& model, const Scalar T, const VecType& rhovec, const VecType& alignment_v0 = {}) {
+    static auto eigen_problem(const Model& model, const Scalar T, const VecType& rhovec, const std::optional<VecType>& alignment_v0 = std::nullopt) {
 
         EigenData ed;
 
@@ -114,7 +109,7 @@ struct CriticalTracing {
         else {
             throw std::invalid_argument("More than one non-zero concentration value found; not currently supported");
         }
-        if (alignment_v0.size() > 0 && ed.eigenvectorscols.col(0).matrix().dot(alignment_v0.matrix()) < 0) {
+        if (alignment_v0 && ed.eigenvectorscols.col(0).matrix().dot(alignment_v0.value().matrix()) < 0) {
             ed.eigenvectorscols.col(0) *= -1;
         }
         
@@ -132,7 +127,7 @@ struct CriticalTracing {
         return eigen_problem(model, T, rhovec).eigenvalues[0];
     }
 
-    static auto get_derivs(const Model& model, const Scalar T, const VecType& rhovec, const VecType& alignment_v0 = {}) {
+    static auto get_derivs(const Model& model, const Scalar T, const VecType& rhovec, const std::optional<VecType>& alignment_v0 = std::nullopt) {
         auto molefrac = rhovec / rhovec.sum();
         auto R = model.R(molefrac);
 
@@ -163,7 +158,7 @@ struct CriticalTracing {
             return eval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
         };
         auto psir_derivs_ = derivatives(wrapper, wrt(varsigma), at(varsigma));
-        VecType psir_derivs; psir_derivs.resize(5);
+        Eigen::ArrayXd psir_derivs; psir_derivs.resize(5);
         for (auto i = 0; i < 5; ++i) { psir_derivs[i] = psir_derivs_[i]; }
 
 #else
@@ -179,7 +174,7 @@ struct CriticalTracing {
             return model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot;
         };
         auto psir_derivs_ = diff_mcx1(wrapper, 0.0, 4, true);
-        VecType psir_derivs; psir_derivs.resize(5);
+        Eigen::ArrayXd psir_derivs; psir_derivs.resize(5);
         for (auto i = 0; i < 5; ++i) { psir_derivs[i] = psir_derivs_[i]; }
 #endif
 
@@ -211,7 +206,7 @@ struct CriticalTracing {
 
         // The derivatives of total Psi w.r.t.sigma_1 (numerical for residual, analytic for ideal)
         // Returns a tuple, with residual, ideal, total dicts with of number of derivatives, value of derivative
-        auto all_derivs = get_derivs(model, T, rhovec);
+        auto all_derivs = get_derivs(model, T, rhovec, Eigen::ArrayXd());
         auto derivs = all_derivs.tot;
 
         // The temperature derivative of total Psi w.r.t.T from a centered finite difference in T
@@ -284,7 +279,7 @@ struct CriticalTracing {
     }
 
     static auto get_criticality_conditions(const Model& model, const Scalar T, const VecType& rhovec) {
-        auto derivs = get_derivs(model, T, rhovec);
+        auto derivs = get_derivs(model, T, rhovec, Eigen::ArrayXd());
         return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
     }
 
@@ -341,7 +336,7 @@ struct CriticalTracing {
             auto T = x[0];
             Eigen::ArrayXd rhovec(2); rhovec << z0*x[1], (1-z0)*x[1];
             //auto z0new = rhovec[0] / rhovec.sum();
-            auto derivs = get_derivs(model, T, rhovec);
+            auto derivs = get_derivs(model, T, rhovec, {});
             // First two are residuals on critical point
             return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
         };
@@ -746,11 +741,16 @@ struct CriticalTracing {
 
     /**
     * \brief Calculate dp/dT along the critical locus at given T, rhovec
+    * \f[
+    *     \rmderivsub{Y}{T}{\CRL} = \deriv{Y}{T}{\vec\rho}  + \sum_j \deriv{Y}{\rho_j}{T,\rho_{k\neq j}} \rmderivsub{\rho_j}{T}{\CRL}
+    * \f]
+    * where the derivatives on the RHS without the subscript $\CRL$ are homogeneous derivatives taken at the mixture statepoint, and are NOT along the critical curve.
     */
     static auto get_dp_dT_crit(const Model& model, const Scalar& T, const VecType& rhovec) {
         using id = IsochoricDerivatives<Model, Scalar, VecType>;
         auto dpdrhovec = id::get_dpdrhovec_constT(model, T, rhovec);
-        return id::get_dpdT_constrhovec(model, T, rhovec) + (dpdrhovec.matrix() * get_drhovec_dT_crit(model, T, rhovec).matrix()).array();
+        Scalar v = id::get_dpdT_constrhovec(model, T, rhovec) + (dpdrhovec.array()*get_drhovec_dT_crit(model, T, rhovec).array()).sum();
+        return v;
     }
 
 }; // namespace VecType

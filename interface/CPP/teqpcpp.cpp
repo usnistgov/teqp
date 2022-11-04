@@ -44,6 +44,37 @@ namespace teqp {
                     return crit::trace_critical_arclength_binary(model, T0, rhovec0, "");
                 }, m_model);
             }
+            EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const override {
+                return std::visit([&](const auto& model) {
+                    using crit = teqp::CriticalTracing<decltype(model), double, std::decay_t<decltype(rhovec)>>;
+                    return crit::get_drhovec_dT_crit(model, T, rhovec);
+                }, m_model);
+            }
+            double get_dp_dT_crit(const double T, const REArrayd& rhovec) const override {
+                return std::visit([&](const auto& model) {
+                    using crit = teqp::CriticalTracing<decltype(model), double, std::decay_t<decltype(rhovec)>>;
+                    return crit::get_dp_dT_crit(model, T, rhovec);
+                }, m_model);
+            }
+            EArray2 get_criticality_conditions(const double T, const REArrayd& rhovec) const override {
+                return std::visit([&](const auto& model) {
+                    using crit = teqp::CriticalTracing<decltype(model), double, std::decay_t<decltype(rhovec)>>;
+                    return crit::get_criticality_conditions(model, T, rhovec);
+                }, m_model);
+            }
+            EigenData eigen_problem(const double T, const REArrayd& rhovec, const std::optional<REArrayd>& alignment_v0) const override {
+                return std::visit([&](const auto& model) {
+                    using crit = teqp::CriticalTracing<decltype(model), double, std::decay_t<decltype(rhovec)>>;
+                    return crit::eigen_problem(model, T, rhovec, alignment_v0.value_or(Eigen::ArrayXd()));
+                }, m_model);
+            }
+            double get_minimum_eigenvalue_Psi_Hessian(const double T, const REArrayd& rhovec) const override {
+                return std::visit([&](const auto& model) {
+                    using crit = teqp::CriticalTracing<decltype(model), double, std::decay_t<decltype(rhovec)>>;
+                    return crit::get_minimum_eigenvalue_Psi_Hessian(model, T, rhovec);
+                }, m_model);
+            }
+            
             EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const override {
                 return std::visit([&](const auto& model) {
                     return teqp::pure_VLE_T(model, T, rhoL, rhoV, maxiter);

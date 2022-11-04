@@ -227,25 +227,25 @@ void init_teqp(py::module& m) {
     
         // Routines related to binary mixture critical curve tracing
         .def("trace_critical_arclength_binary", &am::trace_critical_arclength_binary, "T0"_a, "rhovec0"_a, py::arg_v("path", std::nullopt, "None"), py::arg_v("options", std::nullopt, "None"))
-//        .def("get_criticality_conditions", &am::get_criticality_conditions)
-//        .def("eigen_problem", &am::eigen_problem)
-//        .def("get_minimum_eigenvalue_Psi_Hessian", &am::get_minimum_eigenvalue_Psi_Hessian)
-//        .def("get_drhovec_dT_crit", &am::get_drhovec_dT_crit)
-//        .def("get_dp_dT_crit", &am::get_dp_dT_crit)
+        .def("get_criticality_conditions", &am::get_criticality_conditions, "T"_a, "rhovec"_a.noconvert())
+        .def("eigen_problem", &am::eigen_problem, "T"_a, "rhovec"_a, py::arg_v("alignment_v0", std::nullopt, "None"))
+        .def("get_minimum_eigenvalue_Psi_Hessian", &am::get_minimum_eigenvalue_Psi_Hessian, "T"_a, "rhovec"_a.noconvert())
+        .def("get_drhovec_dT_crit", &am::get_drhovec_dT_crit, "T"_a, "rhovec"_a.noconvert())
+        .def("get_dp_dT_crit", &am::get_dp_dT_crit, "T"_a, "rhovec"_a.noconvert())
 
         .def("pure_VLE_T", &am::pure_VLE_T, "T"_a, "rhoL"_a, "rhoV"_a, "max_iter"_a)
 
         .def("get_drhovecdp_Tsat", &am::get_drhovecdp_Tsat, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
         .def("get_drhovecdT_psat", &am::get_drhovecdT_psat, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
         .def("get_dpsat_dTsat_isopleth", &am::get_dpsat_dTsat_isopleth, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
-//    .def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
-//    .def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, "T"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
-//    .def("get_drhovecdT_psat", &get_drhovecdT_psat<Model, double, RAX>, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
-//    .def("trace_VLE_isobar_binary", &trace_VLE_isobar_binary<Model, double, Eigen::ArrayXd>, "p"_a, "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
-//    .def("get_dpsat_dTsat_isopleth", &get_dpsat_dTsat_isopleth<Model, double, RAX>, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
-//    .def("mix_VLLE_T", &mix_VLLE_T<Model, double, RAX>);
+    
+//        .def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, RAX>)
+//        .def("mix_VLE_Tp", &mix_VLE_Tp<Model, double, RAX>, "T"_a, "p_given"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("flags", MixVLETpFlags{}, "None"))
+//        .def("mixture_VLE_px", &mixture_VLE_px<Model, double, RAX>, "p_spec"_a, "xmolar_spec"_a.noconvert(), "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("flags", MixVLEpxFlags{}, "None"))
+//        .def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary, "T"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+//        .def("trace_VLE_isobar_binary", &trace_VLE_isobar_binary, "p"_a, "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+//        .def("mix_VLLE_T", &mix_VLLE_T<Model, double, RAX>);
 //        .def("find_VLLE_T_binary", &am::find_VLLE_T_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"));
-        
     ;
     
     m.def("_make_model", &teqp::cppinterface::make_model);

@@ -24,4 +24,9 @@ struct TCABOptions {
     bool pure_endpoint_polish = false; ///< If true, if the last step crossed into negative concentrations, try to interpolate to find the pure fluid endpoint hiding in the data
 };
 
+struct EigenData {
+    Eigen::ArrayXd v0, v1, eigenvalues;
+    Eigen::MatrixXd eigenvectorscols;
+};
+
 }

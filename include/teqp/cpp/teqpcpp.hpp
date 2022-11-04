@@ -87,10 +87,6 @@ namespace teqp {
             
             virtual double get_R(const EArrayd&) const = 0;
             
-            virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> &) const = 0;
-            
-            virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z) const = 0;
-            
             virtual double get_Arxy(const int, const int, const double, const double, const EArrayd&) const = 0;
             
             // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
@@ -120,6 +116,8 @@ namespace teqp {
                 ISOCHORIC_matrix_args
             #undef X
             
+            virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const = 0;
+            
             virtual std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>&) const = 0;
             virtual std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const = 0;
             virtual EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const = 0;
@@ -128,6 +126,12 @@ namespace teqp {
             virtual std::tuple<EArrayd, EArrayd> get_drhovecdT_psat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
             virtual double get_dpsat_dTsat_isopleth(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
             
+            virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> &) const = 0;
+            virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const = 0;
+            virtual double get_dp_dT_crit(const double T, const REArrayd& rhovec) const = 0;
+            virtual EArray2 get_criticality_conditions(const double T, const REArrayd& rhovec) const = 0;
+            virtual EigenData eigen_problem(const double T, const REArrayd& rhovec, const std::optional<REArrayd>&) const = 0;
+            virtual double get_minimum_eigenvalue_Psi_Hessian(const double T, const REArrayd& rhovec) const = 0;
             
         };
         
