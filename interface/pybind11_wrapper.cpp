@@ -321,10 +321,8 @@ void init_teqp(py::module& m) {
 //        .def("find_VLLE_T_binary", &am::find_VLLE_T_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"));
         
     ;
-    m.def("make_model", &teqp::cppinterface::make_model);
-    m.def("make_vdW1", &teqp::cppinterface::make_vdW1);
-    m.def("make_canonical_PR", &teqp::cppinterface::make_canonical_PR);
-    m.def("make_canonical_SRK", &teqp::cppinterface::make_canonical_SRK);
+    
+    m.def("_make_model", &teqp::cppinterface::make_model);
     m.def("attach_model_specific_methods", &attach_model_specific_methods);
     
 //    // Some functions for timing overhead of interface
