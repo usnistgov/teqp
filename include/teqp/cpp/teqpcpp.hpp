@@ -140,8 +140,5 @@ namespace teqp {
             const nlohmann::json& flags = {}, 
             const std::string& departurepath = {}
         );
-        std::shared_ptr<AbstractModel> make_vdW1(double a, double b);
-        std::shared_ptr<AbstractModel> make_canonical_PR(const std::valarray<double>& Tcrit, const std::valarray<double>&pcrit, const std::valarray<double>&acentric, const std::valarray<std::valarray<double>>& kmat);
-        std::shared_ptr<AbstractModel> make_canonical_SRK(const std::valarray<double>&Tcrit, const std::valarray<double>&pcrit, const std::valarray<double>& acentric, const std::valarray<std::valarray<double>>& kmat);
     }
 }

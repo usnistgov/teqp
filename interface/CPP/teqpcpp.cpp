@@ -165,37 +165,8 @@ namespace teqp {
         std::shared_ptr<AbstractModel> make_model(const nlohmann::json& j) {
             return std::make_shared<ModelImplementer>(build_model(j));
         }
-
         std::shared_ptr<AbstractModel> make_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags, const std::string& departurepath) {
             return std::make_shared<ModelImplementer>(build_multifluid_model(components, coolprop_root, BIPcollectionpath, flags, departurepath));
-        }
-        std::shared_ptr<AbstractModel> make_vdW1(double a, double b){
-            nlohmann::json j = {{"kind", "vdW1"}, {"model", {{"a", a}, {"b", b}}}};
-            return std::make_shared<ModelImplementer>(build_model(j));
-        }
-        std::shared_ptr<AbstractModel> make_canonical_PR(const std::valarray<double>& Tc_K, const std::valarray<double>& pc_Pa, const std::valarray<double>& acentric, const std::valarray<std::valarray<double>> &kmat = {}){
-            nlohmann::json j{
-                {"kind", "PR"},
-                {"model", {
-                    {"Tcrit / K", Tc_K},
-                    {"pcrit / Pa", pc_Pa},
-                    {"acentric", acentric},
-                    {"kmat", kmat}
-                }}
-            };
-            return std::make_shared<ModelImplementer>(build_model(j));
-        }
-        std::shared_ptr<AbstractModel> make_canonical_SRK(const std::valarray<double>& Tc_K, const std::valarray<double>& pc_Pa, const std::valarray<double>& acentric, const std::valarray<std::valarray<double>> &kmat = {}){
-            nlohmann::json j{
-                {"kind", "SRK"},
-                {"model", {
-                    {"Tcrit / K", Tc_K},
-                    {"pcrit / Pa", pc_Pa},
-                    {"acentric", acentric},
-                    {"kmat", kmat}
-                }}
-            };
-            return std::make_shared<ModelImplementer>(build_model(j));
         }
     }
 }
