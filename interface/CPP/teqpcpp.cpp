@@ -63,7 +63,7 @@ namespace teqp {
             
             // Derivatives from isochoric thermodynamics (all have the same signature)
             #define X(f) \
-            virtual double f(const double T, const EArrayd& rhovec) const override { \
+            virtual double f(const double T, const REArrayd& rhovec) const override { \
                 return std::visit([&](const auto& model) { \
                     using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
                     return id::f(model, T, rhovec); \
@@ -73,7 +73,7 @@ namespace teqp {
             #undef X
             
             #define X(f) \
-            virtual EArrayd f(const double T, const EArrayd& rhovec) const override { \
+            virtual EArrayd f(const double T, const REArrayd& rhovec) const override { \
                 return std::visit([&](const auto& model) { \
                     using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
                     return id::f(model, T, rhovec); \
@@ -83,7 +83,7 @@ namespace teqp {
             #undef X
             
             #define X(f) \
-            virtual EMatrixd f(const double T, const EArrayd& rhovec) const override { \
+            virtual EMatrixd f(const double T, const REArrayd& rhovec) const override { \
                 return std::visit([&](const auto& model) { \
                     using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
                     return id::f(model, T, rhovec); \

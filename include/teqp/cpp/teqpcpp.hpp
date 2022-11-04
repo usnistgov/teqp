@@ -110,13 +110,13 @@ namespace teqp {
             virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& z) const = 0;
             
             // Derivatives from isochoric thermodynamics (all have the same signature whithin each block)
-            #define X(f) virtual double f(const double T, const EArrayd& rhovec) const = 0;
+            #define X(f) virtual double f(const double T, const REArrayd& rhovec) const = 0;
                 ISOCHORIC_double_args
             #undef X
-            #define X(f) virtual EArrayd f(const double T, const EArrayd& rhovec) const = 0;
+            #define X(f) virtual EArrayd f(const double T, const REArrayd& rhovec) const = 0;
                 ISOCHORIC_array_args
             #undef X
-            #define X(f) virtual EMatrixd f(const double T, const EArrayd& rhovec) const = 0;
+            #define X(f) virtual EMatrixd f(const double T, const REArrayd& rhovec) const = 0;
                 ISOCHORIC_matrix_args
             #undef X
             
