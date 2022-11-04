@@ -46,7 +46,7 @@ public:
     }
     auto get_coeffs(const std::vector<std::string>& names){
         std::vector<SAFTCoeffs> c;
-        for (auto n  : names){
+        for (auto n : names){
             c.push_back(get_normal_fluid(n));
         }
         return c;
@@ -201,12 +201,12 @@ private:
             throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components");
         }
     };
-public:
-    PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : names(names), kmat(kmat)
-    {
+    auto get_coeffs_from_names(const std::vector<std::string> &names){
         PCSAFTLibrary library;
-        PCSAFTMixture(library.get_coeffs(names), kmat);
-    };
+        return library.get_coeffs(names);
+    }
+public:
+    PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), kmat){};
     PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : kmat(kmat)
     {
         check_kmat(coeffs.size());
