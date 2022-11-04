@@ -80,7 +80,7 @@ class CMakeBuild(build_ext):
         print('cmake build command:', ' '.join(build_elements))
         subprocess.check_call(build_elements, cwd=self.build_temp)
 
-init_template  = r'''import os
+init_template  = r'''import os, warnings, functools
 
 # Bring all entities from the extension module into this namespace
 from .teqp import *
@@ -92,6 +92,16 @@ def get_datapath():
 
 from .teqp import __version__
 
+deprecated_top_level_functions = ["get_splus","get_pr","get_B2vir""get_B12vir","pure_VLE_T","extrapolate_from_critical","build_Psir_Hessian_autodiff","build_Psi_Hessian_autodiff","build_Psir_gradient_autodiff","build_d2PsirdTdrhoi_autodiff","get_chempotVLE_autodiff","get_dchempotdT_autodiff","get_fugacity_coefficients","get_partial_molar_volumes","trace_critical_arclength_binary","get_criticality_conditions","eigen_problem","get_minimum_eigenvalue_Psi_Hessian","get_drhovec_dT_crit","get_pure_critical_conditions_Jacobian","solve_pure_critical","mix_VLE_Tx","mixture_VLE_px","get_drhovecdp_Tsat","trace_VLE_isotherm_binary","get_drhovecdT_psat","trace_VLE_isobar_binary","get_dpsat_dTsat_isopleth","mix_VLLE_T","find_VLLE_T_binary"]
+
+def deprecated_caller(model, *args, **kwargs):
+    name = kwargs.pop('name123456')
+    warnings.warn("Calling the top-level function " + name + " is deprecated and much slower than calling the same-named method of the model instance", FutureWarning)
+    return getattr(model, name)(*args, **kwargs)
+    
+for f in deprecated_top_level_functions:
+    globals()[f] = functools.partial(deprecated_caller, name123456=f)
+    
 # for factory_function in ['_make_vdW1']:
 
 def tolist(a):
