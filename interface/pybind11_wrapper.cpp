@@ -9,7 +9,6 @@ using namespace py::literals;
 
 #define stringify(A) #A
 
-void add_PCSAFT(py::module& m);
 void add_multifluid(py::module& m);
 void add_multifluid_mutant(py::module& m);
 
@@ -174,6 +173,16 @@ void init_teqp(py::module& m) {
         .def_readonly("r", &MixVLEReturn::r)
         .def_readonly("initial_r", &MixVLEReturn::initial_r)
         ;
+    
+    using namespace teqp::PCSAFT;
+    py::class_<SAFTCoeffs>(m, "SAFTCoeffs")
+    .def(py::init<>())
+    .def_readwrite("name", &SAFTCoeffs::name)
+    .def_readwrite("m", &SAFTCoeffs::m)
+    .def_readwrite("sigma_Angstrom", &SAFTCoeffs::sigma_Angstrom)
+    .def_readwrite("epsilon_over_k", &SAFTCoeffs::epsilon_over_k)
+    .def_readwrite("BibTeXKey", &SAFTCoeffs::BibTeXKey)
+    ;
 
     // The ideal gas Helmholtz energy class
     auto alphaig = py::class_<IdealHelmholtz>(m, "IdealHelmholtz").def(py::init<const nlohmann::json&>());
@@ -181,7 +190,6 @@ void init_teqp(py::module& m) {
     add_ig_derivatives<IdealHelmholtz>(m, alphaig);
     alphaig.def("get_deriv_mat2", [](const IdealHelmholtz &ig, double T, double rho, const Eigen::ArrayXd& z){return DerivativeHolderSquare<2, AlphaWrapperOption::idealgas>(ig, T, rho, z).derivs;});
 
-    add_PCSAFT(m);
     add_multifluid(m);
     add_multifluid_mutant(m);
     
