@@ -17,12 +17,12 @@ namespace teqp {
     public:
         const BaseClass& base;
         const ReducingFunctions redfunc;
-        const DepartureFunction depfunc;
+        const DepartureFunction dep;
 
         template<class VecType>
         auto R(const VecType& molefrac) const { return base.R(molefrac); }
 
-        MultiFluidAdapter(const BaseClass& base, ReducingFunctions&& redfunc, DepartureFunction&& depfunc) : base(base), redfunc(redfunc), depfunc(depfunc) {};
+        MultiFluidAdapter(const BaseClass& base, ReducingFunctions&& redfunc, DepartureFunction&& depfunc) : base(base), redfunc(redfunc), dep(depfunc) {};
 
         /// Store some sort of metadata in string form (perhaps a JSON representation of the model?)
         void set_meta(const std::string& m) { meta = m; }
@@ -38,7 +38,7 @@ namespace teqp {
             auto rhored = forceeval(redfunc.get_rhor(molefrac));
             auto delta = forceeval(rho / rhored);
             auto tau = forceeval(Tred / T);
-            auto val = base.corr.alphar(tau, delta, molefrac) + depfunc.alphar(tau, delta, molefrac);
+            auto val = base.corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
             return forceeval(val);
         }
     };
