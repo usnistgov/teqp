@@ -104,7 +104,8 @@ int main() {
         auto m = teqp::build_model(j);
 
         for (auto& el : data) {
-            auto [T, rho, p, ur, cvr, w, a] = el; // I
+            auto [T_, rho_, p, ur, cvr, w, a] = el;
+            double T = T_, rho = rho_; // It is not possible to capture tuple-unpacked variables
 
             auto NT = 0, ND = 0;
 

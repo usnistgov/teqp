@@ -23,7 +23,6 @@ int main() {
     }};
     //std::cout << j.dump(2);
     auto am = teqp::cppinterface::make_model(j);
-    auto am2 = teqp::cppinterface::make_vdW1(2, 3);
 
     auto z = (Eigen::ArrayXd(2) << 0.5, 0.5).finished();
     double Ar01 = am->get_Arxy(0, 1, 300, 3, z);
@@ -45,11 +44,4 @@ int main() {
     const auto& p = std::get<teqp::multifluid_t>(am->get_model());
     std::cout << p.get_meta() << std::endl;
     
-    try{
-        std::cout << am->get_m() << std::endl;
-    }
-    catch(std::exception&e){
-        std::cout << e.what() << std::endl;
-        std::cout << "This fails, as it should because the model is not a PCSAFT one" << std::endl;
-    }
 }

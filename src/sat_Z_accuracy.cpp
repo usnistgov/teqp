@@ -10,6 +10,10 @@
 #undef REFPROP_FUNCTION_MODIFIER
 #undef REFPROP_IMPLEMENTATION
 
+#if !defined(TEQP_MULTIPRECISION_ENABLED)
+#error "TEQP_MULTIPRECISION_ENABLED must be turned on"
+#endif
+
 #include <iostream>
 #include <valarray>
 
