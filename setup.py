@@ -178,6 +178,11 @@ def PCSAFTEOS(names_or_coeffs, kmat = []):
     }
     return make_model(j)
     
+def AmmoniaWaterTillnerRoth():
+    return make_model({"kind": "AmmoniaWaterTillnerRoth", "model": {}})
+
+def build_LJ126_TholJPCRD2016():
+    return make_model({"kind": "LJ126_TholJPCRD2016", "model": {}})
     
 '''
 

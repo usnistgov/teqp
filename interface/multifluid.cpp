@@ -1,29 +1,10 @@
 #include "pybind11_wrapper.hpp"
 
 #include "teqp/models/multifluid.hpp"
-#include "teqp/models/ammonia_water.hpp"
 #include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/derivs.hpp"
-#include "teqp/models/mie/lennardjones.hpp"
 
 #include "multifluid_shared.hpp"
-
-void add_AmmoniaWaterTillnerRoth(py::module&m ){
-    auto wAW = py::class_<AmmoniaWaterTillnerRoth>(m, "AmmoniaWaterTillnerRoth")
-        .def(py::init<>())
-        .def_readonly("TcNH3", &AmmoniaWaterTillnerRoth::TcNH3)
-        .def_readonly("vcNH3", &AmmoniaWaterTillnerRoth::vcNH3)
-        .def("get_Tr", &AmmoniaWaterTillnerRoth::get_Treducing<Eigen::ArrayXd>)
-        .def("get_rhor", &AmmoniaWaterTillnerRoth::get_rhoreducing<Eigen::ArrayXd>)
-        .def("alphar_departure", &AmmoniaWaterTillnerRoth::alphar_departure<double, double, double>, py::arg("tau"), py::arg("delta"), py::arg("xNH3"))
-        .def("dalphar_departure_ddelta", [](const AmmoniaWaterTillnerRoth& c, const double& tau, const double& delta, const double& xNH3) {
-            autodiff::Real<1, double> delta_ = delta;
-            auto f = [&c, &tau, &xNH3](const auto& delta_) { return c.alphar_departure(tau, delta_, xNH3); };
-            return derivatives(f, along(1), at(delta_))[1];
-        }, py::arg("tau"), py::arg("delta"), py::arg("xNH3"))
-    ;
-    add_derivatives<AmmoniaWaterTillnerRoth>(m, wAW);
-}
 
 void add_multifluid(py::module& m) {
 
@@ -58,7 +39,4 @@ void add_multifluid(py::module& m) {
     m.def("build_alias_map", &build_alias_map, py::arg("root"));
     m.def("collect_component_json", &collect_component_json, py::arg("identifiers"), py::arg("root"));
     m.def("get_departure_json", &get_departure_json, py::arg("name"), py::arg("root"));
-
-    m.def("build_LJ126_TholJPCRD2016", &teqp::build_LJ126_TholJPCRD2016);
-    add_AmmoniaWaterTillnerRoth(m);
 }

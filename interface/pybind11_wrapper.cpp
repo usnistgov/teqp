@@ -59,6 +59,21 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_b", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_b(T, molefrac); }), obj));
         setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<canonical_cubic_t>(o).superanc_rhoLV(T); }), obj));
     }
+    else if (std::holds_alternative<AmmoniaWaterTillnerRoth>(model)){
+        setattr("TcNH3", MethodType(py::cpp_function([](py::object& o){ return get_typed<AmmoniaWaterTillnerRoth>(o).TcNH3; }), obj));
+        setattr("vcNH3", MethodType(py::cpp_function([](py::object& o){ return get_typed<AmmoniaWaterTillnerRoth>(o).vcNH3; }), obj));
+        setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_Treducing(molefrac); }), obj));
+        setattr("get_rhor", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_rhoreducing(molefrac); }), obj));
+        setattr("alphar_departure", MethodType(py::cpp_function([](py::object& o, const double tau, const double delta, const double xNH3){ return get_typed<AmmoniaWaterTillnerRoth>(o).alphar_departure(tau, delta, xNH3); }), obj));
+        setattr("dalphar_departure_ddelta", MethodType(py::cpp_function([](py::object& o, const double tau, const double delta, const double xNH3){
+            // Calculate with complex step derivatives
+            double h = 1e-100;
+            const auto& m = get_typed<AmmoniaWaterTillnerRoth>(o);
+            std::complex<double> delta_(delta, 1e-100);
+            return m.alphar_departure(tau, delta_, xNH3).imag()/h;
+        }), obj));
+    }
+    // EXP-6, SW, LJ
 };
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
