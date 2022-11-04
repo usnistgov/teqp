@@ -235,9 +235,9 @@ void init_teqp(py::module& m) {
 
         .def("pure_VLE_T", &am::pure_VLE_T, "T"_a, "rhoL"_a, "rhoV"_a, "max_iter"_a)
 
-//    .def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, RAX>)
-//    .def("mix_VLE_Tp", &mix_VLE_Tp<Model, double, RAX>, "T"_a, "p_given"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("flags", MixVLETpFlags{}, "None"))
-//    .def("mixture_VLE_px", &mixture_VLE_px<Model, double, RAX>, "p_spec"_a, "xmolar_spec"_a.noconvert(), "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("flags", MixVLEpxFlags{}, "None"))
+        .def("get_drhovecdp_Tsat", &am::get_drhovecdp_Tsat, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
+        .def("get_drhovecdT_psat", &am::get_drhovecdT_psat, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
+        .def("get_dpsat_dTsat_isopleth", &am::get_dpsat_dTsat_isopleth, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
 //    .def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
 //    .def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, "T"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
 //    .def("get_drhovecdT_psat", &get_drhovecdT_psat<Model, double, RAX>, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
