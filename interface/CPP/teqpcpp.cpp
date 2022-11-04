@@ -65,7 +65,7 @@ namespace teqp {
             #define X(f) \
             virtual double f(const double T, const REArrayd& rhovec) const override { \
                 return std::visit([&](const auto& model) { \
-                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
+                    using id = IsochoricDerivatives<decltype(model), double, REArrayd>; \
                     return id::f(model, T, rhovec); \
                 }, m_model); \
             }
@@ -75,7 +75,7 @@ namespace teqp {
             #define X(f) \
             virtual EArrayd f(const double T, const REArrayd& rhovec) const override { \
                 return std::visit([&](const auto& model) { \
-                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
+                    using id = IsochoricDerivatives<decltype(model), double, REArrayd>; \
                     return id::f(model, T, rhovec); \
                 }, m_model); \
             }
@@ -85,7 +85,7 @@ namespace teqp {
             #define X(f) \
             virtual EMatrixd f(const double T, const REArrayd& rhovec) const override { \
                 return std::visit([&](const auto& model) { \
-                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
+                    using id = IsochoricDerivatives<decltype(model), double, REArrayd>; \
                     return id::f(model, T, rhovec); \
                 }, m_model); \
             }
@@ -136,7 +136,7 @@ namespace teqp {
             #define X(i,j) \
             double get_Ar ## i ## j(const double T, const double rho, const REArrayd& molefracs) const override { \
                 return std::visit([&](const auto& model) { \
-                    using tdx = teqp::TDXDerivatives<decltype(model), double, EArrayd>; \
+                    using tdx = teqp::TDXDerivatives<decltype(model), double, REArrayd>; \
                     return tdx::template get_Arxy<i,j>(model, T, rho, molefracs); \
                 }, m_model); \
             }
@@ -147,7 +147,7 @@ namespace teqp {
             #define X(i) \
             EArrayd get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefracs) const override { \
                 return std::visit([&](const auto& model) { \
-                    using tdx = teqp::TDXDerivatives<decltype(model), double, EArrayd>; \
+                    using tdx = teqp::TDXDerivatives<decltype(model), double, REArrayd>; \
                     auto vals = tdx::template get_Ar0n<i>(model, T, rho, molefracs); \
                     return Eigen::Map<Eigen::ArrayXd>(&(vals[0]), vals.size());\
                 }, m_model); \
