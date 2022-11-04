@@ -36,6 +36,9 @@ namespace teqp {
         if (kind == "vdW1") {
             return vdWEOS1(spec.at("a"), spec.at("b"));
         }
+        else if (kind == "vdW") {
+            return vdWEOS<double>(spec.at("Tcrit / K"), spec.at("pcrit / Pa"));
+        }
         else if (kind == "PR") {
             std::valarray<double> Tc_K = spec.at("Tcrit / K"), pc_Pa = spec.at("pcrit / Pa"), acentric = spec.at("acentric");
             Eigen::ArrayXXd kmat(0, 0);
@@ -60,6 +63,12 @@ namespace teqp {
         }
         else if (kind == "multifluid") {
             return multifluidfactory(spec);
+        }
+        else if (kind == "SW_EspindolaHeredia2009"){
+            return squarewell::EspindolaHeredia2009(spec.at("lambda"));
+        }
+        else if (kind == "EXP6_Kataoka1992"){
+            return exp6::Kataoka1992(spec.at("alpha"));
         }
         else {
             throw teqpcException(30, "Unknown kind:" + kind);
