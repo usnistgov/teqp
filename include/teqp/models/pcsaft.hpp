@@ -44,6 +44,13 @@ public:
             throw std::invalid_argument("Bad name:" + name);
         }
     }
+    auto get_coeffs(const std::vector<std::string>& names){
+        std::vector<SAFTCoeffs> c;
+        for (auto n  : names){
+            c.push_back(get_normal_fluid(n));
+        }
+        return c;
+    }
 };
 
 /// Eqn. A.11
@@ -197,21 +204,8 @@ private:
 public:
     PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : names(names), kmat(kmat)
     {
-        check_kmat(names.size());
-        m.resize(names.size());
-        mminus1.resize(names.size());
-        sigma_Angstrom.resize(names.size());
-        epsilon_over_k.resize(names.size());
-        auto i = 0;
         PCSAFTLibrary library;
-        for (auto name : names) {
-            const SAFTCoeffs& coeff = library.get_normal_fluid(name);
-            m[i] = coeff.m;
-            mminus1[i] = m[i] - 1;
-            sigma_Angstrom[i] = coeff.sigma_Angstrom;
-            epsilon_over_k[i] = coeff.epsilon_over_k;
-            i++;
-        }
+        PCSAFTMixture(library.get_coeffs(names), kmat);
     };
     PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : kmat(kmat)
     {

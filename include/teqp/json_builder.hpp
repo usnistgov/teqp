@@ -59,7 +59,31 @@ namespace teqp {
             return CPA::CPAfactory(spec);
         }
         else if (kind == "PCSAFT") {
-            return PCSAFT::PCSAFTfactory(spec);
+            using namespace PCSAFT;
+            Eigen::ArrayXXd kmat(0, 0);
+            if (spec.contains("kmat")){
+                kmat = build_square_matrix(spec["kmat"]);
+            }
+            
+            if (spec.contains("names")){
+                return PCSAFTMixture(spec["names"], kmat);
+            }
+            else if (spec.contains("coeffs")){
+                std::vector<SAFTCoeffs> coeffs;
+                for (auto j : spec["coeffs"]) {
+                    SAFTCoeffs c;
+                    c.name = j.at("name");
+                    c.m = j.at("m");
+                    c.sigma_Angstrom = j.at("sigma_Angstrom");
+                    c.epsilon_over_k = j.at("epsilon_over_k");
+                    c.BibTeXKey = j.at("BibTeXKey");
+                    coeffs.push_back(c);
+                }
+                return PCSAFTMixture(coeffs, kmat);
+            }
+            else{
+                throw std::invalid_argument("you must provide names or coeffs, but not both");
+            }
         }
         else if (kind == "multifluid") {
             return multifluidfactory(spec);

@@ -147,6 +147,28 @@ def CPAfactory(spec):
     }
     return make_model(j)
     
+def PCSAFTEOS(names_or_coeffs, kmat = []):
+    if isinstance(names_or_coeffs[0], SAFTCoeffs):
+        coeffs = []
+        for c in names_or_coeffs:
+            coeffs.append({
+                'name': c.name,
+                'm': c.m,
+                'sigma_Angstrom': c.sigma_Angstrom,
+                'epsilon_over_k': c.epsilon_over_k,
+                'BibTeXKey': c.BibTeXKey
+            })
+        spec = {'coeffs': coeffs, 'kmat': tolist(kmat)}
+    else:
+        spec = {'names': names_or_coeffs, 'kmat': tolist(kmat)}
+    
+    j = {
+        "kind": "PCSAFT",
+        "model": spec
+    }
+    return make_model(j)
+    
+    
 '''
 
 def prepare():

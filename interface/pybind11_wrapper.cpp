@@ -9,18 +9,9 @@ using namespace py::literals;
 
 #define stringify(A) #A
 
-// The implementation of each prototype are in separate files to move the compilation into 
-// multiple compilation units so that multiple processors can be used
-// at the same time to carry out the compilation
-// 
-// This speeds up things a lot on linux, but not much in MSVC
-void add_vdW(py::module &m);
 void add_PCSAFT(py::module& m);
-void add_CPA(py::module& m);
 void add_multifluid(py::module& m);
 void add_multifluid_mutant(py::module& m);
-void add_cubics(py::module& m);
-void add_model_potentials(py::module& m);
 
 template<typename Model, int iT, int iD, typename Class>
 void add_ig_deriv_impl(Class& cls) {
@@ -210,13 +201,9 @@ void init_teqp(py::module& m) {
     add_ig_derivatives<IdealHelmholtz>(m, alphaig);
     alphaig.def("get_deriv_mat2", [](const IdealHelmholtz &ig, double T, double rho, const Eigen::ArrayXd& z){return DerivativeHolderSquare<2, AlphaWrapperOption::idealgas>(ig, T, rho, z).derivs;});
 
-    add_vdW(m);
     add_PCSAFT(m);
-    add_CPA(m);
     add_multifluid(m);
     add_multifluid_mutant(m);
-    add_cubics(m);
-    add_model_potentials(m);
 
     call_method_factory(m, "get_Ar00iso");
     call_method_factory(m, "get_Ar10iso");
