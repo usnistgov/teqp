@@ -61,10 +61,9 @@ inline auto call_method_factory(py::module &m, const std::string& attribute) {
 }
 
 template<typename TYPE>
-TYPE& get_typed(py::object& o){
+const TYPE& get_typed(py::object& o){
     using namespace teqp::cppinterface;
-    auto model = o.cast<const AbstractModel *>()->get_model();
-    return std::get<TYPE>(model);
+    return std::get<TYPE>(o.cast<const AbstractModel *>()->get_model());
 }
 
 // You cannot know at runtime what is contained in the model so you must iterate
