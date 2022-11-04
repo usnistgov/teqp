@@ -31,13 +31,13 @@ namespace teqp {
             const AllowedModels& get_model() const override{
                 return m_model;
             }
-
-            double get_Arxy(const int NT, const int ND, const double T, const double rho, const EArrayd& molefracs) const override {
+            
+            double get_R(const EArrayd& molefracs) const override {
                 return std::visit([&](const auto& model) {
-                    using tdx = teqp::TDXDerivatives<decltype(model), double, EArrayd>;
-                    return tdx::template get_Ar(NT, ND, model, T, rho, molefracs);
+                    return model.R(molefracs);
                 }, m_model);
             }
+            
             nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>& filename_, const std::optional<TCABOptions> &options_) const override {
                 return std::visit([&](const auto& model) {
                     using crit = teqp::CriticalTracing<decltype(model), double, std::decay_t<decltype(rhovec0)>>;
@@ -49,18 +49,48 @@ namespace teqp {
                     return teqp::pure_VLE_T(model, T, rhoL, rhoV, maxiter);
                 }, m_model);
             }
-            EArrayd get_fugacity_coefficients(const double T, const EArrayd& rhovec) const override {
+            std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& flags) const override {
                 return std::visit([&](const auto& model) {
-                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>;
-                    return id::get_fugacity_coefficients(model, T, rhovec);
+                    return teqp::solve_pure_critical(model, T, rho, flags.value());
                 }, m_model);
             }
-            EArrayd get_partial_molar_volumes(const double T, const EArrayd& rhovec) const override {
+            std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tnew) const override {
                 return std::visit([&](const auto& model) {
-                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>;
-                    return id::get_partial_molar_volumes(model, T, rhovec);
+                    return teqp::extrapolate_from_critical(model, Tc, rhoc, Tnew);
                 }, m_model);
             }
+            
+            // Derivatives from isochoric thermodynamics (all have the same signature)
+            #define X(f) \
+            virtual double f(const double T, const EArrayd& rhovec) const override { \
+                return std::visit([&](const auto& model) { \
+                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
+                    return id::f(model, T, rhovec); \
+                }, m_model); \
+            }
+            ISOCHORIC_double_args
+            #undef X
+            
+            #define X(f) \
+            virtual EArrayd f(const double T, const EArrayd& rhovec) const override { \
+                return std::visit([&](const auto& model) { \
+                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
+                    return id::f(model, T, rhovec); \
+                }, m_model); \
+            }
+            ISOCHORIC_array_args
+            #undef X
+            
+            #define X(f) \
+            virtual EMatrixd f(const double T, const EArrayd& rhovec) const override { \
+                return std::visit([&](const auto& model) { \
+                    using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
+                    return id::f(model, T, rhovec); \
+                }, m_model); \
+            }
+            ISOCHORIC_matrix_args
+            #undef X
+            
             EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z) const override {
                 return std::visit([&](const auto& model) {
                     // Although the template argument suggests that only residual terms
@@ -95,6 +125,12 @@ namespace teqp {
                 }, m_model);
             }
             
+            double get_Arxy(const int NT, const int ND, const double T, const double rho, const EArrayd& molefracs) const override {
+                return std::visit([&](const auto& model) {
+                    using tdx = teqp::TDXDerivatives<decltype(model), double, EArrayd>;
+                    return tdx::template get_Ar(NT, ND, model, T, rho, molefracs);
+                }, m_model);
+            }
             // Here XMacros are used to create functions like get_Ar00, get_Ar01, ....
             #define X(i,j) \
             double get_Ar ## i ## j(const double T, const double rho, const EArrayd& molefracs) const override { \
@@ -118,18 +154,11 @@ namespace teqp {
             AR0N_args
             #undef X
             
-            // Methods only available for PC-SAFT
-            EArrayd get_m() const override {
-                return get_or_fail<PCSAFT_t>("PCSAFT").get_m();
-            }
-            EArrayd get_sigma_Angstrom() const override {
-                return get_or_fail<PCSAFT_t>("PCSAFT").get_sigma_Angstrom();
-            }
-            EArrayd get_epsilon_over_k_K() const override {
-                return get_or_fail<PCSAFT_t>("PCSAFT").get_m();
-            }
-            double max_rhoN(const double T, const EArrayd& z) const override {
-                return get_or_fail<PCSAFT_t>("PCSAFT").max_rhoN(T, z);
+            double get_neff(const double T, const double rho, const EArrayd& molefracs) const override {
+                return std::visit([&](const auto& model) {
+                    using tdx = teqp::TDXDerivatives<decltype(model), double, EArrayd>;
+                    return tdx::template get_neff(model, T, rho, molefracs);
+                }, m_model);
             }
         };
 

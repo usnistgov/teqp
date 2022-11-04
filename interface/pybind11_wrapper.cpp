@@ -5,6 +5,7 @@
 #include "teqp/cpp/derivs.hpp"
 
 namespace py = pybind11;
+using namespace py::literals;
 
 #define stringify(A) #A
 
@@ -58,6 +59,38 @@ inline auto call_method_factory(py::module &m, const std::string& attribute) {
     };
     m.def(attribute.c_str(), f);
 }
+
+template<typename TYPE>
+TYPE& get_typed(py::object& o){
+    using namespace teqp::cppinterface;
+    auto model = o.cast<const AbstractModel *>()->get_model();
+    return std::get<TYPE>(model);
+}
+
+// You cannot know at runtime what is contained in the model so you must iterate
+// over possible model types and attach methods accordingly
+void attach_model_specific_methods(py::object& obj){
+    using namespace teqp::cppinterface;
+    const auto& model = obj.cast<AbstractModel *>()->get_model();
+    auto setattr = py::getattr(obj, "__setattr__");
+    auto MethodType = py::module_::import("types").attr("MethodType");
+    
+    if (std::holds_alternative<vdWEOS1>(model)){
+        setattr("get_a", MethodType(py::cpp_function([](py::object& o){ return get_typed<vdWEOS1>(o).get_a(); }), obj));
+        setattr("get_b", MethodType(py::cpp_function([](py::object& o){ return get_typed<vdWEOS1>(o).get_b(); }), obj));
+    }
+    else if (std::holds_alternative<PCSAFT_t>(model)){
+        setattr("get_m", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_m(); }), obj));
+        setattr("get_sigma_Angstrom", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_sigma_Angstrom(); }), obj));
+        setattr("get_epsilon_over_k_K", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_epsilon_over_k_K(); }), obj));
+        setattr("max_rhoN", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<PCSAFT_t>(o).max_rhoN(T, molefrac); }), obj));
+    }
+    else if (std::holds_alternative<canonical_cubic_t>(model)){
+        setattr("get_a", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_a(T, molefrac); }), obj));
+        setattr("get_b", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_b(T, molefrac); }), obj));
+        setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<canonical_cubic_t>(o).superanc_rhoLV(T); }), obj));
+    }
+};
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {
@@ -228,30 +261,72 @@ void init_teqp(py::module& m) {
     call_method_factory(m, "find_VLLE_T_binary");
     
     using am = teqp::cppinterface::AbstractModel;
-    py::class_<AbstractModel, std::shared_ptr<AbstractModel>>(m, "AbstractModel")
-        .def("trace_critical_arclength_binary", &am::trace_critical_arclength_binary)
-        .def("pure_VLE_T", &am::pure_VLE_T)
-        .def("get_fugacity_coefficients", &am::get_fugacity_coefficients)
-        .def("get_partial_molar_volumes", &am::get_partial_molar_volumes)
-        .def("get_deriv_mat2", &am::get_deriv_mat2)
-        .def("get_Arxy", &am::get_Arxy)
-        // Here XMacros are used to create functions like get_Ar00, get_Ar01, ....
-        #define X(i,j) .def(stringify(get_Ar ## i ## j), &am::get_Ar ## i ## j)
+    py::class_<AbstractModel, std::shared_ptr<AbstractModel>>(m, "AbstractModel", py::dynamic_attr())
+    
+        .def("get_R", &am::get_R, "molefrac"_a.noconvert())
+    
+        .def("get_B2vir", &am::get_B2vir, "T"_a, "molefrac"_a.noconvert())
+        .def("get_Bnvir", &am::get_Bnvir, "Nderiv"_a, "T"_a, "molefrac"_a.noconvert())
+        .def("get_dmBnvirdTm", &am::get_dmBnvirdTm, "Nderiv"_a, "NTderiv"_a, "T"_a, "molefrac"_a.noconvert())
+        .def("get_B12vir", &am::get_B12vir, "T"_a, "molefrac"_a.noconvert())
+    
+        .def("get_Arxy", &am::get_Arxy, "NT"_a, "ND"_a, "T"_a, "rho"_a, "molefrac"_a.noconvert())
+        // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
+        #define X(i,j) .def(stringify(get_Ar ## i ## j), &am::get_Ar ## i ## j, "T"_a, "rho"_a, "molefrac"_a.noconvert())
             ARXY_args
         #undef X
         // And like get_Ar01n, get_Ar02n, ....
-        #define X(i) .def(stringify(get_Ar0 ## i ## n), &am::get_Ar0 ## i ## n)
+        #define X(i) .def(stringify(get_Ar0 ## i ## n), &am::get_Ar0 ## i ## n, "T"_a, "rho"_a, "molefrac"_a.noconvert())
             AR0N_args
         #undef X
+        .def("get_neff", &am::get_neff, "T"_a, "rho"_a, "molefrac"_a.noconvert())
     
-        .def_property_readonly("PCSAFT", [](const AbstractModel* am) -> const PCSAFT_t& {return std::get<PCSAFT_t>(am->get_model());})
-        .def_property_readonly("vdWEOS1", [](const AbstractModel* am) -> const vdWEOS1& {return std::get<vdWEOS1>(am->get_model());})
+        // Methods that come from the isochoric derivatives formalism
+        .def("get_pr", &am::get_pr, "T"_a, "rhovec"_a.noconvert())
+        .def("get_splus", &am::get_splus, "T"_a, "rhovec"_a.noconvert())
+        .def("build_Psir_Hessian_autodiff", &am::build_Psir_Hessian_autodiff, "T"_a, "rhovec"_a.noconvert())
+        .def("build_Psi_Hessian_autodiff", &am::build_Psi_Hessian_autodiff, "T"_a, "rhovec"_a.noconvert())
+        .def("build_Psir_gradient_autodiff", &am::build_Psir_gradient_autodiff, "T"_a, "rhovec"_a.noconvert())
+        .def("build_d2PsirdTdrhoi_autodiff", &am::build_d2PsirdTdrhoi_autodiff, "T"_a, "rhovec"_a.noconvert())
+        .def("get_chempotVLE_autodiff", &am::get_chempotVLE_autodiff, "T"_a, "rhovec"_a.noconvert())
+        .def("get_dchempotdT_autodiff", &am::get_dchempotdT_autodiff, "T"_a, "rhovec"_a.noconvert())
+        .def("get_fugacity_coefficients", &am::get_fugacity_coefficients, "T"_a, "rhovec"_a.noconvert())
+        .def("get_partial_molar_volumes", &am::get_partial_molar_volumes, "T"_a, "rhovec"_a.noconvert())
+    
+        .def("get_deriv_mat2", &am::get_deriv_mat2, "T"_a, "rho"_a, "molefrac"_a.noconvert())
+    
+        // Routines related to pure fluid critical point calculation
+//    .def("get_pure_critical_conditions_Jacobian", &am::get_pure_critical_conditions_Jacobian, "T"_a, "rho"_a, py::arg_v("alternative_pure_index", -1), py::arg_v("alternative_length", 2))
+        .def("solve_pure_critical", &am::solve_pure_critical, "T"_a, "rho"_a, py::arg_v("flags", std::nullopt, "None"))
+        .def("extrapolate_from_critical", &am::extrapolate_from_critical, "Tc"_a, "rhoc"_a, "T"_a)
+    
+        // Routines related to binary mixture critical curve tracing
+        .def("trace_critical_arclength_binary", &am::trace_critical_arclength_binary, "T0"_a, "rhovec0"_a, py::arg_v("path", std::nullopt, "None"), py::arg_v("options", std::nullopt, "None"))
+//        .def("get_criticality_conditions", &am::get_criticality_conditions)
+//        .def("eigen_problem", &am::eigen_problem)
+//        .def("get_minimum_eigenvalue_Psi_Hessian", &am::get_minimum_eigenvalue_Psi_Hessian)
+//        .def("get_drhovec_dT_crit", &am::get_drhovec_dT_crit)
+//        .def("get_dp_dT_crit", &am::get_dp_dT_crit)
+
+        .def("pure_VLE_T", &am::pure_VLE_T, "T"_a, "rhoL"_a, "rhoV"_a, "max_iter"_a)
+
+//    .def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, RAX>)
+//    .def("mix_VLE_Tp", &mix_VLE_Tp<Model, double, RAX>, "T"_a, "p_given"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("flags", MixVLETpFlags{}, "None"))
+//    .def("mixture_VLE_px", &mixture_VLE_px<Model, double, RAX>, "p_spec"_a, "xmolar_spec"_a.noconvert(), "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("flags", MixVLEpxFlags{}, "None"))
+//    .def("get_drhovecdp_Tsat", &get_drhovecdp_Tsat<Model, double, RAX>, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
+//    .def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary<Model, double, Eigen::ArrayXd>, "T"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+//    .def("get_drhovecdT_psat", &get_drhovecdT_psat<Model, double, RAX>, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
+//    .def("trace_VLE_isobar_binary", &trace_VLE_isobar_binary<Model, double, Eigen::ArrayXd>, "p"_a, "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+//    .def("get_dpsat_dTsat_isopleth", &get_dpsat_dTsat_isopleth<Model, double, RAX>, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
+//    .def("mix_VLLE_T", &mix_VLLE_T<Model, double, RAX>);
+//        .def("find_VLLE_T_binary", &am::find_VLLE_T_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"));
+        
     ;
     m.def("make_model", &teqp::cppinterface::make_model);
     m.def("make_vdW1", &teqp::cppinterface::make_vdW1);
     m.def("make_canonical_PR", &teqp::cppinterface::make_canonical_PR);
     m.def("make_canonical_SRK", &teqp::cppinterface::make_canonical_SRK);
-    
+    m.def("attach_model_specific_methods", &attach_model_specific_methods);
     
 //    // Some functions for timing overhead of interface
 //    m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });

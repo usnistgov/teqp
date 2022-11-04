@@ -12,6 +12,9 @@
 using EArray2 = Eigen::Array<double, 2, 1>;
 using EArrayd = Eigen::ArrayX<double>;
 using EArray33d = Eigen::Array<double, 3, 3>;
+using REArrayd = Eigen::Ref<const EArrayd>;
+using EMatrixd = Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>;
+using REMatrixd = Eigen::Ref<const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>>;
 
 #define ARXY_args \
     X(0,0) \
@@ -39,6 +42,22 @@ using EArray33d = Eigen::Array<double, 3, 3>;
     X(5) \
     X(6)
 
+// Functions that return a double, take T and rhovec as arguments
+#define ISOCHORIC_double_args \
+    X(get_pr) \
+    X(get_splus)
+
+#define ISOCHORIC_array_args \
+    X(build_Psir_gradient_autodiff) \
+    X(get_chempotVLE_autodiff) \
+    X(get_dchempotdT_autodiff) \
+    X(get_fugacity_coefficients) \
+    X(get_partial_molar_volumes) \
+    X(build_d2PsirdTdrhoi_autodiff)
+
+#define ISOCHORIC_matrix_args \
+    X(build_Psir_Hessian_autodiff) \
+    X(build_Psi_Hessian_autodiff)
 
 namespace teqp {
     namespace cppinterface {
@@ -60,15 +79,21 @@ namespace teqp {
         class AbstractModel {
         public:
             
+            // This method allows for access to the contained variant in the subclass
+            // You can access all its methods after the appropriate std::get call
+            // with the right type
+            virtual const AllowedModels& get_model() const = 0;
+            virtual ~AbstractModel() = default;
+            
+            virtual double get_R(const EArrayd&) const = 0;
+            
             virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> &) const = 0;
-            virtual EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const = 0;
-            virtual EArrayd get_fugacity_coefficients(const double T, const EArrayd& rhovec) const = 0;
-            virtual EArrayd get_partial_molar_volumes(const double T, const EArrayd& rhovec) const = 0;
+            
             virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z) const = 0;
             
             virtual double get_Arxy(const int, const int, const double, const double, const EArrayd&) const = 0;
             
-            // Here XMacros are used to create functions like get_Ar00, get_Ar01, ....
+            // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
             #define X(i,j) virtual double get_Ar ## i ## j(const double T, const double rho, const EArrayd& molefrac) const = 0;
                 ARXY_args
             #undef X
@@ -76,7 +101,7 @@ namespace teqp {
             #define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const EArrayd& molefrac) const = 0;
                 AR0N_args
             #undef X
-            
+            virtual double get_neff(const double, const double, const EArrayd&) const = 0;
             
             // Virial derivatives
             virtual double get_B2vir(const double T, const EArrayd& z) const = 0;
@@ -84,22 +109,21 @@ namespace teqp {
             virtual double get_B12vir(const double T, const EArrayd& z) const = 0;
             virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& z) const = 0;
             
-            // This method allows for access to the contained variant in the subclass
-            // You can access all its methods after the appropriate std::get call
-            // with the right type
-            virtual const AllowedModels& get_model() const = 0;
+            // Derivatives from isochoric thermodynamics (all have the same signature whithin each block)
+            #define X(f) virtual double f(const double T, const EArrayd& rhovec) const = 0;
+                ISOCHORIC_double_args
+            #undef X
+            #define X(f) virtual EArrayd f(const double T, const EArrayd& rhovec) const = 0;
+                ISOCHORIC_array_args
+            #undef X
+            #define X(f) virtual EMatrixd f(const double T, const EArrayd& rhovec) const = 0;
+                ISOCHORIC_matrix_args
+            #undef X
             
-            // Methods only available for PC-SAFT
-            virtual EArrayd get_m() const = 0;
-            virtual EArrayd get_sigma_Angstrom() const = 0;
-            virtual EArrayd get_epsilon_over_k_K() const = 0;
-            virtual double max_rhoN(const double, const EArrayd&) const = 0;
+            virtual std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>&) const = 0;
+            virtual std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const = 0;
+            virtual EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const = 0;
             
-            // Methods only available for canonical cubics
-            
-            // Methods only available for multifluid
-            
-            virtual ~AbstractModel() = default;
         };
         
         // Generic JSON-based interface where the model description is encoded as JSON
