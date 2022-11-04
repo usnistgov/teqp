@@ -85,6 +85,11 @@ namespace teqp {
                     return teqp::solve_pure_critical(model, T, rho, flags.value());
                 }, m_model);
             }
+            std::tuple<EArrayd, EMatrixd> get_pure_critical_conditions_Jacobian(const double T, const double rho, int alternative_pure_index, int alternative_length) const override {
+                return std::visit([&](const auto& model) {
+                    return teqp::get_pure_critical_conditions_Jacobian(model, T, rho, alternative_pure_index, alternative_length);
+                }, m_model);
+            }
             std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tnew) const override {
                 return std::visit([&](const auto& model) {
                     auto mat = teqp::extrapolate_from_critical(model, Tc, rhoc, Tnew);
