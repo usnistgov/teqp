@@ -5,6 +5,7 @@
 #include "teqp/exceptions.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/critical_pure.hpp"
+#include "teqp/algorithms/VLE_types.hpp"
 #include <Eigen/Dense>
 
 // Imports from boost for numerical integration
@@ -167,8 +168,6 @@ auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxi
     return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
 }
 
-enum class VLE_return_code { unset, xtol_satisfied, functol_satisfied, maxfev_met, maxiter_met, notfinite_step };
-
 /***
 * \brief Do a vapor-liquid phase equilibrium problem for a mixture (binary only for now) with mole fractions specified in the liquid phase
 * \param model The model to operate on
@@ -306,25 +305,6 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
     return std::make_tuple(return_code, rhovecLfinal, rhovecVfinal);
 }
 
-struct MixVLETpFlags {
-    double atol = 1e-10,
-        reltol = 1e-10,
-        axtol = 1e-10,
-        relxtol = 1e-10,
-        relaxation = 1.0;
-    int maxiter = 10;
-};
-
-struct MixVLEReturn {
-    bool success = false;
-    std::string message = "";
-    Eigen::ArrayXd rhovecL, rhovecV;
-    VLE_return_code return_code;
-    int num_iter=-1, num_fev=-1;
-    double T=-1;
-    Eigen::ArrayXd r, initial_r;
-};
-
 template<typename Model>
 struct hybrj_functor__mix_VLE_Tp : Functor<double>
 {
@@ -419,7 +399,9 @@ struct hybrj_functor__mix_VLE_Tp : Functor<double>
 * \param flags Flags controlling the iteration and stopping conditions
 */
 template<typename Model, typename Scalar, typename Vector>
-auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhovecL0, const Vector& rhovecV0, const MixVLETpFlags& flags = {}) {
+auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhovecL0, const Vector& rhovecV0, const std::optional<MixVLETpFlags>& flags_ = std::nullopt) {
+    
+    auto flags = flags_.value_or(MixVLETpFlags{});
 
     const Eigen::Index N = rhovecL0.size();
     auto lengths = (Eigen::ArrayXi(2) << rhovecL0.size(), rhovecV0.size()).finished();
@@ -518,14 +500,6 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
     return r;
 }
 
-struct MixVLEpxFlags {
-    double atol = 1e-10,
-        reltol = 1e-10,
-        axtol = 1e-10,
-        relxtol = 1e-10;
-    int maxiter = 10;
-};
-
 /***
 * \brief Do vapor-liquid phase equilibrium problem at specified pressure and mole fractions in the bulk phase
 * \param model The model to operate on
@@ -538,7 +512,9 @@ struct MixVLEpxFlags {
 * \param flags Additional flags
 */
 template<typename Model, typename Scalar, typename Vector>
-auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec, Scalar T0, const Vector& rhovecL0, const Vector& rhovecV0, const MixVLEpxFlags& flags = {}) {
+auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec, Scalar T0, const Vector& rhovecL0, const Vector& rhovecV0, const std::optional<MixVLEpxFlags>& flags_ = std::nullopt) {
+    
+    auto flags = flags_.value_or(MixVLEpxFlags{});
 
     const Eigen::Index N = rhovecL0.size();
     auto lengths = (Eigen::ArrayXi(3) << rhovecL0.size(), rhovecV0.size(), xmolar_spec.size()).finished();
@@ -932,14 +908,6 @@ auto get_dpsat_dTsat_isopleth(const Model& model, const Scalar& T, const VecType
     //return der;
 }
 
-struct TVLEOptions {
-    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0;
-    int max_steps = 1000, integration_order = 5;
-    bool polish = true;
-    bool calc_criticality = false;
-    bool terminate_unstable = false;
-};
-
 /***
 * \brief Trace an isotherm with parametric tracing
 */
@@ -1165,15 +1133,6 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
     }
     return JSONdata;
 }
-
-
-struct PVLEOptions {
-    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0;
-    int max_steps = 1000, integration_order = 5;
-    bool polish = true;
-    bool calc_criticality = false;
-    bool terminate_unstable = false;
-};
 
 /***
 * \brief Trace an isobar with parametric tracing

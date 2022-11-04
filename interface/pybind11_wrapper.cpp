@@ -239,11 +239,12 @@ void init_teqp(py::module& m) {
         .def("get_drhovecdT_psat", &am::get_drhovecdT_psat, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
         .def("get_dpsat_dTsat_isopleth", &am::get_dpsat_dTsat_isopleth, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
     
-//        .def("mix_VLE_Tx", &mix_VLE_Tx<Model, double, RAX>)
-//        .def("mix_VLE_Tp", &mix_VLE_Tp<Model, double, RAX>, "T"_a, "p_given"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("flags", MixVLETpFlags{}, "None"))
-//        .def("mixture_VLE_px", &mixture_VLE_px<Model, double, RAX>, "p_spec"_a, "xmolar_spec"_a.noconvert(), "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("flags", MixVLEpxFlags{}, "None"))
-//        .def("trace_VLE_isotherm_binary", &trace_VLE_isotherm_binary, "T"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
-//        .def("trace_VLE_isobar_binary", &trace_VLE_isobar_binary, "p"_a, "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+        .def("trace_VLE_isotherm_binary", &am::trace_VLE_isotherm_binary, "T"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+        .def("trace_VLE_isobar_binary", &am::trace_VLE_isobar_binary, "p"_a, "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+        .def("mix_VLE_Tx", &am::mix_VLE_Tx, "T"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), "xspec"_a.noconvert(), "atol"_a, "reltol"_a, "axtol"_a, "relxtol"_a, "maxiter"_a)
+        .def("mix_VLE_Tp", &am::mix_VLE_Tp, "T"_a, "p_given"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+        .def("mixture_VLE_px", &am::mixture_VLE_px, "p_spec"_a, "xmolar_spec"_a.noconvert(), "T0"_a, "rhovecL0"_a.noconvert(), "rhovecV0"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
+    
 //        .def("mix_VLLE_T", &mix_VLLE_T<Model, double, RAX>);
 //        .def("find_VLLE_T_binary", &am::find_VLLE_T_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"));
     ;
