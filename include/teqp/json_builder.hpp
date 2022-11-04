@@ -95,6 +95,12 @@ namespace teqp {
         else if (kind == "EXP6_Kataoka1992"){
             return exp6::Kataoka1992(spec.at("alpha"));
         }
+        else if (kind == "AmmoniaWaterTillnerRoth"){
+            return AmmoniaWaterTillnerRoth();
+        }
+        else if (kind == "LJ126_TholJPCRD2016"){
+            return build_LJ126_TholJPCRD2016();
+        }
         else {
             throw teqpcException(30, "Unknown kind:" + kind);
         }
