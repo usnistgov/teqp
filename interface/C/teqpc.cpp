@@ -129,8 +129,8 @@ TEST_CASE("Use of C interface","[teqpc]") {
     build_model(j.c_str(), uuidPR, errmsg, errmsg_length);
     {
         nlohmann::json jmodel = nlohmann::json::object();
-        jmodel["departure"] = nlohmann::json::array();
-        jmodel["BIP"] = nlohmann::json::array();
+        jmodel["departure"] = "";
+        jmodel["BIP"] = "";
         jmodel["components"] = nlohmann::json::array();
         jmodel["components"].push_back("../mycp/dev/fluids/Argon.json");
 
@@ -140,6 +140,39 @@ TEST_CASE("Use of C interface","[teqpc]") {
         };
         std::string js = j.dump(2);
         int e1 = build_model(js.c_str(), uuidMF, errmsg, errmsg_length);
+    }
+    {
+        nlohmann::json jmodel = nlohmann::json::object();
+        jmodel["departure"] = "";
+        jmodel["BIP"] = "";
+        jmodel["components"] = nlohmann::json::array();
+        jmodel["components"].push_back(load_a_JSON_file("../mycp/dev/fluids/Argon.json"));
+        
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", jmodel}
+        };
+        std::string js = j.dump(2);
+        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        CAPTURE(errmsg);
+        REQUIRE(e1 == 0);
+    }
+    {
+        nlohmann::json jmodel = nlohmann::json::object();
+        jmodel["departure"] = "";
+        jmodel["BIP"] = "";
+        jmodel["components"] = nlohmann::json::array();
+        jmodel["components"].push_back("Ethane");
+        jmodel["components"].push_back("Nitrogen");
+        jmodel["root"] = "../mycp";
+        
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", jmodel}
+        };
+        std::string js = j.dump(2);
+        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
     }
     
     BENCHMARK("vdW1") {

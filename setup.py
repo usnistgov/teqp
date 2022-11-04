@@ -197,6 +197,19 @@ def build_LJ126_TholJPCRD2016():
 def IdealHelmholtz(model):
     return make_model({"kind": "IdealHelmholtz", "model": model})
     
+def build_multifluid_model(components, coolprop_root, BIPcollectionpath = "", flags = {}, departurepath=""):
+    j = {
+        "kind": "multifluid",
+        "model": {
+            "components": components,
+            "root": coolprop_root,
+            "BIP": BIPcollectionpath,
+            "flags": flags,
+            "departure": departurepath
+        }
+    }
+    return make_model(j)
+    
 '''
 
 def prepare():

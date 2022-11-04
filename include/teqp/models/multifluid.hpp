@@ -841,23 +841,60 @@ inline auto build_multifluid_JSONstr(const std::vector<std::string>& componentJS
     return _build_multifluid_model(pureJSON, BIPcollection, depcollection, flags);
 }
 
-inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
-
-    std::string BIPpath = (BIPcollectionpath.empty()) ? coolprop_root + "/dev/mixtures/mixture_binary_pairs.json" : BIPcollectionpath;
-    const auto BIPcollection = load_a_JSON_file(BIPpath);
-
-    std::string deppath = (departurepath.empty()) ? coolprop_root + "/dev/mixtures/mixture_departure_functions.json" : departurepath;
-    const auto depcollection = load_a_JSON_file(deppath);
-
-    // Pure fluids
+/**
+ There are 4 options:
+ 
+ 1. Absolute paths to fluid files in the JSON format
+ 2. Names of fluid fluids that can all be looked up in the dev/fluids folder relative to the root
+ 3. Fluid data that is already in the JSON format
+ 4. Names that all resolve to absolute paths when looking up in the alias map
+*/
+inline auto make_pure_components_JSON(const nlohmann::json& components, const std::string& root){
+    
     std::vector<nlohmann::json> pureJSON;
-    try {
-        // Try the normal lookup, matching component name to a file in dev/fluids (case sensitive match on linux!)
-        pureJSON = collect_component_json(components, coolprop_root);
+    if (!components.is_array()){
+        throw std::invalid_argument("Must be an array");
     }
-    catch(...){
+    
+    // Check if are possibly valid paths (JSON should not be)
+    bool all_valid_paths = true;
+    bool all_abspath_exist = true;
+    bool all_fluids_exist = true;
+    bool might_be_JSON = true;
+    for (auto s: components){
+        if (!s.is_object()){
+            might_be_JSON = false;
+        }
+        try{
+            std::filesystem::path p = s.get<std::string>();
+            if (!std::filesystem::exists(p)){
+                all_abspath_exist = false;
+            }
+            if (!std::filesystem::exists(root+"/dev/fluids/"+s.get<std::string>()+".json")){
+                all_fluids_exist = false;
+            }
+        }
+        catch(...){
+            all_valid_paths = false;
+        }
+    }
+    
+    // Normal treatment if:
+    // a) Absolute paths were provided, to files that exist
+    // b) Fluid names in the dev/fluids/ folder relative to the root
+    if (all_valid_paths && (all_fluids_exist || all_abspath_exist)){
+        return collect_component_json(components.get<std::vector<std::string>>(), root);
+    }
+    else if (might_be_JSON){
+        // Data is already in JSON format, just turn it into vector of nlohmann
+        for (auto c : components){
+            pureJSON.push_back(c);
+        }
+        return pureJSON;
+    }
+    else{
         // Lookup the absolute paths for each component
-        auto aliasmap = build_alias_map(coolprop_root);
+        auto aliasmap = build_alias_map(root);
         std::vector<std::string> abspaths;
         for (auto c : components) {
             // Allow matching of absolute paths first
@@ -869,9 +906,20 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
             }
         }
         // Backup lookup with absolute paths resolved for each component
-        pureJSON = collect_component_json(abspaths, coolprop_root);
+        pureJSON = collect_component_json(abspaths, root);
     }
-    return _build_multifluid_model(pureJSON, BIPcollection, depcollection, flags);
+    return pureJSON;
+}
+
+inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
+
+    std::string BIPpath = (BIPcollectionpath.empty()) ? coolprop_root + "/dev/mixtures/mixture_binary_pairs.json" : BIPcollectionpath;
+    const auto BIPcollection = load_a_JSON_file(BIPpath);
+
+    std::string deppath = (departurepath.empty()) ? coolprop_root + "/dev/mixtures/mixture_departure_functions.json" : departurepath;
+    const auto depcollection = load_a_JSON_file(deppath);
+
+    return _build_multifluid_model(make_pure_components_JSON(components, coolprop_root), BIPcollection, depcollection, flags);
 }
 
 /**
@@ -884,7 +932,9 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
 */
 inline auto multifluidfactory(const nlohmann::json& spec) {
     
-    auto JSON_from_path_or_contents = [](const nlohmann::json &path_or_contents) -> nlohmann::json {
+    std::string root = (spec.contains("root")) ? spec.at("root") : "";
+    
+    auto JSON_from_path_or_contents = [&root](const nlohmann::json &path_or_contents) -> nlohmann::json {
         if (path_or_contents.is_string()) {
             return load_a_JSON_file(path_or_contents.get<std::string>());
         }
@@ -892,19 +942,30 @@ inline auto multifluidfactory(const nlohmann::json& spec) {
             return path_or_contents;
         }
     };
+    auto get_json = [](const std::string& path1, const std::string& default_path){
+        try{
+            return load_a_JSON_file(path1);
+        }
+        catch(...){
+            return load_a_JSON_file(default_path);
+        }
+    };
 
-    auto components = spec.at("components"); 
-    auto depcollection = JSON_from_path_or_contents(spec.at("departure"));
-    auto BIPcollection = JSON_from_path_or_contents(spec.at("BIP"));
+    auto components = spec.at("components");
+    
+    auto dep = spec.at("departure");
+    auto BIP = spec.at("BIP");
+    
+    auto depcollection = nlohmann::json::object();
+    auto BIPcollection = nlohmann::json::object();
+    // Only do this if it is a mixture; departure and BIP don't apply for pure fluids
+    if (components.size() > 1){
+        depcollection = (dep.is_object()) ? dep : get_json(dep.get<std::string>(), root + "/dev/mixtures/mixture_departure_functions.json");
+        BIPcollection = (BIP.is_object()) ? BIP : get_json(BIP.get<std::string>(), root+"/dev/mixtures/mixture_binary_pairs.json");
+    }
     nlohmann::json flags = (spec.contains("flags")) ? spec.at("flags") : nlohmann::json();
 
-    // Pure components
-    std::vector<nlohmann::json> pureJSON;
-    for (auto c : components) {
-        pureJSON.push_back(JSON_from_path_or_contents(c));
-    }
-
-    return _build_multifluid_model(pureJSON, BIPcollection, depcollection, flags);
+    return _build_multifluid_model(make_pure_components_JSON(components, root), BIPcollection, depcollection, flags);
 }
 /// An overload of multifluidfactory that takes in a string
 inline auto multifluidfactory(const std::string& specstring) {
