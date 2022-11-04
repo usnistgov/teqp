@@ -23,13 +23,16 @@ namespace teqp {
                 }
             }
         protected:
-            const AllowedModels m_model;
+            AllowedModels m_model;
             using RAX = Eigen::Ref<const Eigen::ArrayXd>;
             
         public:
             ModelImplementer(AllowedModels&& model) : m_model(model) {};
             
             const AllowedModels& get_model() const override{
+                return m_model;
+            }
+            AllowedModels& get_mutable_model() override{
                 return m_model;
             }
             

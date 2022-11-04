@@ -18,6 +18,25 @@ const TYPE& get_typed(py::object& o){
     return std::get<TYPE>(o.cast<const AbstractModel *>()->get_model());
 }
 
+template<typename TYPE>
+TYPE& get_mutable_typed(py::object& o){
+    using namespace teqp::cppinterface;
+    return std::get<TYPE>(o.cast<AbstractModel *>()->get_mutable_model());
+}
+
+template<typename TYPE>
+void attach_multifluid_methods(py::object&obj){
+    auto setattr = py::getattr(obj, "__setattr__");
+    auto MethodType = py::module_::import("types").attr("MethodType");
+    setattr("get_Tcvec", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).redfunc.Tc; }), obj));
+    setattr("get_vcvec", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).redfunc.vc; }), obj));
+    setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<TYPE>(o).redfunc.get_Tr(molefrac); }), obj));
+    setattr("get_rhor", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<TYPE>(o).redfunc.get_rhor(molefrac); }), obj));
+    setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).get_meta(); }), obj));
+    setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<TYPE>(o).set_meta(s); }), obj));
+    setattr("get_alpharij", MethodType(py::cpp_function([](py::object& o, const int i, const int j, const double tau, const double delta){ return get_typed<TYPE>(o).dep.get_alpharij(i,j,tau,delta); }), obj));
+}
+
 // You cannot know at runtime what is contained in the model so you must iterate
 // over possible model types and attach methods accordingly
 void attach_model_specific_methods(py::object& obj){
@@ -51,12 +70,29 @@ void attach_model_specific_methods(py::object& obj){
             // Calculate with complex step derivatives
             double h = 1e-100;
             const auto& m = get_typed<AmmoniaWaterTillnerRoth>(o);
-            std::complex<double> delta_(delta, 1e-100);
+            std::complex<double> delta_(delta, h);
             return m.alphar_departure(tau, delta_, xNH3).imag()/h;
         }), obj));
     }
+    else if (std::holds_alternative<multifluid_t>(model)){
+        attach_multifluid_methods<multifluid_t>(obj);
+        setattr("build_ancillaries", MethodType(py::cpp_function([](py::object& o, std::optional<int> i = std::nullopt){
+            const auto& c = get_typed<multifluid_t>(o);
+            if (!i && c.redfunc.Tc.size() != 1) {
+                throw teqp::InvalidArgument("Can only build ancillaries for pure fluids, or provide the index of fluid you would like to construct");
+            }
+            auto k = i.value_or(0);
+            auto jancillaries = nlohmann::json::parse(c.get_meta()).at("pures")[k].at("ANCILLARIES");
+            return teqp::MultiFluidVLEAncillaries(jancillaries);
+        }), obj));
+    }
+    else if (std::holds_alternative<multifluidmutant_t>(model)){
+        attach_multifluid_methods<multifluidmutant_t>(obj);
+    }
     // EXP-6, SW, LJ
 };
+
+
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {
