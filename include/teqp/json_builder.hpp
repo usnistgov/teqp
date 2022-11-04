@@ -101,6 +101,9 @@ namespace teqp {
         else if (kind == "LJ126_TholJPCRD2016"){
             return build_LJ126_TholJPCRD2016();
         }
+        else if (kind == "IdealHelmholtz"){
+            return IdealHelmholtz(spec);
+        }
         else {
             throw teqpcException(30, "Unknown kind:" + kind);
         }

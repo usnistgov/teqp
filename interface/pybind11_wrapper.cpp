@@ -12,24 +12,6 @@ using namespace py::literals;
 void add_multifluid(py::module& m);
 void add_multifluid_mutant(py::module& m);
 
-template<typename Model, int iT, int iD, typename Class>
-void add_ig_deriv_impl(Class& cls) {
-    using idx = TDXDerivatives<Model>;
-    using RAX = Eigen::Ref<const Eigen::ArrayXd>;
-    const std::string fname = "get_Aig" + std::to_string(iT) + std::to_string(iD);
-    cls.def(fname.c_str(),
-        [](const Model& m, const double T, const double rho, const RAX molefrac) { return idx::template get_Aigxy<iT, iD, ADBackends::autodiff>(m, T, rho, molefrac); },
-        py::arg("T"), py::arg("rho"), py::arg("molefrac").noconvert()
-    );
-}
-
-template<typename Model, typename Class>
-void add_ig_derivatives(py::module& m, Class& cls) {
-    add_ig_deriv_impl<Model, 0, 0>(cls); add_ig_deriv_impl<Model, 0, 1>(cls); add_ig_deriv_impl<Model, 0, 2>(cls); add_ig_deriv_impl<Model, 0, 3>(cls); add_ig_deriv_impl<Model, 0, 4>(cls);
-    add_ig_deriv_impl<Model, 1, 0>(cls); add_ig_deriv_impl<Model, 1, 1>(cls); add_ig_deriv_impl<Model, 1, 2>(cls); add_ig_deriv_impl<Model, 1, 3>(cls); add_ig_deriv_impl<Model, 1, 4>(cls);
-    add_ig_deriv_impl<Model, 2, 0>(cls); add_ig_deriv_impl<Model, 2, 1>(cls); add_ig_deriv_impl<Model, 2, 2>(cls); add_ig_deriv_impl<Model, 2, 3>(cls); add_ig_deriv_impl<Model, 2, 4>(cls);
-}
-
 template<typename TYPE>
 const TYPE& get_typed(py::object& o){
     using namespace teqp::cppinterface;
@@ -199,11 +181,7 @@ void init_teqp(py::module& m) {
     .def_readwrite("BibTeXKey", &SAFTCoeffs::BibTeXKey)
     ;
 
-    // The ideal gas Helmholtz energy class
-    auto alphaig = py::class_<IdealHelmholtz>(m, "IdealHelmholtz").def(py::init<const nlohmann::json&>());
-    alphaig.def_static("convert_CoolProp_format", [](const std::string &path, int index){return convert_CoolProp_idealgas(path, index);});
-    add_ig_derivatives<IdealHelmholtz>(m, alphaig);
-    alphaig.def("get_deriv_mat2", [](const IdealHelmholtz &ig, double T, double rho, const Eigen::ArrayXd& z){return DerivativeHolderSquare<2, AlphaWrapperOption::idealgas>(ig, T, rho, z).derivs;});
+    m.def("convert_CoolProp_idealgas", [](const std::string &path, int index){return convert_CoolProp_idealgas(path, index);});
 
     add_multifluid(m);
     add_multifluid_mutant(m);

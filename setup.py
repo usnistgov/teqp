@@ -183,6 +183,9 @@ def AmmoniaWaterTillnerRoth():
 
 def build_LJ126_TholJPCRD2016():
     return make_model({"kind": "LJ126_TholJPCRD2016", "model": {}})
+
+def IdealHelmholtz(model):
+    return make_model({"kind": "IdealHelmholtz", "model": model})
     
 '''
 
