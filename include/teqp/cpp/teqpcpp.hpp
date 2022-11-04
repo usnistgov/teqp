@@ -124,6 +124,11 @@ namespace teqp {
             virtual std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const = 0;
             virtual EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const = 0;
             
+            virtual std::tuple<EArrayd, EArrayd> get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
+            virtual std::tuple<EArrayd, EArrayd> get_drhovecdT_psat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
+            virtual double get_dpsat_dTsat_isopleth(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
+            
+            
         };
         
         // Generic JSON-based interface where the model description is encoded as JSON

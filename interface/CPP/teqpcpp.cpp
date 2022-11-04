@@ -161,6 +161,22 @@ namespace teqp {
                     return tdx::template get_neff(model, T, rho, molefracs);
                 }, m_model);
             }
+            
+            std::tuple<EArrayd, EArrayd> get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override {
+                return std::visit([&](const auto& model) {
+                    return teqp::get_drhovecdp_Tsat(model, T, rhovecL, rhovecV);
+                }, m_model);
+            }
+            std::tuple<EArrayd, EArrayd> get_drhovecdT_psat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override {
+                return std::visit([&](const auto& model) {
+                    return teqp::get_drhovecdT_psat(model, T, rhovecL, rhovecV);
+                }, m_model);
+            }
+            double get_dpsat_dTsat_isopleth(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override {
+                return std::visit([&](const auto& model) {
+                    return teqp::get_dpsat_dTsat_isopleth(model, T, rhovecL, rhovecV);
+                }, m_model);
+            }
         };
 
         std::shared_ptr<AbstractModel> make_model(const nlohmann::json& j) {
