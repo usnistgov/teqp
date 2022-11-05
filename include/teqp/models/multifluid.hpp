@@ -897,12 +897,13 @@ inline auto make_pure_components_JSON(const nlohmann::json& components, const st
         auto aliasmap = build_alias_map(root);
         std::vector<std::string> abspaths;
         for (auto c : components) {
+            auto cstr = c.get<std::string>();
             // Allow matching of absolute paths first
-            if (std::filesystem::is_regular_file(c)) {
-                abspaths.push_back(c.get<std::string>());
+            if (std::filesystem::is_regular_file(cstr)) {
+                abspaths.push_back(cstr);
             }
             else {
-                abspaths.push_back(aliasmap[c]);
+                abspaths.push_back(aliasmap[cstr]);
             }
         }
         // Backup lookup with absolute paths resolved for each component
