@@ -26,7 +26,8 @@ namespace teqp {
 
 	using vad = std::valarray<double>;
 
-    // Define the EOS types by interrogating the types returned by the respective factory function
+    // Define the EOS types by interrogating the types returned by the respective
+    // factory function or by alias of the class name
     using canonical_cubic_t = decltype(canonical_PR(vad{}, vad{}, vad{}));
     using PCSAFT_t = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
     using CPA_t = decltype(CPA::CPAfactory(nlohmann::json{}));
