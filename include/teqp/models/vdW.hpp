@@ -66,7 +66,7 @@ public:
     vdWEOS(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa)
     {
         if (Tc_K.size() != pc_Pa.size()){
-            throw teqp::InvalidArgument("Sizes of Tc_K " + std::to_string(Tc_K.size()) + " and pc_Pa" + std::to_string(pc_Pa.size()) + " do not agree")
+            throw teqp::InvalidArgument("Sizes of Tc_K " + std::to_string(Tc_K.size()) + " and pc_Pa" + std::to_string(pc_Pa.size()) + " do not agree");
         }
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());

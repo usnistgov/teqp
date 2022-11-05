@@ -899,7 +899,7 @@ inline auto make_pure_components_JSON(const nlohmann::json& components, const st
         for (auto c : components) {
             // Allow matching of absolute paths first
             if (std::filesystem::is_regular_file(c)) {
-                abspaths.push_back(c.string());
+                abspaths.push_back(c.get<std::string>());
             }
             else {
                 abspaths.push_back(aliasmap[c]);
