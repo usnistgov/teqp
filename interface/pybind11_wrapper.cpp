@@ -1,4 +1,9 @@
-#include "pybind11_wrapper.hpp"
+#include "nlohmann/json.hpp"
+#include "pybind11_json/pybind11_json.hpp"
+
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <pybind11/eigen.h>
 
 #include "teqpversion.hpp"
 #include "teqp/ideal_eosterms.hpp"
