@@ -3,14 +3,56 @@
 #include "teqpversion.hpp"
 #include "teqp/ideal_eosterms.hpp"
 #include "teqp/cpp/derivs.hpp"
+#include "teqp/derivs.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
+#include "teqp/models/multifluid_ancillaries.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
 
 #define stringify(A) #A
+using namespace teqp;
 
-void add_multifluid(py::module& m);
-void add_multifluid_mutant(py::module& m);
+void add_multifluid(py::module& m){
+    // A single ancillary curve
+    py::class_<VLEAncillary>(m, "VLEAncillary")
+        .def(py::init<const nlohmann::json&>())
+        .def("__call__", &VLEAncillary::operator())
+        .def_readonly("T_r", &VLEAncillary::T_r)
+        .def_readonly("Tmax", &VLEAncillary::Tmax)
+        .def_readonly("Tmin", &VLEAncillary::Tmin)
+        ;
+
+    // The collection of VLE ancillary curves
+    py::class_<MultiFluidVLEAncillaries>(m, "MultiFluidVLEAncillaries")
+        .def(py::init<const nlohmann::json&>())
+        .def_readonly("rhoL", &MultiFluidVLEAncillaries::rhoL)
+        .def_readonly("rhoV", &MultiFluidVLEAncillaries::rhoV)
+        .def_readonly("pL", &MultiFluidVLEAncillaries::pL)
+        .def_readonly("pV", &MultiFluidVLEAncillaries::pV)
+        ;
+
+    // Expose some additional functions for working with the JSON data structures and resolving aliases
+    m.def("get_BIPdep", &reducing::get_BIPdep, py::arg("BIPcollection"), py::arg("identifiers"), py::arg("flags") = nlohmann::json{});
+    m.def("build_alias_map", &build_alias_map, py::arg("root"));
+    m.def("collect_component_json", &collect_component_json, py::arg("identifiers"), py::arg("root"));
+    m.def("get_departure_json", &get_departure_json, py::arg("name"), py::arg("root"));
+}
+
+void add_multifluid_mutant(py::module& m) {
+    using namespace teqp;
+    using namespace teqp::cppinterface;
+
+    // A typedef for the base model
+    using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"", ""}, "", ""));
+    
+    // Wrap the function for generating a multifluid mutant
+    m.def("build_multifluid_mutant", [](const py::object& o, const nlohmann::json &j){
+        const auto& model = std::get<MultiFluid>(o.cast<const AbstractModel *>()->get_model());
+        AllowedModels mutant{build_multifluid_mutant(model, j)};
+        return emplace_model(std::move(mutant));
+    });
+}
 
 template<typename TYPE>
 const TYPE& get_typed(py::object& o){

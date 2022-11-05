@@ -161,5 +161,7 @@ namespace teqp {
             const nlohmann::json& flags = {}, 
             const std::string& departurepath = {}
         );
+    
+        std::shared_ptr<AbstractModel> emplace_model(AllowedModels&& model);
     }
 }
