@@ -934,14 +934,6 @@ inline auto multifluidfactory(const nlohmann::json& spec) {
     
     std::string root = (spec.contains("root")) ? spec.at("root") : "";
     
-    auto JSON_from_path_or_contents = [&root](const nlohmann::json &path_or_contents) -> nlohmann::json {
-        if (path_or_contents.is_string()) {
-            return load_a_JSON_file(path_or_contents.get<std::string>());
-        }
-        else {
-            return path_or_contents;
-        }
-    };
     auto get_json = [](const std::string& path1, const std::string& default_path){
         try{
             return load_a_JSON_file(path1);
