@@ -125,13 +125,17 @@ void attach_model_specific_methods(py::object& obj){
         attach_multifluid_methods<multifluid_t>(obj);
         setattr("build_ancillaries", MethodType(py::cpp_function([](py::object& o, std::optional<int> i = std::nullopt){
             const auto& c = get_typed<multifluid_t>(o);
+            auto N = c.redfunc.Tc.size();
             if (!i && c.redfunc.Tc.size() != 1) {
                 throw teqp::InvalidArgument("Can only build ancillaries for pure fluids, or provide the index of fluid you would like to construct");
             }
             auto k = i.value_or(0);
+            if (k > N-1) {
+                throw teqp::InvalidArgument("Cannot obtain the EOS at index"+std::to_string(k)+"; length is "+std::to_string(N));
+            }
             auto jancillaries = nlohmann::json::parse(c.get_meta()).at("pures")[k].at("ANCILLARIES");
             return teqp::MultiFluidVLEAncillaries(jancillaries);
-        }), obj));
+        }, "self"_a, py::arg_v("i", std::nullopt, "None")), obj));
     }
     else if (std::holds_alternative<multifluidmutant_t>(model)){
         attach_multifluid_methods<multifluidmutant_t>(obj);
