@@ -51,7 +51,7 @@ namespace teqp {
             return autodiff::detail::eval(expr);
         }
         else {
-            return std::move(expr);
+            return expr;
         }
     }
 

@@ -353,7 +353,7 @@ public:
 
     template<typename Instance>
     auto add_term(Instance&& instance) {
-        coll.emplace_back(std::move(instance));
+        coll.emplace_back(instance);
     }
 
     template <class Tau, class Delta>
