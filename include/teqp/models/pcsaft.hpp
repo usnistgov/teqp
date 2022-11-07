@@ -276,7 +276,7 @@ public:
                 c.m2_epsilon2_sigma3_bar = c.m2_epsilon2_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * pow(eij_over_k / T, 2) * pow(sigma_ij, 3);
             }
         }
-        auto mbar = (mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>()).sum().array();
+        auto mbar = (mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()).sum();
 
         /// Convert from molar density to number density in molecules/Angstrom^3
         RhoType rho_A3 = rhomolar * N_A * 1e-30; //[molecules (not moles)/A^3]
