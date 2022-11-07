@@ -91,6 +91,7 @@ if (NOT TEQP_NO_TEQPCPP)
   target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
   target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
   set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
+  target_compile_definitions(teqpcpp PUBLIC -DMULTICOMPLEX_NO_MULTIPRECISION)
 
   if (TEQP_TESTTEQPCPP)
     add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test_teqpcpp.cpp")
@@ -114,9 +115,8 @@ endif()
 
 if (TEQP_MULTIPRECISION_ENABLED)
     add_definitions(-DTEQP_MULTIPRECISION_ENABLED)
-else()
-    add_definitions(-DMULTICOMPLEX_NO_MULTIPRECISION)
 endif()
+
 
 if (NOT TEQP_NO_PYTHON)
     add_definitions(-DUSE_AUTODIFF)
