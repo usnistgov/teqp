@@ -1,13 +1,15 @@
 #pragma once
 
-#include <complex>
+//#include <complex>
 #include <map>
 #include <tuple>
 
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
 #include "MultiComplex/MultiComplex.hpp"
+#endif
 
 // autodiff include
 #include <autodiff/forward/dual.hpp>
@@ -110,7 +112,12 @@ struct AlphaCallWrapper {
     }
 };
 
-enum class ADBackends { autodiff, multicomplex, complex_step };
+enum class ADBackends { autodiff
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
+    ,multicomplex
+#endif
+//    ,complex_step
+};
 
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
 struct TDXDerivatives {
@@ -138,17 +145,19 @@ struct TDXDerivatives {
                 auto f = [&w, &T, &molefrac](const auto& rho__) { return w.alpha(T, rho__, molefrac); };
                 return powi(rho, iD)*derivatives(f, along(1), at(rho_))[iD];
             }
-            else if constexpr (iD == 1 && be == ADBackends::complex_step) {
-                double h = 1e-100;
-                auto rho_ = std::complex<Scalar>(rho, h);
-                return powi(rho, iD) * w.alpha(T, rho_, molefrac).imag() / h;
-            }
+//            else if constexpr (iD == 1 && be == ADBackends::complex_step) {
+//                double h = 1e-100;
+//                auto rho_ = std::complex<Scalar>(rho, h);
+//                return powi(rho, iD) * w.alpha(T, rho_, molefrac).imag() / h;
+//            }
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
                 fcn_t f = [&](const auto& rhomcx) { return w.alpha(T, rhomcx, molefrac); };
                 auto ders = diff_mcx1(f, rho, iD, true /* and_val */);
                 return powi(rho, iD)*ders[iD];
             }
+#endif
             else {
                 throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iT == 0");
             }
@@ -161,17 +170,19 @@ struct TDXDerivatives {
                 auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(1.0/Trecip__, rho, molefrac); };
                 return powi(Trecip, iT)*derivatives(f, along(1), at(Trecipad))[iT];
             }
-            else if constexpr (iT == 1 && be == ADBackends::complex_step) {
-                double h = 1e-100;
-                auto Trecipcsd = std::complex<Scalar>(Trecip, h);
-                return powi(Trecip, iT)* w.alpha(1/Trecipcsd, rho, molefrac).imag()/h;
-            }
+//            else if constexpr (iT == 1 && be == ADBackends::complex_step) {
+//                double h = 1e-100;
+//                auto Trecipcsd = std::complex<Scalar>(Trecip, h);
+//                return powi(Trecip, iT)* w.alpha(1/Trecipcsd, rho, molefrac).imag()/h;
+//            }
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
                 fcn_t f = [&](const auto& Trecipmcx) { return w.alpha(1.0/Trecipmcx, rho, molefrac); };
                 auto ders = diff_mcx1(f, Trecip, iT, true /* and_val */);
                 return powi(Trecip, iT)*ders[iT];
             }
+#endif
             else {
                 throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iD == 0");
             }
@@ -185,6 +196,7 @@ struct TDXDerivatives {
                 auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad));
                 return powi(1.0 / T, iT) * powi(rho, iD) * der[der.size() - 1];
             }
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
                 const fcn_t func = [&w, &molefrac](const auto& zs) {
@@ -196,6 +208,7 @@ struct TDXDerivatives {
                 auto der = mcx::diff_mcxN(func, xs, order);
                 return powi(1.0 / T, iT)*powi(rho, iD)*der;
             }
+#endif
             else {
                 throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iD > 0 and iT > 0");
             }
@@ -289,6 +302,7 @@ struct TDXDerivatives {
             }
             return o;
         }
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
         else {
             using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
             bool and_val = true;
@@ -299,6 +313,7 @@ struct TDXDerivatives {
             }
             return o;
         }
+#endif
         throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar0n");
     }
     
@@ -315,6 +330,7 @@ struct TDXDerivatives {
                 o[n] = powi(Trecip, n) * ders[n];
             }
         }
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
         else if constexpr (be == ADBackends::multicomplex) {
             using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
             fcn_t f = [&](const auto& Trecipmcx) { return w.alpha(1.0/Trecipmcx, rho, molefrac); };
@@ -323,6 +339,7 @@ struct TDXDerivatives {
                 o[n] = powi(Trecip, n) * ders[n];
             }
         }
+#endif
         else {
             throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenn0");
         }
@@ -434,7 +451,16 @@ struct VirialDerivatives {
     static auto get_Bnvir(const Model& model, const Scalar &T, const VectorType& molefrac) 
     {
         std::map<int, double> dnalphardrhon;
-        if constexpr(be == ADBackends::multicomplex){
+        if constexpr(be == ADBackends::autodiff){
+            autodiff::HigherOrderDual<Nderiv, double> rhodual = 0.0;
+            auto f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
+            auto derivs = derivatives(f, wrt(rhodual), at(rhodual));
+            for (auto n = 1; n < Nderiv; ++n){
+                 dnalphardrhon[n] = derivs[n];
+            }
+        }
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
+        else if constexpr(be == ADBackends::multicomplex){
             using namespace mcx;
             using fcn_t = std::function<MultiComplex<double>(const MultiComplex<double>&)>;
             fcn_t f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
@@ -443,14 +469,7 @@ struct VirialDerivatives {
                 dnalphardrhon[n] = derivs[n];
             }
         }
-        else if constexpr(be == ADBackends::autodiff){
-            autodiff::HigherOrderDual<Nderiv, double> rhodual = 0.0;
-            auto f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
-            auto derivs = derivatives(f, wrt(rhodual), at(rhodual));
-            for (auto n = 1; n < Nderiv; ++n){
-                 dnalphardrhon[n] = derivs[n];
-            }
-        }
+#endif
         else{
             //static_assert(false, "algorithmic differentiation backend is invalid");
             throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Bnvir");
@@ -502,24 +521,26 @@ struct VirialDerivatives {
     {
         std::map<int, Scalar> o;
         auto factorial = [](int N) {return tgamma(N + 1); };
-        if constexpr (be == ADBackends::multicomplex) {
-            using namespace mcx;
-            using fcn_t = std::function<MultiComplex<double>(const std::valarray<MultiComplex<double>>&)>;
-            fcn_t f = [&model, &molefrac](const auto& zs) { 
-                auto T_ = zs[0], rho_ = zs[1];
-                return model.alphar(T_, rho_, molefrac); 
-            };
-            std::valarray<double> at = { T, 0.0 };
-            auto deriv = diff_mcxN(f, at, { NTderiv, Nderiv-1});
-            return deriv / factorial(Nderiv - 2);
-        }
-        else if constexpr (be == ADBackends::autodiff) {
+        if constexpr (be == ADBackends::autodiff) {
             autodiff::HigherOrderDual<NTderiv + Nderiv-1, double> rhodual = 0.0, Tdual = T;
             auto f = [&model, &molefrac](const auto& T_, const auto& rho_) { return model.alphar(T_, rho_, molefrac); };
             auto wrts = std::tuple_cat(build_duplicated_tuple<NTderiv>(std::ref(Tdual)), build_duplicated_tuple<Nderiv-1>(std::ref(rhodual)));
             auto derivs = derivatives(f, std::apply(wrt_helper(), wrts), at(Tdual, rhodual));
             return derivs.back() / factorial(Nderiv - 2);
         }
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
+        else if constexpr (be == ADBackends::multicomplex) {
+            using namespace mcx;
+            using fcn_t = std::function<MultiComplex<double>(const std::valarray<MultiComplex<double>>&)>;
+            fcn_t f = [&model, &molefrac](const auto& zs) {
+                auto T_ = zs[0], rho_ = zs[1];
+                return model.alphar(T_, rho_, molefrac);
+            };
+            std::valarray<double> at = { T, 0.0 };
+            auto deriv = diff_mcxN(f, at, { NTderiv, Nderiv-1});
+            return deriv / factorial(Nderiv - 2);
+        }
+#endif
         else {
             //static_assert(false, "algorithmic differentiation backend is invalid");
             throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Bnvir");
@@ -790,15 +811,17 @@ struct IsochoricDerivatives{
     /* Convenience function to select the correct implementation at compile-time */
     template<ADBackends be = ADBackends::autodiff>
     static auto build_Psir_gradient(const Model& model, const Scalar& T, const VectorType& rho) {
-        if constexpr (be == ADBackends::multicomplex) {
-            return build_Psir_gradient_multicomplex(model, T, rho);
-        }
-        else if constexpr (be == ADBackends::autodiff) {
+        if constexpr (be == ADBackends::autodiff) {
             return build_Psir_gradient_autodiff(model, T, rho);
         }
-        else if constexpr (be == ADBackends::complex_step) {
-            return build_Psir_gradient_complex_step(model, T, rho);
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
+        else if constexpr (be == ADBackends::multicomplex) {
+            return build_Psir_gradient_multicomplex(model, T, rho);
         }
+#endif
+//        else if constexpr (be == ADBackends::complex_step) {
+//            return build_Psir_gradient_complex_step(model, T, rho);
+//        }
     }
 
     /***

@@ -82,6 +82,10 @@ option (TEQP_JAVASCRIPT_EMBIND
 option (TEQP_MULTIPRECISION_ENABLED
         "Enable the use of boost::multiprecision"
         OFF)
+        
+option (TEQP_MULTICOMPLEX_ENABLED
+        "Enable the use of multi-complex arithmetic for taking derivatives"
+        OFF)
 
 if (NOT TEQP_NO_TEQPCPP)
   # Add a static library with the C++ interface that uses only STL
@@ -117,6 +121,10 @@ if (TEQP_MULTIPRECISION_ENABLED)
     add_definitions(-DTEQP_MULTIPRECISION_ENABLED)
 endif()
 
+if (TEQP_MULTICOMPLEX_ENABLED)
+    add_definitions(-DTEQP_MULTICOMPLEX_ENABLED)
+endif()
+
 
 if (NOT TEQP_NO_PYTHON)
     add_definitions(-DUSE_AUTODIFF)
@@ -139,6 +147,7 @@ if (NOT TEQP_NO_TESTS)
       target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
   endif()
   target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
+  target_compile_definitions(catch_tests PRIVATE -DTEQP_MULTICOMPLEX_ENABLED)
   target_link_libraries(catch_tests PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain PUBLIC teqpcpp)
   add_test(normal_tests catch_tests)
 endif()
@@ -193,6 +202,7 @@ if (TEQP_SNIPPETS)
     if(UNIX)
       target_link_libraries (${snippet_exe} PRIVATE ${CMAKE_DL_LIBS})
     endif()
+    target_compile_definitions(${snippet_exe} PRIVATE -DTEQP_MULTICOMPLEX_ENABLED)
 
     if(TEQP_JAVASCRIPT_HTML)
       # All the generated executables will compile to HTML with no prefix and file extension of HTML
