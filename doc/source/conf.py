@@ -17,6 +17,7 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+here = os.path.dirname(__file__)
 
 # -- Project information -----------------------------------------------------
 
@@ -33,7 +34,7 @@ release = teqp.__version__
 # Run doxygen
 if not os.path.exists('source/_static/'):
     os.makedirs('source/_static')
-subprocess.check_call('doxygen', cwd='..', shell=True)
+subprocess.check_call('doxygen Doxyfile', cwd=here+'/../..', shell=True)
 
 if on_rtd:
     # subprocess.check_output(f'jupyter nbconvert --version', shell=True)
@@ -45,7 +46,7 @@ if on_rtd:
 
 
 ### -- Auto-generate API documentation -----------------------------------------
-here = os.path.dirname(__file__)
+
 subprocess.check_output(f'sphinx-apidoc -f -o api {os.path.dirname(teqp.__file__)}', shell=True, cwd=here)
 
 # -- General configuration ---------------------------------------------------
