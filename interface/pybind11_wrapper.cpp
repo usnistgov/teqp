@@ -137,6 +137,15 @@ void attach_model_specific_methods(py::object& obj){
             return teqp::MultiFluidVLEAncillaries(jancillaries);
         }, "self"_a, py::arg_v("i", std::nullopt, "None")), obj));
     }
+    else if (std::holds_alternative<idealgas_t>(model)){
+        // Here X-Macros are used to create functions like get_Aig00, get_Aig01, ....
+        #define X(i,j) setattr(stringify(get_Aig ## i ## j), MethodType(py::cpp_function([](py::object& o, double T, double rho, REArrayd& molefrac){ \
+                using tdx = teqp::TDXDerivatives<idealgas_t, double, REArrayd>; \
+                return tdx::template get_Aigxy<i,j>(get_typed<idealgas_t>(o), T, rho, molefrac); \
+                }, "self"_a, "T"_a, "rho"_a, "molefrac"_a.noconvert()), obj));
+            ARXY_args
+        #undef X
+    }
     else if (std::holds_alternative<multifluidmutant_t>(model)){
         attach_multifluid_methods<multifluidmutant_t>(obj);
     }
