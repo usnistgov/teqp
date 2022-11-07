@@ -20,7 +20,7 @@ TEST_CASE("Simplest case","[alphaig]") {
     j.push_back(demo_pure_term(a_1, a_2));
     IdealHelmholtz ih(j);
     std::valarray<double> molefrac{1.0};
-    REQUIRE(ih.alphaig(T, 1, molefrac) == log(1) + a_1 + a_2 / T);
+    REQUIRE(ih.alphaig(T, 1.0, molefrac) == log(1.0) + a_1 + a_2 / T);
 }
 
 TEST_CASE("alphaig derivative", "[alphaig]") {
