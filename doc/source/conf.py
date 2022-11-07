@@ -29,6 +29,12 @@ import teqp
 release = teqp.__version__
 
 # -- Execute all notebooks --------------------------------------------------
+
+# Run doxygen
+if not os.path.exists('source/_static/'):
+    os.makedirs('source/_static')
+subprocess.check_call('doxygen', cwd='..', shell=True)
+
 if on_rtd:
     # subprocess.check_output(f'jupyter nbconvert --version', shell=True)
     for path, dirs, files in os.walk('.'):
@@ -36,10 +42,7 @@ if on_rtd:
             if file.endswith('.ipynb') and '.ipynb_checkpoints' not in path:
                 subprocess.check_output(f'jupyter nbconvert  --to notebook --output {file} --execute {file}', shell=True, cwd=path)
                 # --ExecutePreprocessor.allow_errors=True      (this allows you to allow errors globally, but a raises-exception cell tag is better)
-# Run doxygen
-if not os.path.exists('source/_static/'):
-    os.makedirs('source/_static')
-subprocess.check_call('doxygen', cwd='..', shell=True)
+
 
 ### -- Auto-generate API documentation -----------------------------------------
 here = os.path.dirname(__file__)
