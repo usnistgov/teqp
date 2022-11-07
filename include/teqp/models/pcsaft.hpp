@@ -76,7 +76,7 @@ auto get_a(TYPE mbar) {
     static Eigen::ArrayXd a_0 = (Eigen::ArrayXd(7) << 0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084).finished();
     static Eigen::ArrayXd a_1 = (Eigen::ArrayXd(7) << -0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930).finished();
     static Eigen::ArrayXd a_2 = (Eigen::ArrayXd(7) << -0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368).finished();
-    return forceeval(a_0.cast<TYPE>() + ((mbar - 1.0) / mbar) * a_1.cast<TYPE>() + ((mbar - 1.0) / mbar * (mbar - 2.0) / mbar) * a_2.cast<TYPE>()).eval();
+    return forceeval(a_0.cast<TYPE>().array() + ((mbar - 1.0) / mbar) * a_1.cast<TYPE>().array() + ((mbar - 1.0) / mbar * (mbar - 2.0) / mbar) * a_2.cast<TYPE>().array()).eval();
 }
 /// Eqn. A.19
 template<typename TYPE>
@@ -85,7 +85,7 @@ auto get_b(TYPE mbar) {
     static Eigen::ArrayXd b_0 = (Eigen::ArrayXd(7) << 0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612).finished();
     static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(7) << -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346).finished();
     static Eigen::ArrayXd b_2 = (Eigen::ArrayXd(7) << 0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585).finished();
-    return forceeval(b_0.cast<TYPE>() + (mbar - 1.0) / mbar * b_1.cast<TYPE>() + (mbar - 1.0) / mbar * (mbar - 2.0) / mbar * b_2.cast<TYPE>()).eval();
+    return forceeval(b_0.cast<TYPE>().array() + (mbar - 1.0) / mbar * b_1.cast<TYPE>().array() + (mbar - 1.0) / mbar * (mbar - 2.0) / mbar * b_2.cast<TYPE>().array()).eval();
 }
 /// Residual contribution to alphar from hard-sphere (Eqn. A.6)
 template<typename VecType>
@@ -165,7 +165,7 @@ Sum up the coefficient-wise product of three array-like objects that can each ha
 template<typename VecType1, typename VecType2, typename VecType3>
 auto sumproduct(const VecType1& v1, const VecType2& v2, const VecType3& v3) {
     using ResultType = typename std::common_type_t<decltype(v1[0]), decltype(v2[0]), decltype(v3[0])>;
-    return forceeval((v1.template cast<ResultType>() * v2.template cast<ResultType>() * v3.template cast<ResultType>()).sum());
+    return forceeval((v1.template cast<ResultType>().array() * v2.template cast<ResultType>().array() * v3.template cast<ResultType>().array()).sum());
 }
 
 /// Parameters for model evaluation
