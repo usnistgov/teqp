@@ -32,8 +32,8 @@ release = teqp.__version__
 # -- Execute all notebooks --------------------------------------------------
 
 # Run doxygen
-if not os.path.exists('source/_static/'):
-    os.makedirs('source/_static')
+if not os.path.exists(here+'/_static/'):
+    os.makedirs(here+'/_static')
 subprocess.check_call('doxygen Doxyfile', cwd=here+'/../..', shell=True)
 
 if on_rtd:
