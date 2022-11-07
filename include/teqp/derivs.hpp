@@ -1,6 +1,6 @@
 #pragma once
 
-//#include <complex>
+#include <complex>
 #include <map>
 #include <tuple>
 
@@ -116,7 +116,7 @@ enum class ADBackends { autodiff
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
     ,multicomplex
 #endif
-//    ,complex_step
+    ,complex_step
 };
 
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
@@ -145,11 +145,11 @@ struct TDXDerivatives {
                 auto f = [&w, &T, &molefrac](const auto& rho__) { return w.alpha(T, rho__, molefrac); };
                 return powi(rho, iD)*derivatives(f, along(1), at(rho_))[iD];
             }
-//            else if constexpr (iD == 1 && be == ADBackends::complex_step) {
-//                double h = 1e-100;
-//                auto rho_ = std::complex<Scalar>(rho, h);
-//                return powi(rho, iD) * w.alpha(T, rho_, molefrac).imag() / h;
-//            }
+            else if constexpr (iD == 1 && be == ADBackends::complex_step) {
+                double h = 1e-100;
+                auto rho_ = std::complex<Scalar>(rho, h);
+                return powi(rho, iD) * w.alpha(T, rho_, molefrac).imag() / h;
+            }
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
@@ -170,11 +170,11 @@ struct TDXDerivatives {
                 auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(1.0/Trecip__, rho, molefrac); };
                 return powi(Trecip, iT)*derivatives(f, along(1), at(Trecipad))[iT];
             }
-//            else if constexpr (iT == 1 && be == ADBackends::complex_step) {
-//                double h = 1e-100;
-//                auto Trecipcsd = std::complex<Scalar>(Trecip, h);
-//                return powi(Trecip, iT)* w.alpha(1/Trecipcsd, rho, molefrac).imag()/h;
-//            }
+            else if constexpr (iT == 1 && be == ADBackends::complex_step) {
+                double h = 1e-100;
+                auto Trecipcsd = std::complex<Scalar>(Trecip, h);
+                return powi(Trecip, iT)* w.alpha(1/Trecipcsd, rho, molefrac).imag()/h;
+            }
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
@@ -819,9 +819,9 @@ struct IsochoricDerivatives{
             return build_Psir_gradient_multicomplex(model, T, rho);
         }
 #endif
-//        else if constexpr (be == ADBackends::complex_step) {
-//            return build_Psir_gradient_complex_step(model, T, rho);
-//        }
+        else if constexpr (be == ADBackends::complex_step) {
+            return build_Psir_gradient_complex_step(model, T, rho);
+        }
     }
 
     /***
