@@ -1,0 +1,20 @@
+# This .yml file is used to specify the conda environment that should be loaded into the RTD instance
+name: teqpdocs
+dependencies:
+  - python=3.10
+  - pip
+  - doxygen
+  - cmake
+  - pip:
+    - breathe
+    - teqp
+    - numpy
+    - scipy
+    - jupyter
+    - notebook
+    - nbconvert
+    - nbsphinx
+    - pandas
+    - matplotlib
+    - PCSAFTsuperanc
+    - sphinxcontrib-doxylink

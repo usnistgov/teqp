@@ -10,3 +10,5 @@
 /dev/docker/gcov/output
 /**/.ipynb_checkpoints
 /doc/build
+doc/source/_static/doxygen
+doc/source/api/*.rst

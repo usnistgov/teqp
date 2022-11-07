@@ -36,6 +36,10 @@ if on_rtd:
             if file.endswith('.ipynb') and '.ipynb_checkpoints' not in path:
                 subprocess.check_output(f'jupyter nbconvert  --to notebook --output {file} --execute {file}', shell=True, cwd=path)
                 # --ExecutePreprocessor.allow_errors=True      (this allows you to allow errors globally, but a raises-exception cell tag is better)
+# Run doxygen
+if not os.path.exists('source/_static/'):
+    os.makedirs('source/_static')
+subprocess.check_call('doxygen', cwd='..', shell=True)
 
 ### -- Auto-generate API documentation -----------------------------------------
 here = os.path.dirname(__file__)
@@ -48,7 +52,8 @@ subprocess.check_output(f'sphinx-apidoc -f -o api {os.path.dirname(teqp.__file__
 # ones.
 extensions = [
 'nbsphinx',
-'sphinx.ext.autodoc'
+'sphinx.ext.autodoc',
+'sphinxcontrib.doxylink',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -58,6 +63,10 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
+
+doxylink = {
+    'teqp' : ('source/_static/doxygen/html/teqp.tag', '_static/doxygen/html'),
+}
 
 # -- Options for HTML output -------------------------------------------------
 
