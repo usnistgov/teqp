@@ -13,3 +13,4 @@
 /**/.DS_Store
 doc/source/_static/doxygen
 doc/source/api/*.rst
+doc/source/examples/*.pdf
