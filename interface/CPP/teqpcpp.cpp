@@ -86,7 +86,7 @@ namespace teqp {
             }
             std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& flags) const override {
                 return std::visit([&](const auto& model) {
-                    return teqp::solve_pure_critical(model, T, rho, flags.value());
+                    return teqp::solve_pure_critical(model, T, rho, flags.value_or(nlohmann::json{}));
                 }, m_model);
             }
             std::tuple<EArrayd, EMatrixd> get_pure_critical_conditions_Jacobian(const double T, const double rho, int alternative_pure_index, int alternative_length) const override {
