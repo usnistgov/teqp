@@ -114,6 +114,8 @@ endif()
 
 if (TEQP_MULTIPRECISION_ENABLED)
     add_definitions(-DTEQP_MULTIPRECISION_ENABLED)
+else()
+    add_definitions(-DMULTICOMPLEX_NO_MULTIPRECISION)
 endif()
 
 if (NOT TEQP_NO_PYTHON)
