@@ -68,8 +68,6 @@ inline auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BT
 
 template<typename BType, typename TType, typename RhoType, typename VecType>
 inline auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double betaABi, const BType b_cubic, const TType RT, const RhoType rhomolar, const VecType& molefrac) {
-    
-    using std::sqrt;
 
     // Matrix XA(A, j) that contains all of the fractions of sites A not bonded to other active sites for each molecule i
     // Start values for the iteration(set all sites to non - bonded, = 1)
@@ -128,8 +126,6 @@ inline auto get_cubic_flag(const std::string& s) {
 
 class CPACubic {
 private:
-    using std::sqrt;
-
     std::valarray<double> a0, bi, c1, Tc;
     double delta_1, delta_2;
     std::valarray<std::valarray<double>> k_ij;
