@@ -6,6 +6,7 @@ Welcome to teqp's documentation!
    :caption: Contents:
 
    getting_started/index
+   cpp/index
    models/index
    derivs/index
    algorithms/index
