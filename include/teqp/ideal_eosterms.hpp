@@ -323,7 +323,7 @@ namespace teqp {
             }
             std::size_t i = 0;
             for (auto &pure : pures){
-                if (molefrac[i] != 0){
+                if (getbaseval(molefrac[i]) != 0){
                     ig += molefrac[i]*(pure.alphaig(T, rho) + log(molefrac[i]));
                 }
                 else{

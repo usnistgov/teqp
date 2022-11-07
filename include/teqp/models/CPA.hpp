@@ -123,8 +123,10 @@ inline auto get_cubic_flag(const std::string& s) {
     }
 }
 
+
 class CPACubic {
 private:
+    using std::sqrt;
 
     std::valarray<double> a0, bi, c1, Tc;
     double delta_1, delta_2;
