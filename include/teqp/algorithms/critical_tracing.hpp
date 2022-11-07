@@ -170,7 +170,7 @@ struct CriticalTracing {
         fcn_t wrapper = [&rhovecmcx, &v0, &T, &model](const MultiComplex<double>& sigma_1) {
             Eigen::Vector<MultiComplex<double>, Eigen::Dynamic> rhovecused = rhovecmcx + sigma_1 * v0;
             auto rhotot = rhovecused.sum();
-            auto molefrac = rhovecused / rhotot;
+            auto molefrac = (rhovecused / rhotot).eval();
             return model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot;
         };
         auto psir_derivs_ = diff_mcx1(wrapper, 0.0, 4, true);
