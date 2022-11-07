@@ -141,6 +141,7 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
+                using std::abs;
                 TType cosh_theta_over_T = cosh(theta[i] / T);
                 summer += n[i] * log(abs(cosh_theta_over_T));
             }
@@ -162,6 +163,7 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
+                using std::abs;
                 TType sinh_theta_over_T = sinh(theta[i] / T);
                 summer += n[i] * log(abs(sinh_theta_over_T));
             }
