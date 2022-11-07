@@ -79,7 +79,7 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
-                summer = summer + n[i] * pow(T, t[i]);
+                summer += n[i] * pow(T, t[i]);
             }
             return forceeval(summer);
         }
@@ -97,7 +97,7 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
-                summer = summer + n[i] * log(1.0 - exp(-theta[i] / T));
+                summer += n[i] * log(1.0 - exp(-theta[i] / T));
             }
             return forceeval(summer);
         }
@@ -121,7 +121,7 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
-                summer = summer + n[i] * log(c[i] + d[i]*exp(theta[i] / T));
+                summer += n[i] * log(c[i] + d[i]*exp(theta[i] / T));
             }
             return forceeval(summer);
         }
@@ -141,7 +141,8 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
-                summer = summer + n[i] * log(abs(cosh(theta[i] / T)));
+                TType theta_over_T = theta[i] / T;
+                summer += n[i] * log(abs(cosh(theta_over_T)));
             }
             return forceeval(summer);
         }
@@ -161,7 +162,8 @@ namespace teqp {
         auto alphaig(const TType& T, const RhoType& rho) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
-                summer = summer + n[i] * log(abs(sinh(theta[i] / T)));
+                TType theta_over_T = theta[i] / T;
+                summer += n[i] * log(abs(sinh(theta_over_T)));
             }
             return forceeval(summer);
         }
