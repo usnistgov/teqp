@@ -10,6 +10,9 @@ using Catch::Approx;
 using namespace teqp::PCSAFT;
 using namespace teqp;
 
+#include "boost/multiprecision/cpp_bin_float.hpp"
+#include "boost/multiprecision/cpp_complex.hpp"
+
 TEST_CASE("Single alphar check value", "[PCSAFT]")
 {
     std::vector<std::string> names = { "Methane" };
