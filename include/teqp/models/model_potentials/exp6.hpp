@@ -105,6 +105,11 @@ public:
     template<typename MoleFracType>
     double R(const MoleFracType &) const { return 1.0; }
     
+    /// Return the alpha parameter
+    auto get_alpha() const{
+        return alphastar*10+8;
+    }
+    
     /**
     \param Tstar \f$T^*=T/\epsilon/k \f$
     \param rhostar \f$\rho^*=\rho_{\rm N}\sigma^3 \f$

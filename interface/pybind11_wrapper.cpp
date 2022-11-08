@@ -149,10 +149,14 @@ void attach_model_specific_methods(py::object& obj){
     else if (std::holds_alternative<multifluidmutant_t>(model)){
         attach_multifluid_methods<multifluidmutant_t>(obj);
     }
-    // EXP-6, SW, LJ
+    else if (std::holds_alternative<SW_EspindolaHeredia2009_t>(model)){
+        // Have to use a method because lambda is a reserved word in Python
+        setattr("get_lambda", MethodType(py::cpp_function([](py::object& o){ return get_typed<SW_EspindolaHeredia2009_t>(o).get_lambda(); }, "self"_a), obj));
+    }
+    else if (std::holds_alternative<EXP6_Kataoka1992_t>(model)){
+        setattr("alpha", get_typed<EXP6_Kataoka1992_t>(obj).get_alpha());
+    }
 };
-
-
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {

@@ -166,6 +166,11 @@ public:
     template<typename MoleFracType>
     double R(const MoleFracType &) const { return 1.0; }
     
+    /// Return the lambda parameter
+    auto get_lambda() const {
+        return lambda;
+    }
+    
     /**
         \param Tstar: \f$T^*=T/\epsilon/k \f$
         \param rhostar: \f$\rho^*=\rho_{\rm N}\sigma^3 \f$
