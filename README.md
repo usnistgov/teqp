@@ -30,6 +30,14 @@ Written by Ian Bell, NIST.
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.14.0 :
+
+  * Massive re-working of the c++ interface. There is now a "public interface" of teqp defined in the ``teqp/cpp/teqpcpp.hpp`` header, with the model contained in a private type-safe variant. This results in much faster incremental compiles in C++ (in general).
+  * [Breaking]: Functions ``get_Ar10iso`` and ``get_Ar00iso`` removed, superceded by ``get_Ar00`` and ``get_Ar10``. Function ``get_Psiriso`` removed.
+  * [Breaking]: ``rho`` keyword argument to isochoric derivatives replaced with ``rhovec``
+  * [Breaking]: ``convert_CoolProp_format`` static method of IdealHelmholtz hoisted to free function ``convert_CoolProp_idealgas``
+  * [Breaking]: Format of ideal-gas Helmholtz term is changed to include gas constant R everywhere
+  
 * 0.13.0 :
 
   * Added 2-center Lennard-Jones models to the C++ code (thanks to Sven Pohl)
