@@ -77,11 +77,11 @@ void attach_multifluid_methods(py::object&obj){
     auto MethodType = py::module_::import("types").attr("MethodType");
     setattr("get_Tcvec", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).redfunc.Tc; }), obj));
     setattr("get_vcvec", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).redfunc.vc; }), obj));
-    setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<TYPE>(o).redfunc.get_Tr(molefrac); }), obj));
-    setattr("get_rhor", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<TYPE>(o).redfunc.get_rhor(molefrac); }), obj));
+    setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<TYPE>(o).redfunc.get_Tr(molefrac); }, "self"_a, "molefrac"_a.noconvert()), obj));
+    setattr("get_rhor", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<TYPE>(o).redfunc.get_rhor(molefrac); }, "self"_a, "molefrac"_a.noconvert()), obj));
     setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).get_meta(); }), obj));
-    setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<TYPE>(o).set_meta(s); }), obj));
-    setattr("get_alpharij", MethodType(py::cpp_function([](py::object& o, const int i, const int j, const double tau, const double delta){ return get_typed<TYPE>(o).dep.get_alpharij(i,j,tau,delta); }), obj));
+    setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<TYPE>(o).set_meta(s); }, "self"_a, "s"_a), obj));
+    setattr("get_alpharij", MethodType(py::cpp_function([](py::object& o, const int i, const int j, const double tau, const double delta){ return get_typed<TYPE>(o).dep.get_alpharij(i,j,tau,delta); }, "self"_a, "i"_a, "j"_a, "tau"_a, "delta"_a), obj));
 }
 
 // You cannot know at runtime what is contained in the model so you must iterate
@@ -100,26 +100,26 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_m", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_m(); }), obj));
         setattr("get_sigma_Angstrom", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_sigma_Angstrom(); }), obj));
         setattr("get_epsilon_over_k_K", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_epsilon_over_k_K(); }), obj));
-        setattr("max_rhoN", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<PCSAFT_t>(o).max_rhoN(T, molefrac); }), obj));
+        setattr("max_rhoN", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<PCSAFT_t>(o).max_rhoN(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
     }
     else if (std::holds_alternative<canonical_cubic_t>(model)){
-        setattr("get_a", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_a(T, molefrac); }), obj));
-        setattr("get_b", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_b(T, molefrac); }), obj));
-        setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<canonical_cubic_t>(o).superanc_rhoLV(T); }), obj));
+        setattr("get_a", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_a(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
+        setattr("get_b", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_b(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
+        setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<canonical_cubic_t>(o).superanc_rhoLV(T); }, "self"_a, "T"_a), obj));
     }
     else if (std::holds_alternative<AmmoniaWaterTillnerRoth>(model)){
         setattr("TcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).TcNH3);
         setattr("vcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).vcNH3);
-        setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_Treducing(molefrac); }), obj));
-        setattr("get_rhor", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_rhoreducing(molefrac); }), obj));
-        setattr("alphar_departure", MethodType(py::cpp_function([](py::object& o, const double tau, const double delta, const double xNH3){ return get_typed<AmmoniaWaterTillnerRoth>(o).alphar_departure(tau, delta, xNH3); }), obj));
+        setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_Treducing(molefrac); }, "self"_a, "molefrac"_a), obj));
+        setattr("get_rhor", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_rhoreducing(molefrac); }, "self"_a, "molefrac"_a), obj));
+        setattr("alphar_departure", MethodType(py::cpp_function([](py::object& o, const double tau, const double delta, const double xNH3){ return get_typed<AmmoniaWaterTillnerRoth>(o).alphar_departure(tau, delta, xNH3); }, "self"_a, "tau"_a, "delta"_a, "xNH3"_a), obj));
         setattr("dalphar_departure_ddelta", MethodType(py::cpp_function([](py::object& o, const double tau, const double delta, const double xNH3){
             // Calculate with complex step derivatives
             double h = 1e-100;
             const auto& m = get_typed<AmmoniaWaterTillnerRoth>(o);
             std::complex<double> delta_(delta, h);
             return m.alphar_departure(tau, delta_, xNH3).imag()/h;
-        }), obj));
+        }, "self"_a, "tau"_a, "delta"_a, "xNH3"_a), obj));
     }
     else if (std::holds_alternative<multifluid_t>(model)){
         attach_multifluid_methods<multifluid_t>(obj);
