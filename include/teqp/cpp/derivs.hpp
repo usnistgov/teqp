@@ -9,15 +9,15 @@ namespace cppinterface{
 struct IterationMatrices{
     std::vector<char> vars; ///< The set of variables matching the rows in the Jacobian
     Eigen::ArrayXXd J; ///< The Jacobian
-    Eigen::ArrayXd v; ///< The values of the thermodynamic variables matchign the variables in vars
+    Eigen::ArrayXd v; ///< The values of the thermodynamic variables matching the variables in vars
 };
 
 /**
- \brief A convenience function for calculation of Jacobian terms of the form \f$ J_{i0} = \frac{\partial y}{\partial T} \f$  and \f$ J_{i1} = \frac{\partial y}{\partial \rho} \f$ where $y$ is one of the thermodynamic variables in vars
+ \brief A convenience function for calculation of Jacobian terms of the form \f$ J_{i0} = \frac{\partial y}{\partial T} \f$  and \f$ J_{i1} = \frac{\partial y}{\partial \rho} \f$ where \f$y\f$ is one of the thermodynamic variables in vars
  
  \param vars A set of chars, allowed are 'H','S','U','P','T','D'
- \param Ar The matrix of derivatives of $\alpha^{\rm r}, perhaps obtained from teqp::DerivativeHolderSquare, or via get_deriv_mat2 of the AbstractModel
- \param Aig The matrix of derivatives of $\alpha^{\rm ig}, perhaps obtained from teqp::DerivativeHolderSquare, or via get_deriv_mat2 of the AbstractModel
+ \param Ar The matrix of derivatives of \f$\alpha^{\rm r}\f$, perhaps obtained from teqp::DerivativeHolderSquare, or via get_deriv_mat2 of the AbstractModel
+ \param Aig The matrix of derivatives of \f$\alpha^{\rm ig}\f$, perhaps obtained from teqp::DerivativeHolderSquare, or via get_deriv_mat2 of the AbstractModel
  \param R The molar gas constant
  \param T Temperature
  \param rho Molar density
