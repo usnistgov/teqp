@@ -11,6 +11,7 @@
 #include "teqp/derivs.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/models/multifluid_ancillaries.hpp"
+#include "teqp/algorithms/iteration.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -352,6 +353,18 @@ void init_teqp(py::module& m) {
     
     m.def("_make_model", &teqp::cppinterface::make_model);
     m.def("attach_model_specific_methods", &attach_model_specific_methods);
+    
+    using namespace teqp::iteration;
+    py::class_<NRIterator>(m, "NRIterator")
+        .def(py::init<const std::shared_ptr<AbstractModel> &, const std::shared_ptr<AbstractModel> &, const std::vector<char>&, const Eigen::Ref<const Eigen::ArrayXd>&, double, double, const Eigen::Ref<const Eigen::ArrayXd>&>())
+        .def("take_step", &NRIterator::take_step)
+        .def("take_steps", &NRIterator::take_steps)
+        .def("get_vars", &NRIterator::get_vars)
+        .def("get_vals", &NRIterator::get_vals)
+        .def("get_molefrac", &NRIterator::get_molefrac)
+        .def("get_T", &NRIterator::get_T)
+        .def("get_rho", &NRIterator::get_rho)
+        ;
     
 //    // Some functions for timing overhead of interface
 //    m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });

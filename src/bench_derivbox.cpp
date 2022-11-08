@@ -6,11 +6,14 @@
 #include "teqp/derivs.hpp"
 #include "teqp/ideal_eosterms.hpp"
 
+#include "teqp/cpp/teqpcpp.hpp"
+#include "teqp/algorithms/iteration.hpp"
+
 using namespace teqp;
 
 TEST_CASE("multifluid derivatives", "[mf]")
 {
-    std::vector<std::string> names = { "Propane" };
+    std::vector<std::string> names = { "Ethane" };
     auto model = build_multifluid_model(names, "../mycp");
 
     double T = 300, rho = 2;
@@ -20,6 +23,15 @@ TEST_CASE("multifluid derivatives", "[mf]")
     auto jig = convert_CoolProp_idealgas(json.at("pures")[0].dump(), 0);
     nlohmann::json jigs = nlohmann::json::array(); jigs.push_back(jig);
     auto aig = teqp::IdealHelmholtz(jigs);
+    
+    auto amm = teqp::cppinterface::make_multifluid_model(names, "../mycp");
+    auto aigg = teqp::cppinterface::make_model({{"kind","IdealHelmholtz"}, {"model", jigs}});
+    
+    std::vector<char> vars = {'P', 'S'};
+    const auto vals = (Eigen::ArrayXd(2) << 300.0, 400.0).finished();
+    
+    Eigen::Ref<const Eigen::ArrayXd> rvals = vals, rz = z;
+    teqp::iteration::NRIterator NR(amm, aigg, vars, rvals, T, rho, rz);
     
     BENCHMARK("alphar") {
         return model.alphar(T, rho, z);
@@ -33,8 +45,24 @@ TEST_CASE("multifluid derivatives", "[mf]")
         return DerivativeHolderSquare<2,AlphaWrapperOption::idealgas>(aig, T, rho, z).derivs;
     };
     
-    BENCHMARK("IterationStepper matrix") {
-        std::vector<char> vars = {'P','S','T','D'};
-        return build_iteration_Jv(vars, model, aig, T, rho, z);
+    BENCHMARK("All residual derivatives (via AbstractModel) needed for first derivatives of h,s,u,p w.r.t. T&rho") {
+        return amm->get_deriv_mat2(T, rho, z);
     };
+    BENCHMARK("All residual derivatives (via AbstractModel) needed for first derivatives of h,s,u,p w.r.t. T&rho") {
+        return aigg->get_deriv_mat2(T, rho, z);
+    };
+    
+    BENCHMARK("Newton-Raphson construction") {
+        return teqp::iteration::NRIterator(amm, aigg, vars, rvals, T, rho, rz);
+    };
+    BENCHMARK("Newton-Raphson calc_step") {
+        return NR.calc_step(T, rho);
+    };
+    BENCHMARK("Newton-Raphson take_step") {
+        return NR.take_step();
+    };
+    BENCHMARK("Newton-Raphson take_steps") {
+        return NR.take_steps(5);
+    };
+    
 }
