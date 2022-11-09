@@ -31,7 +31,7 @@ public:
 
     /// The evaluation of \f$ \alpha^{\rm r}=a/(RT) \f$
     /// \param T The temperature
-    /// \param rho The molar density
+    /// \param rhotot The molar density
     /// \param molefrac The mole fractions of each component
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType &T, const RhoType& rhotot, const VecType &molefrac) const {
@@ -108,7 +108,7 @@ public:
 
     /// \brief Get the universal gas constant 
     /// Here the real universal gas constant, with no composition dependence
-    /// \param molefrac Array of mole fractions (ignored, but required to match other function calls)
+    /// \note The array of mole fractions are ignored, but required to match other function calls
     template<class VecType>
     auto R(const VecType& /*molefrac*/) const {
         return Ru;

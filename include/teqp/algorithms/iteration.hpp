@@ -36,7 +36,7 @@ public:
     /** Do the calculations needed for the step and return the step and the other data
     *  In C++, the copy will be elided (the return value will be moved)
     * \param T Temperature
-    * \param rhomolar Molar density
+    * \param rho Molar density
     */
     auto calc_step(double T, double rho){
         auto Ar = ar->get_deriv_mat2(T, rho, z);

@@ -99,6 +99,8 @@ private:
     const double alphastar;
     
 public:
+    /// Constructor
+    /// \param alpha
     Kataoka1992(double alpha) : alphastar((alpha-8)/10){};
     
     // We are in "simulation units", so R is 1.0, and T and rho are T^* and rho^*
@@ -113,6 +115,7 @@ public:
     /**
     \param Tstar \f$T^*=T/\epsilon/k \f$
     \param rhostar \f$\rho^*=\rho_{\rm N}\sigma^3 \f$
+    \param molefrac mole fractions
      */
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType& Tstar,

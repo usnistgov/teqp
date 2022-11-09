@@ -15,9 +15,18 @@ namespace squarewell{
  square-well fluid of variable range based on
  a fourth-order free-energy expansion
  J. Chem. Phys. 130, 024509 (2009); https://doi.org/10.1063/1.3054361
+
+ \f[
+     V(r) = \left\lbrace \begin{array}{cc}
+         \infty & r < \sigma \\
+         -\varepsilon & \sigma < r < \lambda\sigma \\
+         0 & r > \lambda \sigma
+         \end{array}\right.
+\f]
  
  Note: if needed, all the terms that don't depend on T or rho could be pre-calculated at model
  initialization for a small speed boost
+
  */
 class EspindolaHeredia2009{
 private:
@@ -172,13 +181,14 @@ public:
     }
     
     /**
-        \param Tstar: \f$T^*=T/\epsilon/k \f$
+        \param Tstar: \f$T^*=T/(\epsilon/k) \f$
         \param rhostar: \f$\rho^*=\rho_{\rm N}\sigma^3 \f$
+        \note mole fractions must be provided, but are ignored in this case
      */
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType& Tstar,
         const RhoType& rhostar,
-        const MoleFracType& molefrac) const
+        const MoleFracType& /*molefrac*/) const
     {
         auto a1 = get_a1(rhostar, lambda);
         auto a2 = get_a2(rhostar, lambda);

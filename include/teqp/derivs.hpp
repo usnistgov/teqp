@@ -439,10 +439,10 @@ struct VirialDerivatives {
 
     /**
     * \f$
-    * B_n = \frac{1}{(n-2)!} lim_rho\to 0 d^{n-1}alphar/drho^{n-1}|{T,z}
+    * B_n = \frac{1}{(n-2)!} \lim_{\rho\to 0} \left(\frac{\partial ^{n-1}\alpha^{\rm r}}{\partial \rho^{n-1}}\right)_{T,z}
     * \f$
+    * \tparam Nderiv The maximum virial coefficient to return; e.g. 5: B_2, B_3, ..., B_5
     * \param model The model providing the alphar function
-    * \param Nderiv The maximum virial coefficient to return; e.g. 5: B_2, B_3, ..., B_5
     * \param T Temperature
     * \param molefrac The mole fractions
     */
@@ -508,10 +508,10 @@ struct VirialDerivatives {
     * \brief Temperature derivatives of a virial coefficient
     * 
     * \f$
-    * \left(\frac{\partial^m{B_n}}{\partial T^m}\right) = \frac{1}{(n-2)!} lim_{\rho\to 0} d^{(n-1)*m}alphar/dT^m d\rho^{n-1}|{T,z}
+    * \left(\frac{\partial^m{B_n}}{\partial T^m}\right) = \frac{1}{(n-2)!} \lim_{\rho\to 0} \left(\frac{\partial ^{(n-1)+m}\alpha^{\rm r}}{\partial T^m \partial \rho^{n-1}}\right)_{T, z}
     * \f$
-    * \param Nderiv The virial coefficient to return; e.g. 5: B_5
-    * \param NTderiv The number of temperature derivatives to calculate
+    * \tparam Nderiv The virial coefficient to return; e.g. 5: B_5
+    * \tparam NTderiv The number of temperature derivatives to calculate
     * \param model The model providing the alphar function
     * \param T Temperature
     * \param molefrac The mole fractions
@@ -582,7 +582,13 @@ struct VirialDerivatives {
             throw std::invalid_argument("Nderiv is invalid in get_dmBnvirdTm_runtime");
         }
     }
-
+    
+    /**
+     * \brief Calculate the cross-virial coefficient \f$B_{12}\f$
+     * \param model The model to use
+     * \param T temperature
+     * \param molefrac mole fractions
+     */
     static auto get_B12vir(const Model& model, const Scalar &T, const VectorType& molefrac) {
         if (molefrac.size() != 2) { throw std::invalid_argument("length of mole fraction vector must be 2 in get_B12vir"); }
         auto B2 = get_B2vir(model, T, molefrac); // Overall B2 for mixture

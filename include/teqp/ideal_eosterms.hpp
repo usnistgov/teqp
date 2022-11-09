@@ -470,7 +470,8 @@ namespace teqp {
     /**
     \brief Convert the ideal-gas term for a term from CoolProp-formatted JSON structure
      
-    \param path A string, pointing to a filesystem file, or the JSON contents to be parsed
+    \param s A string, pointing to a filesystem file, or the JSON contents to be parsed
+    \param index The index of the model to load, should be zero in general
     \returns j The JSON
      
      The key difference in the approach in CoolProp and teqp is that the contributions in teqp
