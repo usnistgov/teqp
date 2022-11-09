@@ -102,14 +102,14 @@ namespace teqp {
             std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options) const override;
         };
 
-        std::shared_ptr<AbstractModel> make_model(const nlohmann::json& j) {
+        inline std::shared_ptr<AbstractModel> make_model(const nlohmann::json& j) {
             return std::make_shared<ModelImplementer>(build_model(j));
         }
-        std::shared_ptr<AbstractModel> make_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags, const std::string& departurepath) {
+        inline std::shared_ptr<AbstractModel> make_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags, const std::string& departurepath) {
             return std::make_shared<ModelImplementer>(build_multifluid_model(components, coolprop_root, BIPcollectionpath, flags, departurepath));
         }
     
-        std::shared_ptr<AbstractModel> emplace_model(AllowedModels&& model){
+        inline std::shared_ptr<AbstractModel> emplace_model(AllowedModels&& model){
             return std::make_shared<ModelImplementer>(std::move(model));
         }
     }
