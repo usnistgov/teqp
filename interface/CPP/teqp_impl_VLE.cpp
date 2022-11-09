@@ -1,7 +1,8 @@
 #include "teqpcpp.cpp"
 #include "teqp/algorithms/VLE.hpp"
 
-using MI = teqp::cppinterface::ModelImplementer; 
+using namespace teqp;
+using MI = teqp::cppinterface::ModelImplementer;
 
 std::tuple<EArrayd, EArrayd> MI::get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const {
     return std::visit([&](const auto& model) {

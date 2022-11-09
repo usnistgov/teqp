@@ -2,6 +2,7 @@
 
 #include "teqpcpp.cpp"
 
+using namespace teqp;
 using MI = teqp::cppinterface::ModelImplementer;
 
 nlohmann::json MI::trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>& filename, const std::optional<TCABOptions> &options) const {

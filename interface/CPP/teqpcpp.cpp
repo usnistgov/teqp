@@ -1,9 +1,6 @@
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/json_builder.hpp"
 
-using namespace teqp;
-using namespace teqp::cppinterface;
-
 namespace teqp {
     namespace cppinterface {
 
@@ -102,15 +99,6 @@ namespace teqp {
             std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options) const override;
         };
 
-        inline std::shared_ptr<AbstractModel> make_model(const nlohmann::json& j) {
-            return std::make_shared<ModelImplementer>(build_model(j));
-        }
-        inline std::shared_ptr<AbstractModel> make_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags, const std::string& departurepath) {
-            return std::make_shared<ModelImplementer>(build_multifluid_model(components, coolprop_root, BIPcollectionpath, flags, departurepath));
-        }
-    
-        inline std::shared_ptr<AbstractModel> emplace_model(AllowedModels&& model){
-            return std::make_shared<ModelImplementer>(std::move(model));
-        }
+        
     }
 }
