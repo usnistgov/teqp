@@ -91,16 +91,17 @@ if (NOT TEQP_NO_TEQPCPP)
   # Add a static library with the C++ interface that uses only STL
   # types so that recompilation of a library that uses teqp 
   # doesn't require a full compile for a single LOC change
-  add_library(teqpcpp STATIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/teqpcpp.cpp")
+  file(GLOB sources "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/*.cpp")
+  add_library(teqpcpp STATIC ${sources})
   target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
   target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
   set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
   target_compile_definitions(teqpcpp PUBLIC -DMULTICOMPLEX_NO_MULTIPRECISION)
 
   if (TEQP_TESTTEQPCPP)
-    add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test_teqpcpp.cpp")
+    add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/test_teqpcpp.cpp")
     target_link_libraries(test_teqpcpp PUBLIC teqpcpp)
-    add_executable(bench_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/bench_teqpcpp.cpp")
+    add_executable(bench_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/bench_teqpcpp.cpp")
     target_link_libraries(bench_teqpcpp PUBLIC teqpcpp PRIVATE Catch2WithMain)
   endif()
 endif()

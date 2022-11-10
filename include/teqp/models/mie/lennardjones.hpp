@@ -6,7 +6,7 @@ namespace teqp {
     /**
      * The EOS of Monika Thol and colleagues. DOI:10.1063/1.4945000
      */
-    auto build_LJ126_TholJPCRD2016() {
+    inline auto build_LJ126_TholJPCRD2016() {
         std::string contents = R"(
 
         {
