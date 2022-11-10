@@ -152,7 +152,7 @@ template <typename TCType, typename PCType, typename AcentricType>
 auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen::ArrayXXd& kmat = {}) {
     double Delta1 = 1;
     double Delta2 = 0;
-    auto m = 0.48 + 1.574 * acentric - 0.176 * acentric * acentric;
+    AcentricType m = 0.48 + 1.574 * acentric - 0.176 * acentric * acentric;
 
     std::vector<AlphaFunctionOptions> alphas;
     for (auto i = 0; i < Tc_K.size(); ++i) {
