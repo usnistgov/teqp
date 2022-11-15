@@ -7,6 +7,7 @@ dependencies:
   - pip
   - doxygen
   - cmake
+  - pandoc
   - pip:
     - breathe
     - teqp
@@ -20,3 +21,4 @@ dependencies:
     - matplotlib
     - PCSAFTsuperanc
     - sphinxcontrib-doxylink
+    - insipid-sphinx-theme

@@ -4,7 +4,7 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import os, subprocess
+import os, subprocess, shutil
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 # -- Path setup --------------------------------------------------------------
@@ -31,9 +31,10 @@ release = teqp.__version__
 
 # -- Execute all notebooks --------------------------------------------------
 
-# Run doxygen
-if not os.path.exists(here+'/_static/'):
-    os.makedirs(here+'/_static')
+# Run doxygen (always)
+if os.path.exists(here+'/_static/'):
+    shutil.rmtree(here+'/_static/')
+os.makedirs(here+'/_static')
 subprocess.check_call('doxygen Doxyfile', cwd=here+'/../..', shell=True)
 
 if on_rtd:
