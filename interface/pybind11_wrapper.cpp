@@ -102,11 +102,13 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_sigma_Angstrom", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_sigma_Angstrom(); }), obj));
         setattr("get_epsilon_over_k_K", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_epsilon_over_k_K(); }), obj));
         setattr("max_rhoN", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<PCSAFT_t>(o).max_rhoN(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
+        setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_kmat(); }), obj));
     }
     else if (std::holds_alternative<canonical_cubic_t>(model)){
         setattr("get_a", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_a(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("get_b", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_b(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<canonical_cubic_t>(o).superanc_rhoLV(T); }, "self"_a, "T"_a), obj));
+        setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<canonical_cubic_t>(o).get_kmat(); }), obj));
     }
     else if (std::holds_alternative<AmmoniaWaterTillnerRoth>(model)){
         setattr("TcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).TcNH3);

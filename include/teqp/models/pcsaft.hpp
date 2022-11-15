@@ -180,7 +180,12 @@ public:
                 m2_epsilon2_sigma3_bar; ///< Eq. A. 13
 };
 
-/// A class used to evaluate mixtures using PC-SAFT model
+/** A class used to evaluate mixtures using PC-SAFT model
+
+This is the classical Gross and Sadowski model from 2001: https://doi.org/10.1021/ie0003887
+ 
+with the error fixed as noted in a comment: https://doi.org/10.1021/acs.iecr.9b01515
+*/
 class PCSAFTMixture {
 private:
     Eigen::ArrayX<double> m, ///< number of segments
@@ -229,6 +234,7 @@ public:
     auto get_m() const { return m; }
     auto get_sigma_Angstrom() const { return sigma_Angstrom; }
     auto get_epsilon_over_k_K() const { return epsilon_over_k; }
+    auto get_kmat() const { return kmat; }
 
     auto print_info() {
         std::string s = std::string("i m sigma / A e/kB / K \n  ++++++++++++++") + "\n";

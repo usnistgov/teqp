@@ -83,6 +83,7 @@ public:
 
     void set_meta(const nlohmann::json& j) { meta = j; }
     auto get_meta() const { return meta; }
+    auto get_kmat() const { return kmat; }
 
     /// Return a tuple of saturated liquid and vapor densities for the EOS given the temperature
     /// Uses the superancillary equations from Bell and Deiters: 
