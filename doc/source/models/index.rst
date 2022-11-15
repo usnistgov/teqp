@@ -7,6 +7,7 @@ Models
 
    make_model
    cubics
+   model_potentials
    CPA
    PCSAFT
    multifluid
