@@ -157,6 +157,10 @@ void attach_model_specific_methods(py::object& obj){
     else if (std::holds_alternative<EXP6_Kataoka1992_t>(model)){
         setattr("alpha", get_typed<EXP6_Kataoka1992_t>(obj).get_alpha());
     }
+    else if (std::holds_alternative<twocenterLJF_t>(model)){
+        setattr("Lstar", get_typed<twocenterLJF_t>(obj).L);
+        setattr("mustar_sq", get_typed<twocenterLJF_t>(obj).mu_sq);
+    }
 };
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods

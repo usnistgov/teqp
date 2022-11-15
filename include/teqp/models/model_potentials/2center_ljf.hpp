@@ -275,9 +275,8 @@ namespace teqp {
             auto alphar(const TauType& tau, const DeltaType& delta, const double& alpha) const {
                 using result = std::common_type_t<TauType, DeltaType>;
 
-                result r = 0.0;
-                auto eta = delta / (a + (1.0 - a) * pow(tau, g));
-                r = (pow(alpha, 2) - 1.0) * log(1.0 - eta) + ((pow(alpha, 2) + 3 * alpha) * eta - 3 * alpha * pow(eta, 2)) / (pow(1.0 - eta, 2));
+                auto eta = forceeval((delta / (a + (1.0 - a) * pow(tau, g))));
+                auto r = (pow(alpha, 2) - 1.0) * log(1.0 - eta) + ((pow(alpha, 2) + 3 * alpha) * eta - 3 * alpha * pow(eta, 2)) / (pow(1.0 - eta, 2));
                 return forceeval(r);
             }
         };
@@ -336,7 +335,7 @@ namespace teqp {
                 auto alpha = forceeval(redD.get_alpha_star(L));
                 auto delta = forceeval(rho_dimer_star / Rred);
                 auto tau = forceeval(T_star / Tred);
-                auto delta_eta = rho_dimer_star * eta_red;
+                auto delta_eta = forceeval(rho_dimer_star * eta_red);
                 auto alphar_1 = Hard.alphar(tau, delta_eta, alpha);
                 auto alphar_2 = Attr.alphar(tau, delta, alpha);
                 auto alphar_3 = Pole.alphar(tau, delta, mu_sq);
@@ -350,10 +349,8 @@ namespace teqp {
             }
         };
 
-
-        ParameterContainer pContainer;
-
         inline auto get_density_reducing(const std::string& name) {
+            ParameterContainer pContainer;
             ReducingDensity red_rho;
             red_rho.p_alpha = pContainer.get_alpha_star_parameter(name);
             red_rho.p_eta_rho = pContainer.get_eta_rho_parameter(name);
@@ -362,13 +359,14 @@ namespace teqp {
         };
 
         inline auto get_temperature_reducing(const std::string& name) {
+            ParameterContainer pContainer;
             ReducingTemperature red_T;
             red_T.p_t = pContainer.get_T_parameter(name);
             return red_T;
         };
 
         inline auto get_Attractive_contribution(const std::string& name) {
-
+            ParameterContainer pContainer;
             AttractiveContribution eos;
             eos.c = pContainer.get_c_parameter(name);
             eos.m = pContainer.get_m_parameter(name);
@@ -386,6 +384,7 @@ namespace teqp {
         }
 
         inline auto get_Dipolar_contribution(const std::string& name) {
+            ParameterContainer pContainer;
             DipolarContribution eos;
             eos.c = pContainer.get_dipolar_c_parameter(name);
             eos.n = pContainer.get_dipolar_n_parameter(name);
@@ -396,6 +395,7 @@ namespace teqp {
         }
 
         inline auto get_Quadrupolar_contribution(const std::string& name) {
+            ParameterContainer pContainer;
             DipolarContribution eos;
             eos.c = pContainer.get_quadrupolar_c_parameter(name);
             eos.n = pContainer.get_quadrupolar_n_parameter(name);
@@ -423,7 +423,7 @@ namespace teqp {
             return model;
         }
 
-        // build the 2-center Lennard-Jones model with quadrupol
+        // build the 2-center Lennard-Jones model with quadrupole
         inline auto build_two_center_model_quadrupole(const std::string& model_version, const double& L = 0.0, const double& mu_sq = 0.0) {
 
             // Get reducing for temperature and density

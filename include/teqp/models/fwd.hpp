@@ -21,6 +21,7 @@
 #include "teqp/models/ammonia_water.hpp"
 #include "teqp/models/model_potentials/squarewell.hpp"
 #include "teqp/models/model_potentials/exp6.hpp"
+#include "teqp/models/model_potentials/2center_ljf.hpp"
 
 namespace teqp {
 
@@ -37,6 +38,7 @@ namespace teqp {
     using SW_EspindolaHeredia2009_t = squarewell::EspindolaHeredia2009;
     using EXP6_Kataoka1992_t = exp6::Kataoka1992;
     using vdWEOS_t = vdWEOS<double>;
+    using twocenterLJF_t = decltype(twocenterljf::build_two_center_model_dipole(std::string{}, double{}, double{}));
 
     using idealgas_t = IdealHelmholtz;
 
@@ -52,6 +54,7 @@ namespace teqp {
         idealgas_t,
         ammonia_water_TillnerRoth_t,
         SW_EspindolaHeredia2009_t,
-        EXP6_Kataoka1992_t
+        EXP6_Kataoka1992_t,
+        twocenterLJF_t
 	>;
 }
