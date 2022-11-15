@@ -1,9 +1,0 @@
-breathe
-teqp
-numpy
-jupyter
-nbconvert
-nbsphinx
-pandas
-matplotlib
-PCSAFTsuperanc

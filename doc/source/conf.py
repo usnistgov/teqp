@@ -70,7 +70,7 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 doxylink = {
-    'teqp' : ('source/_static/doxygen/html/teqp.tag', '_static/doxygen/html'),
+    'teqp' : (os.path.abspath(here+'/_static/doxygen/html/teqp.tag'), '_static/doxygen/html'),
 }
 
 # -- Options for HTML output -------------------------------------------------
