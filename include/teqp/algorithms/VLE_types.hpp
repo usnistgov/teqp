@@ -3,7 +3,7 @@
 namespace teqp{
 
 struct TVLEOptions {
-    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0;
+    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0, p_termination = 1e15, crit_termination = 1e-12;
     int max_steps = 1000, integration_order = 5;
     bool polish = true;
     bool calc_criticality = false;

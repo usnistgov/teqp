@@ -193,6 +193,8 @@ void init_teqp(py::module& m) {
         .def_readwrite("init_dt", &TVLEOptions::init_dt)
         .def_readwrite("init_c", &TVLEOptions::init_c)
         .def_readwrite("max_dt", &TVLEOptions::max_dt)
+        .def_readwrite("p_termination", &TVLEOptions::p_termination)
+        .def_readwrite("crit_termination", &TVLEOptions::crit_termination)
         .def_readwrite("max_steps", &TVLEOptions::max_steps)
         .def_readwrite("integration_order", &TVLEOptions::integration_order)
         .def_readwrite("polish", &TVLEOptions::polish)

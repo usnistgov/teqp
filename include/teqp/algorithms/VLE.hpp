@@ -1093,14 +1093,20 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + N, N);
             auto x = rhovecL / rhovecL.sum();
             auto y = rhovecV / rhovecV.sum();
+            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
+            double p = rhovecL.sum()*model.R(x)*T + id::get_pr(model, T, rhovecL);
+            
             // Check if the solution has gone mechanically unstable
             if (opt.calc_criticality) {
                 using ct = CriticalTracing<Model, Scalar, VecType>;
                 auto condsL = ct::get_criticality_conditions(model, T, rhovecL);
                 auto condsV = ct::get_criticality_conditions(model, T, rhovecV);
-                if (condsL[0] < 1e-12 || condsV[0] < 1e-12){
+                if (condsL[0] < opt.crit_termination || condsV[0] < opt.crit_termination){
                     return true;
                 }
+            }
+            if (p > opt.p_termination){
+                return true;
             }
             if ((x < 0).any() || (x > 1).any() || (y < 0).any() || (y > 1).any() || (!rhovecL.isFinite()).any() || (!rhovecV.isFinite()).any()) {
                 return true;
