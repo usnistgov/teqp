@@ -31,6 +31,10 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.14.1 :
+
+  * Fix typo in loading of two-center LJF models, should be "2CLJF-Dipole" for "kind"
+
 * 0.14.0 :
 
   * Massive re-working of the c++ interface. There is now a "public interface" of teqp defined in the ``teqp/cpp/teqpcpp.hpp`` header, with the model contained in a private type-safe variant. This results in much faster incremental compiles in C++ (in general).
