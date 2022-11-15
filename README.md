@@ -16,15 +16,16 @@ So far the following EOS are implemented:
 * ammonia+water model of Tillner-Roth and Friend
 * Exp-6 (modified Buckingham) from Kataoka
 * square-well from Espíndola-Heredia et al.
+* Two-center Lennard-Jones models with dipoles and quadrupoles
 
 Why?
 
 * Implementing an EOS is an error-prone and boring exercise. Automatic differentiation packages are a mature solution for calculating derivatives 
-* Algorithms can be implemented in a very generic way that is model-agnostic
+* Algorithms that *use* the EOS can be implemented in a very generic way that is model-agnostic
 
 Docs are on ReadTheDocs: [![Documentation Status](https://readthedocs.org/projects/teqp/badge/?version=latest)](https://teqp.readthedocs.io/en/latest/?badge=latest)
 
-Written by Ian Bell, NIST.  
+Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 ## Changelog
 
@@ -37,6 +38,9 @@ Written by Ian Bell, NIST.
   * [Breaking]: ``rho`` keyword argument to isochoric derivatives replaced with ``rhovec``
   * [Breaking]: ``convert_CoolProp_format`` static method of IdealHelmholtz hoisted to free function ``convert_CoolProp_idealgas``
   * [Breaking]: Format of ideal-gas Helmholtz term is changed to include gas constant R everywhere
+  * Two-center Lennard-Jones models exposed to Python
+  * ``get_kmat`` method added to PC-SAFT and cubic models
+  * ``p_termination`` and ``crit_termination`` are flags that can be set on ``TVLEOptions`` for tracing of isothermal VLE.  They default to very large and small values, respectively.
   
 * 0.13.0 :
 
