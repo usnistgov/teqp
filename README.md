@@ -31,6 +31,11 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.14.2 :
+
+  * Fix missing ``get_meta`` and ``set_meta`` functions for cubics (should have been in 0.14.0)
+  * Attach methods for multifluid mutants as well
+  
 * 0.14.1 :
 
   * Fix typo in loading of two-center LJF models, should be "2CLJF-Dipole" for "kind"
