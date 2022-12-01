@@ -53,7 +53,7 @@ void add_multifluid_mutant(py::module& m) {
     using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"", ""}, "", ""));
     
     // Wrap the function for generating a multifluid mutant
-    m.def("build_multifluid_mutant", [](const py::object& o, const nlohmann::json &j){
+    m.def("_build_multifluid_mutant", [](const py::object& o, const nlohmann::json &j){
         const auto& model = std::get<MultiFluid>(o.cast<const AbstractModel *>()->get_model());
         AllowedModels mutant{build_multifluid_mutant(model, j)};
         return emplace_model(std::move(mutant));
