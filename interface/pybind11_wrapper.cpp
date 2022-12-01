@@ -109,6 +109,9 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_b", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_b(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<canonical_cubic_t>(o).superanc_rhoLV(T); }, "self"_a, "T"_a), obj));
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<canonical_cubic_t>(o).get_kmat(); }), obj));
+        setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<canonical_cubic_t>(o).get_meta(); }), obj));
+        setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<canonical_cubic_t>(o).set_meta(s); }, "self"_a, "s"_a), obj));
+        
     }
     else if (std::holds_alternative<AmmoniaWaterTillnerRoth>(model)){
         setattr("TcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).TcNH3);
