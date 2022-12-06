@@ -33,7 +33,7 @@ jobs:
           CIBW_ARCHS_MACOS: universal2
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
           CIBW_BUILD_VERBOSITY_WINDOWS: 2
-          CIBW_SKIP: "*pypy*linux* *cp36*"
+          CIBW_SKIP: "*pypy* *cp36*"
 
       - uses: actions/upload-artifact@v2
         with:
