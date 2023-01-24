@@ -1,5 +1,6 @@
+#pragma once
+
 #include "teqp/models/multifluid.hpp"
-#include "teqp/json_builder.hpp"
 
 namespace teqp {
 
@@ -64,5 +65,142 @@ namespace teqp {
         )";
 
         return teqp::build_multifluid_JSONstr({ contents }, "{}", "{}");
-    }
+    };
+
+    /**
+    Jiri Kolafa and Ivo Nezbeda
+    Fluid Phase Equilibria, 100 (1994) 1-34
+    The Lennard-Jones fluid: An accurate analytic and theoretically-based equation of state
+    doi: 10.1016/0378-3812(94)80001-4
+     */
+    class LJ126KolafaNezbeda1994{
+    private:
+
+        template<typename T>
+        auto POW2(const T& x) const {
+            return x*x;
+        }
+
+        template<typename T>
+        auto POW3(const T& x) const{
+            return POW2(x)*x;
+        }
+
+        const double MY_PI = EIGEN_PI;
+
+        const std::vector<std::tuple<int, double>> c_dhBH  {
+            {-2,  0.011117524},
+            {-1, -0.076383859},
+            { 0,  1.080142248},
+            { 1,  0.000693129}
+        };
+        const double c_ln_dhBH = -0.063920968;
+
+        const std::vector<std::tuple<int, double>> c_Delta_B2_hBH  {
+            {-7, -0.58544978},
+            {-6, 0.43102052},
+            {-5, 0.87361369},
+            {-4, -4.13749995},
+            {-3, 2.90616279},
+            {-2, -7.02181962},
+            { 0, 0.02459877}
+        };
+
+        const std::vector<std::tuple<int, int, double>> c_Cij = {
+            { 0, 2,    2.01546797},
+            { 0, 3,  -28.17881636},
+            { 0, 4,   28.28313847},
+            { 0, 5,  -10.42402873},
+            {-1, 2,  -19.58371655},
+            {-1, 3,   75.62340289},
+            {-1, 4, -120.70586598},
+            {-1, 5,  93.92740328},
+            {-1, 6, -27.37737354},
+            {-2, 2, 29.34470520},
+            {-2, 3, -112.3535693},
+            {-2,  4, 170.64908980 },
+            {-2, 5, -123.06669187},
+            {-2, 6, 34.42288969 },
+            {-4, 2, -13.37031968},
+            {-4, 3, 65.38059570},
+            {-4, 4, -115.09233113},
+            {-4, 5, 88.91973082},
+            {-4, 6, -25.62099890}
+        };
+
+        const double gamma = 1.92907278;
+
+        // Form of Eq. 29
+        template<typename TTYPE>
+        auto get_dhBH(const TTYPE& Tstar) const {
+            TTYPE summer = c_ln_dhBH*log(Tstar);
+            for (auto [i, C_i] : c_dhBH){
+                summer += C_i*pow(Tstar, i/2.0);
+            }
+            return forceeval(summer);
+        }
+
+        template<typename TTYPE>
+        auto get_d_dhBH_d1T(const TTYPE& Tstar) const {
+            TTYPE summer = c_ln_dhBH;
+            for (auto [i, C_i] : c_dhBH){
+                summer += (i/2.0)*C_i*pow(Tstar, i/2.0);
+            }
+            return forceeval(-Tstar*summer);
+        }
+
+        // Form of Eq. 29
+        template<typename TTYPE>
+        auto get_DeltaB2hBH(const TTYPE& Tstar) const {
+            TTYPE summer = 0.0;
+            for (auto [i, C_i] : c_Delta_B2_hBH){
+                summer += C_i*pow(Tstar, i/2.0);
+            }
+            return forceeval(summer);
+        }
+
+        template<typename TTYPE>
+        auto get_d_DeltaB2hBH_d1T(const TTYPE& Tstar) const {
+            auto summer = 0.0;
+            for (auto [i, C_i] : c_Delta_B2_hBH){
+                summer += (i/2.0)*C_i*pow(Tstar, i/2.0);
+            }
+            return forceeval(-Tstar*summer);
+        }
+
+        //  Eq. 5 from K-N
+        template<typename TTYPE, typename RHOTYPE>
+        auto get_ahs(const TTYPE& Tstar, const RHOTYPE& rhostar) const {
+            auto zeta = MY_PI/6.0*rhostar*pow(get_dhBH(Tstar), 3);
+            return forceeval(Tstar*(5.0/3.0*log(1.0-zeta) + zeta*(34.0-33.0*zeta+4.0*POW2(zeta))/(6.0*POW2(1.0-zeta))));
+        }
+
+        // Eq. 4 from K-N
+        template<typename TTYPE, typename RHOTYPE>
+        auto get_zhs(const TTYPE& Tstar, const RHOTYPE& rhostar) const {
+            std::common_type_t<TTYPE, RHOTYPE> zeta = MY_PI/6.0*rhostar*POW3(get_dhBH(Tstar));
+            return forceeval((1.0+zeta+zeta**zeta-2.0/3.0*POW3(zeta)*(1+zeta))/POW3(1.0-zeta));
+        }
+
+        // Eq. 30 from K-N
+        template<typename TTYPE, typename RHOTYPE>
+        auto get_a(const TTYPE& Tstar, const RHOTYPE& rhostar) const{
+            std::common_type_t<TTYPE, RHOTYPE> summer = 0.0;
+            for (auto [i, j, Cij] : c_Cij){
+                summer += Cij*pow(Tstar, i/2.0)*pow(rhostar, j);
+            }
+            return forceeval(get_ahs(Tstar, rhostar) + exp(-gamma*POW2(rhostar))*rhostar*Tstar*get_DeltaB2hBH(Tstar)+summer);
+        }
+
+    public:
+        // We are in "simulation units", so R is 1.0, and T and rho that go into alphar are actually T^* and rho^*
+        template<typename MoleFracType>
+        double R(const MoleFracType &) const { return 1.0; }
+        
+        template<typename TTYPE, typename RHOTYPE, typename MoleFracType>
+        auto alphar(const TTYPE& Tstar, const RHOTYPE& rhostar, const MoleFracType& /*molefrac*/) const {
+            return forceeval(get_a(Tstar, rhostar)/Tstar);
+        }
+    };
+
 };

@@ -101,6 +101,9 @@ namespace teqp {
         else if (kind == "LJ126_TholJPCRD2016"){
             return build_LJ126_TholJPCRD2016();
         }
+        else if (kind == "LJ126_KolafaNezbeda1994"){
+            return LJ126KolafaNezbeda1994();
+        }
         else if (kind == "2CLJF-Dipole"){
             return twocenterljf::build_two_center_model_dipole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2"));
         }
