@@ -84,6 +84,7 @@ namespace teqp {
             double get_neff(const double T, const double rho, const EArrayd& molefracs) const override;
 
             EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const override;
+            double dpsatdT_pure(const double T, const double rhoL, const double rhoV) const override;
             std::tuple<EArrayd, EArrayd> get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override;
             std::tuple<EArrayd, EArrayd> get_drhovecdT_psat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override;
             double get_dpsat_dTsat_isopleth(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override;
