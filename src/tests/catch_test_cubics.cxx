@@ -107,6 +107,8 @@ TEST_CASE("Check orthobaric density derivatives for pure fluid", "[cubic][supera
     // Change in enthalpy (Deltah) is equal to change in residual enthalpy (Deltahr) because ideal parts cancel
     auto hrVLERTV = tdx::get_Ar01(model, T, rhoV, molefrac) + tdx::get_Ar10(model, T, rhoV, molefrac);
     auto hrVLERTL = tdx::get_Ar01(model, T, rhoL, molefrac) + tdx::get_Ar10(model, T, rhoL, molefrac);
+    auto dpdrhoL = R*T*(1 + 2*tdx::get_Ar01(model, T, rhoL, molefrac) + tdx::get_Ar02(model, T, rhoL, molefrac));
+    auto dpdTL = R*rhoL*(1 + tdx::get_Ar01(model, T, rhoL, molefrac) - tdx::get_Ar11(model, T, rhoL, molefrac));
     auto deltahr_over_T = R*(hrVLERTV-hrVLERTL);
     auto dpsatdT = deltahr_over_T/(1/rhoV-1/rhoL); // From Clausius-Clapeyron; dp/dT = Deltas/Deltav = Deltah/(T*Deltav); Delta=V-L
     
@@ -115,9 +117,8 @@ TEST_CASE("Check orthobaric density derivatives for pure fluid", "[cubic][supera
     CHECK(dpsatdT == Approx((pLp - pLm)/(2*dT)));
     CHECK(dpsatdT_routine == Approx((pLp - pLm)/(2*dT)));
     
-//    CHECK(drhovecdTL(0) == Approx((rhoLp-rhoLm)/(2*dT)));
-//    auto drhoLdT =
-    
+    auto drhosatdTL = -dpdTL/dpdrhoL + dpsatdT/dpdrhoL;
+    CHECK(drhosatdTL == Approx((rhoLp-rhoLm)/(2*dT)));
 }
 
 TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixture", "[cubic][isochoric][traceisotherm]")
