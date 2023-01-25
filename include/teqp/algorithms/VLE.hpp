@@ -169,6 +169,36 @@ auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxi
 }
 
 /***
+ * \brief Calculate the derivative of vapor pressure with respect to temperature
+ * \param model The model to operate on
+ * \param T Temperature
+ * \param rhoL Liquid density
+ * \param rhoV Vapor density
+ *
+ *  Based upon
+ *  \f[
+ * \frac{dp_{\sigma}}{dT} = \frac{h''-h'}{T(v''-v')} = \frac{s''-s'}{v''-v'}
+ *  \f]
+ *  where the \f$h''-h'\f$ is given by the difference in residual enthalpy \f$h''-h' = h^r''-h^r'\f$ because the ideal-gas parts cancel
+ */
+template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
+auto dpsatdT_pure(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV) {
+    
+    auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    using tdx = TDXDerivatives<decltype(model), double, decltype(molefrac)>;
+    using iso = IsochoricDerivatives<decltype(model), double, decltype(molefrac)>;
+    
+    auto R = model.R(molefrac);
+    
+    auto hrVLERTV = tdx::get_Ar01(model, T, rhoV, molefrac) + tdx::get_Ar10(model, T, rhoV, molefrac);
+    auto hrVLERTL = tdx::get_Ar01(model, T, rhoL, molefrac) + tdx::get_Ar10(model, T, rhoL, molefrac);
+    auto deltahr_over_T = R*(hrVLERTV-hrVLERTL);
+    auto dpsatdT = deltahr_over_T/(1/rhoV-1/rhoL); // From Clausius-Clapeyron; dp/dT = Deltas/Deltav = Deltah/(T*Deltav); Delta=V-L
+    return dpsatdT;
+}
+
+/***
 * \brief Do a vapor-liquid phase equilibrium problem for a mixture (binary only for now) with mole fractions specified in the liquid phase
 * \param model The model to operate on
 * \param T Temperature

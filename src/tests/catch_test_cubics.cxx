@@ -80,6 +80,46 @@ TEST_CASE("Check calling superancillary curves", "[cubic][superanc]")
     }
 }
 
+TEST_CASE("Check orthobaric density derivatives for pure fluid", "[cubic][superanc]")
+{
+    std::valarray<double> Tc_K = { 150.687 };
+    std::valarray<double> pc_Pa = { 4863000.0};
+    std::valarray<double> acentric = { 0.0};
+    
+    double T = 130.0, dT = 0.001;
+    auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    auto model = canonical_PR(Tc_K, pc_Pa, acentric);
+    using tdx = TDXDerivatives<decltype(model)>;
+    using iso = IsochoricDerivatives<decltype(model)>;
+    
+    auto R = model.R(molefrac);
+    auto [rhoL, rhoV] = model.superanc_rhoLV(T);
+    CHECK(rhoL > rhoV);
+    
+    // Finite difference test
+    auto [rhoLp, rhoVp] = model.superanc_rhoLV(T+dT);
+    auto [rhoLm, rhoVm] = model.superanc_rhoLV(T-dT);
+    auto pLp = rhoLp*R*(T+dT) + iso::get_pr(model, T+dT, rhoLp*molefrac);
+    auto pLm = rhoLm*R*(T-dT) + iso::get_pr(model, T-dT, rhoLm*molefrac);
+    
+    // Exact solution for density derivative
+    // Change in enthalpy (Deltah) is equal to change in residual enthalpy (Deltahr) because ideal parts cancel
+    auto hrVLERTV = tdx::get_Ar01(model, T, rhoV, molefrac) + tdx::get_Ar10(model, T, rhoV, molefrac);
+    auto hrVLERTL = tdx::get_Ar01(model, T, rhoL, molefrac) + tdx::get_Ar10(model, T, rhoL, molefrac);
+    auto deltahr_over_T = R*(hrVLERTV-hrVLERTL);
+    auto dpsatdT = deltahr_over_T/(1/rhoV-1/rhoL); // From Clausius-Clapeyron; dp/dT = Deltas/Deltav = Deltah/(T*Deltav); Delta=V-L
+    
+    auto dpsatdT_routine = dpsatdT_pure(model, T, rhoL, rhoV);
+    
+    CHECK(dpsatdT == Approx((pLp - pLm)/(2*dT)));
+    CHECK(dpsatdT_routine == Approx((pLp - pLm)/(2*dT)));
+    
+//    CHECK(drhovecdTL(0) == Approx((rhoLp-rhoLm)/(2*dT)));
+//    auto drhoLdT =
+    
+}
+
 TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixture", "[cubic][isochoric][traceisotherm]")
 {
     using namespace boost::numeric::odeint;
