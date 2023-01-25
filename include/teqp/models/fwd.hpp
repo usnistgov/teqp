@@ -41,6 +41,7 @@ namespace teqp {
     using vdWEOS_t = vdWEOS<double>;
     using twocenterLJF_t = decltype(twocenterljf::build_two_center_model_dipole(std::string{}, double{}, double{}));
     using LJ126KolafaNezbeda1994_t = LJ126KolafaNezbeda1994;
+    using LJ126Johnson1993_t = LJ126Johnson1993;
 
     using idealgas_t = IdealHelmholtz;
 
@@ -58,6 +59,7 @@ namespace teqp {
         SW_EspindolaHeredia2009_t,
         EXP6_Kataoka1992_t,
         twocenterLJF_t,
-        LJ126KolafaNezbeda1994_t
+        LJ126KolafaNezbeda1994_t,
+        LJ126Johnson1993_t
 	>;
 }
