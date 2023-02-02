@@ -914,11 +914,46 @@ inline auto make_pure_components_JSON(const nlohmann::json& components, const st
 
 inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
 
-    std::string BIPpath = (BIPcollectionpath.empty()) ? coolprop_root + "/dev/mixtures/mixture_binary_pairs.json" : BIPcollectionpath;
-    const auto BIPcollection = load_a_JSON_file(BIPpath);
-
-    std::string deppath = (departurepath.empty()) ? coolprop_root + "/dev/mixtures/mixture_departure_functions.json" : departurepath;
-    const auto depcollection = load_a_JSON_file(deppath);
+    
+    auto is_valid_path = [](const std::string & s){
+        try{
+            std::filesystem::is_regular_file(s);
+            return true;
+        }
+        catch(...){
+            return false;
+        }
+    };
+    
+    nlohmann::json BIPcollection = nlohmann::json::array();
+    // If not provided, default values
+    if (BIPcollectionpath.empty()){
+        auto BIPpath = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
+        BIPcollection = load_a_JSON_file(BIPpath);
+    }
+    // If path to existing file, use it
+    else if (is_valid_path(BIPcollectionpath) && std::filesystem::is_regular_file(BIPcollectionpath)){
+        BIPcollection = load_a_JSON_file(BIPcollectionpath);
+    }
+    // Or assume it is a string in JSON format
+    else{
+        BIPcollection = nlohmann::json::parse(BIPcollectionpath);
+    }
+    
+    nlohmann::json depcollection = nlohmann::json::array();
+    // If not provided, default values
+    if (departurepath.empty()){
+        std::string deppath = coolprop_root + "/dev/mixtures/mixture_departure_functions.json";
+        depcollection = load_a_JSON_file(deppath);
+    }
+    // If path to existing file, use it
+    else if (is_valid_path(departurepath) && std::filesystem::is_regular_file(departurepath)){
+        depcollection = load_a_JSON_file(departurepath);
+    }
+    // Or assume it is a string in JSON format
+    else{
+        depcollection = nlohmann::json::parse(departurepath);
+    }
 
     return _build_multifluid_model(make_pure_components_JSON(components, coolprop_root), BIPcollection, depcollection, flags);
 }

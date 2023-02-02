@@ -191,6 +191,23 @@ TEST_CASE("Check mixing absolute and relative paths and fluid names", "[multiflu
     }
 }
 
+TEST_CASE("Check specifying some different kinds of sources of BIP", "[multifluidBIP]") {
+    std::string root = "../mycp";
+    SECTION("Not JSON, should throw") {
+        std::vector<std::string> paths = { std::filesystem::absolute(root + "/dev/fluids/Nitrogen.json").string(), "Ethane" };
+        CHECK_THROWS(build_multifluid_model(paths, root, "I am not a JSON formatted string"));
+    }
+    SECTION("The normal approach") {
+        std::vector<std::string> paths = { std::filesystem::absolute(root + "/dev/fluids/Nitrogen.json").string(), "Ethane" };
+        auto model = build_multifluid_model(paths, root, root + "/dev/mixtures/mixture_binary_pairs.json");
+    }
+    SECTION("Sending the contents in JSON format") {
+        std::vector<std::string> paths = { std::filesystem::absolute(root + "/dev/fluids/Nitrogen.json").string(), "PROPANE" };
+        auto BIP = load_a_JSON_file(root + "/dev/mixtures/mixture_binary_pairs.json");
+        auto model = build_multifluid_model(paths, root, BIP.dump());
+    }
+}
+
 TEST_CASE("Check that all binary pairs specified in the binary pair file can be instantiated", "[multifluid],[binaries]") {
     std::string root = "../mycp";
     REQUIRE_NOTHROW(build_alias_map(root));
