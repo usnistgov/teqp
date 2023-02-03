@@ -23,6 +23,7 @@
 #include "teqp/models/model_potentials/exp6.hpp"
 #include "teqp/models/model_potentials/2center_ljf.hpp"
 #include "teqp/models/mie/lennardjones.hpp"
+#include "teqp/models/mie/mie.hpp"
 
 namespace teqp {
 
@@ -42,6 +43,7 @@ namespace teqp {
     using twocenterLJF_t = decltype(twocenterljf::build_two_center_model_dipole(std::string{}, double{}, double{}));
     using LJ126KolafaNezbeda1994_t = LJ126KolafaNezbeda1994;
     using LJ126Johnson1993_t = LJ126Johnson1993;
+    using Mie6Pohl2023_t = Mie::Mie6Pohl2023;
 
     using idealgas_t = IdealHelmholtz;
 
@@ -60,6 +62,7 @@ namespace teqp {
         EXP6_Kataoka1992_t,
         twocenterLJF_t,
         LJ126KolafaNezbeda1994_t,
-        LJ126Johnson1993_t
+        LJ126Johnson1993_t,
+        Mie6Pohl2023_t
 	>;
 }

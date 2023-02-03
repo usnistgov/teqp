@@ -2,6 +2,7 @@
 
 #include "teqp/models/fwd.hpp"
 #include "teqp/models/mie/lennardjones.hpp"
+#include "teqp/models/mie/mie.hpp"
 
 #include "teqp/exceptions.hpp"
 
@@ -106,6 +107,9 @@ namespace teqp {
         }
         else if (kind == "LJ126_Johnson1993"){
             return LJ126Johnson1993();
+        }
+        else if (kind == "Mie_Pohl2023"){
+            return Mie::Mie6Pohl2023(spec.at("lambda_a"));
         }
         else if (kind == "2CLJF-Dipole"){
             return twocenterljf::build_two_center_model_dipole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2"));
