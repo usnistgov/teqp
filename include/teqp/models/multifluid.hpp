@@ -471,7 +471,8 @@ inline auto get_EOS_terms(const nlohmann::json& j)
 {
     auto alphar = j["EOS"][0]["alphar"];
 
-    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005", "ResidualHelmholtzExponential" };
+    // First check whether term type is allowed
+    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005", "ResidualHelmholtzExponential", "ResidualHelmholtzDoubleExponential" };
 
     auto isallowed = [&](const auto& conventional_types, const std::string& name) {
         for (auto& a : conventional_types) { if (name == a) { return true; }; } return false;
@@ -624,6 +625,22 @@ inline auto get_EOS_terms(const nlohmann::json& j)
         }
         return eos;
     };
+    
+    auto build_doubleexponential = [&](auto& term) {
+        if (!all_same_length(term, { "n","t","d","ld","gd","lt","gt" })) {
+            throw std::invalid_argument("Lengths are not all identical in double exponential term");
+        }
+        DoubleExponentialEOSTerm eos;
+        eos.n = toeig(term.at("n"));
+        eos.t = toeig(term.at("t"));
+        eos.d = toeig(term.at("d"));
+        eos.ld = toeig(term.at("ld"));
+        eos.gd = toeig(term.at("gd"));
+        eos.lt = toeig(term.at("lt"));
+        eos.gt = toeig(term.at("gt"));
+        eos.ld_i = eos.ld.cast<int>();
+        return eos;
+    };
 
     auto build_GaoB = [&](auto term) {
         GaoBEOSTerm eos;
@@ -677,6 +694,9 @@ inline auto get_EOS_terms(const nlohmann::json& j)
         }
         else if (type == "ResidualHelmholtzExponential") {
             container.add_term(build_exponential(term));
+        }
+        else if (type == "ResidualHelmholtzDoubleExponential") {
+            container.add_term(build_doubleexponential(term));
         }
         else {
             throw std::invalid_argument("Bad term type: "+type);
