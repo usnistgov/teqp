@@ -187,6 +187,40 @@ auto get_JDD_3ijk(const Eta& eta, const MType& mijk) {
     return forceeval(summer);
 }
 
+/// Eq. 12 from Gross and Vrabec, AICHEJ
+template <typename Eta, typename MType, typename TType>
+auto get_JQQ_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
+    static Eigen::ArrayXd a_0 = (Eigen::ArrayXd(5) << 1.2378308, 2.4355031, 1.6330905, -1.6118152, 6.9771185).finished();
+    static Eigen::ArrayXd a_1 = (Eigen::ArrayXd(5) << 1.2854109, -11.465615, 22.086893, 7.4691383, -17.197772).finished();
+    static Eigen::ArrayXd a_2 = (Eigen::ArrayXd(5) << 1.7942954, 0.7695103, 7.2647923, 94.486699, -77.148458).finished();
+
+    static Eigen::ArrayXd b_0 = (Eigen::ArrayXd(5) << 0.4542718, -4.5016264, 3.5858868, 0.0, 0.0).finished();
+    static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(5) << -0.8137340, 10.064030, -10.876631, 0.0, 0.0).finished();
+    static Eigen::ArrayXd b_2 = (Eigen::ArrayXd(5) << 6.8682675, -5.1732238, -17.240207, 0.0, 0.0).finished();
+    
+    std::common_type_t<Eta, MType> summer = 0.0;
+    for (auto n = 0; n < 5; ++n){
+        auto anij = a_0[n] + (mij-1)/mij*a_1[n] + (mij-1)/mij*(mij-2)/mij*a_2[n]; // Eq. 12
+        auto bnij = b_0[n] + (mij-1)/mij*b_1[n] + (mij-1)/mij*(mij-2)/mij*b_2[n]; // Eq. 13
+        summer += (anij + bnij/Tstarij)*pow(eta, n);
+    }
+    return forceeval(summer);
+}
+
+/// Eq. 13 from Gross and Vrabec, AICHEJ
+template <typename Eta, typename MType>
+auto get_JQQ_3ijk(const Eta& eta, const MType& mijk) {
+    static Eigen::ArrayXd c_0 = (Eigen::ArrayXd(5) << 0.5000437, 6.5318692, -16.014780, 14.425970, 0.0).finished();
+    static Eigen::ArrayXd c_1 = (Eigen::ArrayXd(5) << 2.0002094, -6.7838658, 20.383246, -10.895984, 0.0).finished();
+    static Eigen::ArrayXd c_2 = (Eigen::ArrayXd(5) << 3.1358271, 7.2475888, 3.0759478, 0.0, 0.0).finished();
+    std::common_type_t<Eta, MType> summer = 0.0;
+    for (auto n = 0; n < 5; ++n){
+        auto cnijk = c_0[n] + (mijk-1)/mijk*c_1[n] + (mijk-1)/mijk*(mijk-2)/mijk*c_2[n]; // Eq. 14
+        summer += cnijk*pow(eta, n);
+    }
+    return forceeval(summer);
+}
+
 /**
 Sum up three array-like objects that can each have different container types and value types
 */
