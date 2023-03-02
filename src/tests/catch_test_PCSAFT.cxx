@@ -188,3 +188,33 @@ TEST_CASE("Check PCSAFT with dipole for acetone", "[PCSAFTD]")
     CHECK(std::get<0>(crit) == Approx(520).margin(10));
 }
 
+TEST_CASE("Check PCSAFT with dipole for CO2", "[PCSAFTQ]")
+{
+    std::vector<teqp::PCSAFT::SAFTCoeffs> coeffs;
+    std::vector<double> eoverk = { 169.33 }, m = { 1.5131 }, sigma = { 3.1869 };
+    for (auto i = 0; i < eoverk.size(); ++i) {
+        teqp::PCSAFT::SAFTCoeffs c;
+        c.m = m[i];
+        c.sigma_Angstrom = sigma[i];
+        c.epsilon_over_k = eoverk[i];
+        coeffs.push_back(c);
+    }
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    auto modelPCSAFT = PCSAFT::PCSAFTMixture(coeffs);
+    auto alpharPCSAFT = modelPCSAFT.alphar(300.0, 300.0, z);
+    
+    // The conversion factor with inputs are in Debye, Angstroms, and K to non-dimensional quantity
+    auto conv_factor = 1e-69/1.380649e-23/1e-50;
+    auto QDA = 4.4; // [DA]
+    auto Qstar2 = (Eigen::ArrayXd(1) << conv_factor*QDA*QDA/(m[0]*eoverk[0]*pow(sigma[0], 5))).finished();
+    
+    auto n = (Eigen::ArrayXd(1) << 1).finished();
+    auto model = PCSAFT::PCSAFTQMixture(coeffs, {}, Qstar2, n);
+    
+    auto alphar = model.alphar(300.0, 300.0, z);
+    CHECK(alpharPCSAFT != alphar);
+    
+    double rhoc = 275/0.05808; // [kg/m^3] to [mol/m^3]
+    auto crit = solve_pure_critical(model, 510.0, rhoc);
+    CHECK(std::get<0>(crit) == Approx(325).margin(10));
+}

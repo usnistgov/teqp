@@ -397,6 +397,8 @@ public:
 
 /***
  * \brief A dipolar model formed of the hard-chain contribution from vanilla PC-SAFT plus the dipolar contribution from Gross and Vrabec
+ *
+ * \TODO Switch to the 2CL model, generalize so that other EOS can be used
  */
 class PCSAFTDMixture : public PCSAFTMixture{
 private:
@@ -491,6 +493,110 @@ public:
         // call base class for the primary contributions
         auto base = PCSAFTMixture::alphar(T, rhomolar, mole_fractions);
         auto dipolar = get_alphar_dipolar(T, rhomolar, mole_fractions);
+        return forceeval(base + dipolar);
+    }
+};
+
+/***
+ * \brief A quadrupolar model formed of the hard-chain contribution from vanilla PC-SAFT plus the quadrupolar contribution from Gross and Vrabec
+ *
+ * \TODO Switch to the 2CL model, generalize so that other EOS can be used
+ */
+class PCSAFTQMixture : public PCSAFTMixture{
+private:
+    Eigen::ArrayXd Qstar2, nQ;
+    template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
+    template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
+    template<typename A> auto POW5(const A& x) const { return forceeval(POW2(x)*POW3(x)); }
+    template<typename A> auto POW7(const A& x) const { return forceeval(POW2(x)*POW5(x)); }
+public:
+    PCSAFTQMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat, const Eigen::ArrayXd& Qstar2, const Eigen::ArrayXd& n) : PCSAFTMixture(coeffs, kmat), Qstar2(Qstar2), nQ(n) {
+        // Check lengths match
+        if (coeffs.size() != Qstar2.size()){
+            throw teqp::InvalidArgument("bad size of mustar2");
+        }
+        if (coeffs.size() != n.size()){
+            throw teqp::InvalidArgument("bad size of n");
+        }
+    }
+    
+    /// Eq. 9 from Gross and Vrabec
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto get_alpha2QQ(const TTYPE& T, const RhoType& rhoN_A3, const RhoType& eta, const VecType& mole_fractions) const{
+        const auto& x = mole_fractions; // concision
+        const auto& sigma = sigma_Angstrom; // concision
+        const auto N = mole_fractions.size();
+        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> summer = 0.0;
+        for (auto i = 0; i < N; ++i){
+            for (auto j = 0; j < N; ++j){
+                auto ninj = nQ[i]*nQ[j];
+                if (ninj > 0){
+                    // Lorentz-Berthelot mixing rules
+                    auto epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
+                    auto sigmaij = (sigma[i]+sigma[j])/2;
+                    
+                    auto Tstarij = T/epskij;
+                    auto mij = sqrt(m[i]*m[j]);
+                    summer += x[i]*x[j]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*POW5(sigma[i]*sigma[j])/POW7(sigmaij)*ninj*Qstar2[i]*Qstar2[j]*get_JQQ_2ij(eta, mij, Tstarij);
+                }
+            }
+        }
+        return forceeval(-EIGEN_PI*POW2(3.0/4.0)*rhoN_A3*summer);
+    }
+    
+    /// Eq. 1 from Gross and Vrabec
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto get_alpha3QQ(const TTYPE& T, const RhoType& rhoN_A3, const RhoType& eta, const VecType& mole_fractions) const{
+        const auto& x = mole_fractions; // concision
+        const auto& sigma = sigma_Angstrom; // concision
+        const auto N = mole_fractions.size();
+        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> summer = 0.0;
+        for (auto i = 0; i < N; ++i){
+            for (auto j = 0; j < N; ++j){
+                for (auto k = 0; k < N; ++k){
+                    auto ninjnk = nQ[i]*nQ[j]*nQ[k];
+                    if (ninjnk > 0){
+                        // Lorentz-Berthelot mixing rules for sigma
+                        auto sigmaij = (sigma[i]+sigma[j])/2;
+                        auto sigmaik = (sigma[i]+sigma[k])/2;
+                        auto sigmajk = (sigma[j]+sigma[k])/2;
+                        
+                        auto mijk = pow(m[i]*m[j]*m[k], 1.0/3.0);
+                        summer += x[i]*x[j]*x[k]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*epsilon_over_k[k]/T*POW5(sigma[i]*sigma[j]*sigma[k])/POW3(sigmaij*sigmaik*sigmajk)*ninjnk*Qstar2[i]*Qstar2[j]*Qstar2[k]*get_JDD_3ijk(eta, mijk);
+                    }
+                }
+            }
+        }
+        return forceeval(-4.0*POW2(EIGEN_PI)/3.0*POW3(3.0/4.0)*POW2(rhoN_A3)*summer);
+    }
+    
+    /***
+     * \brief Get the quadrupolar contribution to \f$ \alpha = A/(NkT) \f$
+     */
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto get_alphar_quadrupolar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
+        
+        /// Convert from molar density to number density in molecules/Angstrom^3
+        RhoType rho_A3 = rhomolar * N_A * 1e-30; //[molecules (not moles)/A^3]
+
+        constexpr double MY_PI = EIGEN_PI;
+        double pi6 = (MY_PI / 6.0);
+        using TRHOType = RhoType;
+        
+        auto d3 = (sigma_Angstrom*(1.0 - 0.12 * exp(-3.0*epsilon_over_k/T))).pow(3);
+        TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()*d3.template cast<TRHOType>().array()).sum());
+        RhoType eta = pi6*rho_A3*xmdn;
+        auto alpha2 = get_alpha2QQ(T, rho_A3, eta, mole_fractions);
+        auto alpha3 = get_alpha3QQ(T, rho_A3, eta, mole_fractions);
+        return alpha2/(1-alpha3/alpha2);
+    }
+    
+    /// The function to get $\alpha$ of the combined model
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto alphar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
+        // call base class for the primary contributions
+        auto base = PCSAFTMixture::alphar(T, rhomolar, mole_fractions);
+        auto dipolar = get_alphar_quadrupolar(T, rhomolar, mole_fractions);
         return forceeval(base + dipolar);
     }
 };
