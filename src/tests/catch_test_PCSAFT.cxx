@@ -7,6 +7,7 @@ using Catch::Approx;
 #include "teqp/derivs.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/finite_derivs.hpp"
+#include "teqp/algorithms/critical_pure.hpp"
 using namespace teqp::PCSAFT;
 using namespace teqp;
 
@@ -154,3 +155,36 @@ TEST_CASE("Check PCSAFT with kij and coeffs", "[PCSAFT]")
         CHECK_THROWS(PCSAFTMixture(coeffs, kij_bad));
     }
 }
+
+TEST_CASE("Check PCSAFT with dipole for acetone", "[PCSAFTD]")
+{
+    std::vector<teqp::PCSAFT::SAFTCoeffs> coeffs;
+    std::vector<double> eoverk = { 232.99 }, m = { 2.7447 }, sigma = { 3.2742 };
+    for (auto i = 0; i < eoverk.size(); ++i) {
+        teqp::PCSAFT::SAFTCoeffs c;
+        c.m = m[i];
+        c.sigma_Angstrom = sigma[i];
+        c.epsilon_over_k = eoverk[i];
+        coeffs.push_back(c);
+    }
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    auto modelPCSAFT = PCSAFT::PCSAFTMixture(coeffs);
+    auto alpharPCSAFT = modelPCSAFT.alphar(300.0, 300.0, z);
+    
+    // The conversion factor with inputs are in Debye, Angstroms, and K to non-dimensional quantity
+    auto conv_factor = pow(3.33564e-30,2)/(4*EIGEN_PI*8.8541878128e-12*1.380649e-23*1e-30);
+    conv_factor = 1e4/1.3807;
+    auto muD = 2.88; // [D]
+    auto mustar2 = (Eigen::ArrayXd(1) << conv_factor*muD*muD/(m[0]*eoverk[0]*pow(sigma[0], 3))).finished();
+    
+    auto n = (Eigen::ArrayXd(1) << 1).finished();
+    auto model = PCSAFT::PCSAFTDMixture(coeffs, {}, mustar2, n);
+    
+    auto alphar = model.alphar(300.0, 300.0, z);
+    CHECK(alpharPCSAFT != alphar);
+    
+    double rhoc = 275/0.05808; // [kg/m^3] to [mol/m^3]
+    auto crit = solve_pure_critical(model, 510.0, rhoc);
+    CHECK(std::get<0>(crit) == Approx(520).margin(10));
+}
+

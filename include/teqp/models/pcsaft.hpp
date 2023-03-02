@@ -1,3 +1,9 @@
+/***
+ 
+ \brief This file contains the contributions that can be composed together to form SAFT models
+
+*/
+
 #pragma once
 
 #include "nlohmann/json.hpp"
@@ -147,6 +153,40 @@ auto get_I2(const Eta& eta, MbarType mbar) {
     return std::make_tuple(forceeval(summer_I2), forceeval(summer_etadI2deta));
 }
 
+/// Eq. 10 from Gross and Vrabec
+template <typename Eta, typename MType, typename TType>
+auto get_JDD_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
+    static Eigen::ArrayXd a_0 = (Eigen::ArrayXd(5) << 0.3043504, -0.1358588, 1.4493329, 0.3556977, -2.0653308).finished();
+    static Eigen::ArrayXd a_1 = (Eigen::ArrayXd(5) << 0.9534641, -1.8396383, 2.0131180, -7.3724958, 8.2374135).finished();
+    static Eigen::ArrayXd a_2 = (Eigen::ArrayXd(5) << -1.1610080, 4.5258607, 0.9751222, -12.281038, 5.9397575).finished();
+
+    static Eigen::ArrayXd b_0 = (Eigen::ArrayXd(5) << 0.2187939, -1.1896431, 1.1626889, 0, 0).finished();
+    static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(5) << -0.5873164, 1.2489132, -0.5085280, 0, 0).finished();
+    static Eigen::ArrayXd b_2 = (Eigen::ArrayXd(5) << 3.4869576, -14.915974, 15.372022, 0, 0).finished();
+    
+    std::common_type_t<Eta, MType> summer = 0.0;
+    for (auto n = 0; n < 5; ++n){
+        auto anij = a_0[n] + (mij-1)/mij*a_1[n] + (mij-1)/mij*(mij-2)/mij*a_2[n]; // Eq. 12
+        auto bnij = b_0[n] + (mij-1)/mij*b_1[n] + (mij-1)/mij*(mij-2)/mij*b_2[n]; // Eq. 13
+        summer += (anij + bnij/Tstarij)*pow(eta, n);
+    }
+    return forceeval(summer);
+}
+
+/// Eq. 11 from Gross and Vrabec
+template <typename Eta, typename MType>
+auto get_JDD_3ijk(const Eta& eta, const MType& mijk) {
+    static Eigen::ArrayXd c_0 = (Eigen::ArrayXd(5) << -0.0646774, 0.1975882, -0.8087562, 0.6902849, 0.0).finished();
+    static Eigen::ArrayXd c_1 = (Eigen::ArrayXd(5) << -0.9520876, 2.9924258, -2.3802636, -0.2701261, 0.0).finished();
+    static Eigen::ArrayXd c_2 = (Eigen::ArrayXd(5) << -0.6260979, 1.2924686, 1.6542783, -3.4396744, 0.0).finished();
+    std::common_type_t<Eta, MType> summer = 0.0;
+    for (auto n = 0; n < 5; ++n){
+        auto cnijk = c_0[n] + (mijk-1)/mijk*c_1[n] + (mijk-1)/mijk*(mijk-2)/mijk*c_2[n]; // Eq. 14
+        summer += cnijk*pow(eta, n);
+    }
+    return forceeval(summer);
+}
+
 /**
 Sum up three array-like objects that can each have different container types and value types
 */
@@ -187,7 +227,7 @@ This is the classical Gross and Sadowski model from 2001: https://doi.org/10.102
 with the error fixed as noted in a comment: https://doi.org/10.1021/acs.iecr.9b01515
 */
 class PCSAFTMixture {
-private:
+protected:
     Eigen::ArrayX<double> m, ///< number of segments
         mminus1, ///< m-1
         sigma_Angstrom, ///< 
@@ -318,6 +358,106 @@ public:
         auto alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar;
         
         return forceeval(alphar_hc + alphar_disp);
+    }
+};
+
+/***
+ * \brief A dipolar model formed of the hard-chain contribution from vanilla PC-SAFT plus the dipolar contribution from Gross and Vrabec
+ */
+class PCSAFTDMixture : public PCSAFTMixture{
+private:
+    Eigen::ArrayXd mustar2, nmu;
+    template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
+    template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
+public:
+    PCSAFTDMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat, const Eigen::ArrayXd& mustar2, const Eigen::ArrayXd& n) : PCSAFTMixture(coeffs, kmat), mustar2(mustar2), nmu(n) {
+        // Check lengths match
+        if (coeffs.size() != mustar2.size()){
+            throw teqp::InvalidArgument("bad size of mustar2");
+        }
+        if (coeffs.size() != n.size()){
+            throw teqp::InvalidArgument("bad size of n");
+        }
+    }
+    
+    /// Eq. 8 from Gross and Vrabec
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto get_alpha2DD(const TTYPE& T, const RhoType& rhoN_A3, const RhoType& eta, const VecType& mole_fractions) const{
+        const auto& x = mole_fractions; // concision
+        const auto& sigma = sigma_Angstrom; // concision
+        const auto N = mole_fractions.size();
+        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> summer = 0.0;
+        for (auto i = 0; i < N; ++i){
+            for (auto j = 0; j < N; ++j){
+                auto ninj = nmu[i]*nmu[j];
+                if (ninj > 0){
+                    // Lorentz-Berthelot mixing rules
+                    auto epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
+                    auto sigmaij = (sigma[i]+sigma[j])/2;
+                    
+                    auto Tstarij = T/epskij;
+                    auto mij = sqrt(m[i]*m[j]);
+                    summer += x[i]*x[j]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*POW3(sigma[i]*sigma[j]/sigmaij)*ninj*mustar2[i]*mustar2[j]*get_JDD_2ij(eta, mij, Tstarij);
+                }
+            }
+        }
+        return forceeval(-EIGEN_PI*rhoN_A3*summer);
+    }
+    
+    /// Eq. 9 from Gross and Vrabec
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto get_alpha3DD(const TTYPE& T, const RhoType& rhoN_A3, const RhoType& eta, const VecType& mole_fractions) const{
+        const auto& x = mole_fractions; // concision
+        const auto& sigma = sigma_Angstrom; // concision
+        const auto N = mole_fractions.size();
+        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> summer = 0.0;
+        for (auto i = 0; i < N; ++i){
+            for (auto j = 0; j < N; ++j){
+                for (auto k = 0; k < N; ++k){
+                    auto ninjnk = nmu[i]*nmu[j]*nmu[k];
+                    if (ninjnk > 0){
+                        // Lorentz-Berthelot mixing rules for sigma
+                        auto sigmaij = (sigma[i]+sigma[j])/2;
+                        auto sigmaik = (sigma[i]+sigma[k])/2;
+                        auto sigmajk = (sigma[j]+sigma[k])/2;
+                        
+                        auto mijk = pow(m[i]*m[j]*m[k], 1.0/3.0);
+                        summer += x[i]*x[j]*x[k]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*epsilon_over_k[k]/T*POW3(sigma[i]*sigma[j]*sigma[k])/(sigmaij*sigmaik*sigmajk)*ninjnk*mustar2[i]*mustar2[j]*mustar2[k]*get_JDD_3ijk(eta, mijk);
+                    }
+                }
+            }
+        }
+        return forceeval(-4.0*POW2(EIGEN_PI)/3.0*POW2(rhoN_A3)*summer);
+    }
+    
+    /***
+     * \brief Get the dipolar contribution to \f$ \alpha = A/(NkT) \f$
+     */
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto get_alphar_dipolar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
+        
+        /// Convert from molar density to number density in molecules/Angstrom^3
+        RhoType rho_A3 = rhomolar * N_A * 1e-30; //[molecules (not moles)/A^3]
+
+        constexpr double MY_PI = EIGEN_PI;
+        double pi6 = (MY_PI / 6.0);
+        using TRHOType = RhoType;
+        
+        auto d3 = (sigma_Angstrom*(1.0 - 0.12 * exp(-3.0*epsilon_over_k/T))).pow(3);
+        TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()*d3.template cast<TRHOType>().array()).sum());
+        RhoType eta = pi6*rho_A3*xmdn;
+        auto alpha2 = get_alpha2DD(T, rho_A3, eta, mole_fractions);
+        auto alpha3 = get_alpha3DD(T, rho_A3, eta, mole_fractions);
+        return alpha2/(1-alpha3/alpha2);
+    }
+    
+    /// The function to get $\alpha$ of the combined model
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto alphar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
+        // call base class for the primary contributions
+        auto base = PCSAFTMixture::alphar(T, rhomolar, mole_fractions);
+        auto dipolar = get_alphar_dipolar(T, rhomolar, mole_fractions);
+        return forceeval(base + dipolar);
     }
 };
 
