@@ -306,13 +306,17 @@ public:
         auto [I1, etadI1deta] = get_I1(eta, mbar);
         auto [I2, etadI2deta] = get_I2(eta, mbar);
 
+        // Hard chain contribution from G&S
         using tt = std::common_type_t<decltype(zeta[0]), decltype(c.d[0])>;
         Eigen::ArrayX<tt> lngii_hs(mole_fractions.size());
         for (auto i = 0; i < lngii_hs.size(); ++i) {
             lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
         }
         auto alphar_hc = mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
+        
+        // Dispersive contribution
         auto alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar;
+        
         return forceeval(alphar_hc + alphar_disp);
     }
 };
