@@ -4,6 +4,7 @@ using Catch::Approx;
 
 #include "teqp/models/mie/lennardjones.hpp"
 #include "teqp/models/mie/mie.hpp"
+#include "teqp/models/model_potentials/LJChain.hpp"
 #include "teqp/algorithms/critical_pure.hpp"
 #include "teqp/derivs.hpp"
 
@@ -85,4 +86,16 @@ TEST_CASE("Test single point values from S. Pohl", "[Mien6]")
         CHECK(Ar10rcalc == Approx(A10r).margin(1e-14));
         CHECK(Ar01rcalc == Approx(A01r).margin(1e-14));
     }
+}
+
+TEST_CASE("Test LJChain models", "[LJChain]"){
+    auto Johnson = LJ126Johnson1993();
+    auto m1 = LJChain::LJChain(std::move(Johnson), 1);
+    auto m2 = LJChain::LJChain(std::move(Johnson), 2);
+    auto m3 = LJChain::LJChain(std::move(Johnson), 3);
+    
+    auto crit1 = solve_pure_critical(m1, 1.32, 0.3);
+    auto crit2 = solve_pure_critical(m2, 1.32, 0.3);
+    auto crit3 = solve_pure_critical(m3, 1.32, 0.3);
+    CHECK(std::get<0>(crit2) == Approx(1.82).margin(0.1));
 }
