@@ -79,11 +79,11 @@ namespace teqp {
                     c.sigma_Angstrom = j.at("sigma_Angstrom");
                     c.epsilon_over_k = j.at("epsilon_over_k");
                     c.BibTeXKey = j.at("BibTeXKey");
-                    if (c.contains("(mu^*)^2") && c.contains("nmu")){
+                    if (j.contains("(mu^*)^2") && j.contains("nmu")){
                         c.mustar2 = j.at("(mu^*)^2");
                         c.nmu = j.at("nmu");
                     }
-                    if (c.contains("(Q^*)^2") && c.contains("nQ")){
+                    if (j.contains("(Q^*)^2") && j.contains("nQ")){
                         c.Qstar2 = j.at("(Q^*)^2");
                         c.nQ = j.at("nQ");
                     }
