@@ -171,7 +171,7 @@ TEST_CASE("Check PCSAFT with dipole for acetone", "[PCSAFTD]")
     auto modelPCSAFT = PCSAFT::PCSAFTMixture(coeffs);
     auto alpharPCSAFT = modelPCSAFT.alphar(300.0, 300.0, z);
     
-    // The conversion factor with inputs are in Debye, Angstroms, and K to non-dimensional quantity
+    // The conversion factor with inputs in Debye, Angstroms, and K to non-dimensional quantity
     auto conv_factor = pow(3.33564e-30,2)/(4*EIGEN_PI*8.8541878128e-12*1.380649e-23*1e-30);
     conv_factor = 1e4/1.3807;
     auto muD = 2.88; // [D]
@@ -203,9 +203,10 @@ TEST_CASE("Check PCSAFT with dipole for CO2", "[PCSAFTQ]")
     auto modelPCSAFT = PCSAFT::PCSAFTMixture(coeffs);
     auto alpharPCSAFT = modelPCSAFT.alphar(300.0, 300.0, z);
     
-    // The conversion factor with inputs are in Debye, Angstroms, and K to non-dimensional quantity
+    // The conversion factor with inputs in Debye, Angstroms, and K to non-dimensional quantity
     auto conv_factor = 1e-69/1.380649e-23/1e-50;
     auto QDA = 4.4; // [DA]
+    auto conv_factorme = pow(3.33564e-40,2)/(4*EIGEN_PI*8.8541878128e-12*1.380649e-23*1e-50);
     auto Qstar2 = (Eigen::ArrayXd(1) << conv_factor*QDA*QDA/(m[0]*eoverk[0]*pow(sigma[0], 5))).finished();
     
     auto n = (Eigen::ArrayXd(1) << 1).finished();
