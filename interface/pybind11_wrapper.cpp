@@ -291,6 +291,10 @@ void init_teqp(py::module& m) {
     .def_readwrite("sigma_Angstrom", &SAFTCoeffs::sigma_Angstrom)
     .def_readwrite("epsilon_over_k", &SAFTCoeffs::epsilon_over_k)
     .def_readwrite("BibTeXKey", &SAFTCoeffs::BibTeXKey)
+    .def_readwrite("mustar2", &SAFTCoeffs::mustar2)
+    .def_readwrite("nmu", &SAFTCoeffs::nmu)
+    .def_readwrite("Qstar2", &SAFTCoeffs::Qstar2)
+    .def_readwrite("nQ", &SAFTCoeffs::nQ)
     ;
 
     m.def("convert_CoolProp_idealgas", [](const std::string &path, int index){return convert_CoolProp_idealgas(path, index);});
