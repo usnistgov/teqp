@@ -181,9 +181,23 @@ TEST_CASE("Check PCSAFT with dipole for acetone", "[PCSAFTD]")
     auto model = PCSAFT::PCSAFTMixture(coeffs, {});
     auto alphar = model.alphar(300.0, 300.0, z);
     
+    // Build from JSON
+    nlohmann::json jcoeffs = nlohmann::json::array();
+    jcoeffs.push_back({ {"name", "acetone"}, { "m", m[0] }, { "sigma_Angstrom", sigma[0]},{"epsilon_over_k", eoverk[0]}, {"BibTeXKey", "Gross-IECR-2001"}, {"(mu^*)^2", mustar2}, {"nmu", 1.0} });
+    nlohmann::json jmodel = {
+        {"coeffs", jcoeffs}
+    };
+    nlohmann::json j = {
+        {"kind", "PCSAFT"},
+        {"model", jmodel}
+    };
+    auto modelj = cppinterface::make_model(j);
+    auto alpharj = modelj->get_Ar00(300.0, 300.0, z);
+    
     double rhoc = 275/0.05808; // [kg/m^3] to [mol/m^3]
     auto crit = solve_pure_critical(model, 510.0, rhoc);
     CHECK(std::get<0>(crit) == Approx(520).margin(10));
+    CHECK(alphar == alpharj);
 }
 
 TEST_CASE("Check PCSAFT with quadrupole for CO2", "[PCSAFTQ]")

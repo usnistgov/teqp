@@ -350,8 +350,7 @@ public:
  */
 class PCSAFTDipolarContribution {
 private:
-    const Eigen::ArrayXd &m, &sigma_Angstrom, &epsilon_over_k,
-        mustar2, nmu; // The last two are owned
+    const Eigen::ArrayXd m, sigma_Angstrom, epsilon_over_k, mustar2, nmu;
     template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
     template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
 public:
