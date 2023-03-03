@@ -264,15 +264,17 @@ public:
 class PCSAFTHardChainContribution{
     
 protected:
-    const Eigen::ArrayX<double> &m, ///< number of segments
-        &mminus1, ///< m-1
-        &sigma_Angstrom, ///<
-        &epsilon_over_k; ///< depth of pair potential divided by Boltzman constant
-    const Eigen::ArrayXXd &kmat; ///< binary interaction parameter matrix
+    const Eigen::ArrayX<double> m, ///< number of segments
+        mminus1, ///< m-1
+        sigma_Angstrom, ///<
+        epsilon_over_k; ///< depth of pair potential divided by Boltzman constant
+    const Eigen::ArrayXXd kmat; ///< binary interaction parameter matrix
 
 public:
     PCSAFTHardChainContribution(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &mminus1, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayXXd &kmat)
     : m(m), mminus1(mminus1), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), kmat(kmat) {}
+    
+    PCSAFTHardChainContribution& operator=( const PCSAFTHardChainContribution& ) = delete; // non copyable
     
     template<typename TTYPE, typename RhoType, typename VecType>
     auto eval(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
@@ -437,7 +439,7 @@ public:
  */
 class PCSAFTQuadrupolarContribution {
 private:
-    const Eigen::ArrayXd &m, &sigma_Angstrom, &epsilon_over_k, Qstar2, nQ;
+    const Eigen::ArrayXd m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ;
     template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
     template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
     template<typename A> auto POW5(const A& x) const { return forceeval(POW2(x)*POW3(x)); }
@@ -452,6 +454,7 @@ public:
             throw teqp::InvalidArgument("bad size of n");
         }
     }
+    PCSAFTQuadrupolarContribution& operator=( const PCSAFTQuadrupolarContribution& ) = delete; // non copyable
     
     /// Eq. 9 from Gross and Vrabec
     template<typename TTYPE, typename RhoType, typename EtaType, typename VecType>
@@ -605,6 +608,10 @@ protected:
 public:
     PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), kmat){};
     PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : kmat(kmat), hardchain(build_hardchain(coeffs)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
+    
+//    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
+    PCSAFTMixture& operator=( const PCSAFTMixture& ) = delete; // non copyable
+    
     auto get_m() const { return m; }
     auto get_sigma_Angstrom() const { return sigma_Angstrom; }
     auto get_epsilon_over_k_K() const { return epsilon_over_k; }

@@ -7,6 +7,8 @@ using Catch::Approx;
 #include "teqp/derivs.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/finite_derivs.hpp"
+#include "teqp/json_builder.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/algorithms/critical_pure.hpp"
 using namespace teqp::PCSAFT;
 using namespace teqp;
@@ -193,6 +195,20 @@ TEST_CASE("Check PCSAFT with quadrupole for CO2", "[PCSAFTQ]")
     auto QDA = 4.4; // [DA]
     auto conv_factorme = pow(3.33564e-40,2)/(4*EIGEN_PI*8.8541878128e-12*1.380649e-23*1e-50);
     auto Qstar2 = conv_factor*QDA*QDA/(m[0]*eoverk[0]*pow(sigma[0], 5));
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    // Build from JSON
+    nlohmann::json jcoeffs = nlohmann::json::array();
+    jcoeffs.push_back({ {"name", "CO2"}, { "m", m[0] }, { "sigma_Angstrom", sigma[0]},{"epsilon_over_k", eoverk[0]}, {"BibTeXKey", "Gross-IECR-2001"}, {"(Q^*)^2", Qstar2}, {"nQ", 1.0} });
+    nlohmann::json jmodel = {
+        {"coeffs", jcoeffs}
+    };
+    nlohmann::json j = {
+        {"kind", "PCSAFT"},
+        {"model", jmodel}
+    };
+    auto modelj = cppinterface::make_model(j);
+    auto alpharj = modelj->get_Ar00(300.0, 300.0, z);
     
     for (auto i = 0; i < eoverk.size(); ++i) {
         teqp::PCSAFT::SAFTCoeffs c;
@@ -203,9 +219,10 @@ TEST_CASE("Check PCSAFT with quadrupole for CO2", "[PCSAFTQ]")
         c.nQ = 1;
         coeffs.push_back(c);
     }
-    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
     auto model = PCSAFT::PCSAFTMixture(coeffs, {});
     auto alphar = model.alphar(300.0, 300.0, z);
+    CHECK(alpharj == Approx(alphar));
     
     double rhoc = 275/0.05808; // [kg/m^3] to [mol/m^3]
     auto crit = solve_pure_critical(model, 310.0, rhoc);
