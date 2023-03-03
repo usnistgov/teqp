@@ -254,6 +254,97 @@ public:
                 m2_epsilon2_sigma3_bar; ///< Eq. A. 13
 };
 
+/***
+ * \brief This class provides the evaluation of the hard chain contribution from classic PC-SAFT
+ */
+class PCSAFTHardChainContribution{
+    
+protected:
+    const Eigen::ArrayX<double> &m, ///< number of segments
+        &mminus1, ///< m-1
+        &sigma_Angstrom, ///<
+        &epsilon_over_k; ///< depth of pair potential divided by Boltzman constant
+    const Eigen::ArrayXXd &kmat; ///< binary interaction parameter matrix
+
+public:
+    PCSAFTHardChainContribution(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &mminus1, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayXXd &kmat)
+    : m(m), mminus1(mminus1), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), kmat(kmat) {}
+    
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto eval(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
+        
+        using EtaType = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
+        
+        struct PCSAFTHardChainContributionTerms{
+            EtaType eta = -9999999999;
+            EtaType alphar_hc;
+            EtaType alphar_disp;
+        };
+        
+        PCSAFTHardChainContributionTerms o;
+        
+        std::size_t N = m.size();
+        
+        if (mole_fractions.size() != N) {
+            throw std::invalid_argument("Length of mole_fractions (" + std::to_string(mole_fractions.size()) + ") is not the length of components (" + std::to_string(N) + ")");
+        }
+        
+        using TRHOType = std::common_type_t<std::decay_t<TTYPE>, std::decay_t<RhoType>, std::decay_t<decltype(mole_fractions[0])>, std::decay_t<decltype(m[0])>>;
+        
+        SAFTCalc<TTYPE, TRHOType> c;
+        c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
+        c.m2_epsilon2_sigma3_bar = static_cast<TRHOType>(0.0);
+        c.d.resize(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            c.d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
+            for (std::size_t j = 0; j < N; ++j) {
+                // Eq. A.5
+                auto sigma_ij = 0.5 * sigma_Angstrom[i] + 0.5 * sigma_Angstrom[j];
+                auto eij_over_k = sqrt(epsilon_over_k[i] * epsilon_over_k[j]) * (1.0 - kmat(i,j));
+                c.m2_epsilon_sigma3_bar = c.m2_epsilon_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * eij_over_k / T * pow(sigma_ij, 3);
+                c.m2_epsilon2_sigma3_bar = c.m2_epsilon2_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * pow(eij_over_k / T, 2) * pow(sigma_ij, 3);
+            }
+        }
+        auto mbar = (mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()).sum();
+        
+        /// Convert from molar density to number density in molecules/Angstrom^3
+        RhoType rho_A3 = rhomolar * N_A * 1e-30; //[molecules (not moles)/A^3]
+        
+        constexpr double MY_PI = EIGEN_PI;
+        double pi6 = (MY_PI / 6.0);
+        
+        /// Evaluate the components of zeta
+        using ta = std::common_type_t<decltype(pi6), decltype(m[0]), decltype(c.d[0]), decltype(rho_A3)>;
+        std::vector<ta> zeta(4);
+        for (std::size_t n = 0; n < 4; ++n) {
+            // Eqn A.8
+            auto dn = c.d.pow(n).eval();
+            TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()*dn.template cast<TRHOType>().array()).sum());
+            zeta[n] = forceeval(pi6*rho_A3*xmdn);
+        }
+        
+        /// Packing fraction is the 4-th value in zeta, at index 3
+        auto eta = zeta[3];
+        o.eta = eta;
+        
+        auto [I1, etadI1deta] = get_I1(eta, mbar);
+        auto [I2, etadI2deta] = get_I2(eta, mbar);
+        
+        // Hard chain contribution from G&S
+        using tt = std::common_type_t<decltype(zeta[0]), decltype(c.d[0])>;
+        Eigen::ArrayX<tt> lngii_hs(mole_fractions.size());
+        for (auto i = 0; i < lngii_hs.size(); ++i) {
+            lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
+        }
+        o.alphar_hc = mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
+        
+        // Dispersive contribution
+        o.alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar;
+        
+        return o;
+    }
+};
+
 /** A class used to evaluate mixtures using PC-SAFT model
 
 This is the classical Gross and Sadowski model from 2001: https://doi.org/10.1021/ie0003887
@@ -268,6 +359,8 @@ protected:
         epsilon_over_k; ///< depth of pair potential divided by Boltzman constant
     std::vector<std::string> names;
     Eigen::ArrayXXd kmat; ///< binary interaction parameter matrix
+    
+    PCSAFTHardChainContribution hardchain;
 
     void check_kmat(std::size_t N) {
         if (kmat.cols() != kmat.rows()) {
@@ -284,10 +377,7 @@ protected:
         PCSAFTLibrary library;
         return library.get_coeffs(names);
     }
-public:
-    PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), kmat){};
-    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : kmat(kmat)
-    {
+    auto build_hardchain(const std::vector<SAFTCoeffs> &coeffs){
         check_kmat(coeffs.size());
 
         m.resize(coeffs.size());
@@ -304,7 +394,11 @@ public:
             names[i] = coeff.name;
             i++;
         }
-    };
+        return PCSAFTHardChainContribution(m, mminus1, sigma_Angstrom, epsilon_over_k, kmat);
+    }
+public:
+    PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), kmat){};
+    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : kmat(kmat), hardchain(build_hardchain(coeffs)) {};
     auto get_m() const { return m; }
     auto get_sigma_Angstrom() const { return sigma_Angstrom; }
     auto get_epsilon_over_k_K() const { return epsilon_over_k; }
@@ -317,6 +411,7 @@ public:
         }
         return s;
     }
+    
     template<typename VecType>
     double max_rhoN(const double T, const VecType& mole_fractions) const {
         auto N = mole_fractions.size();
@@ -326,6 +421,7 @@ public:
         }
         return 6 * 0.74 / EIGEN_PI / (mole_fractions*m*powvec(d, 3)).sum()*1e30; // particles/m^3
     }
+    
     template<class VecType>
     auto R(const VecType& molefrac) const {
         return get_R_gas<decltype(molefrac[0])>();
@@ -333,65 +429,8 @@ public:
 
     template<typename TTYPE, typename RhoType, typename VecType>
     auto alphar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
-
-        std::size_t N = m.size();
-
-        if (mole_fractions.size() != N) {
-            throw std::invalid_argument("Length of mole_fractions (" + std::to_string(mole_fractions.size()) + ") is not the length of components (" + std::to_string(N) + ")");
-        }
-
-        using TRHOType = std::common_type_t<std::decay_t<TTYPE>, std::decay_t<RhoType>, std::decay_t<decltype(mole_fractions[0])>, std::decay_t<decltype(m[0])>>;
-
-        SAFTCalc<TTYPE, TRHOType> c;
-        c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
-        c.m2_epsilon2_sigma3_bar = static_cast<TRHOType>(0.0);
-        c.d.resize(N); 
-        for (std::size_t i = 0; i < N; ++i) {
-            c.d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
-            for (std::size_t j = 0; j < N; ++j) {
-                // Eq. A.5
-                auto sigma_ij = 0.5 * sigma_Angstrom[i] + 0.5 * sigma_Angstrom[j];
-                auto eij_over_k = sqrt(epsilon_over_k[i] * epsilon_over_k[j]) * (1.0 - kmat(i,j));
-                c.m2_epsilon_sigma3_bar = c.m2_epsilon_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * eij_over_k / T * pow(sigma_ij, 3);
-                c.m2_epsilon2_sigma3_bar = c.m2_epsilon2_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * pow(eij_over_k / T, 2) * pow(sigma_ij, 3);
-            }
-        }
-        auto mbar = (mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()).sum();
-
-        /// Convert from molar density to number density in molecules/Angstrom^3
-        RhoType rho_A3 = rhomolar * N_A * 1e-30; //[molecules (not moles)/A^3]
-
-        constexpr double MY_PI = EIGEN_PI;
-        double pi6 = (MY_PI / 6.0);
-
-        /// Evaluate the components of zeta
-        using ta = std::common_type_t<decltype(pi6), decltype(m[0]), decltype(c.d[0]), decltype(rho_A3)>;
-        std::vector<ta> zeta(4);
-        for (std::size_t n = 0; n < 4; ++n) {
-            // Eqn A.8
-            auto dn = c.d.pow(n).eval();
-            TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()*dn.template cast<TRHOType>().array()).sum());
-            zeta[n] = forceeval(pi6*rho_A3*xmdn);
-        }
-
-        /// Packing fraction is the 4-th value in zeta, at index 3
-        const auto &eta = zeta[3];
-        
-        auto [I1, etadI1deta] = get_I1(eta, mbar);
-        auto [I2, etadI2deta] = get_I2(eta, mbar);
-
-        // Hard chain contribution from G&S
-        using tt = std::common_type_t<decltype(zeta[0]), decltype(c.d[0])>;
-        Eigen::ArrayX<tt> lngii_hs(mole_fractions.size());
-        for (auto i = 0; i < lngii_hs.size(); ++i) {
-            lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
-        }
-        auto alphar_hc = mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
-        
-        // Dispersive contribution
-        auto alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar;
-        
-        return forceeval(alphar_hc + alphar_disp);
+        auto vals = hardchain.eval(T, rhomolar, mole_fractions);
+        return forceeval(vals.alphar_hc + vals.alphar_disp);
     }
 };
 
