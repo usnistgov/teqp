@@ -331,15 +331,18 @@ public:
         for (auto i = 0; i < lngii_hs.size(); ++i) {
             lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
         }
-        auto alphar_hc = mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs); // Eq. A.4
+        auto alphar_hc = forceeval(mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs)); // Eq. A.4
         
         // Dispersive contribution
-        auto alphar_disp = -2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar;
-        
+        auto alphar_disp = forceeval(-2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar);
+                                     
+        using eta_t = decltype(eta);
+        using hc_t = decltype(alphar_hc);
+        using disp_t = decltype(alphar_disp);
         struct PCSAFTHardChainContributionTerms{
-            decltype(forceeval(eta)) eta;
-            decltype(forceeval(alphar_hc)) alphar_hc;
-            decltype(forceeval(alphar_disp)) alphar_disp;
+            eta_t eta;
+            hc_t alphar_hc;
+            disp_t alphar_disp;
         };
         return PCSAFTHardChainContributionTerms{forceeval(eta), forceeval(alphar_hc), forceeval(alphar_disp)};
     }
@@ -423,10 +426,13 @@ public:
         auto alpha3 = get_alpha3DD(T, rho_A3, eta, mole_fractions);
         auto alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
         
+        using alpha2_t = decltype(alpha2);
+        using alpha3_t = decltype(alpha3);
+        using alpha_t = decltype(alpha);
         struct PCSAFTDipolarContributionTerms{
-            decltype(alpha2) alpha2;
-            decltype(alpha3) alpha3;
-            decltype(alpha) alpha;
+            alpha2_t alpha2;
+            alpha3_t alpha3;
+            alpha_t alpha;
         };
         return PCSAFTDipolarContributionTerms{alpha2, alpha3, alpha};
     }
@@ -514,10 +520,13 @@ public:
         auto alpha3 = get_alpha3QQ(T, rho_A3, eta, mole_fractions);
         auto alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
         
+        using alpha2_t = decltype(alpha2);
+        using alpha3_t = decltype(alpha3);
+        using alpha_t = decltype(alpha);
         struct PCSAFTQuadrupolarContributionTerms{
-            decltype(alpha2) alpha2;
-            decltype(alpha3) alpha3;
-            decltype(alpha) alpha;
+            alpha2_t alpha2;
+            alpha3_t alpha3;
+            alpha_t alpha;
         };
         return PCSAFTQuadrupolarContributionTerms{alpha2, alpha3, alpha};
     }
