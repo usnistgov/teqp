@@ -10,6 +10,7 @@
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
 #include "teqp/constants.hpp"
+#include <optional>
 
 namespace teqp {
 namespace PCSAFT {
