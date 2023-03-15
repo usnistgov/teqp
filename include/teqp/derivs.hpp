@@ -268,6 +268,11 @@ struct TDXDerivatives {
     static auto get_Ar02(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         return get_Arxy<0, 2, be>(model, T, rho, molefrac);
     }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar03(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        return get_Arxy<0, 3, be>(model, T, rho, molefrac);
+    }
 
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar20(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
@@ -387,6 +392,9 @@ struct TDXDerivatives {
             else if (idelta == 2) {
                 return get_Ar02(model, T, rho, molefrac);
             }
+            else if (idelta == 3) {
+                return get_Ar03(model, T, rho, molefrac);
+            }
             else {
                 throw std::invalid_argument("Invalid value for idelta");
             }
@@ -395,12 +403,12 @@ struct TDXDerivatives {
             if (idelta == 0) {
                 return get_Ar10(model, T, rho, molefrac);
             }
-            //else if (idelta == 1) {
-            //    return get_Ar11(model, T, rho, molefrac);
-            //}
-            /*else if (idelta == 2) {
+            else if (idelta == 1) {
+                return get_Ar11(model, T, rho, molefrac);
+            }
+            else if (idelta == 2) {
                 return get_Ar12(model, T, rho, molefrac);
-            }*/
+            }
             else {
                 throw std::invalid_argument("Invalid value for idelta");
             }
@@ -408,6 +416,17 @@ struct TDXDerivatives {
         else if (itau == 2) {
             if (idelta == 0) {
                 return get_Ar20(model, T, rho, molefrac);
+            }
+            else if (idelta == 1) {
+                return get_Ar21(model, T, rho, molefrac);
+            }
+            else {
+                throw std::invalid_argument("Invalid value for idelta");
+            }
+        }
+        else if (itau == 3) {
+            if (idelta == 0) {
+                return get_Ar30(model, T, rho, molefrac);
             }
             else {
                 throw std::invalid_argument("Invalid value for idelta");
