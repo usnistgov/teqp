@@ -7,6 +7,8 @@
 #include "teqp/algorithms/rootfinding.hpp"
 #include "teqp/exceptions.hpp"
 
+#include <optional>
+
 namespace teqp {
     /**
     * Calculate the criticality conditions for a pure fluid and its Jacobian w.r.t. the temperature and density
@@ -15,16 +17,22 @@ namespace teqp {
     */
     template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
     auto get_pure_critical_conditions_Jacobian(const Model& model, const Scalar T, const Scalar rho,
-        int alternative_pure_index = -1, int alternative_length = 2) {
+        const std::optional<std::size_t>& alternative_pure_index = std::nullopt, const std::optional<std::size_t>& alternative_length = std::nullopt) {
 
         using tdx = TDXDerivatives<Model>;
         Eigen::ArrayXd z;
-        if (alternative_pure_index == -1) {
+        if (!alternative_pure_index) {
             z = (Eigen::ArrayXd(1) << 1.0).finished();
         }
         else {
-            z = Eigen::ArrayXd(alternative_length); z.setZero();
-            z(alternative_pure_index) = 1.0;
+            z = Eigen::ArrayXd(alternative_length.value()); z.setZero();
+            auto index = alternative_pure_index.value();
+            if (index >= 0 && index < z.size()){
+                z(index) = 1.0;
+            }
+            else{
+                throw teqp::InvalidArgument("The provided alternative index of " + std::to_string(index) + " is out of range");
+            }
         }
         auto R = model.R(z);
 
@@ -72,8 +80,18 @@ namespace teqp {
     auto solve_pure_critical(const Model& model, const Scalar T0, const Scalar rho0, const nlohmann::json& flags = {}) {
         auto x = (Eigen::ArrayXd(2) << T0, rho0).finished();
         int maxsteps = (flags.contains("maxsteps")) ? flags.at("maxsteps").get<int>() : 10;
-        int alternative_pure_index = (flags.contains("alternative_pure_index")) ? flags.at("alternative_pure_index").get<int>() : -1;
-        int alternative_length = (flags.contains("alternative_length")) ? flags.at("alternative_length").get<int>() : 2;
+        std::optional<std::size_t> alternative_pure_index;
+        if (flags.contains("alternative_pure_index")){
+            auto i = flags.at("alternative_pure_index").get<int>();
+            if (i < 0){ throw teqp::InvalidArgument("alternative_pure_index cannot be less than 0"); }
+            alternative_pure_index = i;
+        }
+        std::optional<std::size_t> alternative_length;
+        if (flags.contains("alternative_length")){
+            auto i = flags.at("alternative_length").get<int>();
+            if (i < 2){ throw teqp::InvalidArgument("alternative_length cannot be less than 2"); }
+            alternative_length = i;
+        }
         // A convenience method to make linear system solving more concise with Eigen datatypes
         // All arguments are converted to matrices, the solve is done, and an array is returned
         auto linsolve = [](const auto& a, const auto& b) {
