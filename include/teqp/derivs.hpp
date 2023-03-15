@@ -278,6 +278,16 @@ struct TDXDerivatives {
     static auto get_Ar20(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         return get_Arxy<2, 0, be>(model, T, rho, molefrac);
     }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar30(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        return get_Arxy<3, 0, be>(model, T, rho, molefrac);
+    }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_Ar21(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
+        return get_Arxy<2, 1, be>(model, T, rho, molefrac);
+    }
 
     template<ADBackends be = ADBackends::autodiff>
     static auto get_Ar12(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
