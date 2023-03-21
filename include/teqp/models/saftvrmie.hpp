@@ -516,7 +516,7 @@ struct SAFTVRMieChainContributionTerms{
     
     /**
      \f[
-      rhos\frac{\partial K_{HS}}{\partial \rho_s} = \xi\frac{\partial K_{HS}}{\partial \xi}
+      \rho_s\frac{\partial K_{HS}}{\partial \rho_s} = \xi\frac{\partial K_{HS}}{\partial \xi}
      \f]
      */
     template<typename RhoType>
@@ -532,7 +532,7 @@ struct SAFTVRMieChainContributionTerms{
         return 6/(MY_PI*rhos)*(3*xi[1]*xi[2]/(1-xi[3]) + POW3(xi[2])/(xi[3]*POW2(1-xi[3])) + (POW3(xi[2])/POW2(xi[3])-xi[0])*log(1-xi[3]));
     }
     
-    /***
+    /**
     Defining:
     \f[
     \hat B_{ij} \equiv \frac{B_{ij}}{2\pi\epsilon_{ij}d^3_{ij}\rho_s} = \frac{1-\xi_x/2}{(1-xi_x)^3}I-\frac{9\xi_x(1+\xi_x)}{2(1-\xi_x)^3}J
@@ -544,7 +544,7 @@ struct SAFTVRMieChainContributionTerms{
         return (1-xi_x/2.0)/one_minus_xi_x3*I - 9.0*xi_x*(1.0+xi_x)/(2*one_minus_xi_x3)*J;
     }
     
-    /***
+    /**
     \f[
     B = \hat B_{ij}\kappa \rho_s
     \f]
