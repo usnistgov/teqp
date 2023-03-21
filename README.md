@@ -3,25 +3,36 @@
 
 This library implements advanced derivative techniques to allow for implementation of EOS without any hand-written derivatives.  The name TEQP comes from Templated Equation of State Package.  A paper about teqp is published in [Ind. Eng. Chem. Res.](https://doi.org/10.1021/acs.iecr.2c00237):
 
-<img src="doc/source/getting_started/IECR_snip.PNG" alt="Screenshot of paper front page" style="width: 400px;"/>
-
-So far the following EOS are implemented:
-
-* van der Waals
-* Peng-Robinson
-* Soave-Redlich-Kwong
-* PC-SAFT
-* cubic plus association (CPA) for pure fluids
-* multi-fluid model in the form of GERG
-* ammonia+water model of Tillner-Roth and Friend
-* Exp-6 (modified Buckingham) from Kataoka
-* square-well from Espíndola-Heredia et al.
-* Two-center Lennard-Jones models with dipoles and quadrupoles
+<img src="doc/source/getting_started/IECR_snip.PNG" alt="Screenshot of paper front page" style="width: 300px;"/>
 
 Why?
 
 * Implementing an EOS is an error-prone and boring exercise. Automatic differentiation packages are a mature solution for calculating derivatives 
 * Algorithms that *use* the EOS can be implemented in a very generic way that is model-agnostic
+* ``teqp`` is very fast because it is written in C++, see the profiling in the paper in [Ind. Eng. Chem. Res.](https://doi.org/10.1021/acs.iecr.2c00237)
+
+So far the following EOS are implemented:
+
+* cubic:
+    * van der Waals
+    * Peng-Robinson
+    * Soave-Redlich-Kwong
+* SAFT*ish*:
+    * PC-SAFT (+dipoles, +quadrupoles, but no association)
+    * SAFT-VR-Mie (mixtures, but no association)
+    * cubic plus association (CPA) for pure fluids
+* model fluids
+    * Exp-6 (modified Buckingham) from Kataoka
+    * square-well from Espíndola-Heredia et al.
+    * Two-center Lennard-Jones models (+dipoles, +quadrupoles)
+* multiparameter
+    * multi-fluid model in the form of GERG
+    * ammonia+water model of Tillner-Roth and Friend
+
+What is teqp *not*?:
+
+* A feature-rich property library like NIST REFPROP. It is not intended to be, and other packages will be written that allow for the development of new algorithms. You are also welcome to write your own based upon ``teqp``.
+* Written in a new and exciting programming language like [Clapeyron.jl](https://github.com/ClapeyronThermo/Clapeyron.jl) or [FeOS](https://github.com/feos-org/feos).  C++ is a mature and stable language that can be readily embedded into other environments or code bases via shared libraries.
 
 Docs are on ReadTheDocs: [![Documentation Status](https://readthedocs.org/projects/teqp/badge/?version=latest)](https://teqp.readthedocs.io/en/latest/?badge=latest)
 
