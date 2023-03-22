@@ -245,18 +245,17 @@ struct SAFTVRMieChainContributionTerms{
         fkij(get_fkij())
     {}
     
-    template<typename R>
-    R get_uii_over_kB(std::size_t i, const R& r) const {
-        auto rstarinv = sigma_A[i]/r;
-        return C_ij(i,i)*epsilon_over_k[i]*(::pow(rstarinv, lambda_r[i]) - ::pow(rstarinv, lambda_a[i]));
+    double get_uii_over_kB(std::size_t i, const double& r) const {
+        double rstarinv = sigma_A[i]/r;
+        return forceeval(C_ij(i,i)*epsilon_over_k[i]*(::pow(rstarinv, lambda_r[i]) - ::pow(rstarinv, lambda_a[i])));
     }
     
     template <typename TType>
-    auto get_dii(std::size_t i, const TType &T) const{
+    TType get_dii(std::size_t i, const TType &T) const{
         std::function<TType(double)> integrand = [this, i, &T](const double& r){
             return forceeval(1.0-exp(-this->get_uii_over_kB(i, r)/T));
         };
-        return forceeval(quad<7, TType>(integrand, 0.0, sigma_A[i]));
+        return quad<7, TType>(integrand, 0.0, sigma_A[i]);
     }
     
     template <typename TType>
