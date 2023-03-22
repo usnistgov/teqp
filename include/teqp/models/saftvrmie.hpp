@@ -481,7 +481,7 @@ struct SAFTVRMieChainContributionTerms{
         }
         
         auto ahs = a_HS(rhos, zeta);
-        auto alphar_mono = mbar*(ahs + a1kB/T + a2kB2/(T*T) + a3kB3/(T*T*T));
+        auto alphar_mono = forceeval(mbar*(ahs + a1kB/T + a2kB2/(T*T) + a3kB3/(T*T*T)));
         
         struct vals{
             decltype(dmat) dmat;
