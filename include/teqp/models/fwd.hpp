@@ -15,6 +15,7 @@
 #include "teqp/models/cubics.hpp"
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/pcsaft.hpp"
+#include "teqp/models/saftvrmie.hpp"
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/multifluid_mutant.hpp"
 #include "teqp/ideal_eosterms.hpp"
@@ -28,11 +29,13 @@
 namespace teqp {
 
 	using vad = std::valarray<double>;
+    using vecs = std::vector<std::string>;
 
     // Define the EOS types by interrogating the types returned by the respective
     // factory function or by alias of the class name
     using canonical_cubic_t = decltype(canonical_PR(vad{}, vad{}, vad{}));
     using PCSAFT_t = decltype(PCSAFT::PCSAFTfactory(nlohmann::json{}));
+    using SAFTVRMie_t = decltype(SAFTVRMie::SAFTVRMieMixture(vecs{}));
     using CPA_t = decltype(CPA::CPAfactory(nlohmann::json{}));
     using multifluid_t = decltype(multifluidfactory(nlohmann::json{}));
     using multifluidmutant_t = decltype(build_multifluid_mutant(multifluidfactory(nlohmann::json{}), nlohmann::json{}));
@@ -53,6 +56,7 @@ namespace teqp {
         vdWEOS_t,
         canonical_cubic_t,
         PCSAFT_t,
+        SAFTVRMie_t,
         CPA_t,
         multifluid_t,
         multifluidmutant_t,

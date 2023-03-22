@@ -287,7 +287,7 @@ struct SAFTVRMieChainContributionTerms{
         
         auto dmat = get_dmat(T); // Matrix of diameters of pure and cross terms
         auto rhoN = forceeval(rhomolar*N_A); // Number density, in molecules/m^3
-        double mbar = forceeval((molefracs*m).sum()); // Mean number of segments, dimensionless
+        auto mbar = forceeval((molefracs*m).sum()); // Mean number of segments, dimensionless
         auto rhos = forceeval(rhoN*mbar/1e30); // Mean segment number density, in segments/A^3
         auto xs = forceeval((m*molefracs/mbar).eval()); // Segment fractions
         
@@ -297,7 +297,7 @@ struct SAFTVRMieChainContributionTerms{
         using TRHOType = std::common_type_t<std::decay_t<TType>, std::decay_t<RhoType>, std::decay_t<decltype(molefracs[0])>, std::decay_t<decltype(m[0])>>;
         Eigen::Array<TRHOType, 4, 1> zeta;
         for (auto l = 0; l < 4; ++l){
-            TType summer = 0.0;
+            TRHOType summer = 0.0;
             for (auto i = 0; i < N; ++i){
                 summer += xs(i)*powi(dmat(i,i), l);
             }
@@ -305,7 +305,7 @@ struct SAFTVRMieChainContributionTerms{
         }
         
         NumType summer_xi_x = 0.0;
-        double summer_xi_x_bar = 0.0;
+        TRHOType summer_xi_x_bar = 0.0;
         for (auto i = 0; i < N; ++i){
             for (auto j = 0; j < N; ++j){
                 summer_xi_x += xs(i)*xs(j)*powi(dmat(i,j), 3)*rhos;
@@ -322,10 +322,10 @@ struct SAFTVRMieChainContributionTerms{
         // so calculate them here
         auto X = forceeval(POW3(1.0 - xi_x)), X3 = X;
         auto X2 = forceeval(POW2(1.0 - xi_x));
-        auto k0 = forceeval(-log(1-xi_x) + (42*xi_x - 39*POW2(xi_x) + 9*POW3(xi_x) - 2*POW4(xi_x))/(6*X3)); // Eq. A30
-        auto k1 = forceeval((POW4(xi_x) + 6*POW2(xi_x) - 12*xi_x)/(2*X3));
-        auto k2 = forceeval(-3*POW2(xi_x)/(8*X2));
-        auto k3 = forceeval((-POW4(xi_x) + 3*POW2(xi_x) + 3*xi_x)/(6*X3));
+        auto k0 = forceeval(-log(1.0-xi_x) + (42.0*xi_x - 39.0*POW2(xi_x) + 9.0*POW3(xi_x) - 2.0*POW4(xi_x))/(6.0*X3)); // Eq. A30
+        auto k1 = forceeval((POW4(xi_x) + 6.0*POW2(xi_x) - 12.0*xi_x)/(2.0*X3));
+        auto k2 = forceeval(-3.0*POW2(xi_x)/(8.0*X2));
+        auto k3 = forceeval((-POW4(xi_x) + 3.0*POW2(xi_x) + 3.0*xi_x)/(6.0*X3));
         
         // Pre-calculate the cubes of the diameters
         auto dmat3 = dmat.array().pow(3).eval();
@@ -350,7 +350,7 @@ struct SAFTVRMieChainContributionTerms{
                     return forceeval(-(pow(x_0_ij, 3-lambda_ij)-1.0)/(lambda_ij-3.0)); // Eq. A14
                 };
                 auto J = [&x_0_ij](double lambda_ij){
-                    return forceeval(-(pow(x_0_ij, 4-lambda_ij)*(lambda_ij-3)-pow(x_0_ij, 3-lambda_ij)*(lambda_ij-4)-1)/((lambda_ij-3)*(lambda_ij-4))); // Eq. A15
+                    return forceeval(-(pow(x_0_ij, 4-lambda_ij)*(lambda_ij-3.0)-pow(x_0_ij, 3.0-lambda_ij)*(lambda_ij-4.0)-1.0)/((lambda_ij-3.0)*(lambda_ij-4.0))); // Eq. A15
                 };
                 auto Bhatij_a = this->get_Bhatij(xi_x, X, I(lambda_a_ij(i,j)), J(lambda_a_ij(i,j)));
                 auto Bhatij_2a = this->get_Bhatij(xi_x, X, I(2*lambda_a_ij(i,j)), J(2*lambda_a_ij(i,j)));
@@ -392,9 +392,9 @@ struct SAFTVRMieChainContributionTerms{
                 
                 NumType chi_ij = fkij[1](i,j)*xi_x_bar + fkij[2](i,j)*xi_x_bar5 + fkij[3](i,j)*xi_x_bar8;
                 auto a2ij = 0.5*K_HS*(1.0+chi_ij)*epsilon_ij(i,j)*POW2(C_ij(i,j))*(2*MY_PI*rhos*dmat3(i,j)*epsilon_ij(i,j))*(
-                     one_term(2*lambda_a_ij(i,j), xi_x_eff_2a)
-                  -2*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), xi_x_eff_ar)
-                    +one_term(2*lambda_r_ij(i,j), xi_x_eff_2r)
+                     one_term(2.0*lambda_a_ij(i,j), xi_x_eff_2a)
+                  -2.0*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), xi_x_eff_ar)
+                    +one_term(2.0*lambda_r_ij(i,j), xi_x_eff_2r)
                 ); // divided by k_B^2
                                     
                 NumType contributiona2 = xs(i)*xs(j)*a2ij; // Eq. A19
@@ -457,13 +457,13 @@ struct SAFTVRMieChainContributionTerms{
                     // This is [rhos*d(a_2ij/(1+chi_ij))/drhos]/(2*pi*d^3*eps*rhos)
                     auto da2iidrhos_term = 0.5*POW2(C_ij(i,j))*(
                         rho_dK_HS_drho*(
-                            one_term(2*lambda_a_ij(i,j), xi_x_eff_2a)
-                            -2*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), xi_x_eff_ar)
-                            +one_term(2*lambda_r_ij(i,j), xi_x_eff_2r))
+                            one_term(2.0*lambda_a_ij(i,j), xi_x_eff_2a)
+                            -2.0*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), xi_x_eff_ar)
+                            +one_term(2.0*lambda_r_ij(i,j), xi_x_eff_2r))
                         +K_HS*(
-                            rhosda1iidrhos_term(2*lambda_a_ij(i,i), xi_x_eff_2a, dxi_x_eff_dxix_2a, Bhatij_2a)
-                            -2*rhosda1iidrhos_term(lambda_a_ij(i,i)+lambda_r_ij(i,i), xi_x_eff_ar, dxi_x_eff_dxix_ar, Bhatij_ar)
-                            +rhosda1iidrhos_term(2*lambda_r_ij(i,i), xi_x_eff_2r, dxi_x_eff_dxix_2r, Bhatij_2r)
+                            rhosda1iidrhos_term(2.0*lambda_a_ij(i,i), xi_x_eff_2a, dxi_x_eff_dxix_2a, Bhatij_2a)
+                            -2.0*rhosda1iidrhos_term(lambda_a_ij(i,i)+lambda_r_ij(i,i), xi_x_eff_ar, dxi_x_eff_dxix_ar, Bhatij_ar)
+                            +rhosda1iidrhos_term(2.0*lambda_r_ij(i,i), xi_x_eff_2r, dxi_x_eff_dxix_2r, Bhatij_2r)
                             )
                         );
                     auto g2MCAij = 3.0*da2iidrhos_term + g2_noderivterm;
@@ -471,8 +471,8 @@ struct SAFTVRMieChainContributionTerms{
                     auto betaepsilon = epsilon_ij(i,i)/T; // (1/(kB*T))/epsilon
                     auto theta = exp(betaepsilon)-1.0;
                     auto phi7 = phi.col(6);
-                    auto gamma_cij = phi7(0)*(-tanh(phi7(1)*(phi7(2)-alpha_ij(i,j)))+1)*xi_x_bar*theta*exp(phi7(3)*xi_x_bar + phi7(4)*POW2(xi_x_bar)); // Eq. A37
-                    auto g2ii = (1+gamma_cij)*g2MCAij;
+                    auto gamma_cij = phi7(0)*(-tanh(phi7(1)*(phi7(2)-alpha_ij(i,j)))+1.0)*xi_x_bar*theta*exp(phi7(3)*xi_x_bar + phi7(4)*POW2(xi_x_bar)); // Eq. A37
+                    auto g2ii = (1.0+gamma_cij)*g2MCAij;
                     
                     NumType giiMie = gdHSii*exp((betaepsilon*g1ii + POW2(betaepsilon)*g2ii)/gdHSii);
                     alphar_chain -= molefracs[i]*(m[i]-1.0)*log(giiMie);
@@ -535,7 +535,7 @@ struct SAFTVRMieChainContributionTerms{
     template<typename XiType, typename IJ>
     auto get_Bhatij(const XiType& xi_x, const XiType& one_minus_xi_x3, const IJ& I, const IJ& J) const{
         return forceeval(
-             (1.0-xi_x/2.0)/one_minus_xi_x3*I - 9.0*xi_x*(1.0+xi_x)/(2*one_minus_xi_x3)*J
+             (1.0-xi_x/2.0)/one_minus_xi_x3*I - 9.0*xi_x*(1.0+xi_x)/(2.0*one_minus_xi_x3)*J
         );
     }
     
@@ -553,7 +553,7 @@ struct SAFTVRMieChainContributionTerms{
     */
     template<typename XiType, typename IJ>
     auto get_rhodBijdrho(const XiType& xi_x, const XiType& one_minus_xi_x3, const IJ& I, const IJ& J, const XiType& Bhatij) const{
-        auto dBhatdxix = (-3*I*(xi_x - 2) - 27*J*xi_x*(xi_x + 1) + (xi_x - 1)*(I + 9*J*xi_x + 9*J*(xi_x + 1)))/(2*POW4(1-xi_x));
+        auto dBhatdxix = (-3.0*I*(xi_x - 2.0) - 27.0*J*xi_x*(xi_x + 1.0) + (xi_x - 1.0)*(I + 9.0*J*xi_x + 9.0*J*(xi_x + 1.0)))/(2.0*POW4(1.0-xi_x));
         return forceeval(Bhatij + dBhatdxix*xi_x);
     }
     
@@ -603,6 +603,9 @@ private:
     const SAFTVRMieChainContributionTerms terms;
 
     void check_kmat(const Eigen::ArrayXXd& kmat, std::size_t N) {
+        if (kmat.size() == 0){
+            return;
+        }
         if (kmat.cols() != kmat.rows()) {
             throw teqp::InvalidArgument("kmat rows and columns are not identical");
         }
@@ -614,8 +617,10 @@ private:
         SAFTVRMieLibrary library;
         return library.get_coeffs(names);
     }
-    auto build_chain(const std::vector<SAFTVRMieCoeffs> &coeffs, const Eigen::ArrayXXd& kmat){
-        check_kmat(kmat, coeffs.size());
+    auto build_chain(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat){
+        if (kmat){
+            check_kmat(kmat.value(), coeffs.size());
+        }
         const std::size_t N = coeffs.size();
         Eigen::ArrayXd m(N), epsilon_over_k(N), sigma_m(N), lambda_r(N), lambda_a(N);
         auto i = 0;
@@ -627,11 +632,16 @@ private:
             lambda_a[i] = coeff.lambda_a;
             i++;
         }
-        return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(kmat));
+        if (kmat){
+            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(kmat.value()));
+        }
+        else{
+            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(Eigen::ArrayXXd::Zero(N,N)));
+        }
     }
 public:
-     SAFTVRMieMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat){};
-    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : terms(build_chain(coeffs, kmat)) {};
+     SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat){};
+    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt) : terms(build_chain(coeffs, kmat)) {};
     
 //    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
     SAFTVRMieMixture& operator=( const SAFTVRMieMixture& ) = delete; // non copyable

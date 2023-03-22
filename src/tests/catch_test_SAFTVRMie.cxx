@@ -105,13 +105,35 @@ TEST_CASE("Check all xy derivs", "[SAFTVRMie]")
     int rr = 0;
 }
 
-TEST_CASE("Solve for critical point", "[SAFTVRMie]")
+TEST_CASE("Solve for critical point with two interface approaches", "[SAFTVRMie]")
 {
     Eigen::ArrayXXd kmat = Eigen::ArrayXXd::Zero(1,1);
     std::vector<std::string> names = {"Ethane"};
     SAFTVRMieMixture model_{names, kmat};
     double T = 300.0, rho = 10000.0;
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
-    auto crit = solve_pure_critical(model_, 300.0, 10000.0);
+    auto crit1 = solve_pure_critical(model_, 300.0, 10000.0);
+    
+    nlohmann::json jcoeffs = nlohmann::json::array();
+    jcoeffs.push_back({
+        {"name", "Ethane"},
+        { "m", 1.4373 },
+        { "sigma_m", 3.7257e-10},
+        {"epsilon_over_k", 206.12},
+        {"lambda_r", 12.4},
+        {"lambda_a", 6.0},
+        {"BibTeXKey", "Lafitte-JCP"}
+    });
+    nlohmann::json model = {
+        {"coeffs", jcoeffs}
+    };
+    nlohmann::json j = {
+        {"kind", "SAFT-VR-Mie"},
+        {"model", model}
+    };
+    auto modelc = cppinterface::make_model(j);
+    auto crit2 = modelc->solve_pure_critical(300.0, 10000.0, {});
+    CHECK(std::get<0>(crit1) == Approx(std::get<0>(crit2)));
+    
     int rr = 0;
 }
