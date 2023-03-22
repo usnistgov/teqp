@@ -105,7 +105,7 @@ TEST_CASE("Check all xy derivs", "[SAFTVRMie]")
     int rr = 0;
 }
 
-TEST_CASE("Solve for critical point with two interface approaches", "[SAFTVRMie]")
+TEST_CASE("Solve for critical point with three interface approaches", "[SAFTVRMie]")
 {
     Eigen::ArrayXXd kmat = Eigen::ArrayXXd::Zero(1,1);
     std::vector<std::string> names = {"Ethane"};
@@ -134,6 +134,20 @@ TEST_CASE("Solve for critical point with two interface approaches", "[SAFTVRMie]
     auto modelc = cppinterface::make_model(j);
     auto crit2 = modelc->solve_pure_critical(300.0, 10000.0, {});
     CHECK(std::get<0>(crit1) == Approx(std::get<0>(crit2)));
+    
+    nlohmann::json model2 = {
+        {"names", {"Ethane"}}
+    };
+    nlohmann::json j2 = {
+        {"kind", "SAFT-VR-Mie"},
+        {"model", model2}
+    };
+    auto model3 = cppinterface::make_model(j2);
+    auto crit3 = model3->solve_pure_critical(300.0, 10000.0, {});
+    CHECK(std::get<0>(crit1) == Approx(std::get<0>(crit3)));
+    
+    auto z3 = (Eigen::ArrayXd(1) << 1.0).finished();
+    CHECK(std::isfinite(model3->get_Ar11(300.0, 300.0, z3)));
     
     int rr = 0;
 }
