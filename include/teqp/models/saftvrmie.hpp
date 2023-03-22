@@ -141,7 +141,7 @@ struct SAFTVRMieChainContributionTerms{
         }
         return sigma;
     }
-    /// Eq. A45
+    /// Eq. A55
     auto get_epsilon_ij() const{
         Eigen::ArrayXXd eps_(N,N);
         for (auto i = 0; i < N; ++i){
@@ -245,11 +245,13 @@ struct SAFTVRMieChainContributionTerms{
         fkij(get_fkij())
     {}
     
+    /// Eq. A2 from Lafitte
     double get_uii_over_kB(std::size_t i, const double& r) const {
         double rstarinv = sigma_A[i]/r;
         return forceeval(C_ij(i,i)*epsilon_over_k[i]*(::pow(rstarinv, lambda_r[i]) - ::pow(rstarinv, lambda_a[i])));
     }
     
+    /// Eq. A9 from Lafitte
     template <typename TType>
     TType get_dii(std::size_t i, const TType &T) const{
         std::function<TType(double)> integrand = [this, i, &T](const double& r){
@@ -480,6 +482,7 @@ struct SAFTVRMieChainContributionTerms{
         }
         
         auto ahs = a_HS(rhos, zeta);
+        // Eq. A5 from Lafitte, multiplied by mbar
         auto alphar_mono = forceeval(mbar*(ahs + a1kB/T + a2kB2/(T*T) + a3kB3/(T*T*T)));
         
         struct vals{
@@ -500,6 +503,7 @@ struct SAFTVRMieChainContributionTerms{
         return vals{dmat, rhos, rhoN, mbar, xs, zeta, xi_x, xi_x_bar, alphar_mono, a1kB, a2kB2, a3kB3, alphar_chain};
     }
     
+    /// Eq. A21 from Lafitte
     template<typename RhoType>
     auto get_KHS(const RhoType& pf) const {
         return forceeval(pow(1.0-pf,4)/(1.0 + 4.0*pf + 4.0*pf*pf - 4.0*pf*pf*pf + pf*pf*pf*pf));
@@ -517,6 +521,7 @@ struct SAFTVRMieChainContributionTerms{
         return forceeval(num/den*xi_x);
     }
     
+    /// Eq. A6 from Lafitte
     template<typename RhoType, typename XiType>
     auto a_HS(const RhoType& rhos, const Eigen::Array<XiType, 4, 1>& xi) const{
         constexpr double MY_PI = static_cast<double>(EIGEN_PI);
@@ -524,7 +529,7 @@ struct SAFTVRMieChainContributionTerms{
     }
     
     /**
-    \note Eq. A12 from Lafitte
+    \note Starting from Eq. A12 from Lafitte
      
     Defining:
     \f[
