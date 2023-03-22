@@ -59,6 +59,7 @@ inline auto quad(const std::function<T(double)>& F, const double& a, const doubl
         double arg = (b-a)/2.0*x[i] + (a+b)/2.0;
         summer += w[i]*F(arg);
     }
-    return (b-a)/2.0*summer;
+    T retval = (b-a)/2.0*summer; // Forces a flattening if T is an autodiff type
+    return retval;
 }
 }
