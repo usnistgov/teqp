@@ -489,20 +489,33 @@ struct SAFTVRMieChainContributionTerms{
         // Eq. A5 from Lafitte, multiplied by mbar
         auto alphar_mono = forceeval(mbar*(ahs + a1kB/T + a2kB2/(T*T) + a3kB3/(T*T*T)));
         
+        using dmat_t = decltype(dmat);
+        using rhos_t = decltype(rhos);
+        using rhoN_t = decltype(rhoN);
+        using mbar_t = decltype(mbar);
+        using xs_t = decltype(xs);
+        using zeta_t = decltype(zeta);
+        using xi_x_t = decltype(xi_x);
+        using xi_x_bar_t = decltype(xi_x_bar);
+        using alphar_mono_t = decltype(alphar_mono);
+        using a1kB_t = decltype(a1kB);
+        using a2kB2_t = decltype(a2kB2);
+        using a3kB3_t = decltype(a3kB3);
+        using alphar_chain_t = decltype(alphar_chain);
         struct vals{
-            decltype(dmat) dmat;
-            decltype(rhos) rhos;
-            decltype(rhoN) rhoN;
-            decltype(mbar) mbar;
-            decltype(xs) xs;
-            decltype(zeta) zeta;
-            decltype(xi_x) xi_x;
-            decltype(xi_x_bar) xi_x_bar;
-            decltype(alphar_mono) alphar_mono;
-            decltype(a1kB) a1kB;
-            decltype(a2kB2) a2kB2;
-            decltype(a3kB3) a3kB3;
-            decltype(alphar_chain) alphar_chain;
+            dmat_t dmat;
+            rhos_t rhos;
+            rhoN_t rhoN;
+            mbar_t mbar;
+            xs_t xs;
+            zeta_t zeta;
+            xi_x_t xi_x;
+            xi_x_bar_t xi_x_bar;
+            alphar_mono_t alphar_mono;
+            a1kB_t a1kB;
+            a2kB2_t a2kB2;
+            a3kB3_t a3kB3;
+            alphar_chain_t alphar_chain;
         };
         return vals{dmat, rhos, rhoN, mbar, xs, zeta, xi_x, xi_x_bar, alphar_mono, a1kB, a2kB2, a3kB3, alphar_chain};
     }
