@@ -669,6 +669,37 @@ public:
     SAFTVRMieMixture& operator=( const SAFTVRMieMixture& ) = delete; // non copyable
     
     const auto& get_terms() const { return terms; }
+    auto get_core_calcs(double T, double rhomolar, const Eigen::ArrayXd& mole_fractions) const {
+        auto val = terms.get_core_calcs(T, rhomolar, mole_fractions);
+        
+        auto fromArrayX = [](const Eigen::ArrayXd &x){std::valarray<double>n(x.size()); for (auto i =0; i < n.size(); ++i){ n[i] = x[i];} return n;};
+        auto fromArrayXX = [](const Eigen::ArrayXXd &x){
+            std::size_t N = x.rows();
+            std::vector<std::vector<double>> n; n.resize(x.size());
+            for (auto i = 0; i < N; ++i){
+                n[i].resize(N);
+                for (auto j = 0; j < N; ++j){
+                    n[i][j] = x(i,j);
+                }
+            }
+            return n;
+        };
+        return nlohmann::json{
+            {"dmat", fromArrayXX(val.dmat)},
+            {"rhos", val.rhos},
+            {"rhoN", val.rhoN},
+            {"mbar", val.mbar},
+            {"xs", fromArrayX(val.xs)},
+            {"zeta", fromArrayX(val.zeta)},
+            {"xi_x", val.xi_x},
+            {"xi_x_bar", val.xi_x_bar},
+            {"alphar_mono", val.alphar_mono},
+            {"a1kB", val.a1kB},
+            {"a2kB2", val.a2kB2},
+            {"a3kB3", val.a3kB3},
+            {"alphar_chain", val.alphar_chain}
+        };
+    }
     
     auto get_m() const { return terms.m; }
     auto get_sigma_Angstrom() const { return (terms.sigma_A).eval(); }
