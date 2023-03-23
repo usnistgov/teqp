@@ -146,7 +146,7 @@ struct SAFTVRMieChainContributionTerms{
         Eigen::ArrayXXd eps_(N,N);
         for (auto i = 0; i < N; ++i){
             for (auto j = i; j < N; ++j){
-                eps_(i,j) = (1.0-kmat(i,j))*sqrt(pow(sigma_A(i,i),3)*pow(sigma_A(j,j),3)*epsilon_over_k(i)*epsilon_over_k(j))/pow(sigma_ij(i,j), 3);
+                eps_(i,j) = (1.0-kmat(i,j))*sqrt(pow(sigma_ij(i,i),3)*pow(sigma_ij(j,j),3)*epsilon_over_k(i)*epsilon_over_k(j))/pow(sigma_ij(i,j), 3);
                 eps_(j,i) = eps_(i,j); // symmetric
             }
         }
@@ -161,7 +161,7 @@ struct SAFTVRMieChainContributionTerms{
     }
 
     /// Eq. A18 for the attractive exponents
-    auto get_cij(const Eigen::ArrayXd& lambdaij) const{
+    auto get_cij(const Eigen::ArrayXXd& lambdaij) const{
         std::vector<Eigen::ArrayXXd> cij(4);
         for (auto n = 0; n < 4; ++n){
             cij[n].resize(N,N);
@@ -234,7 +234,7 @@ struct SAFTVRMieChainContributionTerms{
             const Eigen::ArrayXd& sigma_m,
             const Eigen::ArrayXd& lambda_r,
             const Eigen::ArrayXd& lambda_a,
-            const Eigen::ArrayXd& kmat)
+            const Eigen::ArrayXXd& kmat)
     :   m(m), epsilon_over_k(epsilon_over_k), sigma_A(sigma_m*1e10), lambda_a(lambda_a), lambda_r(lambda_r), kmat(kmat),
         N(get_N()),
         lambda_r_ij(get_lambda_k_ij(lambda_r)), lambda_a_ij(get_lambda_k_ij(lambda_a)),
@@ -257,7 +257,7 @@ struct SAFTVRMieChainContributionTerms{
         std::function<TType(double)> integrand = [this, i, &T](const double& r){
             return forceeval(1.0-exp(-this->get_uii_over_kB(i, r)/T));
         };
-        return quad<7, TType>(integrand, 0.0, sigma_A[i]);
+        return quad<30, TType>(integrand, 0.0, sigma_A[i]);
     }
     
     template <typename TType>
@@ -279,6 +279,10 @@ struct SAFTVRMieChainContributionTerms{
     // Calculate core parameters that depend on temperature, volume, and composition
     template <typename TType, typename RhoType, typename VecType>
     auto get_core_calcs(const TType& T, const RhoType& rhomolar, const VecType& molefracs) const{
+        
+        if (molefracs.size() != N){
+            throw teqp::InvalidArgument("Length of molefracs of "+std::to_string(molefracs.size()) + " does not match the model size of"+std::to_string(N));
+        }
         
         using FracType = std::decay_t<decltype(molefracs[0])>;
         using NumType = std::common_type_t<TType, RhoType, FracType>;
@@ -640,7 +644,8 @@ private:
             return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(kmat.value()));
         }
         else{
-            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(Eigen::ArrayXXd::Zero(N,N)));
+            auto mat = Eigen::ArrayXXd::Zero(N,N);
+            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(mat));
         }
     }
 public:
