@@ -37,17 +37,17 @@ TEST_CASE("Check integration for d", "[SAFTVRMIE]"){
     double lambda_r = 12.4;
     double lambda_a = 6.0;
     double C = lambda_r/(lambda_r-lambda_a)*::pow(lambda_r/lambda_a,lambda_a/(lambda_r-lambda_a));
-    double T = 100.0;
+    double T = 300.0;
     std::function<double(double)> integrand = [&epskB, &sigma_m, &C, &T, &lambda_a, &lambda_r](const double& r_m){
         auto u = C*epskB*(::pow(sigma_m/r_m, lambda_r) - ::pow(sigma_m/r_m, lambda_a));
-        return 1.0-exp(-u/T);
+        return -expm1(-u/T);
     };
     auto d30 = quad<30, double>(integrand, 0.0, sigma_m);
     auto d15 = quad<15, double>(integrand, 0.0, sigma_m);
     auto d7 = quad<7, double>(integrand, 0.0, sigma_m);
     auto d5 = quad<5, double>(integrand, 0.0, sigma_m);
     auto d3 = quad<3, double>(integrand, 0.0, sigma_m);
-    CHECK(d30 == Approx(3.668937640717724e-10).margin(1e-12));
+    CHECK(d30 == Approx(3.597838581533227e-10).margin(1e-12));
 }
 
 TEST_CASE("Single alphar check value", "[SAFTVRMie]")
@@ -62,11 +62,13 @@ TEST_CASE("Single alphar check value", "[SAFTVRMie]")
 
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     auto core = terms.get_core_calcs(300.0, 12000.0, z);
-//    CHECK(core.a1kB == Approx(-694.2608061145818));
-    //CHECK(core.a2kB2 == Approx(-6741.101051705587));
+    
+    // Check values from Clapeyron.jl
+    CHECK(core.a1kB == Approx(-694.2608061145818));
+    CHECK(core.a2kB2 == Approx(-6741.101051705587));
     CHECK(core.a3kB3 == Approx(-81372.77460911816));
-    //CHECK(core.alphar_mono == Approx(-1.322739797471788));
-    //CHECK(core.alphar_chain == Approx(-0.0950261207746853));
+    CHECK(core.alphar_mono == Approx(-1.322739797471788));
+    CHECK(core.alphar_chain == Approx(-0.0950261207746853));
 }
 
 template<int i, int j, typename Model, typename TTYPE, typename RhoType, typename VecType>
@@ -150,4 +152,41 @@ TEST_CASE("Solve for critical point with three interface approaches", "[SAFTVRMi
     CHECK(std::isfinite(model3->get_Ar11(300.0, 300.0, z3)));
     
     int rr = 0;
+}
+
+TEST_CASE("A mixture calculation", "[SAFTVRMie]"){
+    std::vector<std::string> names = {"Methane","Ethane","Propane"};
+    SAFTVRMieMixture model_{names};
+    double T = 300.0, rho = 1000.0;
+    nlohmann::json model2 = {
+        {"names", names}
+    };
+    nlohmann::json j2 = {
+        {"kind", "PCSAFT"},
+        {"model", model2}
+    };
+    auto model3 = cppinterface::make_model(j2);
+    auto z = (Eigen::ArrayXd(3) << 0.3, 0.4, 0.3).finished();
+    auto rhovec = (rho*z).eval();
+    auto fugcoeff = model3->get_fugacity_coefficients(T, rhovec);
+}
+
+TEST_CASE("Trace critical locus", "[SAFTVRMie]"){
+    std::vector<std::string> names = {"Methane", "Ethane"};
+    nlohmann::json model2 = {
+        {"names", names}
+    };
+    nlohmann::json j2 = {
+        {"kind", "SAFT-VR-Mie"},
+        {"model", model2}
+    };
+    auto model3 = cppinterface::make_model(j2);
+    auto [T0, rho0] = model3->solve_pure_critical(300, 10000, nlohmann::json{{"alternative_pure_index", 0},{"alternative_length", names.size()}});
+    auto rhovec0 = (Eigen::ArrayXd(2) << rho0, 0).finished();
+    auto al = model3->trace_critical_arclength_binary(T0, rhovec0, "aa.txt");
+    int rr = 0;
+    
+//    auto z = (Eigen::ArrayXd(2) << 0.3, 0.4).finished();
+//    auto rhovec = (rho*z).eval();
+//    auto fugcoeff = model3->get_fugacity_coefficients(T, rhovec);
 }
