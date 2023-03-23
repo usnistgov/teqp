@@ -195,9 +195,10 @@ TEST_CASE("VLE pure tracing", "[SAFTVRMieVLE]"){
         {"Tcguess", 300.0},
         {"rhocguess", 10000.0},
         {"Tred", 0.999},
-        {"Nstep", 10}
+        {"Nstep", 100},
+        {"with_deriv", true}
     };
-    auto o1 = pure_trace_VLE(pure, 130, spec1);
+    auto o1 = pure_trace_VLE(pure, 300, spec1);
     
     std::vector<std::string> names = {"Methane", "Ethane"};
     SAFTVRMieMixture model{names};
@@ -207,15 +208,16 @@ TEST_CASE("VLE pure tracing", "[SAFTVRMieVLE]"){
         {"rhocguess", 10000.0},
         {"pure_spec", pure_spec},
         {"Tred", 0.999},
-        {"Nstep", 10}
+        {"Nstep", 100},
+        {"with_deriv", true}
     };
-    auto o = pure_trace_VLE(model, 130, spec);
+    auto o = pure_trace_VLE(model, 300, spec);
     CHECK(o[0] == o1[0]);
 }
 
 TEST_CASE("VLE isotherm tracing", "[SAFTVRMieVLE]"){
     
-    std::vector<std::string> names = {"Methane", "Ethane"};
+    std::vector<std::string> names = {"Ethane", "Propane"};
     SAFTVRMieMixture model{names};
     nlohmann::json pure_spec{{"alternative_pure_index", 0}, {"alternative_length", names.size()}};
     nlohmann::json spec{
@@ -223,14 +225,16 @@ TEST_CASE("VLE isotherm tracing", "[SAFTVRMieVLE]"){
         {"rhocguess", 10000.0},
         {"pure_spec", pure_spec},
         {"Tred", 0.999},
-        {"Nstep", 1000}
+        {"Nstep", 100},
+        {"with_deriv", true}
     };
-    double T = 100.0;
+    double T = 280.0;
     auto purestart = pure_trace_VLE(model, T, spec);
     Eigen::ArrayXd rhovecL0(2), rhovecV0(2);
-    rhovecL0(pure_spec.at("alternative_pure_index").get<int>()) = purestart[0];
-    rhovecV0(pure_spec.at("alternative_pure_index").get<int>()) = purestart[1];
-    auto opt = TVLEOptions(); opt.revision = 2;
+    int ipure = pure_spec.at("alternative_pure_index");
+    rhovecL0(ipure) = purestart[0]; rhovecV0(ipure) = purestart[1];
+    auto der = get_drhovecdp_Tsat(model, T, rhovecL0, rhovecV0);
+    auto opt = TVLEOptions(); opt.revision = 2; opt.polish = true; opt.init_c = -1;
     auto iso = trace_VLE_isotherm_binary(model, T, rhovecL0, rhovecV0, opt);
-    std::cout << iso.dump(2) << std::endl;
+//    std::cout << iso.dump(2) << std::endl;
 }

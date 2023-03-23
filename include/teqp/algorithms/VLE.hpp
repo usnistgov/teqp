@@ -169,41 +169,6 @@ auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxi
     return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
 }
 
-template<typename Model>
-auto pure_trace_VLE(const Model& model, const double T, const nlohmann::json &spec){
-    // Start at the true critical point, from the specified guess value
-    nlohmann::json pure_spec;
-    Eigen::ArrayXd z{Eigen::ArrayXd::Ones(1,1)};
-    if (spec.contains("pure_spec")){
-        pure_spec = spec.at("pure_spec");
-        z = Eigen::ArrayXd(pure_spec.at("alternative_length").get<int>()); z.setZero();
-        z(pure_spec.at("alternative_pure_index").get<int>()) = 1;
-    }
-
-    auto [Tc, rhoc] = solve_pure_critical(model, spec.at("Tcguess").get<double>(), spec.at("rhocguess").get<double>(), pure_spec);
-    
-    // Small step towards lower temperature close to critical temperature
-    double Tclose = spec.at("Tred").get<double>()*Tc;
-    auto rhoLrhoV = extrapolate_from_critical(model, Tc, rhoc, Tclose, z);
-    auto rhoLrhoVpolished = pure_VLE_T(model, Tclose, rhoLrhoV[0], rhoLrhoV[1], spec.value("NVLE", 10), z);
-    if (rhoLrhoVpolished[0] == rhoLrhoVpolished[1]){
-        throw teqp::IterationError("Converged to trivial solution");
-    }
-    
-    // Integrate down to temperature of interest
-    int Nstep = spec.at("Nstep");
-    for (auto T_: Eigen::ArrayXd::LinSpaced(Nstep, Tclose, T)){
-        rhoLrhoVpolished = pure_VLE_T(model, T_, rhoLrhoVpolished[0], rhoLrhoVpolished[1], spec.value("NVLE", 10), z);
-        if (!std::isfinite(rhoLrhoVpolished[0])){
-            throw teqp::IterationError("The density is no longer valid; try increasing Nstep");
-        }
-        if (rhoLrhoVpolished[0] == rhoLrhoVpolished[1]){
-            throw teqp::IterationError("Converged to trivial solution; try increasing Nstep");
-        }
-    }
-    return rhoLrhoVpolished;
-}
-
 /***
  * \brief Calculate the derivative of vapor pressure with respect to temperature
  * \param model The model to operate on
@@ -233,6 +198,78 @@ auto dpsatdT_pure(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, const 
     auto deltahr_over_T = R*(hrVLERTV-hrVLERTL);
     auto dpsatdT = deltahr_over_T/(1/rhoV-1/rhoL); // From Clausius-Clapeyron; dp/dT = Deltas/Deltav = Deltah/(T*Deltav); Delta=V-L
     return dpsatdT;
+}
+
+/***
+ \brief Starting at the critical point, trace the VLE down to a temperature of interest
+ 
+ \note This method only works for well-behaved EOS, notably absent from that category are EOS in the multiparameter category with orthobaric scaling exponent not equal to 0.5 at the critical point. Most other analytical EOS work fine
+ 
+ The JSON data structure defines the variables that need to be specified.
+ 
+ In the current implementation, there are a few steps:
+ 1. Solve for the true critical point satisfying \f$(\partial p/\partial \rho)_{T}=(\partial^2p/\partial\rho^2)_{T}=0\f$
+ 2. Take a small step away from the critical point (this is where the beta=0.5 assumption is invoked)
+ 3. Integrate from the near critical temperature to the temperature of interest
+ */
+template<typename Model>
+auto pure_trace_VLE(const Model& model, const double T, const nlohmann::json &spec){
+    // Start at the true critical point, from the specified guess value
+    nlohmann::json pure_spec;
+    Eigen::ArrayXd z{Eigen::ArrayXd::Ones(1,1)};
+    if (spec.contains("pure_spec")){
+        pure_spec = spec.at("pure_spec");
+        z = Eigen::ArrayXd(pure_spec.at("alternative_length").get<int>()); z.setZero();
+        z(pure_spec.at("alternative_pure_index").get<int>()) = 1;
+    }
+
+    auto [Tc, rhoc] = solve_pure_critical(model, spec.at("Tcguess").get<double>(), spec.at("rhocguess").get<double>(), pure_spec);
+    
+    // Small step towards lower temperature close to critical temperature
+    double Tclose = spec.at("Tred").get<double>()*Tc;
+    auto rhoLrhoV = extrapolate_from_critical(model, Tc, rhoc, Tclose, z);
+    auto rhoLrhoVpolished = pure_VLE_T(model, Tclose, rhoLrhoV[0], rhoLrhoV[1], spec.value("NVLE", 10), z);
+    if (rhoLrhoVpolished[0] == rhoLrhoVpolished[1]){
+        throw teqp::IterationError("Converged to trivial solution");
+    }
+    
+    // "Integrate" down to temperature of interest
+    int Nstep = spec.at("Nstep");
+    double R = model.R(z);
+    bool with_deriv = spec.at("with_deriv");
+    double dT = -(Tclose-T)/(Nstep-1);
+    using tdx = TDXDerivatives<decltype(model)>;
+    for (auto T_: Eigen::ArrayXd::LinSpaced(Nstep, Tclose, T)){
+        rhoLrhoVpolished = pure_VLE_T(model, T_, rhoLrhoVpolished[0], rhoLrhoVpolished[1], spec.value("NVLE", 10), z);
+        
+        //auto pL = rhoLrhoVpolished[0]*R*T_*(1 + tdx::get_Ar01(model, T_, rhoLrhoVpolished[0], z));
+        //auto pV = rhoLrhoVpolished[1]*R*T_*(1 + tdx::get_Ar01(model, T_, rhoLrhoVpolished[1], z));
+        //std::cout << pL << " " << pV << " " << pL/pV-1 <<  std::endl;
+        if (with_deriv){
+            // Get drho/dT for both phases
+            auto dpsatdT = dpsatdT_pure(model, T_, rhoLrhoVpolished[0], rhoLrhoVpolished[1], z);
+            auto get_drhodT = [&z, R, dpsatdT](const Model& model, double T, double rho){
+                auto dpdrho = R*T*(1 + 2*tdx::get_Ar01(model, T, rho, z) + tdx::get_Ar02(model, T, rho, z));
+                auto dpdT = R*rho*(1 + tdx::get_Ar01(model, T, rho, z) - tdx::get_Ar11(model, T, rho, z));
+                return -dpdT/dpdrho + dpsatdT/dpdrho;
+            };
+            auto drhodTL = get_drhodT(model, T_, rhoLrhoVpolished[0]);
+            auto drhodTV = get_drhodT(model, T_, rhoLrhoVpolished[1]);
+            // Use the obtained derivative to calculate the step in rho from deltarho = (drhodT)*dT
+            auto DeltarhoL = dT*drhodTL, DeltarhoV = dT*drhodTV;
+            rhoLrhoVpolished[0] += DeltarhoL;
+            rhoLrhoVpolished[1] += DeltarhoV;
+        }
+        
+        // Updated values for densities at new T
+        if (!std::isfinite(rhoLrhoVpolished[0])){
+            throw teqp::IterationError("The density is no longer valid; try increasing Nstep");
+        }
+        if (rhoLrhoVpolished[0] == rhoLrhoVpolished[1]){
+            throw teqp::IterationError("Converged to trivial solution; try increasing Nstep");
+        }
+    }
+    return rhoLrhoVpolished;
 }
 
 /***
