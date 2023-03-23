@@ -14,6 +14,7 @@ using Catch::Approx;
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/algorithms/critical_pure.hpp"
+#include "teqp/algorithms/VLE.hpp"
 using namespace teqp::SAFTVRMie;
 using namespace teqp;
 
@@ -185,8 +186,51 @@ TEST_CASE("Trace critical locus", "[SAFTVRMie]"){
     auto rhovec0 = (Eigen::ArrayXd(2) << rho0, 0).finished();
     auto al = model3->trace_critical_arclength_binary(T0, rhovec0, "aa.txt");
     int rr = 0;
+}
+
+TEST_CASE("VLE pure tracing", "[SAFTVRMieVLE]"){
+    std::vector<std::string> names1 = {"Ethane"};
+    SAFTVRMieMixture pure{names1};
+    nlohmann::json spec1{
+        {"Tcguess", 300.0},
+        {"rhocguess", 10000.0},
+        {"Tred", 0.999},
+        {"Nstep", 10}
+    };
+    auto o1 = pure_trace_VLE(pure, 130, spec1);
     
-//    auto z = (Eigen::ArrayXd(2) << 0.3, 0.4).finished();
-//    auto rhovec = (rho*z).eval();
-//    auto fugcoeff = model3->get_fugacity_coefficients(T, rhovec);
+    std::vector<std::string> names = {"Methane", "Ethane"};
+    SAFTVRMieMixture model{names};
+    nlohmann::json pure_spec{{"alternative_pure_index", 1}, {"alternative_length", names.size()}};
+    nlohmann::json spec{
+        {"Tcguess", 300.0},
+        {"rhocguess", 10000.0},
+        {"pure_spec", pure_spec},
+        {"Tred", 0.999},
+        {"Nstep", 10}
+    };
+    auto o = pure_trace_VLE(model, 130, spec);
+    CHECK(o[0] == o1[0]);
+}
+
+TEST_CASE("VLE isotherm tracing", "[SAFTVRMieVLE]"){
+    
+    std::vector<std::string> names = {"Methane", "Ethane"};
+    SAFTVRMieMixture model{names};
+    nlohmann::json pure_spec{{"alternative_pure_index", 0}, {"alternative_length", names.size()}};
+    nlohmann::json spec{
+        {"Tcguess", 300.0},
+        {"rhocguess", 10000.0},
+        {"pure_spec", pure_spec},
+        {"Tred", 0.999},
+        {"Nstep", 1000}
+    };
+    double T = 100.0;
+    auto purestart = pure_trace_VLE(model, T, spec);
+    Eigen::ArrayXd rhovecL0(2), rhovecV0(2);
+    rhovecL0(pure_spec.at("alternative_pure_index").get<int>()) = purestart[0];
+    rhovecV0(pure_spec.at("alternative_pure_index").get<int>()) = purestart[1];
+    auto opt = TVLEOptions(); opt.revision = 2;
+    auto iso = trace_VLE_isotherm_binary(model, T, rhovecL0, rhovecV0, opt);
+    std::cout << iso.dump(2) << std::endl;
 }
