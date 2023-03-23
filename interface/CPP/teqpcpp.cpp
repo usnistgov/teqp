@@ -48,17 +48,17 @@ namespace teqp {
 
             // Derivatives from isochoric thermodynamics (all have the same signature)
             #define X(f) \
-            double f(const double T, const REArrayd& rhovec) const override ;
+            double f(const double T, const EArrayd& rhovec) const override ;
             ISOCHORIC_double_args
             #undef X
 
             #define X(f) \
-            EArrayd f(const double T, const REArrayd& rhovec) const override ;
+            EArrayd f(const double T, const EArrayd& rhovec) const override ;
             ISOCHORIC_array_args
             #undef X
 
             #define X(f) \
-            EMatrixd f(const double T, const REArrayd& rhovec) const override ;
+            EMatrixd f(const double T, const EArrayd& rhovec) const override ;
             ISOCHORIC_matrix_args
             #undef X
 

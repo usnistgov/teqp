@@ -5,9 +5,9 @@ using MI = teqp::cppinterface::ModelImplementer;
 
 // Derivatives from isochoric thermodynamics (all have the same signature)
 #define X(f) \
-double MI::f(const double T, const REArrayd& rhovec) const  { \
+double MI::f(const double T, const EArrayd& rhovec) const  { \
     return std::visit([&](const auto& model) { \
-        using id = IsochoricDerivatives<decltype(model), double, REArrayd>; \
+        using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
         return id::f(model, T, rhovec); \
     }, m_model); \
 }
@@ -15,9 +15,9 @@ ISOCHORIC_double_args
 #undef X
 
 #define X(f) \
-EArrayd MI::f(const double T, const REArrayd& rhovec) const  { \
+EArrayd MI::f(const double T, const EArrayd& rhovec) const  { \
     return std::visit([&](const auto& model) { \
-        using id = IsochoricDerivatives<decltype(model), double, REArrayd>; \
+        using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
         return id::f(model, T, rhovec); \
     }, m_model); \
 }
@@ -25,9 +25,9 @@ ISOCHORIC_array_args
 #undef X
 
 #define X(f) \
-EMatrixd MI::f(const double T, const REArrayd& rhovec) const  { \
+EMatrixd MI::f(const double T, const EArrayd& rhovec) const  { \
     return std::visit([&](const auto& model) { \
-        using id = IsochoricDerivatives<decltype(model), double, REArrayd>; \
+        using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
         return id::f(model, T, rhovec); \
     }, m_model); \
 }
