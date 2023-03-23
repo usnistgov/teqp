@@ -63,18 +63,18 @@ public:
     using EigenMatrix = Eigen::Array<TYPE, 2, 2>;
 private:
     const Model& m_model;
-    TYPE m_T;
+    const TYPE m_T;
+    const Eigen::ArrayXd molefracs;
     EigenMatrix J;
     EigenArray y;
-    
 public:
     std::size_t icall = 0;
     double Rr, R0;
 
-    IsothermPureVLEResiduals(const Model& model, TYPE T) : m_model(model), m_T(T) {
-        std::valarray<double> molefrac = { 1.0 };
-        Rr = m_model.R(molefrac);
-        R0 = m_model.R(molefrac);
+    IsothermPureVLEResiduals(const Model& model, const TYPE& T, const std::optional<Eigen::ArrayXd>& molefracs_ = std::nullopt) : m_model(model), m_T(T),
+        molefracs( (molefracs_) ? molefracs_.value() : Eigen::ArrayXd::Ones(1,1)) {
+        Rr = m_model.R(molefracs);
+        R0 = m_model.R(molefracs);
     };
 
     const auto& get_errors() { return y; };
@@ -85,9 +85,8 @@ public:
         const EigenArray1 rhovecL = rhovec.head(1);
         const EigenArray1 rhovecV = rhovec.tail(1);
         const auto rhomolarL = rhovecL.sum(), rhomolarV = rhovecV.sum();
-        const auto molefracs = (EigenArray1() << 1.0).finished();
 
-        using tdx = TDXDerivatives<Model,TYPE,EigenArray1>;
+        using tdx = TDXDerivatives<Model,TYPE,Eigen::ArrayXd>;
 
         const TYPE &T = m_T;
         //const TYPE R = m_model.R(molefracs);
@@ -163,9 +162,46 @@ auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
 }
 
 template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
-auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter) {
-    auto res = IsothermPureVLEResiduals<Model, Scalar, backend>(model, T);
+auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) {
+    Eigen::ArrayXd molefracs_{Eigen::ArrayXd::Ones(1,1)};
+    if (molefracs){ molefracs_ = molefracs.value(); }
+    auto res = IsothermPureVLEResiduals<Model, Scalar, backend>(model, T, molefracs_);
     return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
+}
+
+template<typename Model>
+auto pure_trace_VLE(const Model& model, const double T, const nlohmann::json &spec){
+    // Start at the true critical point, from the specified guess value
+    nlohmann::json pure_spec;
+    Eigen::ArrayXd z{Eigen::ArrayXd::Ones(1,1)};
+    if (spec.contains("pure_spec")){
+        pure_spec = spec.at("pure_spec");
+        z = Eigen::ArrayXd(pure_spec.at("alternative_length").get<int>()); z.setZero();
+        z(pure_spec.at("alternative_pure_index").get<int>()) = 1;
+    }
+
+    auto [Tc, rhoc] = solve_pure_critical(model, spec.at("Tcguess").get<double>(), spec.at("rhocguess").get<double>(), pure_spec);
+    
+    // Small step towards lower temperature close to critical temperature
+    double Tclose = spec.at("Tred").get<double>()*Tc;
+    auto rhoLrhoV = extrapolate_from_critical(model, Tc, rhoc, Tclose, z);
+    auto rhoLrhoVpolished = pure_VLE_T(model, Tclose, rhoLrhoV[0], rhoLrhoV[1], spec.value("NVLE", 10), z);
+    if (rhoLrhoVpolished[0] == rhoLrhoVpolished[1]){
+        throw teqp::IterationError("Converged to trivial solution");
+    }
+    
+    // Integrate down to temperature of interest
+    int Nstep = spec.at("Nstep");
+    for (auto T_: Eigen::ArrayXd::LinSpaced(Nstep, Tclose, T)){
+        rhoLrhoVpolished = pure_VLE_T(model, T_, rhoLrhoVpolished[0], rhoLrhoVpolished[1], spec.value("NVLE", 10), z);
+        if (!std::isfinite(rhoLrhoVpolished[0])){
+            throw teqp::IterationError("The density is no longer valid; try increasing Nstep");
+        }
+        if (rhoLrhoVpolished[0] == rhoLrhoVpolished[1]){
+            throw teqp::IterationError("Converged to trivial solution; try increasing Nstep");
+        }
+    }
+    return rhoLrhoVpolished;
 }
 
 /***
@@ -182,9 +218,10 @@ auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxi
  *  where the \f$h''-h'\f$ is given by the difference in residual enthalpy \f$h''-h' = h^r''-h^r'\f$ because the ideal-gas parts cancel
  */
 template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
-auto dpsatdT_pure(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV) {
+auto dpsatdT_pure(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) {
     
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
+    if (molefracs){ molefrac = molefracs.value(); }
     
     using tdx = TDXDerivatives<decltype(model), double, decltype(molefrac)>;
     using iso = IsochoricDerivatives<decltype(model), double, decltype(molefrac)>;
@@ -939,7 +976,8 @@ auto get_dpsat_dTsat_isopleth(const Model& model, const Scalar& T, const VecType
 }
 
 /***
-* \brief Trace an isotherm with parametric tracing
+ * \brief Trace an isotherm with parametric tracing
+ * \ note If options.revision is 2, the data will be returned in the "data" field, otherwise the data will be returned as root array
 */
 template<typename Model, typename Scalar, typename VecType>
 auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, VecType rhovecV0, const std::optional<TVLEOptions>& options = std::nullopt) 
@@ -1167,7 +1205,22 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
         store_point(); // last_drhodt is updated;
         
     }
-    return JSONdata;
+    if (opt.revision == 1){
+        return JSONdata;
+    }
+    else if (opt.revision == 2){
+        nlohmann::json meta{
+            {"termination_reason", termination_reason}
+        };
+        return nlohmann::json{
+            {"meta", meta},
+            {"data", JSONdata}
+        };
+    }
+    else
+    {
+        throw teqp::InvalidArgument("revision is not valid");
+    }
 }
 
 /***

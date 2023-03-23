@@ -77,20 +77,25 @@ namespace teqp {
     }
 
     template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
-    auto solve_pure_critical(const Model& model, const Scalar T0, const Scalar rho0, const nlohmann::json& flags = {}) {
+    auto solve_pure_critical(const Model& model, const Scalar T0, const Scalar rho0, const std::optional<nlohmann::json>& flags = std::nullopt) {
         auto x = (Eigen::ArrayXd(2) << T0, rho0).finished();
-        int maxsteps = (flags.contains("maxsteps")) ? flags.at("maxsteps").get<int>() : 10;
+        int maxsteps = 10;
         std::optional<std::size_t> alternative_pure_index;
-        if (flags.contains("alternative_pure_index")){
-            auto i = flags.at("alternative_pure_index").get<int>();
-            if (i < 0){ throw teqp::InvalidArgument("alternative_pure_index cannot be less than 0"); }
-            alternative_pure_index = i;
-        }
         std::optional<std::size_t> alternative_length;
-        if (flags.contains("alternative_length")){
-            auto i = flags.at("alternative_length").get<int>();
-            if (i < 2){ throw teqp::InvalidArgument("alternative_length cannot be less than 2"); }
-            alternative_length = i;
+        if (flags){
+            if (flags.value().contains("maxsteps")){
+                maxsteps = flags.value().at("maxsteps");
+            }
+            if (flags.value().contains("alternative_pure_index")){
+                auto i = flags.value().at("alternative_pure_index").get<int>();
+                if (i < 0){ throw teqp::InvalidArgument("alternative_pure_index cannot be less than 0"); }
+                alternative_pure_index = i;
+            }
+            if (flags.value().contains("alternative_length")){
+                auto i = flags.value().at("alternative_length").get<int>();
+                if (i < 2){ throw teqp::InvalidArgument("alternative_length cannot be less than 2"); }
+                alternative_length = i;
+            }
         }
         // A convenience method to make linear system solving more concise with Eigen datatypes
         // All arguments are converted to matrices, the solve is done, and an array is returned
@@ -106,19 +111,29 @@ namespace teqp {
     }
 
     template<typename Model, typename Scalar>
-    Eigen::ArrayXd extrapolate_from_critical(const Model& model, const Scalar& Tc, const Scalar& rhoc, const Scalar& T) {
+    Scalar get_Brho_critical_extrap(const Model& model, const Scalar& Tc, const Scalar& rhoc, const std::optional<Eigen::ArrayXd>& z = std::nullopt) {
 
         using tdx = TDXDerivatives<Model, Scalar>;
-        auto z = (Eigen::ArrayXd(1) << 1.0).finished();
-        auto R = model.R(z);
-        auto ders = tdx::template get_Ar0n<4>(model, Tc, rhoc, z);
+        auto z_ = (Eigen::ArrayXd(1) << 1.0).finished();
+        if (z){
+            z_ = z.value();
+        }
+        auto R = model.R(z_);
+        auto ders = tdx::template get_Ar0n<4>(model, Tc, rhoc, z_);
         //auto dpdrho = R*Tc*(1 + 2 * ders[1] + ders[2]); // Should be zero
         //auto d2pdrho2 = R*Tc/rhoc*(2 * ders[1] + 4 * ders[2] + ders[3]); // Should be zero
         auto d3pdrho3 = R * Tc / (rhoc * rhoc) * (6 * ders[2] + 6 * ders[3] + ders[4]);
-        auto Ar11 = tdx::template get_Ar11(model, Tc, rhoc, z);
-        auto Ar12 = tdx::template get_Ar12(model, Tc, rhoc, z);
+        auto Ar11 = tdx::template get_Ar11(model, Tc, rhoc, z_);
+        auto Ar12 = tdx::template get_Ar12(model, Tc, rhoc, z_);
         auto d2pdrhodT = R * (1 + 2 * ders[1] + ders[2] - 2 * Ar11 - Ar12);
         auto Brho = sqrt(6 * d2pdrhodT * Tc / d3pdrho3);
+        return Brho;
+    }
+
+    template<typename Model, typename Scalar>
+Eigen::Array<double, 2, 1> extrapolate_from_critical(const Model& model, const Scalar& Tc, const Scalar& rhoc, const Scalar& T, const std::optional<Eigen::ArrayXd>& z = std::nullopt) {
+
+        auto Brho = get_Brho_critical_extrap(model, Tc, rhoc, z);
 
         auto drhohat_dT = Brho / Tc;
         auto dT = T - Tc;
