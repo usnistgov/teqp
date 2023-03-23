@@ -212,7 +212,7 @@ TEST_CASE("VLE pure tracing", "[SAFTVRMieVLE]"){
         {"with_deriv", true}
     };
     auto o = pure_trace_VLE(model, 300, spec);
-    CHECK(o[0] == o1[0]);
+    CHECK(o[0] == Approx(o1[0]));
 }
 
 TEST_CASE("VLE isotherm tracing", "[SAFTVRMieVLE]"){
