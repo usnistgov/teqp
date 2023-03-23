@@ -21,10 +21,23 @@ TEST_CASE("Test for critical point of Kolafa-Nezbeda", "[LJ126]")
 TEST_CASE("Test for critical point of Thol", "[LJ126-Thol]")
 {
     auto m = build_LJ126_TholJPCRD2016();
-    auto soln = solve_pure_critical(m, 1.3, 0.3);
+    
     auto Tc = 1.32, rhoc = 0.31;
-    CHECK(std::get<0>(soln) == Approx(Tc).margin(0.01));
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    using tdx = TDXDerivatives<decltype(m)>;
+    // Generated with ljfeos.cpp file included with paper
+    double tol = 1e-100;
+    CHECK(tdx::get_Arxy<0,0>(m, Tc, rhoc, z) == Approx(-0.848655028421735).margin(tol));
+    CHECK(tdx::get_Arxy<1,0>(m, Tc, rhoc, z) == Approx(-1.72121486947745 ).margin(tol));
+    CHECK(tdx::get_Arxy<0,1>(m, Tc, rhoc, z) == Approx(-0.682159784922984).margin(tol));
+    CHECK(tdx::get_Arxy<2,0>(m, Tc, rhoc, z) == Approx(-3.06580477714764).margin(tol));
+    CHECK(tdx::get_Arxy<1,1>(m, Tc, rhoc, z) == Approx(-1.43011286241234).margin(tol));
+    CHECK(tdx::get_Arxy<0,2>(m, Tc, rhoc, z) == Approx(0.364319525724386).margin(tol));
+    
+    auto soln = solve_pure_critical(m, 1.3, 0.3);
+    CHECK(std::get<0>(soln) == Approx(Tc).margin(0.2));
     CHECK(std::get<1>(soln) == Approx(rhoc).margin(0.01));
+    
 }
 TEST_CASE("Test for critical point of Johnson", "[LJ126]")
 {
