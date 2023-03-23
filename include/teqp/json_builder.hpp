@@ -95,6 +95,35 @@ namespace teqp {
                 throw std::invalid_argument("you must provide names or coeffs, but not both");
             }
         }
+        else if (kind == "SAFT-VR-Mie") {
+            using namespace SAFTVRMie;
+            std::optional<Eigen::ArrayXXd> kmat;
+            if (spec.contains("kmat")){
+                kmat = build_square_matrix(spec["kmat"]);
+            }
+            
+            if (spec.contains("names")){
+                return SAFTVRMieMixture(spec["names"], kmat);
+            }
+            else if (spec.contains("coeffs")){
+                std::vector<SAFTVRMieCoeffs> coeffs;
+                for (auto j : spec["coeffs"]) {
+                    SAFTVRMieCoeffs c;
+                    c.name = j.at("name");
+                    c.m = j.at("m");
+                    c.sigma_m = (j.contains("sigma_m")) ? j.at("sigma_m").get<double>() : j.at("sigma_Angstrom").get<double>()/1e10;
+                    c.epsilon_over_k = j.at("epsilon_over_k");
+                    c.lambda_r = j.at("lambda_r");
+                    c.lambda_a = j.at("lambda_a");
+                    c.BibTeXKey = j.at("BibTeXKey");
+                    coeffs.push_back(c);
+                }
+                return SAFTVRMieMixture(coeffs, kmat);
+            }
+            else{
+                throw std::invalid_argument("you must provide names or coeffs, but not both");
+            }
+        }
         else if (kind == "multifluid") {
             return multifluidfactory(spec);
         }

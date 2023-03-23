@@ -36,5 +36,6 @@ namespace teqp {
     public:
         IterationFailure(const std::string& msg) : teqpException(100, msg) {};
     };
+    using IterationError = IterationFailure;
 
 }; // namespace teqp

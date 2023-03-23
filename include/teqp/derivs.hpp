@@ -191,7 +191,9 @@ struct TDXDerivatives {
             if constexpr (be == ADBackends::autodiff) {
                 using adtype = autodiff::HigherOrderDual<iT + iD, double>;
                 adtype Trecipad = 1.0 / T, rhoad = rho;
-                auto f = [&w, &molefrac](const adtype& Trecip, const adtype& rho_) { return eval(w.alpha(eval(1.0/Trecip), rho_, molefrac)); };
+                auto f = [&w, &molefrac](const adtype& Trecip, const adtype& rho_) {
+                    adtype T_ = 1.0/Trecip;
+                    return eval(w.alpha(T_, rho_, molefrac)); };
                 auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)));
                 auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad));
                 return powi(1.0 / T, iT) * powi(rho, iD) * der[der.size() - 1];
