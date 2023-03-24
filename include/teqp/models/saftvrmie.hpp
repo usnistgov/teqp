@@ -309,28 +309,28 @@ struct SAFTVRMieChainContributionTerms{
             zeta(l) = forceeval(pi6*rhos*summer);
         }
         
-        NumType summer_xi_x = 0.0;
-        TRHOType summer_xi_x_bar = 0.0;
+        NumType summer_zeta_x = 0.0;
+        TRHOType summer_zeta_x_bar = 0.0;
         for (auto i = 0; i < N; ++i){
             for (auto j = 0; j < N; ++j){
-                summer_xi_x += xs(i)*xs(j)*powi(dmat(i,j), 3)*rhos;
-                summer_xi_x_bar += xs(i)*xs(j)*powi(sigma_ij(i,j), 3);
+                summer_zeta_x += xs(i)*xs(j)*powi(dmat(i,j), 3)*rhos;
+                summer_zeta_x_bar += xs(i)*xs(j)*powi(sigma_ij(i,j), 3);
             }
         }
         
-        auto xi_x = forceeval(pi6*summer_xi_x); // Eq. A13
-        auto xi_x_bar = forceeval(pi6*rhos*summer_xi_x_bar); // Eq. A23
-        auto xi_x_bar5 = forceeval(POW2(xi_x_bar)*POW3(xi_x_bar)); // (xi_x_bar)^5
-        auto xi_x_bar8 = forceeval(xi_x_bar5*POW3(xi_x_bar)); // (xi_x_bar)^8
+        auto zeta_x = forceeval(pi6*summer_zeta_x); // Eq. A13
+        auto zeta_x_bar = forceeval(pi6*rhos*summer_zeta_x_bar); // Eq. A23
+        auto zeta_x_bar5 = forceeval(POW2(zeta_x_bar)*POW3(zeta_x_bar)); // (zeta_x_bar)^5
+        auto zeta_x_bar8 = forceeval(zeta_x_bar5*POW3(zeta_x_bar)); // (zeta_x_bar)^8
         
         // Coefficients in the gdHSij term, do not depend on component,
         // so calculate them here
-        auto X = forceeval(POW3(1.0 - xi_x)), X3 = X;
-        auto X2 = forceeval(POW2(1.0 - xi_x));
-        auto k0 = forceeval(-log(1.0-xi_x) + (42.0*xi_x - 39.0*POW2(xi_x) + 9.0*POW3(xi_x) - 2.0*POW4(xi_x))/(6.0*X3)); // Eq. A30
-        auto k1 = forceeval((POW4(xi_x) + 6.0*POW2(xi_x) - 12.0*xi_x)/(2.0*X3));
-        auto k2 = forceeval(-3.0*POW2(xi_x)/(8.0*X2));
-        auto k3 = forceeval((-POW4(xi_x) + 3.0*POW2(xi_x) + 3.0*xi_x)/(6.0*X3));
+        auto X = forceeval(POW3(1.0 - zeta_x)), X3 = X;
+        auto X2 = forceeval(POW2(1.0 - zeta_x));
+        auto k0 = forceeval(-log(1.0-zeta_x) + (42.0*zeta_x - 39.0*POW2(zeta_x) + 9.0*POW3(zeta_x) - 2.0*POW4(zeta_x))/(6.0*X3)); // Eq. A30
+        auto k1 = forceeval((POW4(zeta_x) + 6.0*POW2(zeta_x) - 12.0*zeta_x)/(2.0*X3));
+        auto k2 = forceeval(-3.0*POW2(zeta_x)/(8.0*X2));
+        auto k3 = forceeval((-POW4(zeta_x) + 3.0*POW2(zeta_x) + 3.0*zeta_x)/(6.0*X3));
         
         // Pre-calculate the cubes of the diameters
         auto dmat3 = dmat.array().pow(3).eval();
@@ -340,8 +340,8 @@ struct SAFTVRMieChainContributionTerms{
         NumType a3kB3 = 0.0;
         NumType alphar_chain = 0.0;
         
-        NumType K_HS = get_KHS(xi_x);
-        NumType rho_dK_HS_drho = get_rhos_dK_HS_drhos(xi_x);
+        NumType K_HS = get_KHS(zeta_x);
+        NumType rho_dK_HS_drho = get_rhos_dK_HS_drhos(zeta_x);
         
         for (auto i = 0; i < N; ++i){
             for (auto j = i; j < N; ++j){
@@ -357,27 +357,27 @@ struct SAFTVRMieChainContributionTerms{
                 auto J = [&x_0_ij](double lambda_ij){
                     return forceeval(-(pow(x_0_ij, 4-lambda_ij)*(lambda_ij-3.0)-pow(x_0_ij, 3.0-lambda_ij)*(lambda_ij-4.0)-1.0)/((lambda_ij-3.0)*(lambda_ij-4.0))); // Eq. A15
                 };
-                auto Bhatij_a = this->get_Bhatij(xi_x, X, I(lambda_a_ij(i,j)), J(lambda_a_ij(i,j)));
-                auto Bhatij_2a = this->get_Bhatij(xi_x, X, I(2*lambda_a_ij(i,j)), J(2*lambda_a_ij(i,j)));
-                auto Bhatij_r = this->get_Bhatij(xi_x, X, I(lambda_r_ij(i,j)), J(lambda_r_ij(i,j)));
-                auto Bhatij_2r = this->get_Bhatij(xi_x, X, I(2*lambda_r_ij(i,j)), J(2*lambda_r_ij(i,j)));
-                auto Bhatij_ar = this->get_Bhatij(xi_x, X, I(lambda_a_ij(i,j)+lambda_r_ij(i,j)), J(lambda_a_ij(i,j)+lambda_r_ij(i,j)));
+                auto Bhatij_a = this->get_Bhatij(zeta_x, X, I(lambda_a_ij(i,j)), J(lambda_a_ij(i,j)));
+                auto Bhatij_2a = this->get_Bhatij(zeta_x, X, I(2*lambda_a_ij(i,j)), J(2*lambda_a_ij(i,j)));
+                auto Bhatij_r = this->get_Bhatij(zeta_x, X, I(lambda_r_ij(i,j)), J(lambda_r_ij(i,j)));
+                auto Bhatij_2r = this->get_Bhatij(zeta_x, X, I(2*lambda_r_ij(i,j)), J(2*lambda_r_ij(i,j)));
+                auto Bhatij_ar = this->get_Bhatij(zeta_x, X, I(lambda_a_ij(i,j)+lambda_r_ij(i,j)), J(lambda_a_ij(i,j)+lambda_r_ij(i,j)));
                                                  
-                auto one_term =  [this, &x_0_ij, &I, &J, &xi_x, &X](double lambda_ij, const NumType& xi_x_eff){
+                auto one_term =  [this, &x_0_ij, &I, &J, &zeta_x, &X](double lambda_ij, const NumType& zeta_x_eff){
                     return forceeval(
                        pow(x_0_ij, lambda_ij)*(
-                         this->get_Bhatij(xi_x, X, I(lambda_ij), J(lambda_ij))
-                       + this->get_a1Shatij(xi_x_eff, lambda_ij)
+                         this->get_Bhatij(zeta_x, X, I(lambda_ij), J(lambda_ij))
+                       + this->get_a1Shatij(zeta_x_eff, lambda_ij)
                        )
                      );
                 };
-                NumType xi_x_eff_r = crnij[0](i,j)*xi_x + crnij[1](i,j)*POW2(xi_x) + crnij[2](i,j)*POW3(xi_x) + crnij[3](i,j)*POW4(xi_x);
-                NumType xi_x_eff_a = canij[0](i,j)*xi_x + canij[1](i,j)*POW2(xi_x) + canij[2](i,j)*POW3(xi_x) + canij[3](i,j)*POW4(xi_x);
-                NumType dxi_x_eff_dxix_r = crnij[0](i,j) + crnij[1](i,j)*2*xi_x + crnij[2](i,j)*3*POW2(xi_x) + crnij[3](i,j)*4*POW3(xi_x);
-                NumType dxi_x_eff_dxix_a = canij[0](i,j) + canij[1](i,j)*2*xi_x + canij[2](i,j)*3*POW2(xi_x) + canij[3](i,j)*4*POW3(xi_x);
+                NumType zeta_x_eff_r = crnij[0](i,j)*zeta_x + crnij[1](i,j)*POW2(zeta_x) + crnij[2](i,j)*POW3(zeta_x) + crnij[3](i,j)*POW4(zeta_x);
+                NumType zeta_x_eff_a = canij[0](i,j)*zeta_x + canij[1](i,j)*POW2(zeta_x) + canij[2](i,j)*POW3(zeta_x) + canij[3](i,j)*POW4(zeta_x);
+                NumType dzeta_x_eff_dzetax_r = crnij[0](i,j) + crnij[1](i,j)*2*zeta_x + crnij[2](i,j)*3*POW2(zeta_x) + crnij[3](i,j)*4*POW3(zeta_x);
+                NumType dzeta_x_eff_dzetax_a = canij[0](i,j) + canij[1](i,j)*2*zeta_x + canij[2](i,j)*3*POW2(zeta_x) + canij[3](i,j)*4*POW3(zeta_x);
 
                 NumType a1ij = 2.0*MY_PI*rhos*dmat3(i,j)*epsilon_ij(i,j)*C_ij(i,j)*(
-                    one_term(lambda_a_ij(i,j), xi_x_eff_a) - one_term(lambda_r_ij(i,j), xi_x_eff_r)
+                    one_term(lambda_a_ij(i,j), zeta_x_eff_a) - one_term(lambda_r_ij(i,j), zeta_x_eff_r)
                 ); // divided by k_B
                                     
                 NumType contribution = xs(i)*xs(j)*a1ij;
@@ -388,18 +388,18 @@ struct SAFTVRMieChainContributionTerms{
                 // Calculations for a_2/k_B^2
                 // --------------------------
                 
-                NumType xi_x_eff_2r = c2rnij[0](i,j)*xi_x + c2rnij[1](i,j)*POW2(xi_x) + c2rnij[2](i,j)*POW3(xi_x) + c2rnij[3](i,j)*POW4(xi_x);
-                NumType xi_x_eff_2a = c2anij[0](i,j)*xi_x + c2anij[1](i,j)*POW2(xi_x) + c2anij[2](i,j)*POW3(xi_x) + c2anij[3](i,j)*POW4(xi_x);
-                NumType xi_x_eff_ar = carnij[0](i,j)*xi_x + carnij[1](i,j)*POW2(xi_x) + carnij[2](i,j)*POW3(xi_x) + carnij[3](i,j)*POW4(xi_x);
-                NumType dxi_x_eff_dxix_2r = c2rnij[0](i,j) + c2rnij[1](i,j)*2*xi_x + c2rnij[2](i,j)*3*POW2(xi_x) + c2rnij[3](i,j)*4*POW3(xi_x);
-                NumType dxi_x_eff_dxix_ar = carnij[0](i,j) + carnij[1](i,j)*2*xi_x + carnij[2](i,j)*3*POW2(xi_x) + carnij[3](i,j)*4*POW3(xi_x);
-                NumType dxi_x_eff_dxix_2a = c2anij[0](i,j) + c2anij[1](i,j)*2*xi_x + c2anij[2](i,j)*3*POW2(xi_x) + c2anij[3](i,j)*4*POW3(xi_x);
+                NumType zeta_x_eff_2r = c2rnij[0](i,j)*zeta_x + c2rnij[1](i,j)*POW2(zeta_x) + c2rnij[2](i,j)*POW3(zeta_x) + c2rnij[3](i,j)*POW4(zeta_x);
+                NumType zeta_x_eff_2a = c2anij[0](i,j)*zeta_x + c2anij[1](i,j)*POW2(zeta_x) + c2anij[2](i,j)*POW3(zeta_x) + c2anij[3](i,j)*POW4(zeta_x);
+                NumType zeta_x_eff_ar = carnij[0](i,j)*zeta_x + carnij[1](i,j)*POW2(zeta_x) + carnij[2](i,j)*POW3(zeta_x) + carnij[3](i,j)*POW4(zeta_x);
+                NumType dzeta_x_eff_dzetax_2r = c2rnij[0](i,j) + c2rnij[1](i,j)*2*zeta_x + c2rnij[2](i,j)*3*POW2(zeta_x) + c2rnij[3](i,j)*4*POW3(zeta_x);
+                NumType dzeta_x_eff_dzetax_ar = carnij[0](i,j) + carnij[1](i,j)*2*zeta_x + carnij[2](i,j)*3*POW2(zeta_x) + carnij[3](i,j)*4*POW3(zeta_x);
+                NumType dzeta_x_eff_dzetax_2a = c2anij[0](i,j) + c2anij[1](i,j)*2*zeta_x + c2anij[2](i,j)*3*POW2(zeta_x) + c2anij[3](i,j)*4*POW3(zeta_x);
                 
-                NumType chi_ij = fkij[1](i,j)*xi_x_bar + fkij[2](i,j)*xi_x_bar5 + fkij[3](i,j)*xi_x_bar8;
+                NumType chi_ij = fkij[1](i,j)*zeta_x_bar + fkij[2](i,j)*zeta_x_bar5 + fkij[3](i,j)*zeta_x_bar8;
                 auto a2ij = 0.5*K_HS*(1.0+chi_ij)*epsilon_ij(i,j)*POW2(C_ij(i,j))*(2*MY_PI*rhos*dmat3(i,j)*epsilon_ij(i,j))*(
-                     one_term(2.0*lambda_a_ij(i,j), xi_x_eff_2a)
-                  -2.0*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), xi_x_eff_ar)
-                    +one_term(2.0*lambda_r_ij(i,j), xi_x_eff_2r)
+                     one_term(2.0*lambda_a_ij(i,j), zeta_x_eff_2a)
+                  -2.0*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), zeta_x_eff_ar)
+                    +one_term(2.0*lambda_r_ij(i,j), zeta_x_eff_2r)
                 ); // divided by k_B^2
                                     
                 NumType contributiona2 = xs(i)*xs(j)*a2ij; // Eq. A19
@@ -408,8 +408,8 @@ struct SAFTVRMieChainContributionTerms{
                 // --------------------------
                 // Calculations for a_3/k_B^3
                 // --------------------------
-                auto a3ij = -POW3(epsilon_ij(i,j))*fkij[4](i,j)*xi_x_bar*exp(
-                     fkij[5](i,j)*xi_x_bar + fkij[6](i,j)*POW2(xi_x_bar)
+                auto a3ij = -POW3(epsilon_ij(i,j))*fkij[4](i,j)*zeta_x_bar*exp(
+                     fkij[5](i,j)*zeta_x_bar + fkij[6](i,j)*POW2(zeta_x_bar)
                 ); // divided by k_B^3
                 NumType contributiona3 = xs(i)*xs(j)*a3ij; // Eq. A25
                 a3kB3 += contributiona3*factor;
@@ -427,25 +427,25 @@ struct SAFTVRMieChainContributionTerms{
                     
                     // This is the function for the second part (not the partial) that goes in g_{1,ii},
                     // divided by 2*PI*d_ij^3*epsilon*rhos
-                    auto g1_term = [&one_term](double lambda_ij, const NumType& xi_x_eff){
-                        return forceeval(lambda_ij*one_term(lambda_ij, xi_x_eff));
+                    auto g1_term = [&one_term](double lambda_ij, const NumType& zeta_x_eff){
+                        return forceeval(lambda_ij*one_term(lambda_ij, zeta_x_eff));
                     };
-                    auto g1_noderivterm = -C_ij(i,i)*(g1_term(lambda_a_ij(i,i), xi_x_eff_a)-g1_term(lambda_r_ij(i,i), xi_x_eff_r));
+                    auto g1_noderivterm = -C_ij(i,i)*(g1_term(lambda_a_ij(i,i), zeta_x_eff_a)-g1_term(lambda_r_ij(i,i), zeta_x_eff_r));
                     
                     // Bhat = B*rho*kappa; diff(Bhat, rho) = Bhat + rho*dBhat/drho; kappa = 2*pi*eps*d^3
                     // This is the function for the partial derivative rhos*(da1ij/drhos),
                     // divided by 2*PI*d_ij^3*epsilon*rhos
-                    auto rhosda1iidrhos_term = [this, &x_0_ij, &I, &J, &xi_x, &X](double lambda_ij, const NumType& xi_x_eff, const NumType& dxixeff_dxix, const NumType& Bhatij){
+                    auto rhosda1iidrhos_term = [this, &x_0_ij, &I, &J, &zeta_x, &X](double lambda_ij, const NumType& zeta_x_eff, const NumType& dzetaxeff_dzetax, const NumType& Bhatij){
                         auto I_ = I(lambda_ij);
                         auto J_ = J(lambda_ij);
-                        auto rhosda1Sdrhos = this->get_rhoda1Shatijdrho(xi_x, xi_x_eff, dxixeff_dxix, lambda_ij);
-                        auto rhosdBdrhos = this->get_rhodBijdrho(xi_x, X, I_, J_, Bhatij);
+                        auto rhosda1Sdrhos = this->get_rhoda1Shatijdrho(zeta_x, zeta_x_eff, dzetaxeff_dzetax, lambda_ij);
+                        auto rhosdBdrhos = this->get_rhodBijdrho(zeta_x, X, I_, J_, Bhatij);
                         return forceeval(pow(x_0_ij, lambda_ij)*(rhosda1Sdrhos + rhosdBdrhos));
                     };
                     // This is rhos*d(a_1ij)/drhos/(2*pi*d^3*eps*rhos)
                     auto da1iidrhos_term = C_ij(i,j)*(
-                         rhosda1iidrhos_term(lambda_a_ij(i,i), xi_x_eff_a, dxi_x_eff_dxix_a, Bhatij_a)
-                        -rhosda1iidrhos_term(lambda_r_ij(i,i), xi_x_eff_r, dxi_x_eff_dxix_r, Bhatij_r)
+                         rhosda1iidrhos_term(lambda_a_ij(i,i), zeta_x_eff_a, dzeta_x_eff_dzetax_a, Bhatij_a)
+                        -rhosda1iidrhos_term(lambda_r_ij(i,i), zeta_x_eff_r, dzeta_x_eff_dzetax_r, Bhatij_r)
                     );
                     auto g1ii = 3.0*da1iidrhos_term + g1_noderivterm;
                     
@@ -455,20 +455,20 @@ struct SAFTVRMieChainContributionTerms{
                     // This is the second part (not the partial deriv.) that goes in g_{2,ii},
                     // divided by 2*PI*d_ij^3*epsilon*rhos
                     auto g2_noderivterm = -POW2(C_ij(i,i))*K_HS*(
-                       lambda_a_ij(i,j)*one_term(2*lambda_a_ij(i,j), xi_x_eff_2a)
-                       -(lambda_a_ij(i,j)+lambda_r_ij(i,j))*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), xi_x_eff_ar)
-                       +lambda_r_ij(i,j)*one_term(2*lambda_r_ij(i,j), xi_x_eff_2r)
+                       lambda_a_ij(i,j)*one_term(2*lambda_a_ij(i,j), zeta_x_eff_2a)
+                       -(lambda_a_ij(i,j)+lambda_r_ij(i,j))*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), zeta_x_eff_ar)
+                       +lambda_r_ij(i,j)*one_term(2*lambda_r_ij(i,j), zeta_x_eff_2r)
                     );
                     // This is [rhos*d(a_2ij/(1+chi_ij))/drhos]/(2*pi*d^3*eps*rhos)
                     auto da2iidrhos_term = 0.5*POW2(C_ij(i,j))*(
                         rho_dK_HS_drho*(
-                            one_term(2.0*lambda_a_ij(i,j), xi_x_eff_2a)
-                            -2.0*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), xi_x_eff_ar)
-                            +one_term(2.0*lambda_r_ij(i,j), xi_x_eff_2r))
+                            one_term(2.0*lambda_a_ij(i,j), zeta_x_eff_2a)
+                            -2.0*one_term(lambda_a_ij(i,j)+lambda_r_ij(i,j), zeta_x_eff_ar)
+                            +one_term(2.0*lambda_r_ij(i,j), zeta_x_eff_2r))
                         +K_HS*(
-                            rhosda1iidrhos_term(2.0*lambda_a_ij(i,i), xi_x_eff_2a, dxi_x_eff_dxix_2a, Bhatij_2a)
-                            -2.0*rhosda1iidrhos_term(lambda_a_ij(i,i)+lambda_r_ij(i,i), xi_x_eff_ar, dxi_x_eff_dxix_ar, Bhatij_ar)
-                            +rhosda1iidrhos_term(2.0*lambda_r_ij(i,i), xi_x_eff_2r, dxi_x_eff_dxix_2r, Bhatij_2r)
+                            rhosda1iidrhos_term(2.0*lambda_a_ij(i,i), zeta_x_eff_2a, dzeta_x_eff_dzetax_2a, Bhatij_2a)
+                            -2.0*rhosda1iidrhos_term(lambda_a_ij(i,i)+lambda_r_ij(i,i), zeta_x_eff_ar, dzeta_x_eff_dzetax_ar, Bhatij_ar)
+                            +rhosda1iidrhos_term(2.0*lambda_r_ij(i,i), zeta_x_eff_2r, dzeta_x_eff_dzetax_2r, Bhatij_2r)
                             )
                         );
                     auto g2MCAij = 3.0*da2iidrhos_term + g2_noderivterm;
@@ -476,7 +476,7 @@ struct SAFTVRMieChainContributionTerms{
                     auto betaepsilon = epsilon_ij(i,i)/T; // (1/(kB*T))/epsilon
                     auto theta = exp(betaepsilon)-1.0;
                     auto phi7 = phi.col(6);
-                    auto gamma_cij = phi7(0)*(-tanh(phi7(1)*(phi7(2)-alpha_ij(i,j)))+1.0)*xi_x_bar*theta*exp(phi7(3)*xi_x_bar + phi7(4)*POW2(xi_x_bar)); // Eq. A37
+                    auto gamma_cij = phi7(0)*(-tanh(phi7(1)*(phi7(2)-alpha_ij(i,j)))+1.0)*zeta_x_bar*theta*exp(phi7(3)*zeta_x_bar + phi7(4)*POW2(zeta_x_bar)); // Eq. A37
                     auto g2ii = (1.0+gamma_cij)*g2MCAij;
                     
                     NumType giiMie = gdHSii*exp((betaepsilon*g1ii + POW2(betaepsilon)*g2ii)/gdHSii);
@@ -495,8 +495,8 @@ struct SAFTVRMieChainContributionTerms{
         using mbar_t = decltype(mbar);
         using xs_t = decltype(xs);
         using zeta_t = decltype(zeta);
-        using xi_x_t = decltype(xi_x);
-        using xi_x_bar_t = decltype(xi_x_bar);
+        using zeta_x_t = decltype(zeta_x);
+        using zeta_x_bar_t = decltype(zeta_x_bar);
         using alphar_mono_t = decltype(alphar_mono);
         using a1kB_t = decltype(a1kB);
         using a2kB2_t = decltype(a2kB2);
@@ -509,15 +509,15 @@ struct SAFTVRMieChainContributionTerms{
             mbar_t mbar;
             xs_t xs;
             zeta_t zeta;
-            xi_x_t xi_x;
-            xi_x_bar_t xi_x_bar;
+            zeta_x_t zeta_x;
+            zeta_x_bar_t zeta_x_bar;
             alphar_mono_t alphar_mono;
             a1kB_t a1kB;
             a2kB2_t a2kB2;
             a3kB3_t a3kB3;
             alphar_chain_t alphar_chain;
         };
-        return vals{dmat, rhos, rhoN, mbar, xs, zeta, xi_x, xi_x_bar, alphar_mono, a1kB, a2kB2, a3kB3, alphar_chain};
+        return vals{dmat, rhos, rhoN, mbar, xs, zeta, zeta_x, zeta_x_bar, alphar_mono, a1kB, a2kB2, a3kB3, alphar_chain};
     }
     
     /// Eq. A21 from Lafitte
@@ -528,25 +528,25 @@ struct SAFTVRMieChainContributionTerms{
     
     /**
      \f[
-      \rho_s\frac{\partial K_{HS}}{\partial \rho_s} = \xi\frac{\partial K_{HS}}{\partial \xi}
+      \rho_s\frac{\partial K_{HS}}{\partial \rho_s} = \zeta\frac{\partial K_{HS}}{\partial \zeta}
      \f]
      */
     template<typename RhoType>
-    auto get_rhos_dK_HS_drhos(const RhoType& xi_x) const {
-        auto num = -4.0*POW3(xi_x - 1.0)*(POW2(xi_x) - 5.0*xi_x - 2.0);
-        auto den = POW2(POW4(xi_x) - 4.0*POW3(xi_x) + 4.0*POW2(xi_x) + 4.0*xi_x + 1.0);
-        return forceeval(num/den*xi_x);
+    auto get_rhos_dK_HS_drhos(const RhoType& zeta_x) const {
+        auto num = -4.0*POW3(zeta_x - 1.0)*(POW2(zeta_x) - 5.0*zeta_x - 2.0);
+        auto den = POW2(POW4(zeta_x) - 4.0*POW3(zeta_x) + 4.0*POW2(zeta_x) + 4.0*zeta_x + 1.0);
+        return forceeval(num/den*zeta_x);
     }
     
     /// Eq. A6 from Lafitte, accounting for the case of rho_s=0, for which the limit is zero
-    template<typename RhoType, typename XiType>
-    auto get_a_HS(const RhoType& rhos, const Eigen::Array<XiType, 4, 1>& xi) const{
+    template<typename RhoType, typename ZetaType>
+    auto get_a_HS(const RhoType& rhos, const Eigen::Array<ZetaType, 4, 1>& zeta) const{
         constexpr double MY_PI = static_cast<double>(EIGEN_PI);
         if (getbaseval(rhos) == 0){
-            return forceeval(0.0*rhos*xi[3]);
+            return forceeval(0.0*rhos*zeta[3]);
         }
         else{
-            return forceeval(6.0/(MY_PI*rhos)*(3.0*xi[1]*xi[2]/(1.0-xi[3]) + POW3(xi[2])/(xi[3]*POW2(1.0-xi[3])) + (POW3(xi[2])/POW2(xi[3])-xi[0])*log(1.0-xi[3])));
+            return forceeval(6.0/(MY_PI*rhos)*(3.0*zeta[1]*zeta[2]/(1.0-zeta[3]) + POW3(zeta[2])/(zeta[3]*POW2(1.0-zeta[3])) + (POW3(zeta[2])/POW2(zeta[3])-zeta[0])*log(1.0-zeta[3])));
         }
     }
     
@@ -555,13 +555,13 @@ struct SAFTVRMieChainContributionTerms{
      
     Defining:
     \f[
-    \hat B_{ij} \equiv \frac{B_{ij}}{2\pi\epsilon_{ij}d^3_{ij}\rho_s} = \frac{1-\xi_x/2}{(1-\xi_x)^3}I-\frac{9\xi_x(1+\xi_x)}{2(1-\xi_x)^3}J
+    \hat B_{ij} \equiv \frac{B_{ij}}{2\pi\epsilon_{ij}d^3_{ij}\rho_s} = \frac{1-\zeta_x/2}{(1-\zeta_x)^3}I-\frac{9\zeta_x(1+\zeta_x)}{2(1-\zeta_x)^3}J
     \f]
     */
-    template<typename XiType, typename IJ>
-    auto get_Bhatij(const XiType& xi_x, const XiType& one_minus_xi_x3, const IJ& I, const IJ& J) const{
+    template<typename ZetaType, typename IJ>
+    auto get_Bhatij(const ZetaType& zeta_x, const ZetaType& one_minus_zeta_x3, const IJ& I, const IJ& J) const{
         return forceeval(
-             (1.0-xi_x/2.0)/one_minus_xi_x3*I - 9.0*xi_x*(1.0+xi_x)/(2.0*one_minus_xi_x3)*J
+             (1.0-zeta_x/2.0)/one_minus_zeta_x3*I - 9.0*zeta_x*(1.0+zeta_x)/(2.0*one_minus_zeta_x3)*J
         );
     }
     
@@ -570,17 +570,17 @@ struct SAFTVRMieChainContributionTerms{
     B = \hat B_{ij}\kappa \rho_s
     \f]
      \f[
-     \left(\frac{\partial B_{ij}}{\partial \rho_s}\right)_{T,\vec{z}} = \kappa\left(\hat B + \xi_x \frac{\partial \hat B}{\partial \xi_x}\right)
+     \left(\frac{\partial B_{ij}}{\partial \rho_s}\right)_{T,\vec{z}} = \kappa\left(\hat B + \zeta_x \frac{\partial \hat B}{\partial \zeta_x}\right)
      \f]
     and thus
      \f[
-    \rho_s \left(\frac{\partial B_{ij}}{\partial \rho_s}\right)_{T,\vec{z}} = \hat B + \xi_x \frac{\partial \hat B}{\partial \xi_x}
+    \rho_s \left(\frac{\partial B_{ij}}{\partial \rho_s}\right)_{T,\vec{z}} = \hat B + \zeta_x \frac{\partial \hat B}{\partial \zeta_x}
      \f]
     */
-    template<typename XiType, typename IJ>
-    auto get_rhodBijdrho(const XiType& xi_x, const XiType& one_minus_xi_x3, const IJ& I, const IJ& J, const XiType& Bhatij) const{
-        auto dBhatdxix = (-3.0*I*(xi_x - 2.0) - 27.0*J*xi_x*(xi_x + 1.0) + (xi_x - 1.0)*(I + 9.0*J*xi_x + 9.0*J*(xi_x + 1.0)))/(2.0*POW4(1.0-xi_x));
-        return forceeval(Bhatij + dBhatdxix*xi_x);
+    template<typename ZetaType, typename IJ>
+    auto get_rhodBijdrho(const ZetaType& zeta_x, const ZetaType& one_minus_zeta_x3, const IJ& I, const IJ& J, const ZetaType& Bhatij) const{
+        auto dBhatdzetax = (-3.0*I*(zeta_x - 2.0) - 27.0*J*zeta_x*(zeta_x + 1.0) + (zeta_x - 1.0)*(I + 9.0*J*zeta_x + 9.0*J*(zeta_x + 1.0)))/(2.0*POW4(1.0-zeta_x));
+        return forceeval(Bhatij + dBhatdzetax*zeta_x);
     }
     
     /**
@@ -594,10 +594,10 @@ struct SAFTVRMieChainContributionTerms{
      a^S_{1,ii} = \kappa\rho_s\hat a^S_{1,ii}
      \f]
     */
-    template<typename XiType>
-    auto get_a1Shatij(const XiType& xi_x_eff, double lambda_ij) const{
+    template<typename ZetaType>
+    auto get_a1Shatij(const ZetaType& zeta_x_eff, double lambda_ij) const{
         return forceeval(
-            -1.0/(lambda_ij-3.0)*(1.0-xi_x_eff/2.0)/POW3(forceeval(1.0-xi_x_eff))
+            -1.0/(lambda_ij-3.0)*(1.0-zeta_x_eff/2.0)/POW3(forceeval(1.0-zeta_x_eff))
         );
     }
     
@@ -607,15 +607,15 @@ struct SAFTVRMieChainContributionTerms{
      \f]
   
      \f[
-     \left(\frac{\partial a^S_{1,ii}}{\partial \rho_s}\right)_{T,\vec{z}} = \kappa\left(\hat a^S_{1,ii} + \rho_s\frac{\partial \hat a^S_{1,ii}}{\partial \xi_{x,eff}}\frac{\partial \xi_{x,eff}}{\partial \xi_x}\frac{\partial \xi_x}{\partial \rho_s} \right)
+     \left(\frac{\partial a^S_{1,ii}}{\partial \rho_s}\right)_{T,\vec{z}} = \kappa\left(\hat a^S_{1,ii} + \rho_s\frac{\partial \hat a^S_{1,ii}}{\partial \zeta_{x,eff}}\frac{\partial \zeta_{x,eff}}{\partial \zeta_x}\frac{\partial \zeta_x}{\partial \rho_s} \right)
      \f]
      
-     since \f$\rho_s\frac{\partial \xi_x}{\partial \rho_s}  = \xi_x\f$
+     since \f$\rho_s\frac{\partial \zeta_x}{\partial \rho_s}  = \zeta_x\f$
      */
-    template<typename XiType>
-    auto get_rhoda1Shatijdrho(const XiType& xi_x, const XiType& xi_x_eff, const XiType& dxixeffdxix, double lambda_ij) const{
-        auto xixda1Shatdxix = ((2.0*xi_x_eff - 5.0)*dxixeffdxix)/(2.0*(lambda_ij-3)*POW4(xi_x_eff-1.0))*xi_x;
-        return forceeval(get_a1Shatij(xi_x_eff, lambda_ij) + xixda1Shatdxix);
+    template<typename ZetaType>
+    auto get_rhoda1Shatijdrho(const ZetaType& zeta_x, const ZetaType& zeta_x_eff, const ZetaType& dzetaxeffdzetax, double lambda_ij) const{
+        auto zetaxda1Shatdzetax = ((2.0*zeta_x_eff - 5.0)*dzetaxeffdzetax)/(2.0*(lambda_ij-3)*POW4(zeta_x_eff-1.0))*zeta_x;
+        return forceeval(get_a1Shatij(zeta_x_eff, lambda_ij) + zetaxda1Shatdzetax);
     }
 };
 
@@ -696,8 +696,8 @@ public:
             {"mbar", val.mbar},
             {"xs", fromArrayX(val.xs)},
             {"zeta", fromArrayX(val.zeta)},
-            {"xi_x", val.xi_x},
-            {"xi_x_bar", val.xi_x_bar},
+            {"zeta_x", val.zeta_x},
+            {"zeta_x_bar", val.zeta_x_bar},
             {"alphar_mono", val.alphar_mono},
             {"a1kB", val.a1kB},
             {"a2kB2", val.a2kB2},
