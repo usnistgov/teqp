@@ -12,23 +12,29 @@ namespace teqp {
 
     inline AllowedModels build_model(const nlohmann::json& json) {
         
-        auto build_square_matrix = [](const std::valarray<std::valarray<double>>& m){
-            // First assume that the matrix is square, resize
-            Eigen::ArrayXXd mat(m.size(), m.size());
-            if (m.size() == 0){
+        auto build_square_matrix = [](const nlohmann::json& j){
+            try{
+                const std::valarray<std::valarray<double>> m = j;
+                // First assume that the matrix is square, resize
+                Eigen::ArrayXXd mat(m.size(), m.size());
+                if (m.size() == 0){
+                    return mat;
+                }
+                // Then copy elements over
+                for (auto i = 0; i < m.size(); ++i){
+                    auto row = m[i];
+                    if (row.size() != mat.rows()){
+                        throw std::invalid_argument("provided matrix is not square");
+                    }
+                    for (auto j = 0; j < row.size(); ++j){
+                        mat(i, j) = row[j];
+                    }
+                }
                 return mat;
             }
-            // Then copy elements over
-            for (auto i = 0; i < m.size(); ++i){
-                auto row = m[i];
-                if (row.size() != mat.rows()){
-                    throw std::invalid_argument("provided matrix is not square");
-                }
-                for (auto j = 0; j < row.size(); ++j){
-                    mat(i, j) = row[j];
-                }
+            catch(const nlohmann::json::exception&){
+                throw teqp::InvalidArgument("Unable to convert this kmat to a 2x2 matrix of doubles:" + j.dump(2));
             }
-            return mat;
         };
 
         // Extract the name of the model and the model parameters
@@ -62,13 +68,17 @@ namespace teqp {
         }
         else if (kind == "PCSAFT") {
             using namespace PCSAFT;
-            Eigen::ArrayXXd kmat(0, 0);
+            std::optional<Eigen::ArrayXXd> kmat;
             if (spec.contains("kmat")){
                 kmat = build_square_matrix(spec["kmat"]);
             }
             
             if (spec.contains("names")){
-                return PCSAFTMixture(spec["names"], kmat);
+                std::vector<std::string> names = spec["names"];
+                if (kmat && kmat.value().rows() != names.size()){
+                    throw teqp::InvalidArgument("Provided length of names of " + std::to_string(names.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
+                }
+                return PCSAFTMixture(names, kmat.value_or(Eigen::ArrayXXd{}));
             }
             else if (spec.contains("coeffs")){
                 std::vector<SAFTCoeffs> coeffs;
@@ -89,7 +99,10 @@ namespace teqp {
                     }
                     coeffs.push_back(c);
                 }
-                return PCSAFTMixture(coeffs, kmat);
+                if (kmat && kmat.value().rows() != coeffs.size()){
+                    throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
+                }
+                return PCSAFTMixture(coeffs, kmat.value_or(Eigen::ArrayXXd{}));
             }
             else{
                 throw std::invalid_argument("you must provide names or coeffs, but not both");
@@ -103,7 +116,11 @@ namespace teqp {
             }
             
             if (spec.contains("names")){
-                return SAFTVRMieMixture(spec["names"], kmat);
+                std::vector<std::string> names = spec["names"];
+                if (kmat && kmat.value().rows() != names.size()){
+                    throw teqp::InvalidArgument("Provided length of names of " + std::to_string(names.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
+                }
+                return SAFTVRMieMixture(names, kmat);
             }
             else if (spec.contains("coeffs")){
                 std::vector<SAFTVRMieCoeffs> coeffs;
@@ -117,6 +134,9 @@ namespace teqp {
                     c.lambda_a = j.at("lambda_a");
                     c.BibTeXKey = j.at("BibTeXKey");
                     coeffs.push_back(c);
+                }
+                if (kmat && kmat.value().rows() != coeffs.size()){
+                    throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " +  std::to_string(kmat.value().rows()));
                 }
                 return SAFTVRMieMixture(coeffs, kmat);
             }
