@@ -238,3 +238,16 @@ TEST_CASE("VLE isotherm tracing", "[SAFTVRMieVLE]"){
     auto iso = trace_VLE_isotherm_binary(model, T, rhovecL0, rhovecV0, opt);
 //    std::cout << iso.dump(2) << std::endl;
 }
+
+template<typename Model>
+auto get_Theta2_dilute(const Model& model, double T, const Eigen::ArrayXd& z = (Eigen::ArrayXd(1) << 1.0).finished()){
+    auto B = model->get_B2vir(T, z);
+    auto dBdT = model->get_dmBnvirdTm(2, 1, T, z);
+    return B + T*dBdT;
+}
+
+TEST_CASE("Get the Theta_2 from the virial coefficients", "[SAFTVRMie]"){
+    nlohmann::json j{{"kind","SAFT-VR-Mie"},{"model", {{"names", {"Propane"}}}}};
+    auto model = cppinterface::make_model(j);
+    CHECK(std::isfinite(get_Theta2_dilute(model, 300.0)));
+}

@@ -485,7 +485,7 @@ struct SAFTVRMieChainContributionTerms{
             }
         }
         
-        auto ahs = a_HS(rhos, zeta);
+        auto ahs = get_a_HS(rhos, zeta);
         // Eq. A5 from Lafitte, multiplied by mbar
         auto alphar_mono = forceeval(mbar*(ahs + a1kB/T + a2kB2/(T*T) + a3kB3/(T*T*T)));
         
@@ -538,11 +538,16 @@ struct SAFTVRMieChainContributionTerms{
         return forceeval(num/den*xi_x);
     }
     
-    /// Eq. A6 from Lafitte
+    /// Eq. A6 from Lafitte, accounting for the case of rho_s=0, for which the limit is zero
     template<typename RhoType, typename XiType>
-    auto a_HS(const RhoType& rhos, const Eigen::Array<XiType, 4, 1>& xi) const{
+    auto get_a_HS(const RhoType& rhos, const Eigen::Array<XiType, 4, 1>& xi) const{
         constexpr double MY_PI = static_cast<double>(EIGEN_PI);
-        return forceeval(6.0/(MY_PI*rhos)*(3.0*xi[1]*xi[2]/(1.0-xi[3]) + POW3(xi[2])/(xi[3]*POW2(1.0-xi[3])) + (POW3(xi[2])/POW2(xi[3])-xi[0])*log(1.0-xi[3])));
+        if (getbaseval(rhos) == 0){
+            return forceeval(0.0*rhos*xi[3]);
+        }
+        else{
+            return forceeval(6.0/(MY_PI*rhos)*(3.0*xi[1]*xi[2]/(1.0-xi[3]) + POW3(xi[2])/(xi[3]*POW2(1.0-xi[3])) + (POW3(xi[2])/POW2(xi[3])-xi[0])*log(1.0-xi[3])));
+        }
     }
     
     /**
