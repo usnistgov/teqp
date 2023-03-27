@@ -12,3 +12,4 @@ Models
    PCSAFT
    multifluid
    multifluid_mutant
+   SAFT-VR-Mie
