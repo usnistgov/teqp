@@ -42,6 +42,14 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.15.0 :
+
+  * Added SAFT-VR-Mie model of Lafitte et al.; verified against calculations from Clapeyron.jl
+  * Added L-J EOS from Kolafa-Nezbeda
+  * Added L-J EOS from Johnson
+  * Added Mie {11-13}-6 EOS of Pohl et al.
+  * Added the quadrupolar and dipolar contributions to the PC-SAFT model (for the hard chain variant only)
+
 * 0.14.3 :
 
   * Fix the ability to provide BIP and departure information as 
