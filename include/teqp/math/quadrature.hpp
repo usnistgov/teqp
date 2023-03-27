@@ -12,11 +12,11 @@ namespace teqp{
  
  More coefficients here if needed: https://pomax.github.io/bezierinfo/legendre-gauss.html
 */
-template<int N, typename T>
-inline auto quad(const std::function<T(double)>& F, const double& a, const double& b){
+template<int N, typename T, typename Double=double>
+inline auto quad(const std::function<T(Double)>& F, const Double& a, const Double& b){
     
     // Locations x in [-1,1] where the function is to be evaluated, and the corresponding weight
-    static const std::map<int, std::tuple<std::vector<double>, std::vector<double>>> xw = {
+    static const std::map<int, std::tuple<std::vector<Double>, std::vector<Double>>> xw = {
         {
             3,
             {{ 0, sqrt(3.0/5), -sqrt(3.0/5) },
@@ -52,11 +52,11 @@ inline auto quad(const std::function<T(double)>& F, const double& a, const doubl
     
     T summer = 0.0;
     // Lookup the coefficients without making a copy or re-allocating
-    const std::tuple<std::vector<double>, std::vector<double>> &pair = xw.at(N);
-    const std::vector<double> &x = std::get<0>(pair);
-    const std::vector<double> &w = std::get<1>(pair);
+    const std::tuple<std::vector<Double>, std::vector<Double>> &pair = xw.at(N);
+    const std::vector<Double> &x = std::get<0>(pair);
+    const std::vector<Double> &w = std::get<1>(pair);
     for (auto i = 0; i < N; ++i){
-        double arg = (b-a)/2.0*x[i] + (a+b)/2.0;
+        Double arg = (b-a)/2.0*x[i] + (a+b)/2.0;
         summer += w[i]*F(arg);
     }
     T retval = (b-a)/2.0*summer; // Forces a flattening if T is an autodiff type
