@@ -36,7 +36,7 @@ public:
         insert_normal_fluid("Ethane", 1.4373, 3.7257e-10, 206.12, 12.400, 6, "Lafitte-JCP-2001");
         insert_normal_fluid("Propane", 1.6845, 3.9056e-10, 239.89, 13.006, 6, "Lafitte-JCP-2001");
     }
-    void insert_normal_fluid(const std::string& name, double m, const double sigma_m, const double epsilon_over_k, const double lambda_a, const double lambda_r, const std::string& BibTeXKey) {
+    void insert_normal_fluid(const std::string& name, double m, const double sigma_m, const double epsilon_over_k, const double lambda_r, const double lambda_a, const std::string& BibTeXKey) {
         SAFTVRMieCoeffs coeff;
         coeff.name = name;
         coeff.m = m;
@@ -326,7 +326,7 @@ struct SAFTVRMieChainContributionTerms{
         
         // Sum of the two integrals, one is constant, the other is from integration
         auto rcut = forceeval(sigma_A[i]/get_j_cutoff_dii(i, T));
-        auto integral_contribution = quad<15, TType, TType>(integrand, rcut, sigma_A[i]);
+        auto integral_contribution = quad<10, TType, TType>(integrand, rcut, sigma_A[i]);
         auto d = forceeval(rcut + integral_contribution);
         
         if (getbaseval(d) > sigma_A[i]){
