@@ -25,9 +25,9 @@ using namespace teqp;
 TEST_CASE("Check integration", "[SAFTVRMIE]"){
     std::function<double(double)> f = [](const double&x){ return x*sin(x); };
     auto exact = -2*cos(1) + 2*sin(1);
-    auto deg3 = quad<3, double>(f, -1, 1);
-    auto deg4 = quad<4, double>(f, -1, 1);
-    auto deg5 = quad<5, double>(f, -1, 1);
+    auto deg3 = quad<3, double>(f, -1.0, 1.0);
+    auto deg4 = quad<4, double>(f, -1.0, 1.0);
+    auto deg5 = quad<5, double>(f, -1.0, 1.0);
     CHECK(deg4 == Approx(exact).margin(1e-12));
     CHECK(deg5 == Approx(exact).margin(1e-12));
 }
@@ -268,5 +268,38 @@ TEST_CASE("Check that bad kmat options throw", "[SAFTVRMie]"){
 //        catch(const teqpException& e){
 //            std::cout << e.what() << std::endl;
 //        }
+    }
+}
+
+TEST_CASE("Test diameter calculations", "[SAFTVRMie]"){
+    std::vector<std::string> names = {"Ethane"};
+    
+    SAFTVRMieMixture model{names};
+    auto tol = 1e-20;
+    // Check values are for the reciprocal of the variable used here
+    std::vector<std::tuple<double, double>> check_vals{
+        {50.0, 1/0.88880166306088},
+        {100.0, 1/0.8531852567786484},
+        {300.0, 1/0.7930471375700721},
+        {1000.0, 1/0.7265751754644022}
+    };
+    SECTION("double"){
+        for (auto [T,jval] : check_vals){
+            auto j = model.get_terms().get_j_cutoff_dii(0, T);
+            auto d = model.get_terms().get_dii(0, T);
+            CHECK(j == Approx(jval).margin(tol));
+        }
+    }
+    SECTION("std::complex<double>"){
+        for (auto [T, jval] : check_vals){
+            CHECK(std::real(model.get_terms().get_j_cutoff_dii(0,std::complex<double>(T,1e-100))) == Approx(jval).margin(tol));
+        }
+    }
+    SECTION("autodiff<double>"){
+        for (auto [T, jval] : check_vals){
+            using adtype = autodiff::HigherOrderDual<1, double>;
+            adtype Tad = T;
+            CHECK(getbaseval(model.get_terms().get_j_cutoff_dii(0,Tad)) == Approx(jval).margin(tol));
+        }
     }
 }

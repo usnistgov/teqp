@@ -246,18 +246,93 @@ struct SAFTVRMieChainContributionTerms{
     {}
     
     /// Eq. A2 from Lafitte
-    double get_uii_over_kB(std::size_t i, const double& r) const {
-        double rstarinv = sigma_A[i]/r;
-        return forceeval(C_ij(i,i)*epsilon_over_k[i]*(::pow(rstarinv, lambda_r[i]) - ::pow(rstarinv, lambda_a[i])));
+    template<typename RType>
+    auto get_uii_over_kB(std::size_t i, const RType& r) const {
+        auto rstarinv = forceeval(sigma_A[i]/r);
+        return forceeval(C_ij(i,i)*epsilon_over_k[i]*(pow(rstarinv, lambda_r[i]) - pow(rstarinv, lambda_a[i])));
     }
     
-    /// Eq. A9 from Lafitte
+    /// Solve for the value of \f$j=\sigma/r\f$ for which the integrand in \f$d_{ii}\f$ becomes equal to 1 to numerical precision
+    template <typename TType>
+    auto get_j_cutoff_dii(std::size_t i, const TType &T) const {
+        auto lambda_a_ = lambda_a(i), lambda_r_ = lambda_r(i);
+        auto EPS = std::numeric_limits<decltype(getbaseval(T))>::epsilon();
+        auto K = forceeval(log(-log(EPS)*T/(C_ij(i,i)*epsilon_ij(i,i))));
+        auto j0 = forceeval(exp(K/lambda_r_)); // this was proposed by longemen3000 (Andrés Riedemann)
+        auto kappa = C_ij(i,i)*epsilon_ij(i,i);
+        
+        // Function to return residual and its derivatives w.r.t.
+        auto fgh = [&kappa, &lambda_r_, &lambda_a_, &T, &EPS](auto j){
+            auto jlr = pow(j, lambda_r_), jla = pow(j, lambda_a_);
+            auto u = kappa*(jlr - jla);
+            auto uprime = kappa*(lambda_r_*jlr - lambda_a_*jla)/j;
+            auto uprime2 = kappa*(lambda_r_*(lambda_r_-1.0)*jlr - lambda_a_*(lambda_a_-1.0)*jla)/(j*j);
+            return std::make_tuple(forceeval(-u/T-log(EPS)), forceeval(-uprime/T), forceeval(-uprime2/T));
+        };
+        TType j = j0;
+        for (auto counter = 0; counter <= 3; ++counter){
+            // Halley's method steps
+            auto [R, Rprime, Rprime2] = fgh(j);
+            auto denominator = 2.0*Rprime*Rprime-R*Rprime2;
+            if (getbaseval(denominator) < EPS){
+                break;
+            }
+            j -= 2.0*R*Rprime/denominator;
+        }
+        double jbase = getbaseval(j);
+        if (jbase < 1.0){
+            throw teqp::IterationFailure("Cannot obtain a value of j");
+        }
+        return j;
+    }
+    
+    /**
+     \note Eq. A9 from Lafitte
+     
+     The calculation of the diameter is based upon
+     \f[
+     d_{ii} = \int_0^{\sigma_{ii}}(1-\exp(-\beta u_{ii}^{\rm Mie}(r)){\rm d}r
+     \f]
+     which is broken up into two parts:
+    \f[
+     d = \int_0^{r_{\rm cut}} 1 {\rm d} r + \int_{r_{\rm cut}}^{\sigma_{ii}} [1-\exp(-\beta u_{ii}^{\rm Mie}(r))] {\rm d}r
+     \f]
+     but the integrand is basically constant (to numerical precision) from 0 to some cutoff value of \f$r\f$, which we'll call \f$r_{\rm cut}\f$. So first we need to find the value of \f$r_{\rm cut}\f$ that makes the integrand take its constant value, which is explained well in the paper from Aasen (https://github.com/ClapeyronThermo/Clapeyron.jl/issues/152#issuecomment-1480324192).  Finding the cutoff value is obtained when
+     \f[
+     \exp(-\beta u_{ii}^{\rm Mie}(r)) = EPS
+     \f]
+     where EPS is the numerical precision of the floating point type. Taking the logs of both sides,
+     \f[
+     -\beta u_{ii}^{\rm Mie} = \ln(EPS)
+     \f]
+
+     To get a starting value, it is first assumed that only the repulsive contribution contributes to the potential, yielding \f$u^{\rm rep} = C\epsilon(\sigma/r)^{\lambda_r}\f$ (with \f$C\f$ the same as the full potential with attraction) which yields
+     \f[
+     -\beta C\epsilon(\sigma/r)^{\lambda_r} = \ln(EPS)
+     \f]
+     and
+     \f[
+     (\sigma/r)_{\rm guess} = (-\ln(EPS)/(\beta C \epsilon))^{1/\lambda_r}
+     \f]
+
+     Then we solve for the residual \f$R(r)=0\f$, where \f$R_0=\exp(-u/T)-EPS\f$.  Equivalently we can write the residual in logarithmic terms as \f$R=-u/T-\ln(EPS)\f$. This simplifies the rootfinding as you need \f$R\f$, \f$R'\f$ and \f$R''\f$ to apply Halley's method, which are themselves quite straightforward to obtain because \f$R'=-u'/T\f$, \f$R''=-u''/T\f$, where the primes are derivatives taken with respect to \f$\sigma/r\f$.
+    
+    */
     template <typename TType>
     TType get_dii(std::size_t i, const TType &T) const{
-        std::function<TType(double)> integrand = [this, i, &T](const double& r){
+        std::function<TType(TType)> integrand = [this, i, &T](const TType& r){
             return forceeval(1.0-exp(-this->get_uii_over_kB(i, r)/T));
         };
-        return quad<30, TType>(integrand, 0.0, sigma_A[i]);
+        
+        // Sum of the two integrals, one is constant, the other is from integration
+        auto rcut = forceeval(sigma_A[i]/get_j_cutoff_dii(i, T));
+        auto integral_contribution = quad<15, TType, TType>(integrand, rcut, sigma_A[i]);
+        auto d = forceeval(rcut + integral_contribution);
+        
+        if (getbaseval(d) > sigma_A[i]){
+            throw teqp::IterationFailure("Value of d is larger than sigma; this is impossible");
+        }
+        return d;
     }
     
     template <typename TType>
