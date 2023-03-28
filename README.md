@@ -44,7 +44,7 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 * 0.15.0 :
 
-  * Added SAFT-VR-Mie model of Lafitte et al.; verified against calculations from Clapeyron.jl
+  * Added SAFT-VR-Mie model of Lafitte et al.; verified against calculations from Clapeyron.jl (see notebook in notebooks folder)
   * Added L-J EOS from Kolafa-Nezbeda
   * Added L-J EOS from Johnson
   * Added Mie {11-13}-6 EOS of Pohl et al.

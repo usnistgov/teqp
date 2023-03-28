@@ -22,3 +22,4 @@ dependencies:
     - PCSAFTsuperanc
     - sphinxcontrib-doxylink
     - insipid-sphinx-theme
+    - CoolProp
