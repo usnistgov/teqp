@@ -9,6 +9,7 @@ using Catch::Approx;
 #include "teqp/models/cubics.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/algorithms/VLE.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 
 #include <boost/numeric/odeint/stepper/euler.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
@@ -429,5 +430,56 @@ TEST_CASE("Check manual integration of subcritical VLE isobar for binary mixture
         auto Nstep = J.size();
 
         std::ofstream file("isoP.json"); file << J;
+    }
+}
+
+TEST_CASE("Bad kmat options", "[PRkmat]"){
+    SECTION("null; ok"){
+        auto j = nlohmann::json::parse(R"({
+            "kind": "PR",
+            "model": {
+                "Tcrit / K": [190],
+                "pcrit / Pa": [3.5e6],
+                "acentric": [0.11],
+                "kmat": null
+            }
+        })");
+        CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    }
+    SECTION("empty; ok"){
+        auto j = nlohmann::json::parse(R"({
+            "kind": "PR",
+            "model": {
+                "Tcrit / K": [190],
+                "pcrit / Pa": [3.5e6],
+                "acentric": [0.11],
+                "kmat": []
+            }
+        })");
+        CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    }
+    SECTION("empty for two components; ok"){
+        auto j = nlohmann::json::parse(R"({
+            "kind": "PR",
+            "model": {
+                "Tcrit / K": [190,200],
+                "pcrit / Pa": [3.5e6,4e6],
+                "acentric": [0.11,0.2],
+                "kmat": []
+            }
+        })");
+        CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    }
+    SECTION("wrong size for two components; fail"){
+        auto j = nlohmann::json::parse(R"({
+            "kind": "PR",
+            "model": {
+                "Tcrit / K": [190,200],
+                "pcrit / Pa": [3.5e6,4e6],
+                "acentric": [0.11,0.2],
+                "kmat": [0.001]
+            }
+        })");
+        CHECK_THROWS(teqp::cppinterface::make_model(j));
     }
 }

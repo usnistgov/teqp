@@ -13,6 +13,9 @@ namespace teqp {
     inline AllowedModels build_model(const nlohmann::json& json) {
         
         auto build_square_matrix = [](const nlohmann::json& j){
+            if (j.is_null() || (j.is_array() && j.size() == 0)){
+                return Eigen::ArrayXXd(0, 0);
+            }
             try{
                 const std::valarray<std::valarray<double>> m = j;
                 // First assume that the matrix is square, resize
@@ -51,7 +54,7 @@ namespace teqp {
             std::valarray<double> Tc_K = spec.at("Tcrit / K"), pc_Pa = spec.at("pcrit / Pa"), acentric = spec.at("acentric");
             Eigen::ArrayXXd kmat(0, 0);
             if (spec.contains("kmat")){
-                kmat = build_square_matrix(spec["kmat"]);
+                kmat = build_square_matrix(spec.at("kmat"));
             }
             return canonical_PR(Tc_K, pc_Pa, acentric, kmat);
         }
@@ -59,7 +62,7 @@ namespace teqp {
             std::valarray<double> Tc_K = spec.at("Tcrit / K"), pc_Pa = spec.at("pcrit / Pa"), acentric = spec.at("acentric");
             Eigen::ArrayXXd kmat(0, 0);
             if (spec.contains("kmat")){
-                kmat = build_square_matrix(spec["kmat"]);
+                kmat = build_square_matrix(spec.at("kmat"));
             }
             return canonical_SRK(Tc_K, pc_Pa, acentric, kmat);
         }
