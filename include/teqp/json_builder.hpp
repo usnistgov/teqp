@@ -72,7 +72,7 @@ namespace teqp {
         else if (kind == "PCSAFT") {
             using namespace PCSAFT;
             std::optional<Eigen::ArrayXXd> kmat;
-            if (spec.contains("kmat")){
+            if (spec.contains("kmat") && spec.at("kmat").is_array() && spec.at("kmat").size() > 0){
                 kmat = build_square_matrix(spec["kmat"]);
             }
             
@@ -114,7 +114,7 @@ namespace teqp {
         else if (kind == "SAFT-VR-Mie") {
             using namespace SAFTVRMie;
             std::optional<Eigen::ArrayXXd> kmat;
-            if (spec.contains("kmat")){
+            if (spec.contains("kmat") && spec.at("kmat").is_array() && spec.at("kmat").size() > 0){
                 kmat = build_square_matrix(spec["kmat"]);
             }
             

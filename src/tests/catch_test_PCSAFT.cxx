@@ -257,3 +257,47 @@ TEST_CASE("Check PCSAFT with quadrupole for CO2", "[PCSAFTQ]")
     auto crit = solve_pure_critical(model, 310.0, rhoc);
     CHECK(std::get<0>(crit) == Approx(325).margin(10));
 }
+
+TEST_CASE("Check PCSAFT with kmat options", "[PCSAFT],[kmat]")
+{
+    SECTION("null; ok"){
+        auto j = nlohmann::json::parse(R"({
+            "kind": "PCSAFT",
+            "model": {
+                "names": ["Methane"],
+                "kmat": null
+            }
+        })");
+        CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    }
+    SECTION("empty; ok"){
+        auto j = nlohmann::json::parse(R"({
+            "kind": "PCSAFT",
+            "model": {
+                "names": ["Methane"],
+                "kmat": []
+            }
+        })");
+        CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    }
+    SECTION("empty for two components; ok"){
+        auto j = nlohmann::json::parse(R"({
+            "kind": "PCSAFT",
+            "model": {
+                "names": ["Methane","Ethane"],
+                "kmat": []
+            }
+        })");
+        CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    }
+    SECTION("wrong size for two components; fail"){
+        auto j = nlohmann::json::parse(R"({
+            "kind": "PCSAFT",
+            "model": {
+                "names": ["Methane","Ethane","Propane"],
+                "kmat": [0.001]
+            }
+        })");
+        CHECK_THROWS(teqp::cppinterface::make_model(j));
+    }
+}
