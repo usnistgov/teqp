@@ -42,6 +42,11 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.15.1 :
+
+  * Fixed evaluation of PC-SAFT at zero density (for calculation of virial coefficients)
+  * Fixed kmat reading when kmat is empty (in python shim functions)
+
 * 0.15.0 :
 
   * Added SAFT-VR-Mie model of Lafitte et al.; verified against calculations from Clapeyron.jl (see notebook in notebooks folder)
