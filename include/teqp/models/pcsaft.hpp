@@ -101,6 +101,10 @@ auto get_b(TYPE mbar) {
 /// Residual contribution to alphar from hard-sphere (Eqn. A.6)
 template<typename VecType>
 auto get_alphar_hs(const VecType& zeta) {
+    // The limit of alphar_hs in the case of density going to zero is still zero
+    if (getbaseval(zeta[3]) == 0){
+        return forceeval(zeta[3]);
+    }
     auto Upsilon = 1.0 - zeta[3];
     return forceeval(1.0 / zeta[0] * (3.0 * zeta[1] * zeta[2] / Upsilon
         + zeta[2] * zeta[2] * zeta[2] / zeta[3] / Upsilon / Upsilon
@@ -139,7 +143,7 @@ auto get_I1(const Eta& eta, MbarType mbar) {
     auto avec = get_a(mbar);
     Eta summer_I1 = 0.0, summer_etadI1deta = 0.0;
     for (std::size_t i = 0; i < 7; ++i) {
-        auto increment = avec(i) * pow(eta, static_cast<int>(i));
+        auto increment = avec(i) * powi(eta, static_cast<int>(i));
         summer_I1 = summer_I1 + increment;
         summer_etadI1deta = summer_etadI1deta + increment * (i + 1.0);
     }
@@ -151,7 +155,7 @@ auto get_I2(const Eta& eta, MbarType mbar) {
     auto bvec = get_b(mbar);
     Eta summer_I2 = 0.0 * eta, summer_etadI2deta = 0.0 * eta;
     for (std::size_t i = 0; i < 7; ++i) {
-        auto increment = bvec(i) * pow(eta, static_cast<int>(i));
+        auto increment = bvec(i) * powi(eta, static_cast<int>(i));
         summer_I2 = summer_I2 + increment;
         summer_etadI2deta = summer_etadI2deta + increment * (i + 1.0);
     }

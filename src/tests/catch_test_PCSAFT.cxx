@@ -114,6 +114,21 @@ TEST_CASE("Check neff", "[virial]")
     }
 }
 
+TEST_CASE("Check dBdT", "[virial]")
+{
+    double T = 298.15;
+    const Eigen::Array2d molefrac = { 0.5, 0.5 };
+    auto f = [&T, &molefrac](const auto& model) {
+        auto dBdT = VirialDerivatives<decltype(model)>::template get_dmBnvirdTm<2,1>(model, T, molefrac);
+        CAPTURE(dBdT);
+        CHECK(std::isfinite(dBdT));
+    };
+    SECTION("PCSAFT") {
+        std::vector<std::string> names = { "Methane", "Ethane" };
+        f(PCSAFTMixture(names));
+    }
+}
+
 
 TEST_CASE("Check PCSAFT with kij", "[PCSAFT]")
 {
