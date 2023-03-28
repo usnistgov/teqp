@@ -153,13 +153,28 @@ TEST_CASE("Check that all ancillaries can be instantiated and work properly", "[
             CAPTURE(path.string());
             auto abspath = std::filesystem::absolute(path).string();
             auto model = build_multifluid_model({ abspath }, root, root + "/dev/mixtures/mixture_binary_pairs.json");
-            auto jancillaries = nlohmann::json::parse(model.get_meta()).at("pures")[0].at("ANCILLARIES");
+            auto pure0 = nlohmann::json::parse(model.get_meta()).at("pures")[0];
+            // Skip pseudo-pure fluids, where ancillary checking is irrelevant
+            if (pure0.at("EOS")[0].at("pseudo_pure")){
+                counter += 1;
+                continue;
+            }
+            auto jancillaries = pure0.at("ANCILLARIES");
             auto anc = teqp::MultiFluidVLEAncillaries(jancillaries);
-            double T = 0.9*anc.rhoL.T_r;
+            double T = 0.8*anc.rhoL.T_r;
             auto rhoV = anc.rhoV(T), rhoL = anc.rhoL(T);
             auto rhovec = teqp::pure_VLE_T(model, T, rhoL, rhoV, 10);
+            CAPTURE(rhoL);
+            CAPTURE(rhoV);
+            CAPTURE(rhovec);
             CHECK_THROWS(anc.rhoV(1.1*anc.rhoL.T_r));
             CHECK_THROWS(anc.rhoL(1.1*anc.rhoL.T_r));
+            
+            auto rhoLerr = std::abs(rhovec[0]/rhoL-1);
+            auto rhoVerr = std::abs(rhovec[1]/rhoV-1);
+            CHECK(rhoLerr < 0.02);
+            CHECK(rhoVerr < 0.02);
+            
             counter += 1;
         }
         CHECK(counter > 100);
