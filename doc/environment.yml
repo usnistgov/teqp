@@ -8,17 +8,17 @@ dependencies:
   - doxygen
   - cmake
   - pandoc
+  - jupyter
+  - notebook
+  - nbconvert
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
   - pip:
     - breathe
     - teqp
-    - numpy
-    - scipy
-    - jupyter
-    - notebook
-    - nbconvert
     - nbsphinx
-    - pandas
-    - matplotlib
     - PCSAFTsuperanc
     - sphinxcontrib-doxylink
     - insipid-sphinx-theme
