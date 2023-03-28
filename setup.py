@@ -136,26 +136,26 @@ def vdWEOS(Tc_K, pc_Pa):
     }
     return make_model(j)
     
-def canonical_PR(Tc_K, pc_Pa, acentric, kmat=[]):
+def canonical_PR(Tc_K, pc_Pa, acentric, kmat=None):
     j = {
         "kind": "PR",
         "model": {
             "Tcrit / K": tolist(Tc_K),
             "pcrit / Pa": tolist(pc_Pa),
             "acentric": tolist(acentric),
-            "kmat": tolist(kmat)
+            "kmat": tolist(kmat) if kmat is not None else None
         }
     }
     return make_model(j)
     
-def canonical_SRK(Tc_K, pc_Pa, acentric, kmat=[]):
+def canonical_SRK(Tc_K, pc_Pa, acentric, kmat=None):
     j = {
         "kind": "SRK",
         "model": {
             "Tcrit / K": tolist(Tc_K),
             "pcrit / Pa": tolist(pc_Pa),
             "acentric": tolist(acentric),
-            "kmat": tolist(kmat)
+            "kmat": tolist(kmat) if kmat is not None else None
         }
     }
     return make_model(j)
@@ -167,7 +167,7 @@ def CPAfactory(spec):
     }
     return make_model(j)
     
-def PCSAFTEOS(coeffs, kmat = []):
+def PCSAFTEOS(coeffs, kmat=None):
     if isinstance(coeffs[0], SAFTCoeffs):
         coeffs_ = []
         for c in coeffs:
@@ -178,9 +178,9 @@ def PCSAFTEOS(coeffs, kmat = []):
                 'epsilon_over_k': c.epsilon_over_k,
                 'BibTeXKey': c.BibTeXKey
             })
-        spec = {'coeffs': coeffs_, 'kmat': tolist(kmat)}
+        spec = {'coeffs': coeffs_, 'kmat': tolist(kmat) if kmat is not None else None}
     else:
-        spec = {'names': coeffs, 'kmat': tolist(kmat)}
+        spec = {'names': coeffs, 'kmat': tolist(kmat) if kmat is not None else None}
     
     j = {
         "kind": "PCSAFT",
