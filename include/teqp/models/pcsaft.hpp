@@ -101,9 +101,10 @@ auto get_b(TYPE mbar) {
 /// Residual contribution to alphar from hard-sphere (Eqn. A.6)
 template<typename VecType>
 auto get_alphar_hs(const VecType& zeta) {
-    // The limit of alphar_hs in the case of density going to zero is still zero
+    // The limit of alphar_hs in the case of density going to zero is still zero,
+    // but the way it goes to zero is subtle
     if (getbaseval(zeta[3]) == 0){
-        return forceeval(zeta[3]);
+        return forceeval(4.0*zeta[3]);
     }
     auto Upsilon = 1.0 - zeta[3];
     return forceeval(1.0 / zeta[0] * (3.0 * zeta[1] * zeta[2] / Upsilon

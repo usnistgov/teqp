@@ -303,3 +303,25 @@ TEST_CASE("Test diameter calculations", "[SAFTVRMie]"){
         }
     }
 }
+
+TEST_CASE("Check B and its temperature derivatives", "[SAFTVRMie],[B]")
+{
+    auto j = nlohmann::json::parse(R"({
+        "kind": "SAFT-VR-Mie",
+        "model": {
+            "names": ["Methane"]
+        }
+    })");
+    CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    auto model = teqp::cppinterface::make_model(j);
+    double rhotest = 1e-3; double Tspec = 100;
+    Eigen::ArrayXd z(1); z[0] = 1.0;
+    
+    auto Bnondilute = model->get_Ar00(Tspec, rhotest, z)/rhotest;
+    auto B = model->get_dmBnvirdTm(2, 0, Tspec, z);
+    CHECK(B == Approx(Bnondilute));
+
+    auto TdBdTnondilute = -model->get_Ar10(Tspec, rhotest, z)/rhotest;
+    auto TdBdT = Tspec*model->get_dmBnvirdTm(2, 1, Tspec, z);
+    CHECK(TdBdT == Approx(TdBdTnondilute));
+}

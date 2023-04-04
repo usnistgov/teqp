@@ -618,7 +618,8 @@ struct SAFTVRMieChainContributionTerms{
     auto get_a_HS(const RhoType& rhos, const Eigen::Array<ZetaType, 4, 1>& zeta) const{
         constexpr double MY_PI = static_cast<double>(EIGEN_PI);
         if (getbaseval(rhos) == 0){
-            return forceeval(0.0*rhos*zeta[3]);
+            // The way in which the function goes to zero is subtle, and the factor of 4 accounts for the contributions from each term
+            return forceeval(4.0*zeta[3]);
         }
         else{
             return forceeval(6.0/(MY_PI*rhos)*(3.0*zeta[1]*zeta[2]/(1.0-zeta[3]) + POW3(zeta[2])/(zeta[3]*POW2(1.0-zeta[3])) + (POW3(zeta[2])/POW2(zeta[3])-zeta[0])*log(1.0-zeta[3])));
