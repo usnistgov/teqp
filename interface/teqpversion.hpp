@@ -1,2 +1,2 @@
 #include <string>
-const std::string TEQPVERSION = "0.15.2";
+const std::string TEQPVERSION = "0.15.3dev";
