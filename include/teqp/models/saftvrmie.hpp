@@ -225,7 +225,7 @@ struct SAFTVRMieChainContributionTerms{
     // Calculated matrices for the ij pair
     const Eigen::ArrayXXd lambda_r_ij, lambda_a_ij, C_ij, alpha_ij, sigma_ij, epsilon_ij; // Matrices of parameters
 
-    const std::vector<Eigen::ArrayXXd> canij, crnij, c2anij, c2rnij, carnij;
+    const std::vector<Eigen::ArrayXXd> crnij, canij, c2rnij, c2anij, carnij;
     const std::vector<Eigen::ArrayXXd> fkij; // Matrices of parameters
 
     SAFTVRMieChainContributionTerms(
