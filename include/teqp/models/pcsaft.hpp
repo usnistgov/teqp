@@ -113,23 +113,6 @@ auto get_alphar_hs(const VecType& zeta) {
         ));
 }
 
-/// Residual contribution from hard-sphere (Eqn. A.26)
-template<typename VecType>
-auto Z_hs(const VecType& zeta) {
-    auto Upsilon = 1.0 - zeta[3];
-    return forceeval(zeta[3] / Upsilon
-        + 3.0 * zeta[1] * zeta[2] / (zeta[0] * pow(Upsilon, 2))
-        + (3.0 * pow(zeta[2], 3) - zeta[3] * pow(zeta[2], 3)) / (zeta[0] * pow(Upsilon, 3)));
-}
-/// Derivative term from Eqn. A.27
-template<typename zVecType, typename dVecType>
-auto rho_A3_dgij_HS_drhoA3(const zVecType& zeta, const dVecType& d,
-    std::size_t i, std::size_t j) {
-    auto Upsilon = 1.0 - zeta[3];
-    return forceeval(zeta[3] / pow(Upsilon, 2)
-        + d[i] * d[j] / (d[i] + d[j]) * (3.0 * zeta[2] / pow(Upsilon, 2) + 6.0 * zeta[2] * zeta[3] / pow(Upsilon, 3))
-        + pow(d[i] * d[j] / (d[i] + d[j]), 2) * (4.0 * pow(zeta[2], 2) / pow(Upsilon, 3) + 6.0 * pow(zeta[2], 2) * zeta[3] / pow(Upsilon, 4)));
-}
 /// Term from Eqn. A.7
 template<typename zVecType, typename dVecType>
 auto gij_HS(const zVecType& zeta, const dVecType& d,
