@@ -254,9 +254,9 @@ TEST_CASE("Get the Theta_2 from the virial coefficients", "[SAFTVRMie]"){
 
 TEST_CASE("Check that bad kmat options throw", "[SAFTVRMie]"){
     nlohmann::json kmat1 = nlohmann::json::array(); // empty
-    auto kmat2 = kmat1; kmat2.push_back(0); // just one entry, 1D
-    auto kmat3 = kmat2; kmat3.push_back(0); // just one entry, 1D
-    for (auto bad_kmat: {kmat1, kmat2, kmat3}){
+    auto kmat2 = kmat1; kmat2.push_back(0); // just one entry, 1D (should be 2D)
+    auto kmat3 = kmat2; kmat3.push_back(0); // two entries, but 1D (should be 2D)
+    for (auto bad_kmat: {kmat2, kmat3}){
         nlohmann::json j{{"kind","SAFT-VR-Mie"},{"model", {{"names", {"Propane","Ethane"}},{"kmat",bad_kmat}}}};
 //        std::cout << j << std::endl;
         auto sj = j.dump(2);
