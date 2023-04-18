@@ -30,67 +30,98 @@ TEST_CASE("Check 0n derivatives", "[PCSAFT]")
 {
     std::vector<std::string> names = { "Methane", "Ethane" };
     auto model = PCSAFTMixture(names);
-
+    
     const double T = 100.0;
     const double rho = 126.1856883066021;
     const auto rhovec = (Eigen::ArrayXd(2) << rho, 0).finished();
     const auto molefrac = rhovec / rhovec.sum();
-
+    
     using my_float_type = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100U>>;
     my_float_type D = rho, h = pow(my_float_type(10.0), -10);
     auto fD = [&](const auto& x) { return model.alphar(T, x, molefrac); };
-
+    auto fTrecip = [&](const auto& x) { return model.alphar(forceeval(1.0/x), rho, molefrac); };
     using tdx = TDXDerivatives<decltype(model)>;
-    auto Ar02 = tdx::get_Ar02(model, T, rho, molefrac);
-    auto Ar02n = tdx::get_Ar0n<2>(model, T, rho, molefrac)[2];
-    auto Ar02mp = static_cast<double>((D * D) * centered_diff<2, 4>(fD, D, h));
-    auto Ar02mcx = tdx::get_Ar0n<2, ADBackends::multicomplex>(model, T, rho, molefrac)[2];
-    CAPTURE(Ar02);
-    CAPTURE(Ar02n);
-    CAPTURE(Ar02mp);
-    CAPTURE(Ar02mcx);
-    CHECK(std::abs(Ar02 - Ar02n) < 1e-13);
-    CHECK(std::abs(Ar02 - Ar02mp) < 1e-13);
-    CHECK(std::abs(Ar02 - Ar02mcx) < 1e-13);
-
-    auto Ar01 = tdx::get_Ar01(model, T, rho, molefrac);
-    auto Ar01n = tdx::get_Ar0n<1>(model, T, rho, molefrac)[1];
-    auto Ar01mcx = tdx::get_Ar0n<1, ADBackends::multicomplex>(model, T, rho, molefrac)[1];
-    auto Ar01csd = tdx::get_Ar01<ADBackends::complex_step>(model, T, rho, molefrac);
-    auto Ar01mp = static_cast<double>(D * centered_diff<1, 4>(fD, D, h));
-    CAPTURE(Ar01);
-    CAPTURE(Ar01n);
-    CAPTURE(Ar01mp);
-    CAPTURE(Ar01mcx);
-    CAPTURE(Ar01csd);
-    CHECK(std::abs(Ar01 - Ar01n) < 1e-13);
-    CHECK(std::abs(Ar01 - Ar01mp) < 1e-13);
-    CHECK(std::abs(Ar01 - Ar01mcx) < 1e-13);
-    CHECK(std::abs(Ar01 - Ar01csd) < 1e-13);
-
-    auto Ar03 = tdx::get_Arxy<0, 3, ADBackends::autodiff>(model, T, rho, molefrac);
-    auto Ar03n = tdx::get_Ar0n<3>(model, T, rho, molefrac)[3];
-    auto Ar03mp = static_cast<double>((D * D * D) * centered_diff<3, 4>(fD, D, h));
-    auto Ar03mcx = tdx::get_Ar0n<3, ADBackends::multicomplex>(model, T, rho, molefrac)[3];
-    CAPTURE(Ar03);
-    CAPTURE(Ar03n);
-    CAPTURE(Ar03mp);
-    CAPTURE(Ar03mcx);
-    CHECK(std::abs(Ar03 - Ar03n) < 1e-13);
-    CHECK(std::abs(Ar03 - Ar03mp) < 1e-13);
-    CHECK(std::abs(Ar03 - Ar03mcx) < 1e-13);
-
-    auto Ar04 = tdx::get_Arxy<0, 4, ADBackends::autodiff>(model, T, rho, molefrac);
-    auto Ar04n = tdx::get_Ar0n<4>(model, T, rho, molefrac)[4];
-    auto Ar04mp = static_cast<double>((D * D * D * D) * centered_diff<4, 4>(fD, D, h));
-    auto Ar04mcx = tdx::get_Ar0n<4, ADBackends::multicomplex>(model, T, rho, molefrac)[4];
-    CAPTURE(Ar04);
-    CAPTURE(Ar04n);
-    CAPTURE(Ar04mp);
-    CAPTURE(Ar04mcx);
-    CHECK(std::abs(Ar04 - Ar04n) < 1e-13);
-    CHECK(std::abs(Ar04 - Ar04mp) < 1e-13);
-    CHECK(std::abs(Ar04 - Ar04mcx) < 1e-13);
+    
+    SECTION("0n"){
+        auto Ar02 = tdx::get_Ar02(model, T, rho, molefrac);
+        auto Ar02n = tdx::get_Ar0n<2>(model, T, rho, molefrac)[2];
+        auto Ar02mp = static_cast<double>((D * D) * centered_diff<2, 4>(fD, D, h));
+        auto Ar02mcx = tdx::get_Ar0n<2, ADBackends::multicomplex>(model, T, rho, molefrac)[2];
+        CAPTURE(Ar02);
+        CAPTURE(Ar02n);
+        CAPTURE(Ar02mp);
+        CAPTURE(Ar02mcx);
+        CHECK(std::abs(Ar02 - Ar02n) < 1e-13);
+        CHECK(std::abs(Ar02 - Ar02mp) < 1e-13);
+        CHECK(std::abs(Ar02 - Ar02mcx) < 1e-13);
+        
+        auto Ar01 = tdx::get_Ar01(model, T, rho, molefrac);
+        auto Ar01n = tdx::get_Ar0n<1>(model, T, rho, molefrac)[1];
+        auto Ar01mcx = tdx::get_Ar0n<1, ADBackends::multicomplex>(model, T, rho, molefrac)[1];
+        auto Ar01csd = tdx::get_Ar01<ADBackends::complex_step>(model, T, rho, molefrac);
+        auto Ar01mp = static_cast<double>(D * centered_diff<1, 4>(fD, D, h));
+        CAPTURE(Ar01);
+        CAPTURE(Ar01n);
+        CAPTURE(Ar01mp);
+        CAPTURE(Ar01mcx);
+        CAPTURE(Ar01csd);
+        CHECK(std::abs(Ar01 - Ar01n) < 1e-13);
+        CHECK(std::abs(Ar01 - Ar01mp) < 1e-13);
+        CHECK(std::abs(Ar01 - Ar01mcx) < 1e-13);
+        CHECK(std::abs(Ar01 - Ar01csd) < 1e-13);
+        
+        auto Ar03 = tdx::get_Arxy<0, 3, ADBackends::autodiff>(model, T, rho, molefrac);
+        auto Ar03n = tdx::get_Ar0n<3>(model, T, rho, molefrac)[3];
+        auto Ar03mp = static_cast<double>((D * D * D) * centered_diff<3, 4>(fD, D, h));
+        auto Ar03mcx = tdx::get_Ar0n<3, ADBackends::multicomplex>(model, T, rho, molefrac)[3];
+        CAPTURE(Ar03);
+        CAPTURE(Ar03n);
+        CAPTURE(Ar03mp);
+        CAPTURE(Ar03mcx);
+        CHECK(std::abs(Ar03 - Ar03n) < 1e-13);
+        CHECK(std::abs(Ar03 - Ar03mp) < 1e-13);
+        CHECK(std::abs(Ar03 - Ar03mcx) < 1e-13);
+        
+        auto Ar04 = tdx::get_Arxy<0, 4, ADBackends::autodiff>(model, T, rho, molefrac);
+        auto Ar04n = tdx::get_Ar0n<4>(model, T, rho, molefrac)[4];
+        auto Ar04mp = static_cast<double>((D * D * D * D) * centered_diff<4, 4>(fD, D, h));
+        auto Ar04mcx = tdx::get_Ar0n<4, ADBackends::multicomplex>(model, T, rho, molefrac)[4];
+        CAPTURE(Ar04);
+        CAPTURE(Ar04n);
+        CAPTURE(Ar04mp);
+        CAPTURE(Ar04mcx);
+        CHECK(std::abs(Ar04 - Ar04n) < 1e-13);
+        CHECK(std::abs(Ar04 - Ar04mp) < 1e-13);
+        CHECK(std::abs(Ar04 - Ar04mcx) < 1e-13);
+    }
+    SECTION("10"){
+        auto Ar10 = tdx::get_Ar10(model, T, rho, molefrac);
+        auto Ar10n = tdx::get_Arn0<1>(model, T, rho, molefrac)[1];
+        auto Ar10mcx = tdx::get_Arn0<1, ADBackends::multicomplex>(model, T, rho, molefrac)[1];
+        my_float_type Tinv = 1/T;
+        auto Ar10mp = static_cast<double>(Tinv * centered_diff<1, 4>(fTrecip, Tinv, h));
+        CAPTURE(Ar10);
+        CAPTURE(Ar10n);
+        CAPTURE(Ar10mp);
+        CAPTURE(Ar10mcx);
+        CHECK(std::abs(Ar10 - Ar10n) < 1e-13);
+        CHECK(std::abs(Ar10 - Ar10mp) < 1e-13);
+        CHECK(std::abs(Ar10 - Ar10mcx) < 1e-13);
+    }
+    SECTION("20"){
+        auto Ar20 = tdx::get_Ar20(model, T, rho, molefrac);
+        auto Ar20n = tdx::get_Arn0<2>(model, T, rho, molefrac)[2];
+        auto Ar20mcx = tdx::get_Arn0<2, ADBackends::multicomplex>(model, T, rho, molefrac)[2];
+        my_float_type Tinv = 1/T;
+        auto Ar20mp = static_cast<double>(Tinv * Tinv * centered_diff<2, 4>(fTrecip, Tinv, h));
+        CAPTURE(Ar20);
+        CAPTURE(Ar20n);
+        CAPTURE(Ar20mp);
+        CAPTURE(Ar20mcx);
+        CHECK(std::abs(Ar20 - Ar20n) < 1e-13);
+        CHECK(std::abs(Ar20 - Ar20mp) < 1e-13);
+        CHECK(std::abs(Ar20 - Ar20mcx) < 1e-13);
+    }
 }
 
 TEST_CASE("Check neff", "[virial]")
