@@ -136,6 +136,14 @@ namespace teqp {
                     c.lambda_r = j.at("lambda_r");
                     c.lambda_a = j.at("lambda_a");
                     c.BibTeXKey = j.at("BibTeXKey");
+                    if (j.contains("(mu^*)^2") && j.contains("nmu")){
+                        c.mustar2 = j.at("(mu^*)^2");
+                        c.nmu = j.at("nmu");
+                    }
+                    if (j.contains("(Q^*)^2") && j.contains("nQ")){
+                        c.Qstar2 = j.at("(Q^*)^2");
+                        c.nQ = j.at("nQ");
+                    }
                     coeffs.push_back(c);
                 }
                 if (kmat && kmat.value().rows() != coeffs.size()){

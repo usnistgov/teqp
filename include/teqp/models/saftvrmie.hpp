@@ -11,6 +11,7 @@
 #include "teqp/exceptions.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/math/quadrature.hpp"
+#include "teqp/models/pcsaft.hpp"
 #include <optional>
 
 namespace teqp {
@@ -23,7 +24,11 @@ struct SAFTVRMieCoeffs {
         sigma_m = -1, ///< [m] segment diameter
         epsilon_over_k = -1, ///< [K] depth of pair potential divided by Boltzman constant
         lambda_a = -1, ///< The attractive exponent (the 6 in LJ 12-6 potential)
-        lambda_r = -1; ///< The repulsive exponent (the 12 in LJ 12-6 potential)
+        lambda_r = -1, ///< The repulsive exponent (the 12 in LJ 12-6 potential)
+        mustar2 = 0, ///< nondimensional, the reduced dipole moment squared
+        nmu = 0, ///< number of dipolar segments
+        Qstar2 = 0, ///< nondimensional, the reduced quadrupole squared
+        nQ = 0; ///< number of quadrupolar segments
     std::string BibTeXKey; ///< The BibTeXKey for the reference for these coefficients
 };
 
@@ -703,6 +708,8 @@ private:
     
     std::vector<std::string> names;
     const SAFTVRMieChainContributionTerms terms;
+    std::optional<PCSAFT::PCSAFTDipolarContribution> dipolar; // Can be present or not
+    std::optional<PCSAFT::PCSAFTQuadrupolarContribution> quadrupolar; // Can be present or not
 
     void check_kmat(const Eigen::ArrayXXd& kmat, std::size_t N) {
         if (kmat.size() == 0){
@@ -742,9 +749,38 @@ private:
             return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(mat));
         }
     }
+    
+    auto build_dipolar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> std::optional<PCSAFT::PCSAFTDipolarContribution>{
+        Eigen::ArrayXd mustar2(coeffs.size()), nmu(coeffs.size());
+        auto i = 0;
+        for (const auto &coeff : coeffs) {
+            mustar2[i] = coeff.mustar2;
+            nmu[i] = coeff.nmu;
+            i++;
+        }
+        if ((mustar2*nmu).cwiseAbs().sum() == 0){
+            return std::nullopt; // No dipolar contribution is present
+        }
+        // The dispersive and hard chain initialization has already happened at this point
+        return PCSAFT::PCSAFTDipolarContribution(terms.m, terms.sigma_A, terms.epsilon_over_k, mustar2, nmu);
+    }
+    auto build_quadrupolar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> std::optional<PCSAFT::PCSAFTQuadrupolarContribution>{
+        // The dispersive and hard chain initialization has already happened at this point
+        Eigen::ArrayXd Qstar2(coeffs.size()), nQ(coeffs.size());
+        auto i = 0;
+        for (const auto &coeff : coeffs) {
+            Qstar2[i] = coeff.Qstar2;
+            nQ[i] = coeff.nQ;
+            i++;
+        }
+        if ((Qstar2*nQ).cwiseAbs().sum() == 0){
+            return std::nullopt; // No quadrupolar contribution is present
+        }
+        return PCSAFT::PCSAFTQuadrupolarContribution(terms.m, terms.sigma_A, terms.epsilon_over_k, Qstar2, nQ);
+    }
 public:
      SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat){};
-    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt) : terms(build_chain(coeffs, kmat)) {};
+    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt) : terms(build_chain(coeffs, kmat)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
     
 //    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
     SAFTVRMieMixture& operator=( const SAFTVRMieMixture& ) = delete; // non copyable
@@ -810,7 +846,19 @@ public:
         // First values for the Mie chain with dispersion (always included)
         error_if_expr(T); error_if_expr(rhomolar);
         auto vals = terms.get_core_calcs(T, rhomolar, mole_fractions);
-        auto alphar = vals.alphar_mono + vals.alphar_chain;
+        auto alphar = forceeval(vals.alphar_mono + vals.alphar_chain);
+        
+        auto rho_A3 = forceeval(rhomolar*N_A*1e-30);
+        // If dipole is present, add its contribution
+        if (dipolar){
+            auto valsdip = dipolar.value().eval(T, rho_A3, vals.zeta[3], mole_fractions);
+            alphar += valsdip.alpha;
+        }
+        // If quadrupole is present, add its contribution
+        if (quadrupolar){
+            auto valsquad = quadrupolar.value().eval(T, rho_A3, vals.zeta[3], mole_fractions);
+            alphar += valsquad.alpha;
+        }
         return forceeval(alphar);
     }
 };
