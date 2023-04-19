@@ -56,7 +56,8 @@ protected:
     template<typename TType, typename IndexType>
     auto get_bi(TType T, IndexType i) const { return bi[i]; }
 
-    void check_kmat(int N) {
+    template<typename IndexType>
+    void check_kmat(IndexType N) {
         if (kmat.cols() != kmat.rows()) {
             throw teqp::InvalidArgument("kmat rows [" + std::to_string(kmat.rows()) + "] and columns [" + std::to_string(kmat.cols()) + "] are not identical");
         }

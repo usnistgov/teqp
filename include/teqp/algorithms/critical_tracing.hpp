@@ -58,7 +58,7 @@ struct CriticalTracing {
             }
         }
 
-        int nonzero_count = mask.count();
+        Eigen::Index nonzero_count = mask.count();
         auto zero_count = N - nonzero_count;
 
         if (zero_count == 0) {

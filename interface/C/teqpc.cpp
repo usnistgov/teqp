@@ -178,7 +178,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
     BENCHMARK("vdW1") {
         std::string j = R"({"kind":"vdW1", "model":{"a":1.0, "b":2.0}})";
         int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        int e2 = get_Arxy(uuid, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 0, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
         REQUIRE(e2 == 0);
@@ -197,7 +197,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
             }
         )";
         int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        int e2 = get_Arxy(uuid, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 0, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
         REQUIRE(e2 == 0);
@@ -205,7 +205,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         return val;
     };
     BENCHMARK("PR call") {
-        int e = get_Arxy(uuidPR, 0, 0, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e = get_Arxy(uuidPR, 0, 0, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         REQUIRE(e == 0);
         return val;
     };
@@ -221,7 +221,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
             }
         )";
         int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
-        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
         REQUIRE(e2 == 0);
@@ -245,7 +245,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         };
         std::string jstring = j.dump();
         int e1 = build_model(jstring.c_str(), uuid, errmsg, errmsg_length);
-        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
         REQUIRE(e2 == 0);
@@ -270,7 +270,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         CAPTURE(errmsg);
         CAPTURE(js);
         REQUIRE(e1 == 0);
-        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e2 == 0);
         REQUIRE(e3 == 0);
@@ -290,7 +290,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         };
         std::string js = j.dump(2);
         int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
-        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
         REQUIRE(e2 == 0);
@@ -312,7 +312,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         };
         std::string js = j.dump(2);
         int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
-        int e2 = get_Arxy(uuid, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
         REQUIRE(e2 == 0);
@@ -321,7 +321,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
     };
 
     BENCHMARK("multifluid call") {
-        int e2 = get_Arxy(uuidMF, 0, 1, 300, 3.0e-6, &(molefrac[0]), molefrac.size(), &val, errmsg, errmsg_length);
+        int e2 = get_Arxy(uuidMF, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         REQUIRE(e2 == 0);
         return val;
     };

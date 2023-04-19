@@ -293,7 +293,7 @@ template<typename Model, typename Scalar, typename Vector>
 auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vector& rhovecV0, const Vector& xspec, double atol, double reltol, double axtol, double relxtol, int maxiter) {
 
     const Eigen::Index N = rhovecL0.size();
-    auto lengths = (Eigen::ArrayXi(3) << rhovecL0.size(), rhovecV0.size(), xspec.size()).finished();
+    auto lengths = (Eigen::ArrayX<Eigen::Index>(3) << rhovecL0.size(), rhovecV0.size(), xspec.size()).finished();
     if (lengths.minCoeff() != lengths.maxCoeff()){
         throw InvalidArgument("lengths of rhovecs and xspec must be the same in mix_VLE_Tx");
     }
@@ -508,7 +508,7 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
     auto flags = flags_.value_or(MixVLETpFlags{});
 
     const Eigen::Index N = rhovecL0.size();
-    auto lengths = (Eigen::ArrayXi(2) << rhovecL0.size(), rhovecV0.size()).finished();
+    auto lengths = (Eigen::ArrayX<Eigen::Index>(2) << rhovecL0.size(), rhovecV0.size()).finished();
     if (lengths.minCoeff() != lengths.maxCoeff()) {
         throw InvalidArgument("lengths of rhovecs must be the same in mix_VLE_Tx");
     }
@@ -538,7 +538,7 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
     functor.df(x, J);
     Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-final_r);*/
 
-    int niter = 0, nfev = 0;
+    Eigen::Index niter = 0, nfev = 0;
     Eigen::MatrixXd J(2 * N, 2 * N);
     if (powell) {
         HybridNonLinearSolver<FunctorType> solver(functor);
@@ -593,8 +593,8 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
 
     MixVLEReturn r;
     r.return_code = return_code;
-    r.num_iter = niter;
-    r.num_fev = nfev;
+    r.num_iter = static_cast<int>(niter);
+    r.num_fev = static_cast<int>(nfev);
     r.r = final_r;
     r.initial_r = initial_r;
     r.success = success;
@@ -621,7 +621,7 @@ auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec
     auto flags = flags_.value_or(MixVLEpxFlags{});
 
     const Eigen::Index N = rhovecL0.size();
-    auto lengths = (Eigen::ArrayXi(3) << rhovecL0.size(), rhovecV0.size(), xmolar_spec.size()).finished();
+    auto lengths = (Eigen::ArrayX<Eigen::Index>(3) << rhovecL0.size(), rhovecV0.size(), xmolar_spec.size()).finished();
     if (lengths.minCoeff() != lengths.maxCoeff()) {
         throw InvalidArgument("lengths of rhovecs and xspec must be the same in mixture_VLE_px");
     }
@@ -1081,7 +1081,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
         }
 
         // Flip the step if it changes direction from the smooth continuation of previous steps
-        auto get_const_view = [&](const auto& v, int N) {
+        auto get_const_view = [&](const auto& v, Eigen::Index N) {
             return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), N);
         };
         if (get_const_view(Xprime, N).matrix().dot(get_const_view(previous_drhodt, N).matrix()) < 0) {
@@ -1331,7 +1331,7 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
         }
 
         // Flip the step if it changes direction from the smooth continuation of previous steps
-        auto get_const_view = [&](const auto& v, int N) {
+        auto get_const_view = [&](const auto& v, Eigen::Index N) {
             return Eigen::Map<const Eigen::ArrayXd>(&(v[0]), N);
         };
         if (get_const_view(Xprime, N).matrix().dot(get_const_view(previous_drhodt, N).matrix()) < 0) {
