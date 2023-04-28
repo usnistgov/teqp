@@ -21,14 +21,14 @@ static const std::map<int, std::array<double, 12>> Luckas_J_coeffs = {
     {15, {-2.14335965e-01,  2.24240261e-02, 2.68094773e-01, 8.11899188e00, 2.15506735e-01, -8.11465705e00, -1.88310645e01, -4.18309476e-01, 1.88679367e01, 1.02033085e01, 2.37674032e-01, -1.00120648e01}},
 };
 
-template<int n>
+
 class LuckasJIntegral{
 public:
-    
+    const int n;
     const std::array<double, 12> a;
     double a00,a01,a02,a10,a11,a12,a20,a21,a22,a30,a31,a32;
     
-    LuckasJIntegral() : a(Luckas_J_coeffs.at(n)){
+    LuckasJIntegral(int n) : n(n), a(Luckas_J_coeffs.at(n)){
         a00 = a[0]; a01 = a[1]; a02 = a[2];
         a10 = a[3]; a11 = a[4]; a12 = a[5];
         a20 = a[6]; a21 = a[7]; a22 = a[8];
@@ -36,13 +36,15 @@ public:
     }
     
     template<typename TType, typename RhoType>
-    auto get_J(const TType& Tstar, const RhoType& rhostar){
+    auto get_J(const TType& Tstar, const RhoType& rhostar) const{
         auto Z_1 = 0.3 + 0.05*n;
         auto Z_2 = 1.0/n;
         auto A_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
         auto A_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
         auto A_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
-        std::common_type_t<TType, RhoType> out = (A_0 + A_1*pow(Tstar, Z_1) + A_2*pow(Tstar, Z_2))*exp(1.0/(Tstar + 4.0/pow(std::abs(log(rhostar/sqrt(2.0))), 3.0)));
+        // |x| = sqrt(x^2), the latter is well-suited to differentiation
+        auto differentiable_abs = [](const auto& x){ return sqrt(x*x); };
+        std::common_type_t<TType, RhoType> out = (A_0 + A_1*pow(Tstar, Z_1) + A_2*pow(Tstar, Z_2))*exp(1.0/(Tstar + 4.0/pow(differentiable_abs(log(rhostar/sqrt(2.0))), 3.0)));
         return out;
     }
 };
@@ -54,14 +56,14 @@ static const std::map<std::tuple<int, int>, std::array<double, 16>> Luckas_K_coe
     {{444,555},{  1.07862851e-03,  2.88647260e-04,  2.07369614e-03,  1.79600129e-04,  7.57084957e-02, -2.28761197e-03, -7.33670248e-02,  3.12736172e-02,  1.73518964e-01,  4.54174801e-03, -5.14488122e-01,  2.85483011e-01,  1.71670939e-01, -1.07503182e-03, -5.51880129e-01,  4.16887229e-01}}
 };
 
-template<int n1, int n2>
 class LuckasKIntegral{
 public:
     
+    const int n1, n2;
     const std::array<double, 16> a;
     double a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33;
     
-    LuckasKIntegral() : a(Luckas_K_coeffs.at({n1, n2})){
+    LuckasKIntegral(const int n1, const int n2) : n1(n1), n2(n2), a(Luckas_K_coeffs.at({n1, n2})){
         a00 = a[0]; a01 = a[1]; a02 = a[2]; a03 = a[3];
         a10 = a[4]; a11 = a[5]; a12 = a[6]; a13 = a[7];
         a20 = a[8]; a21 = a[9]; a22 = a[10]; a23 = a[11];
@@ -69,7 +71,7 @@ public:
     }
     
     template<typename TType, typename RhoType>
-    auto get_K(const TType& Tstar, const RhoType& rhostar){
+    auto get_K(const TType& Tstar, const RhoType& rhostar) const{
         auto Z_1 = 2.0;
         auto Z_2 = 3.0;
         auto Z_3 = 4.0;

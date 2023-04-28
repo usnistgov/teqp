@@ -704,12 +704,15 @@ struct SAFTVRMieChainContributionTerms{
  \brief A class used to evaluate mixtures using the SAFT-VR-Mie model
 */
 class SAFTVRMieMixture {
+public:
+    using PCSAFTDipolarContribution = SAFTpolar::DipolarContributionGrossVrabec;
+    using PCSAFTQuadrupolarContribution = SAFTpolar::QuadrupolarContributionGrossVrabec;
 private:
     
     std::vector<std::string> names;
     const SAFTVRMieChainContributionTerms terms;
-    std::optional<PCSAFT::PCSAFTDipolarContribution> dipolar; // Can be present or not
-    std::optional<PCSAFT::PCSAFTQuadrupolarContribution> quadrupolar; // Can be present or not
+    std::optional<PCSAFTDipolarContribution> dipolar; // Can be present or not
+    std::optional<PCSAFTQuadrupolarContribution> quadrupolar; // Can be present or not
 
     void check_kmat(const Eigen::ArrayXXd& kmat, std::size_t N) {
         if (kmat.size() == 0){
@@ -750,7 +753,7 @@ private:
         }
     }
     
-    auto build_dipolar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> std::optional<PCSAFT::PCSAFTDipolarContribution>{
+    auto build_dipolar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> std::optional<PCSAFTDipolarContribution>{
         Eigen::ArrayXd mustar2(coeffs.size()), nmu(coeffs.size());
         auto i = 0;
         for (const auto &coeff : coeffs) {
@@ -762,9 +765,9 @@ private:
             return std::nullopt; // No dipolar contribution is present
         }
         // The dispersive and hard chain initialization has already happened at this point
-        return PCSAFT::PCSAFTDipolarContribution(terms.m, terms.sigma_A, terms.epsilon_over_k, mustar2, nmu);
+        return PCSAFTDipolarContribution(terms.m, terms.sigma_A, terms.epsilon_over_k, mustar2, nmu);
     }
-    auto build_quadrupolar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> std::optional<PCSAFT::PCSAFTQuadrupolarContribution>{
+    auto build_quadrupolar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> std::optional<PCSAFTQuadrupolarContribution>{
         // The dispersive and hard chain initialization has already happened at this point
         Eigen::ArrayXd Qstar2(coeffs.size()), nQ(coeffs.size());
         auto i = 0;
@@ -776,7 +779,7 @@ private:
         if ((Qstar2*nQ).cwiseAbs().sum() == 0){
             return std::nullopt; // No quadrupolar contribution is present
         }
-        return PCSAFT::PCSAFTQuadrupolarContribution(terms.m, terms.sigma_A, terms.epsilon_over_k, Qstar2, nQ);
+        return PCSAFTQuadrupolarContribution(terms.m, terms.sigma_A, terms.epsilon_over_k, Qstar2, nQ);
     }
 public:
      SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat){};
