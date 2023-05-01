@@ -31,7 +31,7 @@ namespace teqp{
         return lengths.size() == 1;
     }
 
-    auto build_square_matrix = [](const nlohmann::json& j){
+    inline auto build_square_matrix = [](const nlohmann::json& j){
         if (j.is_null() || (j.is_array() && j.size() == 0)){
             return Eigen::ArrayXXd(0, 0);
         }

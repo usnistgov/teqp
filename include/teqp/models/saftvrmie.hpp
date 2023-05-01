@@ -873,7 +873,7 @@ public:
     }
 };
                                                                                                                                                          
-static auto SAFTVRMiefactory(const nlohmann::json & spec){
+inline auto SAFTVRMiefactory(const nlohmann::json & spec){
 
     std::optional<Eigen::ArrayXXd> kmat;
     if (spec.contains("kmat") && spec.at("kmat").is_array() && spec.at("kmat").size() > 0){
