@@ -379,7 +379,11 @@ public:
         const auto& sigma = sigma_m; // concision
         
         const auto N = mole_fractions.size();
-        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> summer112 = 0.0, summer123 = 0.0, summer224 = 0.0;
+        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> alpha2_112 = 0.0, alpha2_123 = 0.0, alpha2_224 = 0.0;
+        
+        const auto factor_112 = forceeval(-2.0*PI_*rhoN/3.0); //*POW2(4*PI_*epsilon_0)
+        const auto factor_123 = forceeval(-PI_*rhoN/3.0);
+        const auto factor_224 = forceeval(-14.0*PI_*rhoN/5.0);
                 
         for (auto i = 0; i < N; ++i){
             for (auto j = 0; j < N; ++j){
@@ -391,15 +395,11 @@ public:
                 auto leading = x[i]*x[j]/(Tstari*Tstarj); // common for all alpha_2 terms
                 auto Tstarij = forceeval(T/epskij);
                 
-                summer112 += leading*POW3(sigma[i]*sigma[j])/POW3(sigmaij)*mubar2[i]*mubar2[j]*J6.get_J(Tstarij, rhostar);
-                summer123 += leading*POW3(sigma[i])*POW5(sigma[j])/POW5(sigmaij)*mubar2[i]*Qbar2[j]*J8.get_J(Tstarij, rhostar);
-                summer224 += leading*POW5(sigma[i]*sigma[j])/POW7(sigmaij)*Qbar2[i]*Qbar2[j]*J10.get_J(Tstarij, rhostar);
+                alpha2_112 += factor_112*leading*POW3(sigma[i]*sigma[j])/POW3(sigmaij)*mubar2[i]*mubar2[j]*J6.get_J(Tstarij, rhostar);
+                alpha2_123 += factor_123*leading*POW3(sigma[i])*POW5(sigma[j])/POW5(sigmaij)*mubar2[i]*Qbar2[j]*J8.get_J(Tstarij, rhostar);
+                alpha2_224 += factor_224*leading*POW5(sigma[i]*sigma[j])/POW7(sigmaij)*Qbar2[i]*Qbar2[j]*J10.get_J(Tstarij, rhostar);
             }
         }
-        
-        auto alpha2_112 = -2.0*PI_*rhoN*POW2(4*PI_*epsilon_0)/3.0*summer112;
-        auto alpha2_123 = -PI_*rhoN*POW2(4*PI_*epsilon_0)/3.0*summer123;
-        auto alpha2_224 = -14.0*PI_*rhoN*POW2(4*PI_*epsilon_0)/5.0*summer224;
         
         return forceeval(alpha2_112 + 2.0*alpha2_123 + alpha2_224);
     }
@@ -440,31 +440,43 @@ public:
                     auto sigmaik = (sigma[i]+sigma[k])/2;
                     auto sigmajk = (sigma[j]+sigma[k])/2;
                     auto leadingijk = x[i]*x[j]*x[k]/(Tstari*Tstarj*Tstark);
+                    
+                    auto get_Kijk = [&](const auto& Kint){
+                        return pow(Kint.get_K(Tstarij, rhostar)*Kint.get_K(Tstarik, rhostar)*Kint.get_K(Tstarjk, rhostar), 1.0/3.0);
+                    };
                         
-                    auto K222333 = pow(K222_333.get_K(Tstarij, rhostar)*K222_333.get_K(Tstarik, rhostar)*K222_333.get_K(Tstarjk, rhostar), 1.0/3.0);
-                    summerB_112_112_112 += leadingijk*POW3(sigma[i]*sigma[j]*sigma[k])/(sigmaij*sigmaik*sigmajk)*mubar2[i]*mubar2[j]*mubar2[k]*K222333;
-                    auto K233344 = pow(K233_344.get_K(Tstarij, rhostar)*K233_344.get_K(Tstarik, rhostar)*K233_344.get_K(Tstarjk, rhostar), 1.0/3.0);
-                    summerB_112_123_123 += leadingijk*POW3(sigma[i]*sigma[j])*POW5(sigma[k])/(sigmaij*POW2(sigmaik*sigmajk))*mubar2[i]*mubar2[j]*Qbar2[k]*K233344;
-                    auto K334445 = pow(K334_445.get_K(Tstarij, rhostar)*K334_445.get_K(Tstarik, rhostar)*K334_445.get_K(Tstarjk, rhostar), 1.0/3.0);
-                    summerB_123_123_224 += leadingijk*POW3(sigma[i])*POW5(sigma[j]*sigma[k])/(POW2(sigmaij*sigmaik)*POW3(sigmajk))*mubar2[i]*Qbar2[j]*Qbar2[k]*K334445;
-                    auto K444555 = pow(K444_555.get_K(Tstarij, rhostar)*K444_555.get_K(Tstarik, rhostar)*K444_555.get_K(Tstarjk, rhostar), 1.0/3.0);
-                    summerB_224_224_224 += leadingijk*POW5(sigma[i]*sigma[j]*sigma[k])/(POW3(sigmaij*sigmaik*sigmajk))*Qbar2[i]*Qbar2[j]*Qbar2[k]*K444555;
+                    if (std::abs(mubar2[i]*mubar2[j]*mubar2[k]) > 0){
+                        auto K222333 = get_Kijk(K222_333);
+                        summerB_112_112_112 += leadingijk*POW3(sigma[i]*sigma[j]*sigma[k])/(sigmaij*sigmaik*sigmajk)*mubar2[i]*mubar2[j]*mubar2[k]*K222333;
+                    }
+                    if (std::abs(mubar2[i]*mubar2[j]*Qbar2[k]) > 0){
+                        auto K233344 = get_Kijk(K233_344);
+                        summerB_112_123_123 += leadingijk*POW3(sigma[i]*sigma[j])*POW5(sigma[k])/(sigmaij*POW2(sigmaik*sigmajk))*mubar2[i]*mubar2[j]*Qbar2[k]*K233344;
+                    }
+                    if (std::abs(mubar2[i]*Qbar2[j]*Qbar2[k]) > 0){
+                        auto K334445 = get_Kijk(K334_445);
+                        summerB_123_123_224 += leadingijk*POW3(sigma[i])*POW5(sigma[j]*sigma[k])/(POW2(sigmaij*sigmaik)*POW3(sigmajk))*mubar2[i]*Qbar2[j]*Qbar2[k]*K334445;
+                    }
+                    if (std::abs(Qbar2[i]*Qbar2[j]*Qbar2[k]) > 0){
+                        auto K444555 = get_Kijk(K444_555);
+                        summerB_224_224_224 += leadingijk*POW5(sigma[i]*sigma[j]*sigma[k])/(POW3(sigmaij*sigmaik*sigmajk))*Qbar2[i]*Qbar2[j]*Qbar2[k]*K444555;
+                    }
                 }
             }
         }
-        auto alpha3A_112_112_224 = 8.0*PI_*rhoN*POW3(4*PI_*epsilon_0)/25.0*summerA_112_112_224;
-        auto alpha3A_112_123_213 = 8.0*PI_*rhoN*POW3(4*PI_*epsilon_0)/75.0*summerA_112_123_213;
-        auto alpha3A_123_123_224 = 8.0*PI_*rhoN*POW3(4*PI_*epsilon_0)/35.0*summerA_123_123_224;
-        auto alpha3A_224_224_224 = 144.0*PI_*rhoN*POW3(4*PI_*epsilon_0)/245.0*summerA_224_224_224;
+        auto alpha3A_112_112_224 = 8.0*PI_*rhoN/25.0*summerA_112_112_224;
+        auto alpha3A_112_123_213 = 8.0*PI_*rhoN/75.0*summerA_112_123_213;
+        auto alpha3A_123_123_224 = 8.0*PI_*rhoN/35.0*summerA_123_123_224;
+        auto alpha3A_224_224_224 = 144.0*PI_*rhoN/245.0*summerA_224_224_224;
         
-        auto alpha3A = 3.0*alpha3A_112_112_224 + 6.0*alpha3A_112_123_213 + 6.0*alpha3A_123_123_224 + alpha3A_224_224_224;
+        auto alpha3A = forceeval(3.0*alpha3A_112_112_224 + 6.0*alpha3A_112_123_213 + 6.0*alpha3A_123_123_224 + alpha3A_224_224_224);
         
-        auto alpha3B_112_112_112 = 32.0*POW3(PI_)*POW2(rhoN)*POW3(4*PI_*epsilon_0)/135.0*sqrt(14*PI_/5.0)*summerB_112_112_112;
-        auto alpha3B_112_123_123 = 64.0*POW3(PI_)*POW2(rhoN)*POW3(4*PI_*epsilon_0)/315.0*sqrt(3.0*PI_)*summerB_112_123_123;
-        auto alpha3B_123_123_224 = -32.0*POW3(PI_)*POW2(rhoN)*POW3(4*PI_*epsilon_0)/45.0*sqrt(22.0*PI_/63.0)*summerB_123_123_224;
-        auto alpha3B_224_224_224 = 32.0*POW3(PI_)*POW2(rhoN)*POW3(4*PI_*epsilon_0)/2025.0*sqrt(2002.0*PI_)*summerB_224_224_224;
+        auto alpha3B_112_112_112 = 32.0*POW3(PI_)*POW2(rhoN)/135.0*sqrt(14*PI_/5.0)*summerB_112_112_112;
+        auto alpha3B_112_123_123 = 64.0*POW3(PI_)*POW2(rhoN)/315.0*sqrt(3.0*PI_)*summerB_112_123_123;
+        auto alpha3B_123_123_224 = -32.0*POW3(PI_)*POW2(rhoN)/45.0*sqrt(22.0*PI_/63.0)*summerB_123_123_224;
+        auto alpha3B_224_224_224 = 32.0*POW3(PI_)*POW2(rhoN)/2025.0*sqrt(2002.0*PI_)*summerB_224_224_224;
         
-        auto alpha3B = alpha3B_112_112_112 + 3.0*alpha3B_112_123_123 + 3.0*alpha3B_123_123_224 + alpha3B_224_224_224;
+        auto alpha3B = forceeval(alpha3B_112_112_112 + 3.0*alpha3B_112_123_123 + 3.0*alpha3B_123_123_224 + alpha3B_224_224_224);
         
         return forceeval(alpha3A + alpha3B);
     }
@@ -503,7 +515,7 @@ public:
     }
 };
 
-/// The variant including the multipolar terms that can be provided
+/// The variant containing the multipolar types that can be provided
 using multipolar_contributions_variant = std::variant<
     MultipolarContributionGrossVrabec,
     MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>,
