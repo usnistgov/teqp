@@ -25,16 +25,27 @@ TEST_CASE("Evaluation of K(xxx, yyy)", "[LuckasKnn]")
     CHECK(Kval45 == Approx(0.01541).margin(0.02));
 }
 
-TEST_CASE("Evaluation of Gubbins and Twu", "[GTLPolar]")
+using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
+using MCGG = MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
+
+TEST_CASE("Evaluation of Gubbins and Twu combos ", "[GTLPolar]")
 {
     auto sigma_m = (Eigen::ArrayXd(2) << 3e-10, 3.1e-10).finished();
     auto epsilon_over_k= (Eigen::ArrayXd(2) << 200, 300).finished();
     auto mubar2 = (Eigen::ArrayXd(2) << 0.0, 0.5).finished();
     auto Qbar2 = (Eigen::ArrayXd(2) << 0.5, 0).finished();
-    MCGTL GTL{sigma_m, epsilon_over_k, mubar2, Qbar2};
-    auto z = (Eigen::ArrayXd(2) << 0.1, 0.9).finished();
-    auto rhoN = std::complex<double>(300, 1e-100);
-    GTL.eval(300.0, rhoN, z);
+    SECTION("+ Luckas"){
+        MCGTL GTL{sigma_m, epsilon_over_k, mubar2, Qbar2};
+        auto z = (Eigen::ArrayXd(2) << 0.1, 0.9).finished();
+        auto rhoN = std::complex<double>(300, 1e-100);
+        GTL.eval(300.0, rhoN, z);
+    }
+    SECTION("+ Gubbins&Twu"){
+        MCGG GTL{sigma_m, epsilon_over_k, mubar2, Qbar2};
+        auto z = (Eigen::ArrayXd(2) << 0.1, 0.9).finished();
+        auto rhoN = std::complex<double>(300, 1e-100);
+        GTL.eval(300.0, rhoN, z);
+    }
 }
 
 // This test is used to make sure that replacing std::abs with a more flexible function

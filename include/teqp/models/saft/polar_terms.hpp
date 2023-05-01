@@ -268,6 +268,64 @@ public:
     }
 };
 
+enum class multipolar_argument_spec {
+    TK_rhoNA3_packingfraction_molefractions,
+    TK_rhoNm3_molefractions
+};
+
+class MultipolarContributionGrossVrabec{
+public:
+    static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNA3_packingfraction_molefractions;
+    
+    const std::optional<DipolarContributionGrossVrabec> di;
+    const std::optional<QuadrupolarContributionGrossVrabec> quad;
+    // TODO: add cross term
+    
+    MultipolarContributionGrossVrabec(
+      const Eigen::ArrayX<double> &m,
+      const Eigen::ArrayX<double> &sigma_Angstrom,
+      const Eigen::ArrayX<double> &epsilon_over_k,
+      const Eigen::ArrayX<double> &mustar2,
+      const Eigen::ArrayX<double> &nmu,
+      const Eigen::ArrayX<double> &Qstar2,
+      const Eigen::ArrayX<double> &nQ)
+    : di(((nmu.sum() > 0) ? decltype(di)(DipolarContributionGrossVrabec(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu)) : std::nullopt)),
+      quad(((nQ.sum() > 0) ? decltype(quad)(QuadrupolarContributionGrossVrabec(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ)) : std::nullopt)) {};
+    
+    template<typename TTYPE, typename RhoType, typename EtaType, typename VecType>
+    auto eval(const TTYPE& T, const RhoType& rho_A3, const EtaType& eta, const VecType& mole_fractions) const {
+        
+        using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
+        type alpha2DD = 0.0, alpha3DD = 0.0, alphaDD = 0.0;
+        if (di){
+            alpha2DD = di.value().get_alpha2DD(T, rho_A3, eta, mole_fractions);
+            alpha3DD = di.value().get_alpha3DD(T, rho_A3, eta, mole_fractions);
+            alphaDD = forceeval(alpha2DD/(1.0-alpha3DD/alpha2DD));
+        }
+        
+        type alpha2QQ = 0.0, alpha3QQ = 0.0, alphaQQ = 0.0;
+        if (quad){
+            alpha2QQ = quad.value().get_alpha2QQ(T, rho_A3, eta, mole_fractions);
+            alpha3QQ = quad.value().get_alpha3QQ(T, rho_A3, eta, mole_fractions);
+            alphaQQ = forceeval(alpha2QQ/(1.0-alpha3QQ/alpha2QQ));
+        }
+        
+        auto alpha = forceeval(alphaDD + alphaQQ);
+        
+        struct Terms{
+            type alpha2DD;
+            type alpha3DD;
+            type alphaDD;
+            type alpha2QQ;
+            type alpha3QQ;
+            type alphaQQ;
+            type alpha;
+        };
+        return Terms{alpha2DD, alpha3DD, alphaDD, alpha2QQ, alpha3QQ, alphaQQ, alpha};
+    }
+    
+};
+
 /**
  \tparam JIntegral A type that can be indexed with a single integer n to give the J^{(n)} integral
  \tparam KIntegral A type that can be indexed with a two integers a and b to give the K(a,b) integral
@@ -276,6 +334,8 @@ public:
  */
 template<class JIntegral, class KIntegral>
 class MultipolarContributionGubbinsTwu {
+public:
+    static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_molefractions;
 private:
     const Eigen::ArrayXd sigma_m, epsilon_over_k, mubar2, Qbar2;
     template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
@@ -312,8 +372,8 @@ public:
     }
     MultipolarContributionGubbinsTwu& operator=( const MultipolarContributionGubbinsTwu& ) = delete; // non copyable
     
-    template<typename TTYPE, typename RhoType, typename VecType>
-    auto get_alpha2(const TTYPE& T, const RhoType& rhoN, const RhoType& rhostar, const VecType& mole_fractions) const{
+    template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType>
+    auto get_alpha2(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions) const{
         const auto& x = mole_fractions; // concision
         const auto& sigma = sigma_m; // concision
         
@@ -343,8 +403,8 @@ public:
         return forceeval(alpha2_112 + 2.0*alpha2_123 + alpha2_224);
     }
     
-    template<typename TTYPE, typename RhoType, typename VecType>
-    auto get_alpha3(const TTYPE& T, const RhoType& rhoN, const RhoType& rhostar, const VecType& mole_fractions) const{
+    template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType>
+    auto get_alpha3(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions) const{
         const auto& x = mole_fractions; // concision
         const auto& sigma = sigma_m; // concision
         const auto N = mole_fractions.size();
@@ -424,7 +484,7 @@ public:
                 sigma_x3 += mole_fractions[i]*mole_fractions[j]*POW3(sigmaij);
             }
         }
-        auto rhostar = rhoN*sigma_x3;
+        auto rhostar = forceeval(rhoN*sigma_x3);
         
         auto alpha2 = get_alpha2(T, rhoN, rhostar, mole_fractions);
         auto alpha3 = get_alpha3(T, rhoN, rhostar, mole_fractions);
@@ -441,7 +501,13 @@ public:
         return Terms{alpha2, alpha3, alpha};
     }
 };
-using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
+
+/// The variant including the multipolar terms that can be provided
+using multipolar_contributions_variant = std::variant<
+    MultipolarContributionGrossVrabec,
+    MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>,
+    MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>
+>;
 
 }
 }

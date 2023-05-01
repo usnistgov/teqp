@@ -704,15 +704,11 @@ struct SAFTVRMieChainContributionTerms{
  \brief A class used to evaluate mixtures using the SAFT-VR-Mie model
 */
 class SAFTVRMieMixture {
-public:
-    using PCSAFTDipolarContribution = SAFTpolar::DipolarContributionGrossVrabec;
-    using PCSAFTQuadrupolarContribution = SAFTpolar::QuadrupolarContributionGrossVrabec;
 private:
     
     std::vector<std::string> names;
     const SAFTVRMieChainContributionTerms terms;
-    std::optional<PCSAFTDipolarContribution> dipolar; // Can be present or not
-    std::optional<PCSAFTQuadrupolarContribution> quadrupolar; // Can be present or not
+    std::optional<SAFTpolar::multipolar_contributions_variant> polar; // Can be present or not
 
     void check_kmat(const Eigen::ArrayXXd& kmat, std::size_t N) {
         if (kmat.size() == 0){
@@ -753,37 +749,30 @@ private:
         }
     }
     
-    auto build_dipolar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> std::optional<PCSAFTDipolarContribution>{
-        Eigen::ArrayXd mustar2(coeffs.size()), nmu(coeffs.size());
+    auto build_polar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> decltype(this->polar){
+        Eigen::ArrayXd mustar2(coeffs.size()), nmu(coeffs.size()), Qstar2(coeffs.size()), nQ(coeffs.size());
         auto i = 0;
         for (const auto &coeff : coeffs) {
             mustar2[i] = coeff.mustar2;
             nmu[i] = coeff.nmu;
-            i++;
-        }
-        if ((mustar2*nmu).cwiseAbs().sum() == 0){
-            return std::nullopt; // No dipolar contribution is present
-        }
-        // The dispersive and hard chain initialization has already happened at this point
-        return PCSAFTDipolarContribution(terms.m, terms.sigma_A, terms.epsilon_over_k, mustar2, nmu);
-    }
-    auto build_quadrupolar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> std::optional<PCSAFTQuadrupolarContribution>{
-        // The dispersive and hard chain initialization has already happened at this point
-        Eigen::ArrayXd Qstar2(coeffs.size()), nQ(coeffs.size());
-        auto i = 0;
-        for (const auto &coeff : coeffs) {
             Qstar2[i] = coeff.Qstar2;
             nQ[i] = coeff.nQ;
             i++;
         }
-        if ((Qstar2*nQ).cwiseAbs().sum() == 0){
-            return std::nullopt; // No quadrupolar contribution is present
+        bool has_dipolar = ((mustar2*nmu).cwiseAbs().sum() == 0);
+        bool has_quadrupolar = ((Qstar2*nQ).cwiseAbs().sum() == 0);
+        if (!has_dipolar && !has_quadrupolar){
+            return std::nullopt; // No dipolar or quadrupolar contribution is present
         }
-        return PCSAFTQuadrupolarContribution(terms.m, terms.sigma_A, terms.epsilon_over_k, Qstar2, nQ);
+        else{
+            // The dispersive and hard chain initialization has already happened at this point
+            return SAFTpolar::MultipolarContributionGrossVrabec(terms.m, terms.sigma_A, terms.epsilon_over_k, mustar2, nmu, Qstar2, nQ);
+        }
     }
+    
 public:
-     SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat){};
-    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt) : terms(build_chain(coeffs, kmat)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
+    SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat){};
+    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt) : terms(build_chain(coeffs, kmat)), polar(build_polar(coeffs)) {};
     
 //    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
     SAFTVRMieMixture& operator=( const SAFTVRMieMixture& ) = delete; // non copyable
@@ -851,17 +840,24 @@ public:
         auto vals = terms.get_core_calcs(T, rhomolar, mole_fractions);
         auto alphar = forceeval(vals.alphar_mono + vals.alphar_chain);
         
-        auto rho_A3 = forceeval(rhomolar*N_A*1e-30);
-        // If dipole is present, add its contribution
-        if (dipolar){
-            auto valsdip = dipolar.value().eval(T, rho_A3, vals.zeta[3], mole_fractions);
-            alphar += valsdip.alpha;
+        if (polar){ // polar term is present
+            using mas = SAFTpolar::multipolar_argument_spec;
+            auto visitor = [&](const auto& contrib){
+                if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNA3_packingfraction_molefractions){
+                    auto rho_A3 = forceeval(rhomolar*N_A*1e-30);
+                    alphar += contrib.eval(T, rho_A3, vals.zeta[3], mole_fractions).alpha;
+                }
+                else if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNm3_molefractions){
+                    auto rhoN_m3 = forceeval(rhomolar*N_A);
+                    alphar += contrib.eval(T, rhoN_m3, mole_fractions).alpha;
+                }
+                else{
+                    throw teqp::InvalidArgument("Don't know how to handle this kind of arguments in polar term");
+                }
+            };
+            std::visit(visitor, polar.value());
         }
-        // If quadrupole is present, add its contribution
-        if (quadrupolar){
-            auto valsquad = quadrupolar.value().eval(T, rho_A3, vals.zeta[3], mole_fractions);
-            alphar += valsquad.alpha;
-        }
+        
         return forceeval(alphar);
     }
 };
