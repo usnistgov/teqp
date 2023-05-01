@@ -10,6 +10,7 @@
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
 #include "correlation_integrals.hpp"
+#include <optional>
 #include <Eigen/Dense>
 
 namespace teqp{
