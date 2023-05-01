@@ -120,7 +120,7 @@ public:
                     auto sigmaij = (sigma[i]+sigma[j])/2;
                     
                     auto Tstarij = T/epskij;
-                    auto mij = std::max(sqrt(m[i]*m[j]), 2.0);
+                    auto mij = std::min(sqrt(m[i]*m[j]), 2.0);
                     summer += x[i]*x[j]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*POW3(sigma[i]*sigma[j]/sigmaij)*ninj*mustar2[i]*mustar2[j]*get_JDD_2ij(eta, mij, Tstarij);
                 }
             }
@@ -145,7 +145,7 @@ public:
                         auto sigmaik = (sigma[i]+sigma[k])/2;
                         auto sigmajk = (sigma[j]+sigma[k])/2;
                         
-                        auto mijk = std::max(pow(m[i]*m[j]*m[k], 1.0/3.0), 2.0);
+                        auto mijk = std::min(pow(m[i]*m[j]*m[k], 1.0/3.0), 2.0);
                         summer += x[i]*x[j]*x[k]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*epsilon_over_k[k]/T*POW3(sigma[i]*sigma[j]*sigma[k])/(sigmaij*sigmaik*sigmajk)*ninjnk*mustar2[i]*mustar2[j]*mustar2[k]*get_JDD_3ijk(eta, mijk);
                     }
                 }
@@ -214,7 +214,7 @@ public:
                     auto sigmaij = (sigma[i]+sigma[j])/2;
                     
                     auto Tstarij = T/epskij;
-                    auto mij = sqrt(m[i]*m[j]);
+                    auto mij = std::min(sqrt(m[i]*m[j]), 2.0);
                     summer += x[i]*x[j]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*POW5(sigma[i]*sigma[j])/POW7(sigmaij)*ninj*Qstar2[i]*Qstar2[j]*get_JQQ_2ij(eta, mij, Tstarij);
                 }
             }
@@ -239,7 +239,7 @@ public:
                         auto sigmaik = (sigma[i]+sigma[k])/2;
                         auto sigmajk = (sigma[j]+sigma[k])/2;
                         
-                        auto mijk = pow(m[i]*m[j]*m[k], 1.0/3.0);
+                        auto mijk = std::min(pow(m[i]*m[j]*m[k], 1.0/3.0), 2.0);
                         summer += x[i]*x[j]*x[k]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*epsilon_over_k[k]/T*POW5(sigma[i]*sigma[j]*sigma[k])/POW3(sigmaij*sigmaik*sigmajk)*ninjnk*Qstar2[i]*Qstar2[j]*Qstar2[k]*get_JDD_3ijk(eta, mijk);
                     }
                 }
