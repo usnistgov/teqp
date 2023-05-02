@@ -94,7 +94,8 @@ private:
     template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
     template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
 public:
-    DipolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mustar2, const Eigen::ArrayX<double> &nmu) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), mustar2(mustar2), nmu(nmu) {
+    const bool has_a_polar;
+    DipolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mustar2, const Eigen::ArrayX<double> &nmu) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), mustar2(mustar2), nmu(nmu), has_a_polar(mustar2.cwiseAbs().sum() > 0) {
         // Check lengths match
         if (m.size() != mustar2.size()){
             throw teqp::InvalidArgument("bad size of mustar2");
@@ -187,7 +188,8 @@ private:
     template<typename A> auto POW5(const A& x) const { return forceeval(POW2(x)*POW3(x)); }
     template<typename A> auto POW7(const A& x) const { return forceeval(POW2(x)*POW5(x)); }
 public:
-    QuadrupolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &Qstar2, const Eigen::ArrayX<double> &nQ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), Qstar2(Qstar2), nQ(nQ) {
+    const bool has_a_polar;
+    QuadrupolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &Qstar2, const Eigen::ArrayX<double> &nQ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), Qstar2(Qstar2), nQ(nQ), has_a_polar(Qstar2.cwiseAbs().sum() > 0) {
         // Check lengths match
         if (m.size() != Qstar2.size()){
             throw teqp::InvalidArgument("bad size of mustar2");
@@ -298,14 +300,14 @@ public:
         
         using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
         type alpha2DD = 0.0, alpha3DD = 0.0, alphaDD = 0.0;
-        if (di){
+        if (di && di.value().has_a_polar){
             alpha2DD = di.value().get_alpha2DD(T, rho_A3, eta, mole_fractions);
             alpha3DD = di.value().get_alpha3DD(T, rho_A3, eta, mole_fractions);
             alphaDD = forceeval(alpha2DD/(1.0-alpha3DD/alpha2DD));
         }
         
         type alpha2QQ = 0.0, alpha3QQ = 0.0, alphaQQ = 0.0;
-        if (quad){
+        if (quad && quad.value().has_a_polar){
             alpha2QQ = quad.value().get_alpha2QQ(T, rho_A3, eta, mole_fractions);
             alpha3QQ = quad.value().get_alpha3QQ(T, rho_A3, eta, mole_fractions);
             alphaQQ = forceeval(alpha2QQ/(1.0-alpha3QQ/alpha2QQ));
@@ -339,7 +341,7 @@ public:
     static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_molefractions;
 private:
     const Eigen::ArrayXd sigma_m, epsilon_over_k, mubar2, Qbar2;
-    template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
+    const bool has_a_polar;
     template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
     template<typename A> auto POW4(const A& x) const { return forceeval(POW2(x)*POW2(x)); }
     template<typename A> auto POW5(const A& x) const { return forceeval(POW2(x)*POW3(x)); }
@@ -362,7 +364,7 @@ private:
     const double PI_ = static_cast<double>(EIGEN_PI);
     
 public:
-    MultipolarContributionGubbinsTwu(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2) {
+    MultipolarContributionGubbinsTwu(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2), has_a_polar(mubar2.cwiseAbs().sum() > 0 || Qbar2.cwiseAbs().sum() > 0) {
         // Check lengths match
         if (sigma_m.size() != mubar2.size()){
             throw teqp::InvalidArgument("bad size of mubar2");
@@ -486,10 +488,11 @@ public:
      */
     template<typename TTYPE, typename RhoType, typename VecType>
     auto eval(const TTYPE& T, const RhoType& rhoN, const VecType& mole_fractions) const {
+        using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
         
         // Calculate the effective reduced diameter (cubed) to be used for evaluation
         // Eq. 24 from Gubbins
-        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> sigma_x3 = 0.0;
+        type sigma_x3 = 0.0;
         auto N = mole_fractions.size();
         for (auto i = 0; i < N; ++i){
             for (auto j = 0; j < N; ++j){
@@ -497,11 +500,14 @@ public:
                 sigma_x3 += mole_fractions[i]*mole_fractions[j]*POW3(sigmaij);
             }
         }
-        auto rhostar = forceeval(rhoN*sigma_x3);
+        type rhostar = forceeval(rhoN*sigma_x3);
         
-        auto alpha2 = get_alpha2(T, rhoN, rhostar, mole_fractions);
-        auto alpha3 = get_alpha3(T, rhoN, rhostar, mole_fractions);
-        auto alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
+        type alpha2 = 0.0, alpha3 = 0.0, alpha = 0.0;
+        if (has_a_polar){
+            alpha2 = get_alpha2(T, rhoN, rhostar, mole_fractions);
+            alpha3 = get_alpha3(T, rhoN, rhostar, mole_fractions);
+            alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
+        }
         
         using alpha2_t = decltype(alpha2);
         using alpha3_t = decltype(alpha3);
