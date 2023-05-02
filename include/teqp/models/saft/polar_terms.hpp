@@ -441,7 +441,14 @@ public:
                     auto leadingijk = x[i]*x[j]*x[k]/(Tstari*Tstarj*Tstark);
                     
                     auto get_Kijk = [&](const auto& Kint){
-                        return pow(Kint.get_K(Tstarij, rhostar)*Kint.get_K(Tstarik, rhostar)*Kint.get_K(Tstarjk, rhostar), 1.0/3.0);
+                        return forceeval(pow(Kint.get_K(Tstarij, rhostar)*Kint.get_K(Tstarik, rhostar)*Kint.get_K(Tstarjk, rhostar), 1.0/3.0));
+                    };
+                    
+                    // Special treatment needed here because the 334,445 term is negative, so negative*negative*negative is negative, and negative^{1/3} is undefined
+                    // First flip the sign on the triple product, do the evaluation, the flip it back. Not documented in Gubbins&Twu, but this seem reasonable,
+                    // in the spirit of the others.
+                    auto get_Kijk_334445 = [&](const auto& Kint){
+                        return forceeval(-pow(-Kint.get_K(Tstarij, rhostar)*Kint.get_K(Tstarik, rhostar)*Kint.get_K(Tstarjk, rhostar), 1.0/3.0));
                     };
                         
                     if (std::abs(mubar2[i]*mubar2[j]*mubar2[k]) > 0){
@@ -453,7 +460,7 @@ public:
                         summerB_112_123_123 += leadingijk*POW3(sigma[i]*sigma[j])*POW5(sigma[k])/(sigmaij*POW2(sigmaik*sigmajk))*mubar2[i]*mubar2[j]*Qbar2[k]*K233344;
                     }
                     if (std::abs(mubar2[i]*Qbar2[j]*Qbar2[k]) > 0){
-                        auto K334445 = get_Kijk(K334_445);
+                        auto K334445 = get_Kijk_334445(K334_445);
                         summerB_123_123_224 += leadingijk*POW3(sigma[i])*POW5(sigma[j]*sigma[k])/(POW2(sigmaij*sigmaik)*POW3(sigmajk))*mubar2[i]*Qbar2[j]*Qbar2[k]*K334445;
                     }
                     if (std::abs(Qbar2[i]*Qbar2[j]*Qbar2[k]) > 0){
