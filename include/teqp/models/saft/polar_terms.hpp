@@ -17,6 +17,15 @@ namespace teqp{
 
 namespace SAFTpolar{
 
+template<typename A> auto POW2(const A& x) { return forceeval(x*x); }
+template<typename A> auto POW3(const A& x) { return forceeval(POW2(x)*x); }
+template<typename A> auto POW4(const A& x) { return forceeval(POW2(x)*POW2(x)); }
+template<typename A> auto POW5(const A& x) { return forceeval(POW2(x)*POW3(x)); }
+template<typename A> auto POW7(const A& x) { return forceeval(POW2(x)*POW5(x)); }
+template<typename A> auto POW8(const A& x) { return forceeval(POW4(x)*POW4(x)); }
+template<typename A> auto POW10(const A& x) { return forceeval(POW2(x)*POW8(x)); }
+template<typename A> auto POW12(const A& x) { return forceeval(POW4(x)*POW8(x)); }
+
 /// Eq. 10 from Gross and Vrabec
 template <typename Eta, typename MType, typename TType>
 auto get_JDD_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
@@ -91,8 +100,6 @@ auto get_JQQ_3ijk(const Eta& eta, const MType& mijk) {
 class DipolarContributionGrossVrabec {
 private:
     const Eigen::ArrayXd m, sigma_Angstrom, epsilon_over_k, mustar2, nmu;
-    template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
-    template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
 public:
     const bool has_a_polar;
     DipolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mustar2, const Eigen::ArrayX<double> &nmu) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), mustar2(mustar2), nmu(nmu), has_a_polar(mustar2.cwiseAbs().sum() > 0) {
@@ -183,10 +190,7 @@ public:
 class QuadrupolarContributionGrossVrabec {
 private:
     const Eigen::ArrayXd m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ;
-    template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
-    template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
-    template<typename A> auto POW5(const A& x) const { return forceeval(POW2(x)*POW3(x)); }
-    template<typename A> auto POW7(const A& x) const { return forceeval(POW2(x)*POW5(x)); }
+    
 public:
     const bool has_a_polar;
     QuadrupolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &Qstar2, const Eigen::ArrayX<double> &nQ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), Qstar2(Qstar2), nQ(nQ), has_a_polar(Qstar2.cwiseAbs().sum() > 0) {
@@ -342,13 +346,6 @@ public:
 private:
     const Eigen::ArrayXd sigma_m, epsilon_over_k, mubar2, Qbar2;
     const bool has_a_polar;
-    template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
-    template<typename A> auto POW4(const A& x) const { return forceeval(POW2(x)*POW2(x)); }
-    template<typename A> auto POW5(const A& x) const { return forceeval(POW2(x)*POW3(x)); }
-    template<typename A> auto POW7(const A& x) const { return forceeval(POW2(x)*POW5(x)); }
-    template<typename A> auto POW8(const A& x) const { return forceeval(POW4(x)*POW4(x)); }
-    template<typename A> auto POW10(const A& x) const { return forceeval(POW2(x)*POW8(x)); }
-    template<typename A> auto POW12(const A& x) const { return forceeval(POW4(x)*POW8(x)); }
     
     const JIntegral J6{6};
     const JIntegral J8{8};
