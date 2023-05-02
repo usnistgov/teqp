@@ -148,7 +148,7 @@ TEST_CASE("Check critical points with polarity terms", "[SAFTVRMiepolar]"){
 //        CHECK(rhostar_guess == Approx(0.221054));
 //    }
     
-    SECTION("With Gross&Vrabec"){
+    SECTION("With multipolar terms"){
         for (std::string polar_model : {"GrossVrabec", "GubbinsTwu+Luckas", "GubbinsTwu+GubbinsTwu"}){
             const bool print = true;
             double Tstar_guess = Tstar_guess_init, rhostar_guess = rhostar_guess_init;
@@ -161,7 +161,7 @@ TEST_CASE("Check critical points with polarity terms", "[SAFTVRMiepolar]"){
             
             double mustar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
             j["model"]["polar_model"] = polar_model;
-            for (double mustar2 = 0.1; mustar2 < 5; mustar2 += 0.1){
+            for (double mustar2 = 0.0; mustar2 < 5; mustar2 += 0.1){
                 j["model"]["coeffs"][0]["mu_Cm"] = sqrt(mustar2/mustar2factor*(ek*pow(sigma_m, 3)));
                 j["model"]["coeffs"][0]["nmu"] = 1;
                 auto model = teqp::cppinterface::make_model(j);
