@@ -17,6 +17,15 @@ namespace teqp{
 
 namespace SAFTpolar{
 
+template<typename A> auto POW2(const A& x) { return forceeval(x*x); }
+template<typename A> auto POW3(const A& x) { return forceeval(POW2(x)*x); }
+template<typename A> auto POW4(const A& x) { return forceeval(POW2(x)*POW2(x)); }
+template<typename A> auto POW5(const A& x) { return forceeval(POW2(x)*POW3(x)); }
+template<typename A> auto POW7(const A& x) { return forceeval(POW2(x)*POW5(x)); }
+template<typename A> auto POW8(const A& x) { return forceeval(POW4(x)*POW4(x)); }
+template<typename A> auto POW10(const A& x) { return forceeval(POW2(x)*POW8(x)); }
+template<typename A> auto POW12(const A& x) { return forceeval(POW4(x)*POW8(x)); }
+
 /// Eq. 10 from Gross and Vrabec
 template <typename Eta, typename MType, typename TType>
 auto get_JDD_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
@@ -91,10 +100,9 @@ auto get_JQQ_3ijk(const Eta& eta, const MType& mijk) {
 class DipolarContributionGrossVrabec {
 private:
     const Eigen::ArrayXd m, sigma_Angstrom, epsilon_over_k, mustar2, nmu;
-    template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
-    template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
 public:
-    DipolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mustar2, const Eigen::ArrayX<double> &nmu) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), mustar2(mustar2), nmu(nmu) {
+    const bool has_a_polar;
+    DipolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mustar2, const Eigen::ArrayX<double> &nmu) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), mustar2(mustar2), nmu(nmu), has_a_polar(mustar2.cwiseAbs().sum() > 0) {
         // Check lengths match
         if (m.size() != mustar2.size()){
             throw teqp::InvalidArgument("bad size of mustar2");
@@ -182,12 +190,10 @@ public:
 class QuadrupolarContributionGrossVrabec {
 private:
     const Eigen::ArrayXd m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ;
-    template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
-    template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
-    template<typename A> auto POW5(const A& x) const { return forceeval(POW2(x)*POW3(x)); }
-    template<typename A> auto POW7(const A& x) const { return forceeval(POW2(x)*POW5(x)); }
+    
 public:
-    QuadrupolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &Qstar2, const Eigen::ArrayX<double> &nQ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), Qstar2(Qstar2), nQ(nQ) {
+    const bool has_a_polar;
+    QuadrupolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &Qstar2, const Eigen::ArrayX<double> &nQ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), Qstar2(Qstar2), nQ(nQ), has_a_polar(Qstar2.cwiseAbs().sum() > 0) {
         // Check lengths match
         if (m.size() != Qstar2.size()){
             throw teqp::InvalidArgument("bad size of mustar2");
@@ -298,14 +304,14 @@ public:
         
         using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
         type alpha2DD = 0.0, alpha3DD = 0.0, alphaDD = 0.0;
-        if (di){
+        if (di && di.value().has_a_polar){
             alpha2DD = di.value().get_alpha2DD(T, rho_A3, eta, mole_fractions);
             alpha3DD = di.value().get_alpha3DD(T, rho_A3, eta, mole_fractions);
             alphaDD = forceeval(alpha2DD/(1.0-alpha3DD/alpha2DD));
         }
         
         type alpha2QQ = 0.0, alpha3QQ = 0.0, alphaQQ = 0.0;
-        if (quad){
+        if (quad && quad.value().has_a_polar){
             alpha2QQ = quad.value().get_alpha2QQ(T, rho_A3, eta, mole_fractions);
             alpha3QQ = quad.value().get_alpha3QQ(T, rho_A3, eta, mole_fractions);
             alphaQQ = forceeval(alpha2QQ/(1.0-alpha3QQ/alpha2QQ));
@@ -339,14 +345,7 @@ public:
     static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_molefractions;
 private:
     const Eigen::ArrayXd sigma_m, epsilon_over_k, mubar2, Qbar2;
-    template<typename A> auto POW2(const A& x) const { return forceeval(x*x); }
-    template<typename A> auto POW3(const A& x) const { return forceeval(POW2(x)*x); }
-    template<typename A> auto POW4(const A& x) const { return forceeval(POW2(x)*POW2(x)); }
-    template<typename A> auto POW5(const A& x) const { return forceeval(POW2(x)*POW3(x)); }
-    template<typename A> auto POW7(const A& x) const { return forceeval(POW2(x)*POW5(x)); }
-    template<typename A> auto POW8(const A& x) const { return forceeval(POW4(x)*POW4(x)); }
-    template<typename A> auto POW10(const A& x) const { return forceeval(POW2(x)*POW8(x)); }
-    template<typename A> auto POW12(const A& x) const { return forceeval(POW4(x)*POW8(x)); }
+    const bool has_a_polar;
     
     const JIntegral J6{6};
     const JIntegral J8{8};
@@ -362,7 +361,7 @@ private:
     const double PI_ = static_cast<double>(EIGEN_PI);
     
 public:
-    MultipolarContributionGubbinsTwu(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2) {
+    MultipolarContributionGubbinsTwu(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2), has_a_polar(mubar2.cwiseAbs().sum() > 0 || Qbar2.cwiseAbs().sum() > 0) {
         // Check lengths match
         if (sigma_m.size() != mubar2.size()){
             throw teqp::InvalidArgument("bad size of mubar2");
@@ -379,7 +378,11 @@ public:
         const auto& sigma = sigma_m; // concision
         
         const auto N = mole_fractions.size();
-        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> summer112 = 0.0, summer123 = 0.0, summer224 = 0.0;
+        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> alpha2_112 = 0.0, alpha2_123 = 0.0, alpha2_224 = 0.0;
+        
+        const auto factor_112 = forceeval(-2.0*PI_*rhoN/3.0); //*POW2(4*PI_*epsilon_0)
+        const auto factor_123 = forceeval(-PI_*rhoN/3.0);
+        const auto factor_224 = forceeval(-14.0*PI_*rhoN/5.0);
                 
         for (auto i = 0; i < N; ++i){
             for (auto j = 0; j < N; ++j){
@@ -391,15 +394,11 @@ public:
                 auto leading = x[i]*x[j]/(Tstari*Tstarj); // common for all alpha_2 terms
                 auto Tstarij = forceeval(T/epskij);
                 
-                summer112 += leading*POW3(sigma[i]*sigma[j])/POW3(sigmaij)*mubar2[i]*mubar2[j]*J6.get_J(Tstarij, rhostar);
-                summer123 += leading*POW3(sigma[i])*POW5(sigma[j])/POW5(sigmaij)*mubar2[i]*Qbar2[j]*J8.get_J(Tstarij, rhostar);
-                summer224 += leading*POW5(sigma[i]*sigma[j])/POW7(sigmaij)*Qbar2[i]*Qbar2[j]*J10.get_J(Tstarij, rhostar);
+                alpha2_112 += factor_112*leading*POW3(sigma[i]*sigma[j])/POW3(sigmaij)*mubar2[i]*mubar2[j]*J6.get_J(Tstarij, rhostar);
+                alpha2_123 += factor_123*leading*POW3(sigma[i])*POW5(sigma[j])/POW5(sigmaij)*mubar2[i]*Qbar2[j]*J8.get_J(Tstarij, rhostar);
+                alpha2_224 += factor_224*leading*POW5(sigma[i]*sigma[j])/POW7(sigmaij)*Qbar2[i]*Qbar2[j]*J10.get_J(Tstarij, rhostar);
             }
         }
-        
-        auto alpha2_112 = -2.0*PI_*rhoN*POW2(4*PI_*epsilon_0)/3.0*summer112;
-        auto alpha2_123 = -PI_*rhoN*POW2(4*PI_*epsilon_0)/3.0*summer123;
-        auto alpha2_224 = -14.0*PI_*rhoN*POW2(4*PI_*epsilon_0)/5.0*summer224;
         
         return forceeval(alpha2_112 + 2.0*alpha2_123 + alpha2_224);
     }
@@ -440,31 +439,50 @@ public:
                     auto sigmaik = (sigma[i]+sigma[k])/2;
                     auto sigmajk = (sigma[j]+sigma[k])/2;
                     auto leadingijk = x[i]*x[j]*x[k]/(Tstari*Tstarj*Tstark);
+                    
+                    auto get_Kijk = [&](const auto& Kint){
+                        return forceeval(pow(Kint.get_K(Tstarij, rhostar)*Kint.get_K(Tstarik, rhostar)*Kint.get_K(Tstarjk, rhostar), 1.0/3.0));
+                    };
+                    
+                    // Special treatment needed here because the 334,445 term is negative, so negative*negative*negative is negative, and negative^{1/3} is undefined
+                    // First flip the sign on the triple product, do the evaluation, the flip it back. Not documented in Gubbins&Twu, but this seem reasonable,
+                    // in the spirit of the others.
+                    auto get_Kijk_334445 = [&](const auto& Kint){
+                        return forceeval(-pow(-Kint.get_K(Tstarij, rhostar)*Kint.get_K(Tstarik, rhostar)*Kint.get_K(Tstarjk, rhostar), 1.0/3.0));
+                    };
                         
-                    auto K222333 = pow(K222_333.get_K(Tstarij, rhostar)*K222_333.get_K(Tstarik, rhostar)*K222_333.get_K(Tstarjk, rhostar), 1.0/3.0);
-                    summerB_112_112_112 += leadingijk*POW3(sigma[i]*sigma[j]*sigma[k])/(sigmaij*sigmaik*sigmajk)*mubar2[i]*mubar2[j]*mubar2[k]*K222333;
-                    auto K233344 = pow(K233_344.get_K(Tstarij, rhostar)*K233_344.get_K(Tstarik, rhostar)*K233_344.get_K(Tstarjk, rhostar), 1.0/3.0);
-                    summerB_112_123_123 += leadingijk*POW3(sigma[i]*sigma[j])*POW5(sigma[k])/(sigmaij*POW2(sigmaik*sigmajk))*mubar2[i]*mubar2[j]*Qbar2[k]*K233344;
-                    auto K334445 = pow(K334_445.get_K(Tstarij, rhostar)*K334_445.get_K(Tstarik, rhostar)*K334_445.get_K(Tstarjk, rhostar), 1.0/3.0);
-                    summerB_123_123_224 += leadingijk*POW3(sigma[i])*POW5(sigma[j]*sigma[k])/(POW2(sigmaij*sigmaik)*POW3(sigmajk))*mubar2[i]*Qbar2[j]*Qbar2[k]*K334445;
-                    auto K444555 = pow(K444_555.get_K(Tstarij, rhostar)*K444_555.get_K(Tstarik, rhostar)*K444_555.get_K(Tstarjk, rhostar), 1.0/3.0);
-                    summerB_224_224_224 += leadingijk*POW5(sigma[i]*sigma[j]*sigma[k])/(POW3(sigmaij*sigmaik*sigmajk))*Qbar2[i]*Qbar2[j]*Qbar2[k]*K444555;
+                    if (std::abs(mubar2[i]*mubar2[j]*mubar2[k]) > 0){
+                        auto K222333 = get_Kijk(K222_333);
+                        summerB_112_112_112 += leadingijk*POW3(sigma[i]*sigma[j]*sigma[k])/(sigmaij*sigmaik*sigmajk)*mubar2[i]*mubar2[j]*mubar2[k]*K222333;
+                    }
+                    if (std::abs(mubar2[i]*mubar2[j]*Qbar2[k]) > 0){
+                        auto K233344 = get_Kijk(K233_344);
+                        summerB_112_123_123 += leadingijk*POW3(sigma[i]*sigma[j])*POW5(sigma[k])/(sigmaij*POW2(sigmaik*sigmajk))*mubar2[i]*mubar2[j]*Qbar2[k]*K233344;
+                    }
+                    if (std::abs(mubar2[i]*Qbar2[j]*Qbar2[k]) > 0){
+                        auto K334445 = get_Kijk_334445(K334_445);
+                        summerB_123_123_224 += leadingijk*POW3(sigma[i])*POW5(sigma[j]*sigma[k])/(POW2(sigmaij*sigmaik)*POW3(sigmajk))*mubar2[i]*Qbar2[j]*Qbar2[k]*K334445;
+                    }
+                    if (std::abs(Qbar2[i]*Qbar2[j]*Qbar2[k]) > 0){
+                        auto K444555 = get_Kijk(K444_555);
+                        summerB_224_224_224 += leadingijk*POW5(sigma[i]*sigma[j]*sigma[k])/(POW3(sigmaij*sigmaik*sigmajk))*Qbar2[i]*Qbar2[j]*Qbar2[k]*K444555;
+                    }
                 }
             }
         }
-        auto alpha3A_112_112_224 = 8.0*PI_*rhoN*POW3(4*PI_*epsilon_0)/25.0*summerA_112_112_224;
-        auto alpha3A_112_123_213 = 8.0*PI_*rhoN*POW3(4*PI_*epsilon_0)/75.0*summerA_112_123_213;
-        auto alpha3A_123_123_224 = 8.0*PI_*rhoN*POW3(4*PI_*epsilon_0)/35.0*summerA_123_123_224;
-        auto alpha3A_224_224_224 = 144.0*PI_*rhoN*POW3(4*PI_*epsilon_0)/245.0*summerA_224_224_224;
+        auto alpha3A_112_112_224 = 8.0*PI_*rhoN/25.0*summerA_112_112_224;
+        auto alpha3A_112_123_213 = 8.0*PI_*rhoN/75.0*summerA_112_123_213;
+        auto alpha3A_123_123_224 = 8.0*PI_*rhoN/35.0*summerA_123_123_224;
+        auto alpha3A_224_224_224 = 144.0*PI_*rhoN/245.0*summerA_224_224_224;
         
-        auto alpha3A = 3.0*alpha3A_112_112_224 + 6.0*alpha3A_112_123_213 + 6.0*alpha3A_123_123_224 + alpha3A_224_224_224;
+        auto alpha3A = forceeval(3.0*alpha3A_112_112_224 + 6.0*alpha3A_112_123_213 + 6.0*alpha3A_123_123_224 + alpha3A_224_224_224);
         
-        auto alpha3B_112_112_112 = 32.0*POW3(PI_)*POW2(rhoN)*POW3(4*PI_*epsilon_0)/135.0*sqrt(14*PI_/5.0)*summerB_112_112_112;
-        auto alpha3B_112_123_123 = 64.0*POW3(PI_)*POW2(rhoN)*POW3(4*PI_*epsilon_0)/315.0*sqrt(3.0*PI_)*summerB_112_123_123;
-        auto alpha3B_123_123_224 = -32.0*POW3(PI_)*POW2(rhoN)*POW3(4*PI_*epsilon_0)/45.0*sqrt(22.0*PI_/63.0)*summerB_123_123_224;
-        auto alpha3B_224_224_224 = 32.0*POW3(PI_)*POW2(rhoN)*POW3(4*PI_*epsilon_0)/2025.0*sqrt(2002.0*PI_)*summerB_224_224_224;
+        auto alpha3B_112_112_112 = 32.0*POW3(PI_)*POW2(rhoN)/135.0*sqrt(14*PI_/5.0)*summerB_112_112_112;
+        auto alpha3B_112_123_123 = 64.0*POW3(PI_)*POW2(rhoN)/315.0*sqrt(3.0*PI_)*summerB_112_123_123;
+        auto alpha3B_123_123_224 = -32.0*POW3(PI_)*POW2(rhoN)/45.0*sqrt(22.0*PI_/63.0)*summerB_123_123_224;
+        auto alpha3B_224_224_224 = 32.0*POW3(PI_)*POW2(rhoN)/2025.0*sqrt(2002.0*PI_)*summerB_224_224_224;
         
-        auto alpha3B = alpha3B_112_112_112 + 3.0*alpha3B_112_123_123 + 3.0*alpha3B_123_123_224 + alpha3B_224_224_224;
+        auto alpha3B = forceeval(alpha3B_112_112_112 + 3.0*alpha3B_112_123_123 + 3.0*alpha3B_123_123_224 + alpha3B_224_224_224);
         
         return forceeval(alpha3A + alpha3B);
     }
@@ -474,10 +492,11 @@ public:
      */
     template<typename TTYPE, typename RhoType, typename VecType>
     auto eval(const TTYPE& T, const RhoType& rhoN, const VecType& mole_fractions) const {
+        using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
         
         // Calculate the effective reduced diameter (cubed) to be used for evaluation
         // Eq. 24 from Gubbins
-        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> sigma_x3 = 0.0;
+        type sigma_x3 = 0.0;
         auto N = mole_fractions.size();
         for (auto i = 0; i < N; ++i){
             for (auto j = 0; j < N; ++j){
@@ -485,11 +504,14 @@ public:
                 sigma_x3 += mole_fractions[i]*mole_fractions[j]*POW3(sigmaij);
             }
         }
-        auto rhostar = forceeval(rhoN*sigma_x3);
+        type rhostar = forceeval(rhoN*sigma_x3);
         
-        auto alpha2 = get_alpha2(T, rhoN, rhostar, mole_fractions);
-        auto alpha3 = get_alpha3(T, rhoN, rhostar, mole_fractions);
-        auto alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
+        type alpha2 = 0.0, alpha3 = 0.0, alpha = 0.0;
+        if (has_a_polar){
+            alpha2 = get_alpha2(T, rhoN, rhostar, mole_fractions);
+            alpha3 = get_alpha3(T, rhoN, rhostar, mole_fractions);
+            alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
+        }
         
         using alpha2_t = decltype(alpha2);
         using alpha3_t = decltype(alpha3);
@@ -503,7 +525,7 @@ public:
     }
 };
 
-/// The variant including the multipolar terms that can be provided
+/// The variant containing the multipolar types that can be provided
 using multipolar_contributions_variant = std::variant<
     MultipolarContributionGrossVrabec,
     MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>,

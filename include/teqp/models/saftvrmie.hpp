@@ -8,6 +8,7 @@
 
 #include "nlohmann/json.hpp"
 #include "teqp/types.hpp"
+#include "teqp/json_tools.hpp"
 #include "teqp/exceptions.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/math/quadrature.hpp"
@@ -708,9 +709,9 @@ private:
     
     std::vector<std::string> names;
     const SAFTVRMieChainContributionTerms terms;
-    std::optional<SAFTpolar::multipolar_contributions_variant> polar; // Can be present or not
+    const std::optional<SAFTpolar::multipolar_contributions_variant> polar; // Can be present or not
 
-    void check_kmat(const Eigen::ArrayXXd& kmat, std::size_t N) {
+    static void check_kmat(const Eigen::ArrayXXd& kmat, std::size_t N) {
         if (kmat.size() == 0){
             return;
         }
@@ -721,11 +722,12 @@ private:
             throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components");
         }
     };
-    auto get_coeffs_from_names(const std::vector<std::string> &names){
+    static auto get_coeffs_from_names(const std::vector<std::string> &names){
         SAFTVRMieLibrary library;
         return library.get_coeffs(names);
     }
-    auto build_chain(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat){
+public:
+    static auto build_chain(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat){
         if (kmat){
             check_kmat(kmat.value(), coeffs.size());
         }
@@ -748,7 +750,6 @@ private:
             return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(mat));
         }
     }
-    
     auto build_polar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> decltype(this->polar){
         Eigen::ArrayXd mustar2(coeffs.size()), nmu(coeffs.size()), Qstar2(coeffs.size()), nQ(coeffs.size());
         auto i = 0;
@@ -773,9 +774,17 @@ private:
 public:
     SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat){};
     SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt) : terms(build_chain(coeffs, kmat)), polar(build_polar(coeffs)) {};
+    SAFTVRMieMixture(SAFTVRMieChainContributionTerms&& terms, std::optional<SAFTpolar::multipolar_contributions_variant> &&polar = std::nullopt) : terms(std::move(terms)), polar(std::move(polar)) {};
+    
     
 //    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
     SAFTVRMieMixture& operator=( const SAFTVRMieMixture& ) = delete; // non copyable
+    
+    auto chain_factory(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat){
+        SAFTVRMieMixture::build_chain(coeffs, kmat);
+    }
+    
+    const auto& get_polar(){ return polar; }
     
     const auto& get_terms() const { return terms; }
     auto get_core_calcs(double T, double rhomolar, const Eigen::ArrayXd& mole_fractions) const {
@@ -845,7 +854,9 @@ public:
             auto visitor = [&](const auto& contrib){
                 if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNA3_packingfraction_molefractions){
                     auto rho_A3 = forceeval(rhomolar*N_A*1e-30);
-                    alphar += contrib.eval(T, rho_A3, vals.zeta[3], mole_fractions).alpha;
+                    auto packing_fraction = vals.zeta[3];
+                    auto alpha = contrib.eval(T, rho_A3, packing_fraction, mole_fractions).alpha;
+                    alphar += alpha;
                 }
                 else if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNm3_molefractions){
                     auto rhoN_m3 = forceeval(rhomolar*N_A);
@@ -861,6 +872,145 @@ public:
         return forceeval(alphar);
     }
 };
+                                                                                                                                                         
+inline auto SAFTVRMiefactory(const nlohmann::json & spec){
+
+    std::optional<Eigen::ArrayXXd> kmat;
+    if (spec.contains("kmat") && spec.at("kmat").is_array() && spec.at("kmat").size() > 0){
+        kmat = build_square_matrix(spec["kmat"]);
+    }
+    
+    if (spec.contains("names")){
+        std::vector<std::string> names = spec["names"];
+        if (kmat && kmat.value().rows() != names.size()){
+            throw teqp::InvalidArgument("Provided length of names of " + std::to_string(names.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
+        }
+        return SAFTVRMieMixture(names, kmat);
+    }
+    else if (spec.contains("coeffs")){
+        bool something_polar = false;
+        std::vector<SAFTVRMieCoeffs> coeffs;
+        for (auto j : spec["coeffs"]) {
+            SAFTVRMieCoeffs c;
+            c.name = j.at("name");
+            c.m = j.at("m");
+            c.sigma_m = (j.contains("sigma_m")) ? j.at("sigma_m").get<double>() : j.at("sigma_Angstrom").get<double>()/1e10;
+            c.epsilon_over_k = j.at("epsilon_over_k");
+            c.lambda_r = j.at("lambda_r");
+            c.lambda_a = j.at("lambda_a");
+            c.BibTeXKey = j.at("BibTeXKey");
+            
+            // These are legacy definitions of the polar moments
+            if (j.contains("(mu^*)^2") && j.contains("nmu")){
+                c.mustar2 = j.at("(mu^*)^2");
+                c.nmu = j.at("nmu");
+                something_polar = true;
+            }
+            if (j.contains("(Q^*)^2") && j.contains("nQ")){
+                c.Qstar2 = j.at("(Q^*)^2");
+                c.nQ = j.at("nQ");
+                something_polar = true;
+            }
+            if (j.contains("Q_Cm2") || j.contains("Q_DA") || j.contains("mu_Cm") || j.contains("mu_D")){
+                something_polar = true;
+            }
+            coeffs.push_back(c);
+        }
+        if (kmat && kmat.value().rows() != coeffs.size()){
+            throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " +  std::to_string(kmat.value().rows()));
+        }
+        
+        if (!something_polar){
+            // Nonpolar, just m, epsilon, sigma and possibly a kmat matrix with kij coefficients
+            return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat));
+        }
+        else{
+            // Polar term is also provided, along with the chain terms
+            std::string polar_model = "GrossVrabec"; // This is the default, as it was the first one implemented
+            if (spec.contains("polar_model")){
+                polar_model = spec["polar_model"];
+            }
+            
+            // Go back and extract the dipolar and quadrupolar terms from
+            // the JSON, in base SI units
+            const double D_to_Cm = 3.33564e-30; // C m/D
+            const double mustar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23); // factor=1/(4*pi*epsilon_0*k_B), such that (mu^*)^2 := factor*mu[Cm]^2/((epsilon/kB)[K]*sigma[m]^3)
+            const double Qstar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23); // same as mustar2factor
+            auto N = coeffs.size();
+            Eigen::ArrayXd ms(N), epsks(N), sigma_ms(N), mu_Cm(N), Q_Cm2(N), nQ(N), nmu(N);
+            Eigen::Index i = 0;
+            for (auto j : spec["coeffs"]) {
+                double m = j.at("m");
+                double sigma_m = (j.contains("sigma_m")) ? j.at("sigma_m").get<double>() : j.at("sigma_Angstrom").get<double>()/1e10;
+                double epsilon_over_k = j.at("epsilon_over_k");
+                auto get_dipole_Cm = [&]() -> double {
+                    if (j.contains("(mu^*)^2") && j.contains("nmu")){
+                        // Terms defined like in Gross&Vrabec; backwards-compatibility
+                        double mustar2 = j.at("(mu^*)^2");
+                        return sqrt(mustar2*(m*epsilon_over_k*pow(sigma_m, 3))/mustar2factor);
+                    }
+                    else if (j.contains("mu_Cm")){
+                        return j.at("mu_Cm");
+                    }
+                    else if (j.contains("mu_D")){
+                        return j.at("mu_D").get<double>()*D_to_Cm;
+                    }
+                    else{
+                        return 0.0;
+                    }
+                };
+                auto get_quadrupole_Cm2 = [&]() -> double{
+                    if (j.contains("(Q^*)^2") && j.contains("nQ")){
+                        // Terms defined like in Gross&Vrabec; backwards-compatibility
+                        double Qstar2 = j.at("(Q^*)^2");
+                        return sqrt(Qstar2*(m*epsilon_over_k*pow(sigma_m, 5))/Qstar2factor);
+                    }
+                    else if (j.contains("Q_Cm2")){
+                        return j.at("Q_Cm2");
+                    }
+                    else if (j.contains("Q_DA")){
+                        return j.at("Q_DA").get<double>()*D_to_Cm*1e10;
+                    }
+                    else{
+                        return 0.0;
+                    }
+                };
+                ms(i) = m; sigma_ms(i) = sigma_m; epsks(i) = epsilon_over_k; mu_Cm(i) = get_dipole_Cm(); Q_Cm2(i) = get_quadrupole_Cm2();
+                nmu(i) = (j.contains("nmu") ? j["nmu"].get<double>() : 0.0);
+                nQ(i) = (j.contains("nQ") ? j["nQ"].get<double>() : 0.0);
+                i++;
+            };
+            
+            using namespace SAFTpolar;
+            if (polar_model == "GrossVrabec"){
+                auto mustar2 = (mustar2factor*mu_Cm.pow(2)/(ms*epsks*sigma_ms.pow(3))).eval();
+                auto Qstar2 = (Qstar2factor*Q_Cm2.pow(2)/(ms*epsks*sigma_ms.pow(5))).eval();
+                auto polar = MultipolarContributionGrossVrabec(ms, sigma_ms*1e10, epsks, mustar2, nmu, Qstar2, nQ);
+                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+            }
+            else if (polar_model == "GubbinsTwu+Luckas"){
+                using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
+                auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
+                auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
+                auto polar = MCGTL(sigma_ms, epsks, mubar2, Qbar2);
+                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+            }
+            else if (polar_model == "GubbinsTwu+GubbinsTwu"){
+                using MCGG = MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
+                auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
+                auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
+                auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2);
+                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+            }
+            else{
+                throw teqp::InvalidArgument("didn't understand this polar_model:"+polar_model);
+            }
+        }
+    }
+    else{
+        throw std::invalid_argument("you must provide names or coeffs, but not both");
+    }
+}
 
 } /* namespace SAFTVRMie */
 }; // namespace teqp
