@@ -135,7 +135,7 @@ TEST_CASE("Check derivative of |x|", "[diffabs]")
     }
 }
 
-TEST_CASE("Check critical points with polarity terms", "[SAFTVRMiepolar]"){
+TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepolar]"){
     double rhostar_guess_init = 0.27;
     double Tstar_guess_init = 1.5;
     double ek = 100;
@@ -159,28 +159,28 @@ TEST_CASE("Check critical points with polarity terms", "[SAFTVRMiepolar]"){
     CHECK_NOTHROW(teqp::cppinterface::make_model(j));
     auto nonpolar_model = teqp::cppinterface::make_model(j);
     
-//    SECTION("Backwards-compat Gross&Vrabec"){
-//        const bool print = false;
-//        double Tstar_guess = Tstar_guess_init, rhostar_guess = rhostar_guess_init;
-//        if (print) std::cout << "(mu^*)^2, T^*, rho^*" << std::endl;
-//
-//        auto critpure = nonpolar_model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)));
-//        Tstar_guess = std::get<0>(critpure)/ek;
-//        rhostar_guess = std::get<1>(critpure)*N_A*pow(sigma_m, 3);
-//        if (print) std::cout << "0, " << Tstar_guess << ", " << rhostar_guess << std::endl;
-//
-//        for (double mustar2 = 0.1; mustar2 < 5; mustar2 += 0.1){
-//            j["model"]["coeffs"][0]["(mu^*)^2"] = mustar2;
-//            j["model"]["coeffs"][0]["nmu"] = 1;
-//            auto model = teqp::cppinterface::make_model(j);
-//            auto pure = model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)));
-//            if (print) std::cout << mustar2 << ", " << std::get<0>(pure)/ek << ", " << std::get<1>(pure)*N_A*pow(sigma_m, 3) << std::endl;
-//            Tstar_guess = std::get<0>(pure)/ek;
-//            rhostar_guess = std::get<1>(pure)*N_A*pow(sigma_m, 3);
-//        }
-//        CHECK(Tstar_guess == Approx(2.29743));
-//        CHECK(rhostar_guess == Approx(0.221054));
-//    }
+    //    SECTION("Backwards-compat Gross&Vrabec"){
+    //        const bool print = false;
+    //        double Tstar_guess = Tstar_guess_init, rhostar_guess = rhostar_guess_init;
+    //        if (print) std::cout << "(mu^*)^2, T^*, rho^*" << std::endl;
+    //
+    //        auto critpure = nonpolar_model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)));
+    //        Tstar_guess = std::get<0>(critpure)/ek;
+    //        rhostar_guess = std::get<1>(critpure)*N_A*pow(sigma_m, 3);
+    //        if (print) std::cout << "0, " << Tstar_guess << ", " << rhostar_guess << std::endl;
+    //
+    //        for (double mustar2 = 0.1; mustar2 < 5; mustar2 += 0.1){
+    //            j["model"]["coeffs"][0]["(mu^*)^2"] = mustar2;
+    //            j["model"]["coeffs"][0]["nmu"] = 1;
+    //            auto model = teqp::cppinterface::make_model(j);
+    //            auto pure = model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)));
+    //            if (print) std::cout << mustar2 << ", " << std::get<0>(pure)/ek << ", " << std::get<1>(pure)*N_A*pow(sigma_m, 3) << std::endl;
+    //            Tstar_guess = std::get<0>(pure)/ek;
+    //            rhostar_guess = std::get<1>(pure)*N_A*pow(sigma_m, 3);
+    //        }
+    //        CHECK(Tstar_guess == Approx(2.29743));
+    //        CHECK(rhostar_guess == Approx(0.221054));
+    //    }
     
     SECTION("With multipolar terms"){
         for (std::string polar_model : {"GrossVrabec", "GubbinsTwu+Luckas", "GubbinsTwu+GubbinsTwu"}){
@@ -194,6 +194,7 @@ TEST_CASE("Check critical points with polarity terms", "[SAFTVRMiepolar]"){
             if (print) std::cout << "0, " << Tstar_guess << ", " << rhostar_guess << std::endl;
             
             double mustar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
+            double Qstar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
             j["model"]["polar_model"] = polar_model;
             for (double mustar2 = 0.0; mustar2 < 5; mustar2 += 0.1){
                 j["model"]["coeffs"][0]["mu_Cm"] = sqrt(mustar2/mustar2factor*(ek*pow(sigma_m, 3)));
@@ -204,8 +205,70 @@ TEST_CASE("Check critical points with polarity terms", "[SAFTVRMiepolar]"){
                 Tstar_guess = std::get<0>(pure)/ek;
                 rhostar_guess = std::get<1>(pure)*N_A*pow(sigma_m, 3);
             }
+            //            CHECK(Tstar_guess == Approx(2.29743));
+            //            CHECK(rhostar_guess == Approx(0.221054));
+        }
+    }
+    
+}
+TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepolarmuQ]"){
+    double rhostar_guess_init = 0.27;
+    double Tstar_guess_init = 1.5;
+    double ek = 100;
+    double sigma_m = 3e-10;
+    auto j = nlohmann::json::parse(R"({
+        "kind": "SAFT-VR-Mie",
+        "model": {
+            "coeffs": [
+                {
+                    "name": "Stockmayer126",
+                    "m": 1.0,
+                    "sigma_m": 3e-10,
+                    "epsilon_over_k": 100,
+                    "lambda_r": 12,
+                    "lambda_a": 6,
+                    "BibTeXKey": "me"
+                }
+            ]
+        }
+    })");
+    CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    auto nonpolar_model = teqp::cppinterface::make_model(j);
+    
+    const double mustar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
+    const double Qstar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
+    
+    // Check the Vrabec&Gross values
+    std::valarray<std::tuple<double, double>> mu2Q22CLJ = {{6,2}, {6,4}, {12,2}, {12,4}};
+    
+    SECTION("With mu&Q terms"){
+        const bool print = true;
+        
+        double Tstar_guess = Tstar_guess_init, rhostar_guess = rhostar_guess_init;
+        if (print) std::cout << "(mu^*)^2, T^*, rho^*" << std::endl;
+        
+        auto critpure = nonpolar_model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)));
+        
+        for (std::string polar_model : {"GubbinsTwu+GubbinsTwu", "GubbinsTwu+Luckas"}){
+            for (auto [mustar22CLJ, Qstar22CLJ] : mu2Q22CLJ){
+                
+                j["model"]["polar_model"] = polar_model;
+                
+                double Qstar2 = Qstar22CLJ/4.0;
+                double mustar2 = mustar22CLJ/4.0;
+                
+                j["model"]["coeffs"][0]["mu_Cm"] = sqrt(mustar2/mustar2factor*(ek*pow(sigma_m, 3)));
+                j["model"]["coeffs"][0]["Q_Cm2"] = sqrt(Qstar2/Qstar2factor*(ek*pow(sigma_m, 5)));
+                j["model"]["coeffs"][0]["nmu"] = 1;
+                j["model"]["coeffs"][0]["nQ"] = 1;
+                
+                auto model = teqp::cppinterface::make_model(j);
+                auto pure = model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)));
+                if (print) std::cout << mustar2 << ", " << std::get<0>(pure)/ek*4.0 << ", " << std::get<1>(pure)*N_A*pow(sigma_m, 3) << std::endl;
+            }
 //            CHECK(Tstar_guess == Approx(2.29743));
 //            CHECK(rhostar_guess == Approx(0.221054));
         }
     }
+    
 }
