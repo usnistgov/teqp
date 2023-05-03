@@ -8,6 +8,11 @@ using Catch::Approx;
 #include "teqp/models/saft/correlation_integrals.hpp"
 #include "teqp/models/saft/polar_terms.hpp"
 #include "teqp/types.hpp"
+#include "teqp/derivs.hpp"
+#include "teqp/finite_derivs.hpp"
+
+#include "boost/multiprecision/cpp_bin_float.hpp"
+#include "boost/multiprecision/cpp_complex.hpp"
 
 using namespace teqp;
 using namespace teqp::SAFTpolar;
@@ -52,6 +57,35 @@ TEST_CASE("Evaluation of K^{(n,m)}", "[checkKvals]")
             CAPTURE(m);
             CHECK(L == Approx(G));
         }
+    }
+}
+
+using my_float_type = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100U>>;
+
+TEST_CASE("Evaluate higher derivatives of K", "[GTK]")
+{
+    std::vector<std::tuple<int, int>> nm = {{222,333},{233,344},{334,445},{444,555}};
+    for (auto [n_, m_] : nm){
+        const int n = n_, m = m_;
+        double Tstar = 1.65;
+        auto frho = [&](const auto& rho_) { return LuckasKIntegral(n, m).get_K(Tstar, rho_); };
+        
+        my_float_type rho__ = 0.32, h = 1e-20;
+        auto f1 = static_cast<double>(teqp::centered_diff<1, 4>(frho, rho__, h));
+        auto f2 = static_cast<double>(teqp::centered_diff<2, 4>(frho, rho__, h));
+        auto f3 = static_cast<double>(teqp::centered_diff<3, 4>(frho, rho__, h));
+        auto f4 = static_cast<double>(teqp::centered_diff<4, 4>(frho, rho__, h));
+        
+        autodiff::Real<6, double> rho_ = 0.32;
+        auto ad = derivatives(frho, along(1), at(rho_));
+        
+        CAPTURE(n);
+        CAPTURE(m);
+        CAPTURE(f4);
+        CHECK(f1 == Approx(ad[1]));
+        CHECK(f2 == Approx(ad[2]));
+        CHECK(f3 == Approx(ad[3]));
+        CHECK(f4 == Approx(ad[4]));
     }
 }
 
