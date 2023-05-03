@@ -41,10 +41,6 @@ namespace teqp {
             EArray2 get_criticality_conditions(const double T, const REArrayd& rhovec) const override;
             EigenData eigen_problem(const double T, const REArrayd& rhovec, const std::optional<REArrayd>& alignment_v0) const override;
             double get_minimum_eigenvalue_Psi_Hessian(const double T, const REArrayd& rhovec) const override ;
-            
-            std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& flags) const override ;
-            std::tuple<EArrayd, EMatrixd> get_pure_critical_conditions_Jacobian(const double T, const double rho, int alternative_pure_index, int alternative_length) const override ;
-            std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tnew) const override ;
 
             // Derivatives from isochoric thermodynamics (all have the same signature)
             #define X(f) \
@@ -60,6 +56,11 @@ namespace teqp {
             #define X(f) \
             EMatrixd f(const double T, const EArrayd& rhovec) const override ;
             ISOCHORIC_matrix_args
+            #undef X
+            
+            #define X(f) \
+            std::tuple<double, Eigen::ArrayXd, Eigen::MatrixXd> f(const double T, const EArrayd& rhovec) const override ;
+            ISOCHORIC_multimatrix_args
             #undef X
 
             EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z) const override ;
@@ -81,10 +82,6 @@ namespace teqp {
             AR0N_args
             #undef X
 
-            double get_neff(const double T, const double rho, const EArrayd& molefracs) const override;
-
-            EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const override;
-            double dpsatdT_pure(const double T, const double rhoL, const double rhoV) const override;
             std::tuple<EArrayd, EArrayd> get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override;
             std::tuple<EArrayd, EArrayd> get_drhovecdT_psat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override;
             double get_dpsat_dTsat_isopleth(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const override;
@@ -95,11 +92,6 @@ namespace teqp {
             MixVLEReturn mix_VLE_Tp(const double T, const double pgiven, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLETpFlags> &flags) const override;
             std::tuple<VLE_return_code,double,EArrayd,EArrayd> mixture_VLE_px(const double p_spec, const REArrayd& xmolar_spec, const double T0, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLEpxFlags>& flags ) const override;
 
-            std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const override;
-
-            std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options) const override;
         };
-
-        
     }
 }

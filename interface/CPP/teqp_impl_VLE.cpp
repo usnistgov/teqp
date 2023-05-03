@@ -45,14 +45,4 @@ std::tuple<VLE_return_code,double,EArrayd,EArrayd> MI::mixture_VLE_px(const doub
         return teqp::mixture_VLE_px(model, p_spec, xmolar_spec, T0, rhovecL0, rhovecV0, flags);
     }, m_model);
 }
-EArray2 MI::pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const {
-    return std::visit([&](const auto& model) {
-        return teqp::pure_VLE_T(model, T, rhoL, rhoV, maxiter);
-    }, m_model);
-}
 
-double MI::dpsatdT_pure(const double T, const double rhoL, const double rhoV) const {
-    return std::visit([&](const auto& model) {
-        return teqp::dpsatdT_pure(model, T, rhoL, rhoV);
-    }, m_model);
-}

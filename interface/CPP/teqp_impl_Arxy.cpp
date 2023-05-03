@@ -3,48 +3,32 @@
 #include "teqpcpp.cpp"
 using MI = teqp::cppinterface::ModelImplementer;
 
-// Derivatives from isochoric thermodynamics (all have the same signature)
-#define X(f) \
-double MI::f(const double T, const EArrayd& rhovec) const  { \
+#include "teqp/cpp/deriv_adapter.hpp"
+using namespace teqp::cppinterface;
+
+// Here XMacros are used to create functions like get_Ar00, get_Ar01, ....
+#define X(i,j) \
+double MI::get_Ar ## i ## j(const double T, const double rho, const REArrayd& molefracs) const { \
     return std::visit([&](const auto& model) { \
-        using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
-        return id::f(model, T, rhovec); \
+        return DerivativeAdapter(model).get_Ar ## i ## j(T, rho, molefracs); \
     }, m_model); \
 }
-ISOCHORIC_double_args
+ARXY_args
 #undef X
 
-#define X(f) \
-EArrayd MI::f(const double T, const EArrayd& rhovec) const  { \
-    return std::visit([&](const auto& model) { \
-        using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
-        return id::f(model, T, rhovec); \
+// Here XMacros are used to create functions like get_Ar01n, get_Ar02n, ....
+#define X(i) \
+EArrayd MI::get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefracs) const { \
+    return std::visit([&](const auto& model) -> EArrayd { \
+        return DerivativeAdapter(model).get_Ar0 ## i ## n(T, rho, molefracs); \
     }, m_model); \
 }
-ISOCHORIC_array_args
-#undef X
-
-#define X(f) \
-EMatrixd MI::f(const double T, const EArrayd& rhovec) const  { \
-    return std::visit([&](const auto& model) { \
-        using id = IsochoricDerivatives<decltype(model), double, EArrayd>; \
-        return id::f(model, T, rhovec); \
-    }, m_model); \
-}
-ISOCHORIC_matrix_args
+AR0N_args
 #undef X
 
 double MI::get_Arxy(const int NT, const int ND, const double T, const double rho, const EArrayd& molefracs) const {
     return std::visit([&](const auto& model) {
-        using tdx = teqp::TDXDerivatives<decltype(model), double, EArrayd>;
-        return tdx::template get_Ar(NT, ND, model, T, rho, molefracs);
-    }, m_model);
-}
-
-double MI::get_neff(const double T, const double rho, const EArrayd& molefracs) const {
-    return std::visit([&](const auto& model) {
-        using tdx = teqp::TDXDerivatives<decltype(model), double, EArrayd>;
-        return tdx::template get_neff(model, T, rho, molefracs);
+        return DerivativeAdapter(model).get_Arxy(NT, ND, T, rho, molefracs);
     }, m_model);
 }
 

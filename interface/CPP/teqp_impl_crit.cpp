@@ -1,5 +1,4 @@
 #include "teqp/algorithms/critical_tracing.hpp"
-
 #include "teqpcpp.cpp"
 
 using namespace teqp;
@@ -39,23 +38,5 @@ double MI::get_minimum_eigenvalue_Psi_Hessian(const double T, const REArrayd& rh
     return std::visit([&](const auto& model) {
         using crit = teqp::CriticalTracing<decltype(model), double, std::decay_t<decltype(rhovec)>>;
         return crit::get_minimum_eigenvalue_Psi_Hessian(model, T, rhovec);
-    }, m_model);
-}
-
-
-std::tuple<double, double> MI::solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& flags) const  {
-    return std::visit([&](const auto& model) {
-        return teqp::solve_pure_critical(model, T, rho, flags.value_or(nlohmann::json{}));
-    }, m_model);
-}
-std::tuple<EArrayd, EMatrixd> MI::get_pure_critical_conditions_Jacobian(const double T, const double rho, int alternative_pure_index, int alternative_length) const {
-    return std::visit([&](const auto& model) {
-        return teqp::get_pure_critical_conditions_Jacobian(model, T, rho, alternative_pure_index, alternative_length);
-    }, m_model);
-}
-std::tuple<double, double> MI::extrapolate_from_critical(const double Tc, const double rhoc, const double Tnew) const {
-    return std::visit([&](const auto& model) {
-        auto mat = teqp::extrapolate_from_critical(model, Tc, rhoc, Tnew);
-        return std::make_tuple(mat[0], mat[1]);
     }, m_model);
 }

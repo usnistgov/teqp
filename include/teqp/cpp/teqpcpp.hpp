@@ -61,6 +61,9 @@ using REMatrixd = Eigen::Ref<const Eigen::Array<double, Eigen::Dynamic, Eigen::D
     X(build_Psir_Hessian_autodiff) \
     X(build_Psi_Hessian_autodiff)
 
+#define ISOCHORIC_multimatrix_args \
+    X(build_Psir_fgradHessian_autodiff)
+    
 namespace teqp {
     namespace cppinterface {
 
@@ -100,7 +103,7 @@ namespace teqp {
             #define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefrac) const = 0;
                 AR0N_args
             #undef X
-            virtual double get_neff(const double, const double, const EArrayd&) const = 0;
+            
             
             // Virial derivatives
             virtual double get_B2vir(const double T, const EArrayd& z) const = 0;
@@ -118,14 +121,20 @@ namespace teqp {
             #define X(f) virtual EMatrixd f(const double T, const EArrayd& rhovec) const = 0;
                 ISOCHORIC_matrix_args
             #undef X
+            #define X(f) virtual std::tuple<double, Eigen::ArrayXd, Eigen::MatrixXd> f(const double T, const EArrayd& rhovec) const = 0;
+                ISOCHORIC_multimatrix_args
+            #undef X
+            
+            double get_neff(const double, const double, const EArrayd&) const;
             
             virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const = 0;
             
-            virtual std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& = std::nullopt) const = 0;
-            virtual std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const = 0;
-            virtual std::tuple<EArrayd, EMatrixd> get_pure_critical_conditions_Jacobian(const double T, const double rho, int alternative_pure_index=-1, int alternative_length=2) const  = 0;
-            virtual EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const = 0;
-            virtual double dpsatdT_pure(const double T, const double rhoL, const double rhoV) const = 0;
+            std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& = std::nullopt) const ;
+            std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const;
+            std::tuple<EArrayd, EMatrixd> get_pure_critical_conditions_Jacobian(const double T, const double rho, int alternative_pure_index=-1, int alternative_length=2) const;
+            
+            EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const;
+            double dpsatdT_pure(const double T, const double rhoL, const double rhoV) const;
             
             virtual std::tuple<EArrayd, EArrayd> get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
             virtual std::tuple<EArrayd, EArrayd> get_drhovecdT_psat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
@@ -136,8 +145,8 @@ namespace teqp {
             virtual MixVLEReturn mix_VLE_Tp(const double T, const double pgiven, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLETpFlags> &flags) const = 0;
             virtual std::tuple<VLE_return_code,double,EArrayd,EArrayd> mixture_VLE_px(const double p_spec, const REArrayd& xmolar_spec, const double T0, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLEpxFlags>& flags) const = 0;
             
-            virtual std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const = 0;
-            virtual std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options = std::nullopt) const = 0;
+            std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const;
+            std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options = std::nullopt) const;
             
             virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> & = std::nullopt) const = 0;
             virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const = 0;

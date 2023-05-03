@@ -3,9 +3,12 @@
 #include "teqp/derivs.hpp"
 #include "teqp/exceptions.hpp"
 #include "teqp/algorithms/VLLE_types.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 
 namespace teqp {
 namespace VLLE {
+    
+    using namespace teqp::cppinterface;
     /***
     * \brief Do a vapor-liquid-liquid phase equilibrium problem for a mixture (binary only for now)
     * \param model The model to operate on
@@ -19,8 +22,8 @@ namespace VLLE {
     * \param relxtol Relative tolerance on steps in independent variables
     * \param maxiter Maximum number of iterations permitted
     */
-    template<typename Model, typename Scalar, typename Vector>
-    auto mix_VLLE_T(const Model& model, Scalar T, const Vector& rhovecVinit, const Vector& rhovecL1init, const Vector& rhovecL2init, double atol, double reltol, double axtol, double relxtol, int maxiter) {
+    
+    auto mix_VLLE_T(const AbstractModel& model, double T, const EArrayd& rhovecVinit, const EArrayd& rhovecL1init, const EArrayd& rhovecL2init, double atol, double reltol, double axtol, double relxtol, int maxiter) {
 
         const Eigen::Index N = rhovecVinit.size();
         Eigen::MatrixXd J(3 * N, 3 * N); J.setZero();
@@ -29,8 +32,6 @@ namespace VLLE {
         x.head(N) = rhovecVinit;
         x.segment(N, N) = rhovecL1init;
         x.tail(N) = rhovecL2init;
-        
-        using isochoric = IsochoricDerivatives<Model, Scalar, Vector>;
 
         Eigen::Map<Eigen::ArrayXd> rhovecV (&(x(0)), N);
         Eigen::Map<Eigen::ArrayXd> rhovecL1(&(x(0+N)), N);
@@ -40,23 +41,23 @@ namespace VLLE {
 
         for (int iter = 0; iter < maxiter; ++iter) {
 
-            auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
-            auto [PsirL1, PsirgradL1, hessianL1] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL1);
-            auto [PsirL2, PsirgradL2, hessianL2] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL2);
+            auto [PsirV, PsirgradV, hessianV] = model.build_Psir_fgradHessian_autodiff(T, rhovecV);
+            auto [PsirL1, PsirgradL1, hessianL1] = model.build_Psir_fgradHessian_autodiff(T, rhovecL1);
+            auto [PsirL2, PsirgradL2, hessianL2] = model.build_Psir_fgradHessian_autodiff(T, rhovecL2);
             
-            auto HtotV = isochoric::build_Psi_Hessian_autodiff(model, T, rhovecV);
-            auto HtotL1 = isochoric::build_Psi_Hessian_autodiff(model, T, rhovecL1);
-            auto HtotL2 = isochoric::build_Psi_Hessian_autodiff(model, T, rhovecL2);
+            auto HtotV = model.build_Psi_Hessian_autodiff(T, rhovecV);
+            auto HtotL1 = model.build_Psi_Hessian_autodiff(T, rhovecL1);
+            auto HtotL2 = model.build_Psi_Hessian_autodiff(T, rhovecL2);
 
             auto zV = rhovecV/rhovecV.sum(), zL1 = rhovecL1 / rhovecL1.sum(), zL2 = rhovecL2 / rhovecL2.sum();
-            double RTL1 = model.R(zL1)*T, RTL2 = model.R(zL2)*T, RTV = model.R(zV)*T;
+            double RTL1 = model.get_R(zL1)*T, RTL2 = model.get_R(zL2)*T, RTV = model.get_R(zV)*T;
 
             auto rhoL1 = rhovecL1.sum();
             auto rhoL2 = rhovecL2.sum();
             auto rhoV = rhovecV.sum();
-            Scalar pL1 = rhoL1 * RTL1 - PsirL1 + (rhovecL1.array() * PsirgradL1.array()).sum(); // The (array*array).sum is a dot product
-            Scalar pL2 = rhoL2 * RTL2 - PsirL2 + (rhovecL2.array() * PsirgradL2.array()).sum(); // The (array*array).sum is a dot product
-            Scalar pV = rhoV * RTV - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
+            double pL1 = rhoL1 * RTL1 - PsirL1 + (rhovecL1.array() * PsirgradL1.array()).sum(); // The (array*array).sum is a dot product
+            double pL2 = rhoL2 * RTL2 - PsirL2 + (rhovecL2.array() * PsirgradL2.array()).sum(); // The (array*array).sum is a dot product
+            double pV = rhoV * RTV - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
             auto dpdrhovecL1 = RTL1 + (hessianL1 * rhovecL1.matrix()).array();
             auto dpdrhovecL2 = RTL2 + (hessianL2 * rhovecL2.matrix()).array();
             auto dpdrhovecV = RTV + (hessianV * rhovecV.matrix()).array();
@@ -100,7 +101,7 @@ namespace VLLE {
             // If the solution has stopped improving, stop. The change in x is equal to dx in infinite precision, but
             // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
             // the values are done changing
-            if (((x.array() - dx.array()).cwiseAbs() < std::numeric_limits<Scalar>::min()).all()) {
+            if (((x.array() - dx.array()).cwiseAbs() < std::numeric_limits<double>::min()).all()) {
                 return_code = VLLE_return_code::xtol_satisfied;
                 break;
             }
@@ -142,8 +143,8 @@ namespace VLLE {
     * \param model The Model to be used for the thermodynamics
     * \param traces The nlohmann::json formatted information from the traces, perhaps obtained from trace_VLE_isotherm_binary
     */
-    template<typename Model>
-    auto find_VLLE_T_binary(const Model& model, const std::vector<nlohmann::json>& traces, const std::optional<VLLEFinderOptions> options = std::nullopt) {
+    
+    auto find_VLLE_T_binary(const AbstractModel& model, const std::vector<nlohmann::json>& traces, const std::optional<VLLEFinderOptions> options = std::nullopt) {
         std::vector<double> x, y;
         auto opt = options.value_or(VLLEFinderOptions{});
 
