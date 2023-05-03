@@ -12,7 +12,7 @@
 #include "teqp/exceptions.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/math/quadrature.hpp"
-#include "teqp/models/pcsaft.hpp"
+#include "teqp/models/saft/polar_terms.hpp"
 #include <optional>
 
 namespace teqp {
