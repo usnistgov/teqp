@@ -29,7 +29,7 @@ auto get_JDD_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
     static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(5) << -0.5873164, 1.2489132, -0.5085280, 0, 0).finished();
     static Eigen::ArrayXd b_2 = (Eigen::ArrayXd(5) << 3.4869576, -14.915974, 15.372022, 0, 0).finished();
     
-    std::common_type_t<Eta, MType> summer = 0.0;
+    std::common_type_t<Eta, MType, TType> summer = 0.0;
     for (auto n = 0; n < 5; ++n){
         auto anij = a_0[n] + (mij-1)/mij*a_1[n] + (mij-1)/mij*(mij-2)/mij*a_2[n]; // Eq. 12
         auto bnij = b_0[n] + (mij-1)/mij*b_1[n] + (mij-1)/mij*(mij-2)/mij*b_2[n]; // Eq. 13
@@ -63,7 +63,7 @@ auto get_JQQ_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
     static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(5) << -0.8137340, 10.064030, -10.876631, 0.0, 0.0).finished();
     static Eigen::ArrayXd b_2 = (Eigen::ArrayXd(5) << 6.8682675, -5.1732238, -17.240207, 0.0, 0.0).finished();
     
-    std::common_type_t<Eta, MType> summer = 0.0;
+    std::common_type_t<Eta, MType, TType> summer = 0.0;
     for (auto n = 0; n < 5; ++n){
         auto anij = a_0[n] + (mij-1)/mij*a_1[n] + (mij-1)/mij*(mij-2)/mij*a_2[n]; // Eq. 12
         auto bnij = b_0[n] + (mij-1)/mij*b_1[n] + (mij-1)/mij*(mij-2)/mij*b_2[n]; // Eq. 13
@@ -292,9 +292,9 @@ public:
       quad(((nQ.sum() > 0) ? decltype(quad)(QuadrupolarContributionGrossVrabec(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ)) : std::nullopt)) {};
     
     template<typename TTYPE, typename RhoType, typename EtaType, typename VecType>
-    auto eval(const TTYPE& T, const RhoType& rho_A3, const EtaType& eta, const VecType& mole_fractions) const {
+    auto evalo(const TTYPE& T, const RhoType& rho_A3, const EtaType& eta, const VecType& mole_fractions) const {
         
-        using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
+        using type = std::common_type_t<TTYPE, RhoType, EtaType, decltype(mole_fractions[0])>;
         type alpha2DD = 0.0, alpha3DD = 0.0, alphaDD = 0.0;
         if (di && di.value().has_a_polar){
             alpha2DD = di.value().get_alpha2DD(T, rho_A3, eta, mole_fractions);
