@@ -207,19 +207,6 @@ struct SAFTVRMieChainContributionTerms{
         return get_cij(lambda_r_ij + lambda_a_ij);
     }
     
-    template<typename X>
-    auto POW2(const X& x) const{
-        return forceeval(x*x);
-    };
-    template<typename X>
-    auto POW3(const X& x) const{
-        return forceeval(x*POW2(x));
-    };
-    template<typename X>
-    auto POW4(const X& x) const{
-        return forceeval(POW2(x)*POW2(x));
-    };
-    
     public:
     
     // One entry per component
