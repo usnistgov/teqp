@@ -38,14 +38,15 @@ public:
     
     template<typename TType, typename RhoType>
     auto get_J(const TType& Tstar, const RhoType& rhostar) const{
-        auto Z_1 = 0.3 + 0.05*n;
-        auto Z_2 = 1.0/n;
-        auto A_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
-        auto A_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
-        auto A_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
+        double Z_1 = 0.3 + 0.05*n;
+        double Z_2 = 1.0/n;
+        auto A_0 = forceeval(a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar);
+        auto A_1 = forceeval(a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar);
+        auto A_2 = forceeval(a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar);
         // |x| = sqrt(x^2), the latter is well-suited to differentiation
-        auto differentiable_abs = [](const auto& x){ return sqrt(x*x); };
-        std::common_type_t<TType, RhoType> out = (A_0 + A_1*pow(Tstar, Z_1) + A_2*pow(Tstar, Z_2))*exp(1.0/(Tstar + 4.0/pow(differentiable_abs(log(rhostar/sqrt(2.0))), 3.0)));
+        auto differentiable_abs = [](const auto& x){ return forceeval(sqrt(x*x)); };
+//        return forceeval(A_2*differentiable_abs(Tstar));
+        std::common_type_t<TType, RhoType> out = (A_0 + A_1*pow(Tstar, Z_1) + A_2*pow(Tstar, Z_2))*exp(1.0/(Tstar + 4.0/pow(differentiable_abs(log(forceeval(rhostar/sqrt(2.0)))), 3.0)));
         return out;
     }
 };
@@ -73,13 +74,13 @@ public:
     
     template<typename TType, typename RhoType>
     auto get_K(const TType& Tstar, const RhoType& rhostar) const{
-        auto Z_1 = 2.0;
-        auto Z_2 = 3.0;
-        auto Z_3 = 4.0;
-        auto b_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
-        auto b_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
-        auto b_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
-        auto b_3 = a03 + a13*rhostar + a23*rhostar*rhostar + a33*rhostar*rhostar*rhostar;
+        double Z_1 = 2.0;
+        double Z_2 = 3.0;
+        double Z_3 = 4.0;
+        auto b_0 = forceeval(a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar);
+        auto b_1 = forceeval(a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar);
+        auto b_2 = forceeval(a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar);
+        auto b_3 = forceeval(a03 + a13*rhostar + a23*rhostar*rhostar + a33*rhostar*rhostar*rhostar);
         std::common_type_t<TType, RhoType> out = b_0 + b_1*Tstar + b_2*pow(exp(pow(1.0-rhostar/sqrt(2.0),Z_3)), Z_1) + b_3*pow(exp(pow(1.0-rhostar/sqrt(2.0),Z_3)), Z_2);
         return out;
     }
