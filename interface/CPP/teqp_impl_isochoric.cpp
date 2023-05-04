@@ -34,3 +34,11 @@ EMatrixd MI::f(const double T, const EArrayd& rhovec) const  { \
 ISOCHORIC_matrix_args
 #undef X
 
+#define X(f) \
+std::tuple<double, Eigen::ArrayXd, Eigen::MatrixXd> MI::f(const double T, const EArrayd& rhovec) const  { \
+    return std::visit([&](const auto& model) { \
+        return DerivativeAdapter(model).f(T, rhovec); \
+    }, m_model); \
+}
+ISOCHORIC_multimatrix_args
+#undef X
