@@ -3,6 +3,7 @@
 #include <complex>
 #include <map>
 #include <tuple>
+#include <numeric>
 
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
@@ -31,6 +32,7 @@ typename ContainerType::value_type derivT(const FuncType& f, TType T, const Cont
     return f(std::complex<TType>(T, h), rho).imag() / h;
 }
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
 /***
 * \brief Given a function, use multicomplex derivatives to calculate the derivative with
 * respect to the first variable which here is temperature
@@ -42,6 +44,7 @@ typename ContainerType::value_type derivTmcx(const FuncType& f, TType T, const C
     auto ders = diff_mcx1(wrapper, T, 1);
     return ders[0];
 }
+#endif
 
 /***
 * \brief Given a function, use complex step derivatives to calculate the derivative with respect 
@@ -764,6 +767,7 @@ struct IsochoricDerivatives{
         return H;
     }
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
     /***
     * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations (residual contribution only)
     *
@@ -785,6 +789,7 @@ struct IsochoricDerivatives{
         auto H = get_Hessian<mattype, fcn_t, VectorType, HessianMethods::Multiple>(func, rho);
         return H;
     }
+#endif
 
     /***
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
@@ -802,6 +807,7 @@ struct IsochoricDerivatives{
         return val;
     }
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
     /***
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
     *
@@ -821,6 +827,7 @@ struct IsochoricDerivatives{
         }
         return out;
     }
+#endif
     /***
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
     *
