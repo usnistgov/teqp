@@ -119,7 +119,7 @@ public:
                     auto epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
                     auto sigmaij = (sigma[i]+sigma[j])/2;
                     
-                    auto Tstarij = T/epskij;
+                    auto Tstarij = forceeval(T/epskij);
                     auto mij = std::min(sqrt(m[i]*m[j]), 2.0);
                     summer += x[i]*x[j]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*POW3(sigma[i]*sigma[j]/sigmaij)*ninj*mustar2[i]*mustar2[j]*get_JDD_2ij(eta, mij, Tstarij);
                 }
@@ -211,7 +211,7 @@ public:
                     auto epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
                     auto sigmaij = (sigma[i]+sigma[j])/2;
                     
-                    auto Tstarij = T/epskij;
+                    auto Tstarij = forceeval(T/epskij);
                     auto mij = std::min(sqrt(m[i]*m[j]), 2.0);
                     summer += x[i]*x[j]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*POW5(sigma[i]*sigma[j])/POW7(sigmaij)*ninj*Qstar2[i]*Qstar2[j]*get_JQQ_2ij(eta, mij, Tstarij);
                 }
