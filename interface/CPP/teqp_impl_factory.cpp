@@ -12,6 +12,7 @@ namespace teqp {
 
         static std::unordered_map<std::string, makefunc> pointer_factory = {
             {"vdW1", [](const nlohmann::json& spec){ return make_owned(vdWEOS1(spec.at("a"), spec.at("b"))); }},
+            {"vdW", [](const nlohmann::json& spec){ return make_owned(vdWEOS<double>(spec.at("Tcrit / K"), spec.at("pcrit / Pa"))); }},
             
             {"PR", [](const nlohmann::json& spec){ return make_owned(make_canonicalPR(spec));}},
             {"SRK", [](const nlohmann::json& spec){ return make_owned(make_canonicalSRK(spec));}},
@@ -45,7 +46,7 @@ namespace teqp {
                 return (itr->second)(spec);
             }
             else{
-                throw std::invalid_argument("aah");
+                throw std::invalid_argument("Don't understand \"kind\" of: " + kind);
             }
         }
     
