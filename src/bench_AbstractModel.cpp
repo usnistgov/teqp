@@ -78,6 +78,7 @@ TEST_CASE("multifluid derivatives via DerivativeAdapter", "[mf]")
         return am->get_Bnvir(4, 300, z);
     };
     BENCHMARK("B4 via DerivativeAdapter") {
-        return DerivativeAdapter(model).get_Bnvir(4, 300, z);
+        using namespace teqp::cppinterface::adapter;
+        return view(model)->get_Bnvir(4, 300, z);
     };
 }

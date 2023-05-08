@@ -43,12 +43,11 @@ struct CriticalTracing {
         auto N = rhovec.size();
         Eigen::ArrayX<bool> mask = (rhovec != 0).eval();
 
-        using id = IsochoricDerivatives<decltype(model)>;
-
         // Build the Hessian for the residual part;
 #if defined(USE_AUTODIFF)
-        auto H = id::build_Psir_Hessian_autodiff(model, T, rhovec);
+        auto H = model.build_Psir_Hessian_autodiff(T, rhovec);
 #else
+        using id = IsochoricDerivatives<decltype(model)>;
         auto H = id::build_Psir_Hessian_mcx(model, T, rhovec);
 #endif
         // ... and add ideal-gas terms to H
@@ -147,19 +146,20 @@ struct CriticalTracing {
         }
 
 #if defined(USE_AUTODIFF)
-        // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
-        ArrayXdual4th v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
-        ArrayXdual4th rhovecad(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecad[i] = rhovec[i]; }
-        dual4th varsigma{ 0.0 };
-        auto wrapper = [&rhovecad, &v0, &T, &model](const auto& sigma_1) {
-            auto rhovecused = (rhovecad + sigma_1 * v0).eval();
-            auto rhotot = rhovecused.sum();
-            auto molefrac = (rhovecused / rhotot).eval();
-            return eval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
-        };
-        auto psir_derivs_ = derivatives(wrapper, wrt(varsigma), at(varsigma));
-        Eigen::ArrayXd psir_derivs; psir_derivs.resize(5);
-        for (auto i = 0; i < 5; ++i) { psir_derivs[i] = psir_derivs_[i]; }
+        auto psir_derivs = model.get_Psir_sigma_derivs(T, rhovec, ei.v0);
+//        // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
+//        ArrayXdual4th v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
+//        ArrayXdual4th rhovecad(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecad[i] = rhovec[i]; }
+//        dual4th varsigma{ 0.0 };
+//        auto wrapper = [&rhovecad, &v0, &T, &model](const auto& sigma_1) {
+//            auto rhovecused = (rhovecad + sigma_1 * v0).eval();
+//            auto rhotot = rhovecused.sum();
+//            auto molefrac = (rhovecused / rhotot).eval();
+//            return eval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
+//        };
+//        auto psir_derivs_ = derivatives(wrapper, wrt(varsigma), at(varsigma));
+//        Eigen::ArrayXd psir_derivs; psir_derivs.resize(5);
+//        for (auto i = 0; i < 5; ++i) { psir_derivs[i] = psir_derivs_[i]; }
 
 #else
         using namespace mcx;
@@ -474,10 +474,9 @@ struct CriticalTracing {
 
             // Calculate some other parameters, for debugging, or scientific interest
             auto rhotot = rhovec.sum();
-            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-            double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
+            double p = rhotot * model.R(rhovec / rhovec.sum()) * T + model.get_pr(T, rhovec);
             auto conditions = get_criticality_conditions(model, T, rhovec);
-            double splus = id::get_splus(model, T, rhovec);
+            double splus = model.get_splus(T, rhovec);
             auto dxdt = x0;
             xprime(x0, dxdt, -1.0);
 
@@ -507,9 +506,8 @@ struct CriticalTracing {
             std::stringstream out;
             auto rhotot = rhovec.sum();
             double z0 = rhovec[0] / rhotot;
-            using id = IsochoricDerivatives<decltype(model)>;
             auto conditions = get_criticality_conditions(model, T, rhovec);
-            out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << dt << "," << conditions(0) << "," << conditions(1) << std::endl;
+            out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + model.get_pr(T, rhovec) << "," << c << "," << dt << "," << conditions(0) << "," << conditions(1) << std::endl;
             std::string sout(out.str());
             std::cout << sout;
             if (ofs.is_open()) {
@@ -747,9 +745,8 @@ struct CriticalTracing {
     * where the derivatives on the RHS without the subscript $\CRL$ are homogeneous derivatives taken at the mixture statepoint, and are NOT along the critical curve.
     */
     static auto get_dp_dT_crit(const Model& model, const Scalar& T, const VecType& rhovec) {
-        using id = IsochoricDerivatives<Model, Scalar, VecType>;
-        auto dpdrhovec = id::get_dpdrhovec_constT(model, T, rhovec);
-        Scalar v = id::get_dpdT_constrhovec(model, T, rhovec) + (dpdrhovec.array()*get_drhovec_dT_crit(model, T, rhovec).array()).sum();
+        auto dpdrhovec = model.get_dpdrhovec_constT(T, rhovec);
+        Scalar v = model.get_dpdT_constrhovec(T, rhovec) + (dpdrhovec.array()*get_drhovec_dT_crit(model, T, rhovec).array()).sum();
         return v;
     }
 

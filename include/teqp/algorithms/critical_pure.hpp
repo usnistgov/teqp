@@ -83,7 +83,10 @@ namespace teqp {
               typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, Model>::value>::type>
     auto get_pure_critical_conditions_Jacobian(const Model& model, const Scalar T, const Scalar rho,
         const std::optional<std::size_t>& alternative_pure_index = std::nullopt, const std::optional<std::size_t>& alternative_length = std::nullopt) {
-        return get_pure_critical_conditions_Jacobian(DerivativeAdapter(model), T, rho, alternative_pure_index, alternative_length);
+        using namespace teqp::cppinterface::adapter;
+        auto view_ = std::unique_ptr<AbstractModel>(view(model));
+//        static_assert(std::is_base_of<teqp::cppinterface::AbstractModel, std::decay_t<decltype(*view_)> >::value);
+        return get_pure_critical_conditions_Jacobian(*(view_), T, rho, alternative_pure_index, alternative_length);
     }
 
     template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff, typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, Model>::value>::type>
@@ -113,7 +116,7 @@ namespace teqp {
             return a.matrix().colPivHouseholderQr().solve(b.matrix()).array().eval();
         };
         for (auto counter = 0; counter < maxsteps; ++counter) {
-            auto [resids, Jacobian] = get_pure_critical_conditions_Jacobian<Model, Scalar, backend>(model, x[0], x[1], alternative_pure_index, alternative_length);
+            auto [resids, Jacobian] = get_pure_critical_conditions_Jacobian(model, x[0], x[1], alternative_pure_index, alternative_length);
             auto v = linsolve(Jacobian, -resids);
             x += v;
         }

@@ -14,6 +14,7 @@
 #include "teqp/math/quadrature.hpp"
 #include "teqp/models/saft/polar_terms.hpp"
 #include <optional>
+#include <variant>
 
 namespace teqp {
 namespace SAFTVRMie {
@@ -836,25 +837,25 @@ public:
         auto vals = terms.get_core_calcs(T, rhomolar, mole_fractions);
         auto alphar = forceeval(vals.alphar_mono + vals.alphar_chain);
         
-        if (polar){ // polar term is present
-            using mas = SAFTpolar::multipolar_argument_spec;
-            auto visitor = [&](const auto& contrib){
-                if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNA3_packingfraction_molefractions){
-                    auto rho_A3 = forceeval(rhomolar*N_A*1e-30);
-                    auto packing_fraction = vals.zeta[3];
-                    auto alpha = contrib.eval(T, rho_A3, packing_fraction, mole_fractions).alpha;
-                    alphar += alpha;
-                }
-                else if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNm3_molefractions){
-                    auto rhoN_m3 = forceeval(rhomolar*N_A);
-                    alphar += contrib.eval(T, rhoN_m3, mole_fractions).alpha;
-                }
-                else{
-                    throw teqp::InvalidArgument("Don't know how to handle this kind of arguments in polar term");
-                }
-            };
-            std::visit(visitor, polar.value());
-        }
+       if (polar){ // polar term is present
+           using mas = SAFTpolar::multipolar_argument_spec;
+           auto visitor = [&](const auto& contrib){
+               if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNA3_packingfraction_molefractions){
+                   auto rho_A3 = forceeval(rhomolar*N_A*1e-30);
+                   auto packing_fraction = forceeval(vals.zeta[3]);
+                   auto alpha = contrib.eval(T, rho_A3, packing_fraction, mole_fractions).alpha;
+                   return alpha;
+               }
+               else if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNm3_molefractions){
+                   auto rhoN_m3 = forceeval(rhomolar*N_A);
+                   return contrib.eval(T, rhoN_m3, mole_fractions).alpha;
+               }
+               else{
+                   throw teqp::InvalidArgument("Don't know how to handle this kind of arguments in polar term");
+               }
+           };
+           alphar += std::visit(visitor, polar.value());
+       }
         
         return forceeval(alphar);
     }
@@ -975,23 +976,21 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
                 auto polar = MultipolarContributionGrossVrabec(ms, sigma_ms*1e10, epsks, mustar2, nmu, Qstar2, nQ);
                 return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
             }
-            else if (polar_model == "GubbinsTwu+Luckas"){
+            if (polar_model == "GubbinsTwu+Luckas"){
                 using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGTL(sigma_ms, epsks, mubar2, Qbar2);
                 return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
             }
-            else if (polar_model == "GubbinsTwu+GubbinsTwu"){
+            if (polar_model == "GubbinsTwu+GubbinsTwu"){
                 using MCGG = MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2);
                 return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
             }
-            else{
-                throw teqp::InvalidArgument("didn't understand this polar_model:"+polar_model);
-            }
+            throw teqp::InvalidArgument("didn't understand this polar_model:"+polar_model);
         }
     }
     else{

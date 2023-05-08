@@ -5,8 +5,10 @@
 #include "teqp/models/mie/mie.hpp"
 
 #include "teqp/exceptions.hpp"
+#include "teqp/cpp/deriv_adapter.hpp"
 
 #include "nlohmann/json.hpp"
+#include <memory>
 
 namespace teqp {
 

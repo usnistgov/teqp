@@ -47,7 +47,8 @@ using REMatrixd = Eigen::Ref<const Eigen::Array<double, Eigen::Dynamic, Eigen::D
 // Functions that return a double, take T and rhovec as arguments
 #define ISOCHORIC_double_args \
     X(get_pr) \
-    X(get_splus)
+    X(get_splus) \
+    X(get_dpdT_constrhovec)
 
 #define ISOCHORIC_array_args \
     X(build_Psir_gradient_autodiff) \
@@ -55,7 +56,8 @@ using REMatrixd = Eigen::Ref<const Eigen::Array<double, Eigen::Dynamic, Eigen::D
     X(get_dchempotdT_autodiff) \
     X(get_fugacity_coefficients) \
     X(get_partial_molar_volumes) \
-    X(build_d2PsirdTdrhoi_autodiff)
+    X(build_d2PsirdTdrhoi_autodiff) \
+    X(get_dpdrhovec_constT)
 
 #define ISOCHORIC_matrix_args \
     X(build_Psir_Hessian_autodiff) \
@@ -92,6 +94,7 @@ namespace teqp {
             virtual ~AbstractModel() = default;
             
             virtual double get_R(const EArrayd&) const = 0;
+            double R(const EArrayd& x) const { return get_R(x); };
             
             virtual double get_Arxy(const int, const int, const double, const double, const EArrayd&) const = 0;
             
@@ -124,6 +127,7 @@ namespace teqp {
             #define X(f) virtual std::tuple<double, Eigen::ArrayXd, Eigen::MatrixXd> f(const double T, const EArrayd& rhovec) const = 0;
                 ISOCHORIC_multimatrix_args
             #undef X
+            virtual Eigen::ArrayXd get_Psir_sigma_derivs(const double T, const EArrayd& rhovec, const EArrayd& v) const = 0;
             
             double get_neff(const double, const double, const EArrayd&) const;
             
@@ -136,35 +140,35 @@ namespace teqp {
             EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const;
             double dpsatdT_pure(const double T, const double rhoL, const double rhoV) const;
             
-            virtual std::tuple<EArrayd, EArrayd> get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
-            virtual std::tuple<EArrayd, EArrayd> get_drhovecdT_psat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
-            virtual double get_dpsat_dTsat_isopleth(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const = 0;
-            virtual nlohmann::json trace_VLE_isotherm_binary(const double T0, const EArrayd& rhovec0, const EArrayd& rhovecV0, const std::optional<TVLEOptions> &) const = 0;
-            virtual nlohmann::json trace_VLE_isobar_binary(const double p, const double T0, const EArrayd& rhovecL0, const EArrayd& rhovecV0, const std::optional<PVLEOptions> &) const = 0;
-            virtual std::tuple<VLE_return_code,EArrayd,EArrayd> mix_VLE_Tx(const double T, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const REArrayd& xspec, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const = 0;
-            virtual MixVLEReturn mix_VLE_Tp(const double T, const double pgiven, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLETpFlags> &flags) const = 0;
-            virtual std::tuple<VLE_return_code,double,EArrayd,EArrayd> mixture_VLE_px(const double p_spec, const REArrayd& xmolar_spec, const double T0, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLEpxFlags>& flags) const = 0;
+            virtual std::tuple<EArrayd, EArrayd> get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const;
+            virtual std::tuple<EArrayd, EArrayd> get_drhovecdT_psat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const;
+            virtual double get_dpsat_dTsat_isopleth(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const;
+            virtual nlohmann::json trace_VLE_isotherm_binary(const double T0, const EArrayd& rhovec0, const EArrayd& rhovecV0, const std::optional<TVLEOptions> & = std::nullopt) const;
+            virtual nlohmann::json trace_VLE_isobar_binary(const double p, const double T0, const EArrayd& rhovecL0, const EArrayd& rhovecV0, const std::optional<PVLEOptions> & = std::nullopt) const;
+            virtual std::tuple<VLE_return_code,EArrayd,EArrayd> mix_VLE_Tx(const double T, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const REArrayd& xspec, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const;
+            virtual MixVLEReturn mix_VLE_Tp(const double T, const double pgiven, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLETpFlags> &flags = std::nullopt) const;
+            virtual std::tuple<VLE_return_code,double,EArrayd,EArrayd> mixture_VLE_px(const double p_spec, const REArrayd& xmolar_spec, const double T0, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const std::optional<MixVLEpxFlags>& flags = std::nullopt) const;
             
             std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const;
             std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options = std::nullopt) const;
             
-            virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> & = std::nullopt) const = 0;
-            virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const = 0;
-            virtual double get_dp_dT_crit(const double T, const REArrayd& rhovec) const = 0;
-            virtual EArray2 get_criticality_conditions(const double T, const REArrayd& rhovec) const = 0;
-            virtual EigenData eigen_problem(const double T, const REArrayd& rhovec, const std::optional<REArrayd>&) const = 0;
-            virtual double get_minimum_eigenvalue_Psi_Hessian(const double T, const REArrayd& rhovec) const = 0;
+            virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> & = std::nullopt) const;
+            virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const;
+            virtual double get_dp_dT_crit(const double T, const REArrayd& rhovec) const;
+            virtual EArray2 get_criticality_conditions(const double T, const REArrayd& rhovec) const;
+            virtual EigenData eigen_problem(const double T, const REArrayd& rhovec, const std::optional<REArrayd>& = std::nullopt) const;
+            virtual double get_minimum_eigenvalue_Psi_Hessian(const double T, const REArrayd& rhovec) const;
             
         };
         
         // Generic JSON-based interface where the model description is encoded as JSON
-        std::shared_ptr<AbstractModel> make_model(const nlohmann::json &);
+        std::unique_ptr<AbstractModel> make_model(const nlohmann::json &);
 
         // Expose specialized factory functions for different models
         // Mostly these are just adapter functions that prepare some
         // JSON and pass it to the make_model function
         // ....
-        std::shared_ptr<AbstractModel> make_multifluid_model(
+        std::unique_ptr<AbstractModel> make_multifluid_model(
             const std::vector<std::string>& components, 
             const std::string& coolprop_root, 
             const std::string& BIPcollectionpath = {}, 
@@ -172,6 +176,8 @@ namespace teqp {
             const std::string& departurepath = {}
         );
     
-        std::shared_ptr<AbstractModel> emplace_model(AllowedModels&& model);
+        std::unique_ptr<AbstractModel> emplace_model(AllowedModels&& model);
+    
+        std::unique_ptr<AbstractModel> build_model_ptr(const nlohmann::json& json);
     }
 }

@@ -970,6 +970,21 @@ struct IsochoricDerivatives{
         auto denominator = -pow2(rhotot)*RT*(1 + 2*ders[1] + ders[2]);
         return (numerator/denominator).eval();
     }
+    
+    static VectorType get_Psir_sigma_derivs(const Model& model, const Scalar& T, const VectorType& rhovec, const VectorType& v) {
+        autodiff::Real<4, double> sigma = 0.0;
+        auto rhovecad = rhovec.template cast<decltype(sigma)>(), vad = v.template cast<decltype(sigma)>();
+        auto wrapper = [&rhovecad, &vad, &T, &model](const auto& sigma_1) {
+            auto rhovecused = (rhovecad + sigma_1 * vad).eval();
+            auto rhotot = rhovecused.sum();
+            auto molefrac = (rhovecused / rhotot).eval();
+            return forceeval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
+        };
+        auto der = derivatives(wrapper, along(1), at(sigma));
+        VectorType ret(rhovec.size());
+        for (auto i = 0; i < ret.size(); ++i){ ret[i] = der[i];}
+        return ret;
+    }
 };
 
 template<int Nderivsmax, AlphaWrapperOption opt>
