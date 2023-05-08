@@ -101,7 +101,7 @@ const std::type_index SAFTVRMie_i{std::type_index(typeid(SAFTVRMie_t))};
 const std::type_index canonical_cubic_i{std::type_index(typeid(canonical_cubic_t))};
 const std::type_index AmmoniaWaterTillnerRoth_i{std::type_index(typeid(AmmoniaWaterTillnerRoth))};
 const std::type_index idealgas_i{std::type_index(typeid(idealgas_t))};
-const std::type_index multifluid_i{std::type_index(typeid(multifluid_i))};
+const std::type_index multifluid_i{std::type_index(typeid(multifluid_t))};
 const std::type_index multifluidmutant_i{std::type_index(typeid(multifluidmutant_t))};
 const std::type_index SW_EspindolaHeredia2009_i{std::type_index(typeid(SW_EspindolaHeredia2009_t))};
 const std::type_index EXP6_Kataoka1992_i{std::type_index(typeid(EXP6_Kataoka1992_t))};
