@@ -176,8 +176,6 @@ namespace teqp {
             const std::string& departurepath = {}
         );
     
-        std::unique_ptr<AbstractModel> emplace_model(AllowedModels&& model);
-    
         std::unique_ptr<AbstractModel> build_model_ptr(const nlohmann::json& json);
     }
 }

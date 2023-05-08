@@ -12,6 +12,7 @@ Implementations of the canonical cubic equations of state
 #include "teqp/constants.hpp"
 #include "teqp/exceptions.hpp"
 #include "cubicsuperancillary.hpp"
+#include "teqp/json_tools.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -20,16 +21,16 @@ Implementations of the canonical cubic equations of state
 namespace teqp {
 
 /**
-* \brief The standard alpha function used by Peng-Robinson and SRK
-*/
+ * \brief The standard alpha function used by Peng-Robinson and SRK
+ */
 template<typename NumType>
 class BasicAlphaFunction {
 private:
     NumType Tci, ///< The critical temperature
-        mi;  ///< The "m" parameter
+    mi;  ///< The "m" parameter
 public:
     BasicAlphaFunction(NumType Tci, NumType mi) : Tci(Tci), mi(mi) {};
-
+    
     template<typename TType>
     auto operator () (const TType& T) const {
         return forceeval(pow2(forceeval(1.0 + mi * (1.0 - sqrt(T / Tci)))));
@@ -44,18 +45,18 @@ class GenericCubic {
 protected:
     std::valarray<NumType> ai, bi;
     const NumType Delta1, Delta2, OmegaA, OmegaB;
-    int superanc_index; 
+    int superanc_index;
     const AlphaFunctions alphas;
     Eigen::ArrayXXd kmat;
-
+    
     nlohmann::json meta;
-
+    
     template<typename TType, typename IndexType>
     auto get_ai(TType T, IndexType i) const { return ai[i]; }
-
+    
     template<typename TType, typename IndexType>
     auto get_bi(TType T, IndexType i) const { return bi[i]; }
-
+    
     template<typename IndexType>
     void check_kmat(IndexType N) {
         if (kmat.cols() != kmat.rows()) {
@@ -68,10 +69,10 @@ protected:
             throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components [" + std::to_string(N) + "]");
         }
     };
-
+    
 public:
     GenericCubic(NumType Delta1, NumType Delta2, NumType OmegaA, NumType OmegaB, int superanc_index, const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const Eigen::ArrayXXd& kmat)
-        : Delta1(Delta1), Delta2(Delta2), OmegaA(OmegaA), OmegaB(OmegaB), superanc_index(superanc_index), alphas(alphas), kmat(kmat)
+    : Delta1(Delta1), Delta2(Delta2), OmegaA(OmegaA), OmegaB(OmegaB), superanc_index(superanc_index), alphas(alphas), kmat(kmat)
     {
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
@@ -81,13 +82,13 @@ public:
         }
         check_kmat(ai.size());
     };
-
+    
     void set_meta(const nlohmann::json& j) { meta = j; }
     auto get_meta() const { return meta; }
     auto get_kmat() const { return kmat; }
-
+    
     /// Return a tuple of saturated liquid and vapor densities for the EOS given the temperature
-    /// Uses the superancillary equations from Bell and Deiters: 
+    /// Uses the superancillary equations from Bell and Deiters:
     auto superanc_rhoLV(double T) const {
         if (ai.size() != 1) {
             throw std::invalid_argument("function only available for pure species");
@@ -96,18 +97,18 @@ public:
         auto b = get_b(T, z);
         auto Ttilde = R(z)*T*b/get_a(T,z);
         return std::make_tuple(
-            CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)/b,
-            CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)/b
-        );
+                               CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)/b,
+                               CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)/b
+                               );
     }
-
+    
     const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
-
+    
     template<class VecType>
     auto R(const VecType& molefrac) const {
         return Ru;
     }
-
+    
     template<typename TType, typename CompType>
     auto get_a(TType T, const CompType& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> a_ = 0.0;
@@ -124,7 +125,7 @@ public:
         }
         return forceeval(a_);
     }
-
+    
     template<typename TType, typename CompType>
     auto get_b(TType /*T*/, const CompType& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> b_ = 0.0;
@@ -133,11 +134,11 @@ public:
         }
         return forceeval(b_);
     }
-
+    
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType& T,
-        const RhoType& rho,
-        const MoleFracType& molefrac) const
+                const RhoType& rho,
+                const MoleFracType& molefrac) const
     {
         if (molefrac.size() != alphas.size()) {
             throw std::invalid_argument("Sizes do not match");
@@ -155,16 +156,16 @@ auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen:
     double Delta1 = 1;
     double Delta2 = 0;
     AcentricType m = 0.48 + 1.574 * acentric - 0.176 * acentric * acentric;
-
+    
     std::vector<AlphaFunctionOptions> alphas;
     for (auto i = 0; i < Tc_K.size(); ++i) {
         alphas.emplace_back(BasicAlphaFunction(Tc_K[i], m[i]));
     }
-
+    
     // See https://doi.org/10.1021/acs.iecr.1c00847
     double OmegaA = 1.0 / (9.0 * (cbrt(2) - 1));
     double OmegaB = (cbrt(2) - 1) / 3;
-
+    
     nlohmann::json meta = {
         {"Delta1", Delta1},
         {"Delta2", Delta2},
@@ -172,10 +173,20 @@ auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen:
         {"OmegaB", OmegaB},
         {"kind", "Soave-Redlich-Kwong"}
     };
-
+    
     auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::SRK_CODE, Tc_K, pc_K, std::move(alphas), kmat);
     cub.set_meta(meta);
     return cub;
+}
+
+/// A JSON-based factory function for the canonical SRK model
+inline auto make_canonicalSRK(const nlohmann::json& spec){
+    std::valarray<double> Tc_K = spec.at("Tcrit / K"), pc_Pa = spec.at("pcrit / Pa"), acentric = spec.at("acentric");
+    Eigen::ArrayXXd kmat(0, 0);
+    if (spec.contains("kmat")){
+        kmat = build_square_matrix(spec.at("kmat"));
+    }
+    return canonical_SRK(Tc_K, pc_Pa, acentric, kmat);
 }
 
 template <typename TCType, typename PCType, typename AcentricType>
@@ -209,6 +220,16 @@ auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen::
     auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::PR_CODE, Tc_K, pc_K, std::move(alphas), kmat);
     cub.set_meta(meta);
     return cub;
+}
+
+/// A JSON-based factory function for the canonical SRK model
+inline auto make_canonicalPR(const nlohmann::json& spec){
+    std::valarray<double> Tc_K = spec.at("Tcrit / K"), pc_Pa = spec.at("pcrit / Pa"), acentric = spec.at("acentric");
+    Eigen::ArrayXXd kmat(0, 0);
+    if (spec.contains("kmat")){
+        kmat = build_square_matrix(spec.at("kmat"));
+    }
+    return canonical_PR(Tc_K, pc_Pa, acentric, kmat);
 }
 
 }; // namespace teqp

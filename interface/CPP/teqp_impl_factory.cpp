@@ -4,15 +4,6 @@
 
 namespace teqp {
     namespace cppinterface {
-    
-    // std::unique_ptr<AbstractModel> emplace_model(AllowedModels&& model){
-    //     return make(model);
-    // }
-    
-#warning PR is not yet implemented
-#warning SRK is not yet implemented
-#warning CPA is not yet implemented
-#warning PCSAFT is not yet implemented
 
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_SAFTVRMie(const nlohmann::json &j);
 
@@ -21,7 +12,12 @@ namespace teqp {
 
         static std::unordered_map<std::string, makefunc> pointer_factory = {
             {"vdW1", [](const nlohmann::json& spec){ return make_owned(vdWEOS1(spec.at("a"), spec.at("b"))); }},
-            {"SAFT-VR-Mie", [](const nlohmann::json& spec){ return make_SAFTVRMie(spec); }},
+            
+            {"PR", [](const nlohmann::json& spec){ return make_owned(make_canonicalPR(spec));}},
+            {"SRK", [](const nlohmann::json& spec){ return make_owned(make_canonicalSRK(spec));}},
+            {"CPA", [](const nlohmann::json& spec){ return make_owned(CPA::CPAfactory(spec));}},
+            {"PCSAFT", [](const nlohmann::json& spec){ return make_owned(PCSAFT::PCSAFTfactory(spec));}},
+            
             {"multifluid", [](const nlohmann::json& spec){ return make_owned(multifluidfactory(spec));}},
             {"SW_EspindolaHeredia2009",  [](const nlohmann::json& spec){ return make_owned(squarewell::EspindolaHeredia2009(spec.at("lambda")));}},
             {"EXP6_Kataoka1992", [](const nlohmann::json& spec){ return make_owned(exp6::Kataoka1992(spec.at("alpha")));}},
@@ -32,7 +28,10 @@ namespace teqp {
             {"Mie_Pohl2023", [](const nlohmann::json& spec){ return make_owned(Mie::Mie6Pohl2023(spec.at("lambda_a")));}},
             {"2CLJF-Dipole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_dipole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2")));}},
             {"2CLJF-Quadrupole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_quadrupole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2")));}},
-            {"IdealHelmholtz", [](const nlohmann::json& spec){ return make_owned(IdealHelmholtz(spec));}}
+            {"IdealHelmholtz", [](const nlohmann::json& spec){ return make_owned(IdealHelmholtz(spec));}},
+            
+            // Implemented in its own compilation unit to help with compilation time
+            {"SAFT-VR-Mie", [](const nlohmann::json& spec){ return make_SAFTVRMie(spec); }}
         };
 
         std::unique_ptr<teqp::cppinterface::AbstractModel> build_model_ptr(const nlohmann::json& json) {
