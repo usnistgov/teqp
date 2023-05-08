@@ -1,5 +1,6 @@
 #pragma once 
 #include <memory>
+#include <typeindex>
 
 #include <Eigen/Dense>
 #include "nlohmann/json.hpp"
@@ -92,6 +93,9 @@ namespace teqp {
             virtual const AllowedModels& get_model() const = 0;
             virtual AllowedModels& get_mutable_model() = 0;
             virtual ~AbstractModel() = default;
+            
+            virtual const std::type_index& get_type_index() const = 0;
+            
             
             virtual double get_R(const EArrayd&) const = 0;
             double R(const EArrayd& x) const { return get_R(x); };

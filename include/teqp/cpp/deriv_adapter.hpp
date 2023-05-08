@@ -8,16 +8,27 @@ namespace teqp{
 namespace cppinterface{
 namespace adapter{
 
+// The ownership
 template<typename ModelType>
 struct Owner{
-    const ModelType model;
-    Owner(ModelType&& m) : model(m) {};
+private:
+    ModelType model;
+public:
+    auto& get_ref(){ return model; };
+    const auto& get_cref() const { return model; };
+    const std::type_index index;
+    Owner(ModelType&& m) : model(m), index(std::type_index(typeid(ModelType))) {};
 };
 
 template<typename ModelType>
 struct ConstViewer{
+private:
     const ModelType& model;
-    ConstViewer(ModelType& m) : model(m) {};
+public:
+    auto& get_ref(){ return model; };
+    const auto& get_cref() const { return model; };
+    const std::type_index index;
+    ConstViewer(ModelType& m) : model(m), index(std::type_index(typeid(ModelType))) {};
 };
 
 namespace internal{
@@ -31,11 +42,18 @@ namespace internal{
  */
 template<typename ModelPack>
 class DerivativeAdapter : public teqp::cppinterface::AbstractModel{
+private:
+    ModelPack mp;
 public:
-    const ModelPack mp;
+    auto& get_ModelPack_ref(){ return mp; }
+    const auto& get_ModelPack_cref() const { return mp; }
     
     template<typename T>
     DerivativeAdapter(internal::tag<T> tag_, const T&& mp): mp(mp) {} ;
+    
+    const std::type_index& get_type_index() const override {
+        return mp.index;
+    };
     
 //    template<typename T>
 //    DerivativeAdapter(const Owner<T>&& mp): mp(mp) {} ;
@@ -47,62 +65,54 @@ public:
     AllowedModels& get_mutable_model() override { throw teqp::NotImplementedError(""); };
     
     virtual double get_R(const EArrayd& molefrac) const override {
-        return mp.model.R(molefrac);
+        return mp.get_cref().R(molefrac);
     };
     
     virtual double get_Arxy(const int NT, const int ND, const double T, const double rhomolar, const EArrayd& molefrac) const override{
-        return TDXDerivatives<decltype(mp.model), double, EArrayd>::get_Ar(NT, ND, mp.model, T, rhomolar, molefrac);
+        return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_Ar(NT, ND, mp.get_cref(), T, rhomolar, molefrac);
     };
     
     // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
-#define X(i,j) virtual double get_Ar ## i ## j(const double T, const double rho, const REArrayd& molefrac) const  override { return TDXDerivatives<decltype(mp.model), double, EArrayd>::template get_Arxy<i,j>(mp.model, T, rho, molefrac); };
+#define X(i,j) virtual double get_Ar ## i ## j(const double T, const double rho, const REArrayd& molefrac) const  override { return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::template get_Arxy<i,j>(mp.get_cref(), T, rho, molefrac); };
     ARXY_args
 #undef X
     // And like get_Ar01n, get_Ar02n, ....
-#define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefrac) const  override { auto vals = TDXDerivatives<decltype(mp.model), double, EArrayd>::template get_Ar0n<i>(mp.model, T, rho, molefrac); return Eigen::Map<Eigen::ArrayXd>(&(vals[0]), vals.size()); };
+#define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefrac) const  override { auto vals = TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::template get_Ar0n<i>(mp.get_cref(), T, rho, molefrac); return Eigen::Map<Eigen::ArrayXd>(&(vals[0]), vals.size()); };
     AR0N_args
 #undef X
     
     // Virial derivatives
     virtual double get_B2vir(const double T, const EArrayd& z) const override {
-        return VirialDerivatives<decltype(mp.model), double, EArrayd>::get_B2vir(mp.model, T, z);
+        return VirialDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_B2vir(mp.get_cref(), T, z);
     };
     virtual std::map<int, double> get_Bnvir(const int Nderiv, const double T, const EArrayd& z) const override {
-        return VirialDerivatives<decltype(mp.model), double, EArrayd>::get_Bnvir_runtime(Nderiv, mp.model, T, z);
+        return VirialDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_Bnvir_runtime(Nderiv, mp.get_cref(), T, z);
     };
     virtual double get_B12vir(const double T, const EArrayd& z) const override {
-        return VirialDerivatives<decltype(mp.model), double, EArrayd>::get_B12vir(mp.model, T, z);
+        return VirialDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_B12vir(mp.get_cref(), T, z);
     };
     virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& molefrac) const override {
-        return VirialDerivatives<decltype(mp.model), double, EArrayd>::get_dmBnvirdTm_runtime(Nderiv, NTderiv, mp.model, T, molefrac);
+        return VirialDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_dmBnvirdTm_runtime(Nderiv, NTderiv, mp.get_cref(), T, molefrac);
     };
     
     // Derivatives from isochoric thermodynamics (all have the same signature within each block), and they differ by their output argument
-#define X(f) virtual double f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.model), double, EArrayd>::f(mp.model, T, rhovec); };
+#define X(f) virtual double f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::f(mp.get_cref(), T, rhovec); };
     ISOCHORIC_double_args
 #undef X
-#define X(f) virtual EArrayd f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.model), double, EArrayd>::f(mp.model, T, rhovec); };
+#define X(f) virtual EArrayd f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::f(mp.get_cref(), T, rhovec); };
     ISOCHORIC_array_args
 #undef X
-#define X(f) virtual EMatrixd f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.model), double, EArrayd>::f(mp.model, T, rhovec); };
+#define X(f) virtual EMatrixd f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::f(mp.get_cref(), T, rhovec); };
     ISOCHORIC_matrix_args
 #undef X
-#define X(f) virtual std::tuple<double, Eigen::ArrayXd, Eigen::MatrixXd> f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.model), double, EArrayd>::f(mp.model, T, rhovec); };
+#define X(f) virtual std::tuple<double, Eigen::ArrayXd, Eigen::MatrixXd> f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::f(mp.get_cref(), T, rhovec); };
     ISOCHORIC_multimatrix_args
 #undef X
     virtual Eigen::ArrayXd get_Psir_sigma_derivs(const double T, const EArrayd& rhovec, const EArrayd& v) const override{
-        return IsochoricDerivatives<decltype(mp.model), double, EArrayd>::get_Psir_sigma_derivs(mp.model, T, rhovec, v);
+        return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_Psir_sigma_derivs(mp.get_cref(), T, rhovec, v);
     };
     
     virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const override { throw teqp::NotImplementedError("Not available"); };
-    
-//    virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> & = std::nullopt) const override { throw teqp::NotImplementedError("Not available"); };
-//    virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const  override { throw teqp::NotImplementedError("Not available"); };
-//    virtual double get_dp_dT_crit(const double T, const REArrayd& rhovec) const override { throw teqp::NotImplementedError("Not available"); };
-//    virtual EArray2 get_criticality_conditions(const double T, const REArrayd& rhovec) const  override { throw teqp::NotImplementedError("Not available"); };
-//    virtual EigenData eigen_problem(const double T, const REArrayd& rhovec, const std::optional<REArrayd>&) const override { throw teqp::NotImplementedError("Not available"); };
-//    virtual double get_minimum_eigenvalue_Psi_Hessian(const double T, const REArrayd& rhovec) const override { throw teqp::NotImplementedError("Not available"); };
-    
 };
 
 template<typename TemplatedModel> auto view(const TemplatedModel& tp){
@@ -118,6 +128,44 @@ template<typename TemplatedModel> auto make_owned(const TemplatedModel& tmodel){
     using namespace teqp::cppinterface;
     return std::unique_ptr<AbstractModel>(own(std::move(tmodel)));
 };
+
+/**
+ Get a const reference to the model
+ 
+ Available for both ownership and const viewer holder types
+ */
+template<typename ModelType>
+const ModelType& get_model_cref(const AbstractModel *am)
+{
+    const auto* mptr = dynamic_cast<const DerivativeAdapter<ConstViewer<const ModelType>>*>(am);
+    const auto* mptr2 = dynamic_cast<const DerivativeAdapter<Owner<const ModelType>>*>(am);
+    if (mptr != nullptr){
+        return mptr->get_ModelPack_cref().get_cref();
+    }
+    else if (mptr2 != nullptr){
+        return mptr2->get_ModelPack_cref().get_cref();
+    }
+    else{
+        throw teqp::InvalidArgument("Unable to cast model to desired type");
+    }
+}
+
+/**
+ Get a mutable reference to the model
+ 
+ Only available when the holder type is ownership (not available for const viewer holder type)
+ */
+template<typename ModelType>
+ModelType& get_model_ref(AbstractModel *am)
+{
+    auto* mptr2 = dynamic_cast<DerivativeAdapter<Owner<ModelType>>*>(am);
+    if (mptr2 != nullptr){
+        return mptr2->get_ModelPack_ref().get_ref();
+    }
+    else{
+        throw teqp::InvalidArgument("Unable to cast model to desired type; only the Owner ownership model is allowed");
+    }
+}
 
 }
 }
