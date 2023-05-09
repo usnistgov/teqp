@@ -73,7 +73,7 @@ auto linsolve(const A& a, const B& b) {
 * this component will not be allowed to change (they will stay zero, avoiding the possibility that 
 * they go to a negative value, which can cause trouble for some EOS)
 */
-auto mix_VLE_Tx(const AbstractModel& model, double T, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const Eigen::ArrayXd& xspec, double atol, double reltol, double axtol, double relxtol, int maxiter) {
+inline auto mix_VLE_Tx(const AbstractModel& model, double T, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const Eigen::ArrayXd& xspec, double atol, double reltol, double axtol, double relxtol, int maxiter) {
     using Scalar = double;
 
     const Eigen::Index N = rhovecL0.size();
@@ -284,7 +284,7 @@ struct hybrj_functor__mix_VLE_Tp : Functor<double>
 * \param flags Flags controlling the iteration and stopping conditions
 */
 
-auto mix_VLE_Tp(const AbstractModel& model, double T, double pgiven, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<MixVLETpFlags>& flags_ = std::nullopt) {
+inline auto mix_VLE_Tp(const AbstractModel& model, double T, double pgiven, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<MixVLETpFlags>& flags_ = std::nullopt) {
     
     auto flags = flags_.value_or(MixVLETpFlags{});
 
@@ -396,7 +396,7 @@ auto mix_VLE_Tp(const AbstractModel& model, double T, double pgiven, const Eigen
 
 * \param flags Additional flags
 */
-auto mixture_VLE_px(const AbstractModel& model, double p_spec, const Eigen::ArrayXd& xmolar_spec, double T0, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<MixVLEpxFlags>& flags_ = std::nullopt) {
+inline auto mixture_VLE_px(const AbstractModel& model, double p_spec, const Eigen::ArrayXd& xmolar_spec, double T0, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<MixVLEpxFlags>& flags_ = std::nullopt) {
     using Scalar = double;
     
     auto flags = flags_.value_or(MixVLEpxFlags{});
@@ -521,7 +521,7 @@ auto mixture_VLE_px(const AbstractModel& model, double p_spec, const Eigen::Arra
     return std::make_tuple(return_code, T, rhovecLfinal, rhovecVfinal);
 }
 
-auto get_drhovecdp_Tsat(const AbstractModel& model, const double &T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
+inline auto get_drhovecdp_Tsat(const AbstractModel& model, const double &T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
     //tic = timeit.default_timer();
     using Scalar = double;
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = model.build_Psi_Hessian_autodiff(T, rhovecL).eval();
@@ -595,7 +595,7 @@ auto get_drhovecdp_Tsat(const AbstractModel& model, const double &T, const Eigen
 /**
  * Derivative of molar concentration vectors w.r.t. p along an isobar of the phase envelope for binary mixtures
 */
-auto get_drhovecdT_psat(const AbstractModel& model, const double &T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
+inline auto get_drhovecdT_psat(const AbstractModel& model, const double &T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
     using Scalar = double;
     if (rhovecL.size() != 2) { throw std::invalid_argument("Binary mixtures only"); }
     assert(rhovecL.size() == rhovecV.size());
@@ -709,7 +709,7 @@ auto get_drhovecdT_psat(const AbstractModel& model, const double &T, const Eigen
 * To keep the vapor mole fraction constant, just swap the input molar concentrations to this function, the first concentration 
 * vector is always the one with fixed mole fractions
 */
-auto get_drhovecdT_xsat(const AbstractModel& model, const double& T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
+inline auto get_drhovecdT_xsat(const AbstractModel& model, const double& T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
     using Scalar = double;
     if (rhovecL.size() != 2) { throw std::invalid_argument("Binary mixtures only"); }
     assert(rhovecL.size() == rhovecV.size());
@@ -789,8 +789,7 @@ auto get_dpsat_dTsat_isopleth(const Model& model, const double& T, const Eigen::
  * \brief Trace an isotherm with parametric tracing
  * \ note If options.revision is 2, the data will be returned in the "data" field, otherwise the data will be returned as root array
 */
-template<typename Model = AbstractModel>
-auto trace_VLE_isotherm_binary(const Model &model, double T, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<TVLEOptions>& options = std::nullopt)
+inline auto trace_VLE_isotherm_binary(const AbstractModel &model, double T, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<TVLEOptions>& options = std::nullopt)
 {
     // Get the options, or the default values if not provided
     TVLEOptions opt = options.value_or(TVLEOptions{});
@@ -1258,5 +1257,34 @@ auto trace_VLE_isobar_binary(const Model& model, double p, double T0, const Eige
     }
     return JSONdata;
 }
+
+#define VLE_FUNCTIONS_TO_WRAP \
+    X(trace_VLE_isobar_binary) \
+    X(trace_VLE_isotherm_binary) \
+    X(get_dpsat_dTsat_isopleth) \
+    X(get_drhovecdT_xsat) \
+    X(get_drhovecdT_psat) \
+    X(get_drhovecdp_Tsat) \
+    X(trace_critical_arclength_binary) \
+    X(mixture_VLE_px) \
+    X(mix_VLE_Tp) \
+    X(mix_VLE_Tx)
+
+#define X(f) template <typename TemplatedModel, typename ...Params, \
+typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, TemplatedModel>::value>::type> \
+inline auto f(const TemplatedModel& model, Params&&... params){ \
+    auto view = teqp::cppinterface::adapter::make_cview(model); \
+    const AbstractModel& am = *view.get(); \
+    return f(am, std::forward<Params>(params)...); \
+}
+    VLE_FUNCTIONS_TO_WRAP
+#undef X
+#undef VLE_FUNCTIONS_TO_WRAP
+
+//
+//template <typename TemplatedModel, typename ...Params, typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, TemplatedModel>::value>::type>
+//auto get_drhovecdT_psat(const TemplatedModel& model, Params&&... params){
+//    return get_drhovecdT_psat(teqp::cppinterface::adapter::make_cview(model), std::forward<Params>(params)...);
+//}
 
 }; /* namespace teqp*/

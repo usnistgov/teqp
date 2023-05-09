@@ -48,7 +48,7 @@ public:
     auto get_der(const Rho& rho){
         if constexpr(is_not_AbstractModel<Model>::value){
             using tdx = TDXDerivatives<Model,TYPE,Eigen::ArrayXd>;
-            return tdx::template get_Ar0n<2>(m_model, m_T, rho, molefracs);
+            return tdx::template get_Ar0n<2, backend>(m_model, m_T, rho, molefracs);
         }
         else{
             return m_model.get_Ar02n(m_T, rho, molefracs);
@@ -135,15 +135,6 @@ auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
     return rhovec;
 }
 
-template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff,
-typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, Model>::value>::type>
-auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) {
-    Eigen::ArrayXd molefracs_{Eigen::ArrayXd::Ones(1,1)};
-    if (molefracs){ molefracs_ = molefracs.value(); }
-    auto res = IsothermPureVLEResiduals<Model, Scalar, backend>(model, T, molefracs_);
-    return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
-}
-
 inline auto pure_VLE_T(const teqp::cppinterface::AbstractModel& model, double T, double rhoL, double rhoV, int maxiter, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) {
     Eigen::ArrayXd molefracs_{Eigen::ArrayXd::Ones(1,1)};
     if (molefracs){ molefracs_ = molefracs.value(); }
@@ -178,12 +169,6 @@ inline auto dpsatdT_pure(const teqp::cppinterface::AbstractModel& model, double 
     return dpsatdT;
 }
 
-template <typename Model, typename Scalar,
-          typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, Model>::value>::type>
-double dpsatdT_pure(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt){
-    return dpsatdT_pure(DerivativeAdapter(model), T, rhoL, rhoV, molefracs);
-}
-
 /***
  \brief Starting at the critical point, trace the VLE down to a temperature of interest
  
@@ -196,8 +181,7 @@ double dpsatdT_pure(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, cons
  2. Take a small step away from the critical point (this is where the beta=0.5 assumption is invoked)
  3. Integrate from the near critical temperature to the temperature of interest
  */
-template<typename Model>
-auto pure_trace_VLE(const Model& model, const double T, const nlohmann::json &spec){
+inline auto pure_trace_VLE(const AbstractModel& model, const double T, const nlohmann::json &spec){
     // Start at the true critical point, from the specified guess value
     nlohmann::json pure_spec;
     Eigen::ArrayXd z{Eigen::ArrayXd::Ones(1,1)};
@@ -232,9 +216,9 @@ auto pure_trace_VLE(const Model& model, const double T, const nlohmann::json &sp
         if (with_deriv){
             // Get drho/dT for both phases
             auto dpsatdT = dpsatdT_pure(model, T_, rhoLrhoVpolished[0], rhoLrhoVpolished[1], z);
-            auto get_drhodT = [&z, R, dpsatdT](const Model& model, double T, double rho){
-                auto dpdrho = R*T*(1 + 2*tdx::get_Ar01(model, T, rho, z) + tdx::get_Ar02(model, T, rho, z));
-                auto dpdT = R*rho*(1 + tdx::get_Ar01(model, T, rho, z) - tdx::get_Ar11(model, T, rho, z));
+            auto get_drhodT = [&z, R, dpsatdT](const AbstractModel& model, double T, double rho){
+                auto dpdrho = R*T*(1 + 2*model.get_Ar01(T, rho, z) + model.get_Ar02(T, rho, z));
+                auto dpdT = R*rho*(1 + model.get_Ar01(T, rho, z) - model.get_Ar11(T, rho, z));
                 return -dpdT/dpdrho + dpsatdT/dpdrho;
             };
             auto drhodTL = get_drhodT(model, T_, rhoLrhoVpolished[0]);
@@ -255,5 +239,21 @@ auto pure_trace_VLE(const Model& model, const double T, const nlohmann::json &sp
     }
     return rhoLrhoVpolished;
 }
+
+#define VLE_PURE_FUNCTIONS_TO_WRAP \
+    X(dpsatdT_pure) \
+    X(pure_VLE_T) \
+    X(pure_trace_VLE)
+
+#define X(f) template <typename TemplatedModel, typename ...Params, \
+typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, TemplatedModel>::value>::type> \
+inline auto f(const TemplatedModel& model, Params&&... params){ \
+    auto view = teqp::cppinterface::adapter::make_cview(model); \
+    const AbstractModel& am = *view.get(); \
+    return f(am, std::forward<Params>(params)...); \
+}
+VLE_PURE_FUNCTIONS_TO_WRAP
+#undef X
+#undef VLE_PURE_FUNCTIONS_TO_WRAP
 
 }
