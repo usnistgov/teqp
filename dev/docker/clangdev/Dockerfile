@@ -10,4 +10,4 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y python3 libpython3-dev pyt
 # Run the catch exe, generating gcov output
 CMD mkdir build && cd build && \
     cmake /teqp -GNinja -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build . --target teqpcpp
+    cmake --build . --target teqpcpp --parallel 4
