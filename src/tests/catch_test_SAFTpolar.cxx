@@ -183,9 +183,10 @@ TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepol
     //    }
     
     SECTION("With multipolar terms"){
-        for (std::string polar_model : {"GrossVrabec", "GubbinsTwu+Luckas", "GubbinsTwu+GubbinsTwu"}){
-            const bool print = true;
+        for (std::string polar_model : {"GubbinsTwu+Luckas", "GubbinsTwu+GubbinsTwu", "GrossVrabec"}){
+            const bool print = false;
             double Tstar_guess = Tstar_guess_init, rhostar_guess = rhostar_guess_init;
+            if (print) std::cout << "===== " << polar_model << " =====" << std::endl;
             if (print) std::cout << "(mu^*)^2, T^*, rho^*" << std::endl;
             
             auto critpure = nonpolar_model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)));
@@ -196,7 +197,8 @@ TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepol
             double mustar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
             double Qstar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
             j["model"]["polar_model"] = polar_model;
-            for (double mustar2 = 0.0; mustar2 < 5; mustar2 += 0.1){
+            
+            for (double mustar2 = 0.1; mustar2 < 5; mustar2 += 0.1){
                 j["model"]["coeffs"][0]["mu_Cm"] = sqrt(mustar2/mustar2factor*(ek*pow(sigma_m, 3)));
                 j["model"]["coeffs"][0]["nmu"] = 1;
                 auto model = teqp::cppinterface::make_model(j);
