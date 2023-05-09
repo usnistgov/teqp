@@ -129,6 +129,11 @@ template<typename TemplatedModel> auto make_owned(const TemplatedModel& tmodel){
     return std::unique_ptr<AbstractModel>(own(std::move(tmodel)));
 };
 
+template<typename TemplatedModel> auto make_cview(const TemplatedModel& tmodel){
+    using namespace teqp::cppinterface;
+    return std::unique_ptr<AbstractModel>(view(tmodel));
+};
+
 /**
  Get a const reference to the model
  
