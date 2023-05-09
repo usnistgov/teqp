@@ -486,9 +486,10 @@ struct VirialDerivatives {
     {
         std::map<int, double> dnalphardrhon;
         if constexpr(be == ADBackends::autodiff){
-            autodiff::HigherOrderDual<Nderiv, double> rhodual = 0.0;
             auto f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
-            auto derivs = derivatives(f, wrt(rhodual), at(rhodual));
+            autodiff::Real<Nderiv, Scalar> rhoreal = 0.0;
+            auto derivs = derivatives(f, along(1), at(rhoreal));
+            
             for (auto n = 1; n < Nderiv; ++n){
                  dnalphardrhon[n] = derivs[n];
             }
