@@ -220,6 +220,6 @@ namespace teqp {
         auto drhohat = dT * drhohat_dT;
         auto rholiq = -drhohat / sqrt(1 - T / Tc) + rhoc;
         auto rhovap = drhohat / sqrt(1 - T / Tc) + rhoc;
-        return std::make_tuple(rholiq, rhovap);
+        return (Eigen::ArrayXd(2) << rholiq, rhovap).finished();
     }
 };
