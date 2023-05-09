@@ -138,7 +138,7 @@ namespace teqp {
             virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const = 0;
             
             std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& = std::nullopt) const ;
-            std::tuple<double, double> extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const;
+            EArray2 extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const;
             std::tuple<EArrayd, EMatrixd> get_pure_critical_conditions_Jacobian(const double T, const double rho, int alternative_pure_index=-1, int alternative_length=2) const;
             
             EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const;
@@ -156,7 +156,7 @@ namespace teqp {
             std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const;
             std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options = std::nullopt) const;
             
-            virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>&, const std::optional<TCABOptions> & = std::nullopt) const;
+            virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>& = std::nullopt, const std::optional<TCABOptions> & = std::nullopt) const;
             virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const;
             virtual double get_dp_dT_crit(const double T, const REArrayd& rhovec) const;
             virtual EArray2 get_criticality_conditions(const double T, const REArrayd& rhovec) const;
