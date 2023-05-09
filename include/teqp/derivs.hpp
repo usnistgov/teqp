@@ -166,11 +166,11 @@ struct TDXDerivatives {
             }
         }
         else if constexpr (iT > 0 && iD == 0) {
-            auto Trecip = 1.0 / T;
+            Scalar Trecip = 1.0 / T;
             if constexpr (be == ADBackends::autodiff) {
                 // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
                 autodiff::Real<iT, Scalar> Trecipad = Trecip;
-                auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(1.0/Trecip__, rho, molefrac); };
+                auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(forceeval(1.0/Trecip__), rho, molefrac); };
                 return powi(Trecip, iT)*derivatives(f, along(1), at(Trecipad))[iT];
             }
             else if constexpr (iT == 1 && be == ADBackends::complex_step) {
@@ -199,7 +199,7 @@ struct TDXDerivatives {
                     return eval(w.alpha(T_, rho_, molefrac)); };
                 auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)));
                 auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad));
-                return powi(1.0 / T, iT) * powi(rho, iD) * der[der.size() - 1];
+                return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
             }
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
@@ -340,11 +340,11 @@ struct TDXDerivatives {
     template<int Nderiv, ADBackends be = ADBackends::autodiff, class AlphaWrapper>
     static auto get_Agenn0(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         std::valarray<Scalar> o(Nderiv+1);
-        auto Trecip = 1.0 / T;
+        Scalar Trecip = 1.0 / T;
         if constexpr (be == ADBackends::autodiff) {
             // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
             autodiff::Real<Nderiv, Scalar> Trecipad = Trecip;
-            auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(1.0/Trecip__, rho, molefrac); };
+            auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(forceeval(1.0/Trecip__), rho, molefrac); };
             auto ders = derivatives(f, along(1), at(Trecipad));
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = powi(Trecip, n) * ders[n];
@@ -523,7 +523,7 @@ struct VirialDerivatives {
     }
 
     /// This version of the get_Bnvir takes the maximum number of derivatives as a runtime argument
-    /// and then forwards all arguments to the templated function
+    /// and then forwards all arguments to the corresponding templated function
     template <ADBackends be = ADBackends::autodiff>
     static auto get_Bnvir_runtime(const int Nderiv, const Model& model, const Scalar &T, const VectorType& molefrac) {
         switch(Nderiv){
@@ -702,7 +702,7 @@ struct IsochoricDerivatives{
     */
     static auto get_dPsirdT_constrhovec(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot_ = rhovec.sum();
-        auto molefrac = rhovec / rhotot_;
+        auto molefrac = (rhovec / rhotot_).eval();
         autodiff::Real<1, Scalar> Tad = T;
         auto f = [&model, &rhotot_, &molefrac](const auto& T_) {return rhotot_*model.R(molefrac)*T_*model.alphar(T_, rhotot_, molefrac); };
         return derivatives(f, along(1), at(Tad))[1];
