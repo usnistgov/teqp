@@ -1,0 +1,14 @@
+version: '3.2'
+
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    environment:
+      DEBIAN_FRONTEND: noninteractive
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /teqp
+        read_only: true
