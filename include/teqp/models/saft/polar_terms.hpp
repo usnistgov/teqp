@@ -375,6 +375,7 @@ private:
     const KIntegral K444_555{444, 555};
     const double epsilon_0 = 8.8541878128e-12; // https://en.wikipedia.org/wiki/Vacuum_permittivity, in F/m, or C^2⋅N^−1⋅m^−2
     const double PI_ = static_cast<double>(EIGEN_PI);
+    Eigen::MatrixXd SIGMAIJ, EPSKIJ;
     
 public:
     MultipolarContributionGubbinsTwu(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2), has_a_polar(mubar2.cwiseAbs().sum() > 0 || Qbar2.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)) {
@@ -385,59 +386,64 @@ public:
         if (sigma_m.size() != Qbar2.size()){
             throw teqp::InvalidArgument("bad size of Qbar2");
         }
+        // Pre-calculate the mixing terms;
+        const std::size_t N = sigma_m.size();
+        SIGMAIJ.resize(N, N); EPSKIJ.resize(N, N);
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < N; ++j){
+                // Lorentz-Berthelot mixing rules
+                double epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
+                double sigmaij = (sigma_m[i]+sigma_m[j])/2;
+                SIGMAIJ(i, j) = sigmaij;
+                EPSKIJ(i, j) = epskij;
+            }
+        }
     }
     MultipolarContributionGubbinsTwu& operator=( const MultipolarContributionGubbinsTwu& ) = delete; // non copyable
     
     template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType>
     auto get_alpha2(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions) const{
         const auto& x = mole_fractions; // concision
-        const auto& sigma = sigma_m; // concision
         
         const std::size_t N = mole_fractions.size();
-        std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> alpha2_112 = 0.0, alpha2_123 = 0.0, alpha2_224 = 0.0;
+        std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])> alpha2_112 = 0.0, alpha2_123 = 0.0, alpha2_224 = 0.0;
         
-        const auto factor_112 = forceeval(-2.0*PI_*rhoN/3.0); //*POW2(4*PI_*epsilon_0)
+        const auto factor_112 = forceeval(-2.0*PI_*rhoN/3.0);
         const auto factor_123 = forceeval(-PI_*rhoN/3.0);
         const auto factor_224 = forceeval(-14.0*PI_*rhoN/5.0);
         
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = 0; j < N; ++j){
-                // Lorentz-Berthelot mixing rules
-                double epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
-                double sigmaij = (sigma[i]+sigma[j])/2;
 
-                TTYPE Tstari = forceeval(T/epsilon_over_k[i]), Tstarj = forceeval(T/epsilon_over_k[j]);
+                TTYPE Tstari = forceeval(T/EPSKIJ(i, i)), Tstarj = forceeval(T/EPSKIJ(j, j));
                 auto leading = forceeval(x[i]*x[j]/(Tstari*Tstarj)); // common for all alpha_2 terms
-                TTYPE Tstarij = forceeval(T/epskij);
-
-                alpha2_112 += factor_112*leading*sigma_m3[i]*sigma_m3[j]/powi(sigmaij,3)*mubar2[i]*mubar2[j]*J6.get_J(Tstarij, rhostar);
-                alpha2_123 += factor_123*leading*sigma_m3[i]*sigma_m5[j]/powi(sigmaij,5)*mubar2[i]*Qbar2[j]*J8.get_J(Tstarij, rhostar);
-                alpha2_224 += factor_224*leading*sigma_m5[i]*sigma_m5[j]/powi(sigmaij,7)*Qbar2[i]*Qbar2[j]*J10.get_J(Tstarij, rhostar);
+                TTYPE Tstarij = forceeval(T/EPSKIJ(i, j));
+                double sigmaij = SIGMAIJ(i,j);
+                {
+                    double dbl = sigma_m3[i]*sigma_m3[j]/powi(sigmaij,3)*mubar2[i]*mubar2[j];
+                    alpha2_112 += leading*dbl*J6.get_J(Tstarij, rhostar);
+                }
+                {
+                    double dbl = sigma_m3[i]*sigma_m5[j]/powi(sigmaij,5)*mubar2[i]*Qbar2[j];
+                    alpha2_123 += leading*dbl*J8.get_J(Tstarij, rhostar);
+                }
+                {
+                    double dbl = sigma_m5[i]*sigma_m5[j]/powi(sigmaij,7)*Qbar2[i]*Qbar2[j];
+                    alpha2_224 += leading*dbl*J10.get_J(Tstarij, rhostar);
+                }
             }
         }
-        return forceeval(alpha2_112 + 2.0*alpha2_123 + alpha2_224);
+        return forceeval(factor_112*alpha2_112 + 2.0*factor_123*alpha2_123 + factor_224*alpha2_224);
     }
-    
     
     
     template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType>
     auto get_alpha3(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions) const{
         const VecType& x = mole_fractions; // concision
-        const auto& sigma = sigma_m; // concision
         const std::size_t N = mole_fractions.size();
-        using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
+        using type = std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])>;
         type summerA_112_112_224 = 0.0, summerA_112_123_213 = 0.0, summerA_123_123_224 = 0.0, summerA_224_224_224 = 0.0;
         type summerB_112_112_112 = 0.0, summerB_112_123_123 = 0.0, summerB_123_123_224 = 0.0, summerB_224_224_224 = 0.0;
-        Eigen::MatrixXd SIGMAIJ(N,N), EPSKIJ(N,N);
-        for (std::size_t i = 0; i < N; ++i){
-            for (std::size_t j = 0; j < N; ++j){
-                // Lorentz-Berthelot mixing rules
-                double epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
-                double sigmaij = (sigma[i]+sigma[j])/2;
-                SIGMAIJ(i, j) = sigmaij;
-                EPSKIJ(i, j) = epskij;
-            }
-        }
         
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = 0; j < N; ++j){
@@ -452,10 +458,22 @@ public:
                 double POW10sigmaij = powi(sigmaij, 10);
                 double POW12sigmaij = POW4sigmaij*POW8sigmaij;
                 
-                summerA_112_112_224 += leading*pow(sigma[i]*sigma[j], 11.0/2.0)/POW8sigmaij*mubar2[i]*mubar2[j]*sqrt(Qbar2[i]*Qbar2[j])*J11.get_J(Tstarij, rhostar);
-                summerA_112_123_213 += leading*pow(sigma[i]*sigma[j], 11.0/2.0)/POW8sigmaij*mubar2[i]*mubar2[j]*sqrt(Qbar2[i]*Qbar2[j])*J11.get_J(Tstarij, rhostar);
-                summerA_123_123_224 += leading*pow(sigma[i], 11.0/2.0)*pow(sigma[j], 15.0/2.0)/POW10sigmaij*mubar2[i]*sqrt(Qbar2[i])*pow(Qbar2[j], 3.0/2.0)*J13.get_J(Tstarij, rhostar);
-                summerA_224_224_224 += leading*pow(sigma[i]*sigma[j], 15.0/2.0)/POW12sigmaij*Qbar2[i]*Qbar2[j]*J15.get_J(Tstarij, rhostar);
+                {
+                    double dbl = pow(sigma_m[i]*sigma_m[j], 11.0/2.0)/POW8sigmaij*mubar2[i]*mubar2[j]*sqrt(Qbar2[i]*Qbar2[j]);
+                    summerA_112_112_224 += leading*dbl*J11.get_J(Tstarij, rhostar);
+                }
+                {
+                    double dbl = pow(sigma_m[i]*sigma_m[j], 11.0/2.0)/POW8sigmaij*mubar2[i]*mubar2[j]*sqrt(Qbar2[i]*Qbar2[j]);
+                    summerA_112_123_213 += leading*dbl*J11.get_J(Tstarij, rhostar);
+                }
+                {
+                    double dbl = pow(sigma_m[i], 11.0/2.0)*pow(sigma_m[j], 15.0/2.0)/POW10sigmaij*mubar2[i]*sqrt(Qbar2[i])*pow(Qbar2[j], 3.0/2.0);
+                    summerA_123_123_224 += leading*dbl*J13.get_J(Tstarij, rhostar);
+                }
+                {
+                    double dbl = pow(sigma_m[i]*sigma_m[j], 15.0/2.0)/POW12sigmaij*Qbar2[i]*Qbar2[j];
+                    summerA_224_224_224 += leading*dbl*J15.get_J(Tstarij, rhostar);
+                }
 
                 for (std::size_t k = 0; k < N; ++k){
                     TTYPE Tstark = forceeval(T/EPSKIJ(k,k));
@@ -483,7 +501,7 @@ public:
                     }
                     if (std::abs(Qbar2[i]*Qbar2[j]*Qbar2[k]) > 0){
                         auto K444555 = get_Kijk(K444_555, rhostar, Tstarij, Tstarik, Tstarjk);
-                        double dbl = POW5(sigma[i]*sigma[j]*sigma[k])/(POW3(sigmaij*sigmaik*sigmajk))*Qbar2[i]*Qbar2[j]*Qbar2[k];
+                        double dbl = POW5(sigma_m[i]*sigma_m[j]*sigma_m[k])/(POW3(sigmaij*sigmaik*sigmajk))*Qbar2[i]*Qbar2[j]*Qbar2[k];
                         summerB_224_224_224 += leadingijk*dbl*K444555;
                     }
                 }
