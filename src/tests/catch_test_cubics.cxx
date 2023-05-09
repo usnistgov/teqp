@@ -129,7 +129,8 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
     std::valarray<double> Tc_K = { 190.564, 154.581},
                          pc_Pa = { 4599200, 5042800},
                       acentric = { 0.011, 0.022};
-    auto model = canonical_PR(Tc_K, pc_Pa, acentric);
+    const auto modelptr = teqp::cppinterface::adapter::make_owned(canonical_PR(Tc_K, pc_Pa, acentric));
+    const auto& model = teqp::cppinterface::adapter::get_model_cref<canonical_cubic_t>(modelptr.get());
     const auto N = Tc_K.size();
     using state_type = std::vector<double>; 
     REQUIRE(N == 2);
@@ -164,8 +165,7 @@ TEST_CASE("Check manual integration of subcritical VLE isotherm for binary mixtu
         auto rho = rhovecL.sum();
         auto molefrac = rhovecL / rhovecL.sum();
 
-        using id = IsochoricDerivatives<decltype(model)>; 
-        auto pfromderiv = rho * model.R(molefrac) * T + id::get_pr(model, T, rhovecL);
+        auto pfromderiv = rho * modelptr->R(molefrac) * T + modelptr->get_pr(T, rhovecL);
         return pfromderiv;
     };
 
