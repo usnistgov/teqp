@@ -137,6 +137,9 @@ template<typename TemplatedModel> auto make_owned(const TemplatedModel& tmodel){
 template<typename ModelType>
 const ModelType& get_model_cref(const AbstractModel *am)
 {
+    if (am == nullptr){
+        throw teqp::InvalidArgument("Argument to get_model_cref is a nullptr");
+    }
     const auto* mptr = dynamic_cast<const DerivativeAdapter<ConstViewer<const ModelType>>*>(am);
     const auto* mptr2 = dynamic_cast<const DerivativeAdapter<Owner<const ModelType>>*>(am);
     if (mptr != nullptr){
@@ -158,6 +161,9 @@ const ModelType& get_model_cref(const AbstractModel *am)
 template<typename ModelType>
 ModelType& get_model_ref(AbstractModel *am)
 {
+    if (am == nullptr){
+        throw teqp::InvalidArgument("Argument to get_model_ref is a nullptr");
+    }
     auto* mptr2 = dynamic_cast<DerivativeAdapter<Owner<ModelType>>*>(am);
     if (mptr2 != nullptr){
         return mptr2->get_ModelPack_ref().get_ref();
