@@ -981,7 +981,7 @@ struct IsochoricDerivatives{
             return forceeval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
         };
         auto der = derivatives(wrapper, along(1), at(sigma));
-        VectorType ret(rhovec.size());
+        VectorType ret(der.size());
         for (auto i = 0; i < ret.size(); ++i){ ret[i] = der[i];}
         return ret;
     }
