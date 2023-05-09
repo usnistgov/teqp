@@ -413,7 +413,6 @@ public:
                 alpha2_112 += factor_112*leading*sigma_m3[i]*sigma_m3[j]/powi(sigmaij,3)*mubar2[i]*mubar2[j]*J6.get_J(Tstarij, rhostar);
                 alpha2_123 += factor_123*leading*sigma_m3[i]*sigma_m5[j]/powi(sigmaij,5)*mubar2[i]*Qbar2[j]*J8.get_J(Tstarij, rhostar);
                 alpha2_224 += factor_224*leading*sigma_m5[i]*sigma_m5[j]/powi(sigmaij,7)*Qbar2[i]*Qbar2[j]*J10.get_J(Tstarij, rhostar);
-                return alpha2_224;
             }
         }
         return forceeval(alpha2_112 + 2.0*alpha2_123 + alpha2_224);
