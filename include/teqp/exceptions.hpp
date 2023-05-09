@@ -38,4 +38,9 @@ namespace teqp {
     };
     using IterationError = IterationFailure;
 
+    class NotImplementedError : public teqpException {
+    public:
+        NotImplementedError(const std::string& msg) : teqpException(200, msg) {};
+    };
+
 }; // namespace teqp

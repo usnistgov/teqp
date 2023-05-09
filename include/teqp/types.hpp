@@ -15,7 +15,9 @@ namespace teqp {
 // compilation speed hit invoked by these headers
 #if !defined(NO_TYPES_HEADER)
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
 #include "MultiComplex/MultiComplex.hpp"
+#endif
 
 #include <valarray>
 #include <chrono>
@@ -72,7 +74,9 @@ namespace teqp {
 
     // See https://stackoverflow.com/a/41438758
     template<typename T> struct is_mcx_t : public std::false_type {};
+#if defined(TEQP_MULTICOMPLEX_ENABLED)    
     template<typename T> struct is_mcx_t<mcx::MultiComplex<T>> : public std::true_type {};
+#endif
 
     // Extract the underlying value from more complicated numerical types, like complex step types with
     // a tiny increment in the imaginary direction
@@ -198,7 +202,7 @@ namespace teqp {
         }
         return o;
     }
-
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
     template<typename T>
     auto pow(const mcx::MultiComplex<T>& x, const Eigen::ArrayXd& e) {
         Eigen::Array<mcx::MultiComplex<T>, Eigen::Dynamic, 1> o(e.size());
@@ -207,6 +211,7 @@ namespace teqp {
         }
         return o;
     }
+#endif
 
 }; // namespace teqp
 

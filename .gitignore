@@ -1,4 +1,5 @@
 /bld
+/bldgcc
 /build
 /interface/teqpversion.hpp
 /pypirc

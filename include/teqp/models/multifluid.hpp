@@ -14,13 +14,16 @@
 #include "teqp/json_tools.hpp"
 #include "teqp/exceptions.hpp"
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
 #include "MultiComplex/MultiComplex.hpp"
+#endif 
 
 #include "multifluid_eosterms.hpp"
 #include "multifluid_reducing.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
 // See https://eigen.tuxfamily.org/dox/TopicCustomizing_CustomScalar.html
 namespace Eigen {
     template<typename TN> struct NumTraits<mcx::MultiComplex<TN>> : NumTraits<double> // permits to get the epsilon, dummy_precision, lowest, highest functions
@@ -36,6 +39,7 @@ namespace Eigen {
         };
     };
 }
+#endif
 
 namespace teqp{
 

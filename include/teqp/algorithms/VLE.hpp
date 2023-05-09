@@ -6,6 +6,7 @@
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/critical_pure.hpp"
 #include "teqp/algorithms/VLE_types.hpp"
+#include "teqp/algorithms/VLE_pure.hpp"
 #include <Eigen/Dense>
 
 // Imports from boost for numerical integration
@@ -55,223 +56,6 @@ auto linsolve(const A& a, const B& b) {
     return a.matrix().colPivHouseholderQr().solve(b.matrix()).array().eval();
 }
 
-template<typename Model, typename TYPE = double, ADBackends backend = ADBackends::autodiff>
-class IsothermPureVLEResiduals  {
-public:
-    using EigenArray = Eigen::Array<TYPE, 2, 1>;
-    using EigenArray1 = Eigen::Array<TYPE, 1, 1>;
-    using EigenMatrix = Eigen::Array<TYPE, 2, 2>;
-private:
-    const Model& m_model;
-    const TYPE m_T;
-    const Eigen::ArrayXd molefracs;
-    EigenMatrix J;
-    EigenArray y;
-public:
-    std::size_t icall = 0;
-    double Rr, R0;
-
-    IsothermPureVLEResiduals(const Model& model, const TYPE& T, const std::optional<Eigen::ArrayXd>& molefracs_ = std::nullopt) : m_model(model), m_T(T),
-        molefracs( (molefracs_) ? molefracs_.value() : Eigen::ArrayXd::Ones(1,1)) {
-        Rr = m_model.R(molefracs);
-        R0 = m_model.R(molefracs);
-    };
-
-    const auto& get_errors() { return y; };
-
-    auto call(const EigenArray& rhovec) {
-        assert(rhovec.size() == 2);
-
-        const EigenArray1 rhovecL = rhovec.head(1);
-        const EigenArray1 rhovecV = rhovec.tail(1);
-        const auto rhomolarL = rhovecL.sum(), rhomolarV = rhovecV.sum();
-
-        using tdx = TDXDerivatives<Model,TYPE,Eigen::ArrayXd>;
-
-        const TYPE &T = m_T;
-        //const TYPE R = m_model.R(molefracs);
-        double R0_over_Rr = R0 / Rr;
-        
-        auto derL = tdx::template get_Ar0n<2, backend>(m_model, T, rhomolarL, molefracs);
-        auto pRTL = rhomolarL*(R0_over_Rr + derL[1]); // p/(R*T)
-        auto dpRTLdrhoL = R0_over_Rr + 2*derL[1] + derL[2];
-        auto hatmurL = derL[1] + derL[0] + R0_over_Rr*log(rhomolarL);
-        auto dhatmurLdrho = (2*derL[1] + derL[2])/rhomolarL + R0_over_Rr/rhomolarL;
-
-        auto derV = tdx::template get_Ar0n<2, backend>(m_model, T, rhomolarV, molefracs);
-        auto pRTV = rhomolarV*(R0_over_Rr + derV[1]); // p/(R*T)
-        auto dpRTVdrhoV = R0_over_Rr + 2*derV[1] + derV[2];
-        auto hatmurV = derV[1] + derV[0] + R0_over_Rr *log(rhomolarV);
-        auto dhatmurVdrho = (2*derV[1] + derV[2])/rhomolarV + R0_over_Rr/rhomolarV;
-
-        y(0) = pRTL - pRTV;
-        J(0, 0) = dpRTLdrhoL;
-        J(0, 1) = -dpRTVdrhoV;
-
-        y(1) = hatmurL - hatmurV;
-        J(1, 0) = dhatmurLdrho;
-        J(1, 1) = -dhatmurVdrho;
-
-        icall++;
-        return y;
-    }
-    auto Jacobian(const EigenArray& rhovec){
-        return J;
-    }
-    //auto numJacobian(const EigenArray& rhovec) {
-    //    EigenArray plus0 = rhovec, plus1 = rhovec;
-    //    double dr = 1e-6 * rhovec[0];
-    //    plus0[0] += dr; plus1[1] += dr;
-    //    EigenMatrix J;
-    //    J.col(0) = (call(plus0) - call(rhovec))/dr;
-    //    J.col(1) = (call(plus1) - call(rhovec))/dr;
-    //    return J;
-    //}
-};
-
-template<typename Residual, typename Scalar>
-auto do_pure_VLE_T(Residual &resid, Scalar rhoL, Scalar rhoV, int maxiter) {
-    using EArray = Eigen::Array<Scalar, 2, 1>;
-    auto rhovec = (EArray() << rhoL, rhoV).finished();
-    auto r0 = resid.call(rhovec);
-    auto J = resid.Jacobian(rhovec);
-    for (int iter = 0; iter < maxiter; ++iter){
-        if (iter > 0) {
-            r0 = resid.call(rhovec);
-            J = resid.Jacobian(rhovec); 
-        }
-        auto v = J.matrix().colPivHouseholderQr().solve(-r0.matrix()).array().eval();
-        auto rhovecnew = (rhovec + v).eval();
-        //double r00 = static_cast<double>(r0[0]);
-        //double r01 = static_cast<double>(r0[1]);
-        
-        // If the solution has stopped improving, stop. The change in rhovec is equal to v in infinite precision, but 
-        // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
-        // the values are done changing
-        auto minval = std::numeric_limits<Scalar>::epsilon();
-        //double minvaldbl = static_cast<double>(minval);
-        if (((rhovecnew - rhovec).cwiseAbs() < minval).all()) {
-            break;
-        }
-        if ((r0.cwiseAbs() < minval).all()) {
-            break;
-        }
-        rhovec = rhovecnew;
-    }
-    return rhovec;
-}
-
-template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
-auto pure_VLE_T(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, int maxiter, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) {
-    Eigen::ArrayXd molefracs_{Eigen::ArrayXd::Ones(1,1)};
-    if (molefracs){ molefracs_ = molefracs.value(); }
-    auto res = IsothermPureVLEResiduals<Model, Scalar, backend>(model, T, molefracs_);
-    return do_pure_VLE_T(res, rhoL, rhoV, maxiter);
-}
-
-/***
- * \brief Calculate the derivative of vapor pressure with respect to temperature
- * \param model The model to operate on
- * \param T Temperature
- * \param rhoL Liquid density
- * \param rhoV Vapor density
- *
- *  Based upon
- *  \f[
- * \frac{dp_{\sigma}}{dT} = \frac{h''-h'}{T(v''-v')} = \frac{s''-s'}{v''-v'}
- *  \f]
- *  where the \f$h''-h'\f$ is given by the difference in residual enthalpy \f$h''-h' = h^r''-h^r'\f$ because the ideal-gas parts cancel
- */
-template<typename Model, typename Scalar, ADBackends backend = ADBackends::autodiff>
-auto dpsatdT_pure(const Model& model, Scalar T, Scalar rhoL, Scalar rhoV, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) {
-    
-    auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
-    if (molefracs){ molefrac = molefracs.value(); }
-    
-    using tdx = TDXDerivatives<decltype(model), double, decltype(molefrac)>;
-    using iso = IsochoricDerivatives<decltype(model), double, decltype(molefrac)>;
-    
-    auto R = model.R(molefrac);
-    
-    auto hrVLERTV = tdx::get_Ar01(model, T, rhoV, molefrac) + tdx::get_Ar10(model, T, rhoV, molefrac);
-    auto hrVLERTL = tdx::get_Ar01(model, T, rhoL, molefrac) + tdx::get_Ar10(model, T, rhoL, molefrac);
-    auto deltahr_over_T = R*(hrVLERTV-hrVLERTL);
-    auto dpsatdT = deltahr_over_T/(1/rhoV-1/rhoL); // From Clausius-Clapeyron; dp/dT = Deltas/Deltav = Deltah/(T*Deltav); Delta=V-L
-    return dpsatdT;
-}
-
-/***
- \brief Starting at the critical point, trace the VLE down to a temperature of interest
- 
- \note This method only works for well-behaved EOS, notably absent from that category are EOS in the multiparameter category with orthobaric scaling exponent not equal to 0.5 at the critical point. Most other analytical EOS work fine
- 
- The JSON data structure defines the variables that need to be specified.
- 
- In the current implementation, there are a few steps:
- 1. Solve for the true critical point satisfying \f$(\partial p/\partial \rho)_{T}=(\partial^2p/\partial\rho^2)_{T}=0\f$
- 2. Take a small step away from the critical point (this is where the beta=0.5 assumption is invoked)
- 3. Integrate from the near critical temperature to the temperature of interest
- */
-template<typename Model>
-auto pure_trace_VLE(const Model& model, const double T, const nlohmann::json &spec){
-    // Start at the true critical point, from the specified guess value
-    nlohmann::json pure_spec;
-    Eigen::ArrayXd z{Eigen::ArrayXd::Ones(1,1)};
-    if (spec.contains("pure_spec")){
-        pure_spec = spec.at("pure_spec");
-        z = Eigen::ArrayXd(pure_spec.at("alternative_length").get<int>()); z.setZero();
-        z(pure_spec.at("alternative_pure_index").get<int>()) = 1;
-    }
-
-    auto [Tc, rhoc] = solve_pure_critical(model, spec.at("Tcguess").get<double>(), spec.at("rhocguess").get<double>(), pure_spec);
-    
-    // Small step towards lower temperature close to critical temperature
-    double Tclose = spec.at("Tred").get<double>()*Tc;
-    auto rhoLrhoV = extrapolate_from_critical(model, Tc, rhoc, Tclose, z);
-    auto rhoLrhoVpolished = pure_VLE_T(model, Tclose, rhoLrhoV[0], rhoLrhoV[1], spec.value("NVLE", 10), z);
-    if (rhoLrhoVpolished[0] == rhoLrhoVpolished[1]){
-        throw teqp::IterationError("Converged to trivial solution");
-    }
-    
-    // "Integrate" down to temperature of interest
-    int Nstep = spec.at("Nstep");
-    double R = model.R(z);
-    bool with_deriv = spec.at("with_deriv");
-    double dT = -(Tclose-T)/(Nstep-1);
-    using tdx = TDXDerivatives<decltype(model)>;
-    for (auto T_: Eigen::ArrayXd::LinSpaced(Nstep, Tclose, T)){
-        rhoLrhoVpolished = pure_VLE_T(model, T_, rhoLrhoVpolished[0], rhoLrhoVpolished[1], spec.value("NVLE", 10), z);
-        
-        //auto pL = rhoLrhoVpolished[0]*R*T_*(1 + tdx::get_Ar01(model, T_, rhoLrhoVpolished[0], z));
-        //auto pV = rhoLrhoVpolished[1]*R*T_*(1 + tdx::get_Ar01(model, T_, rhoLrhoVpolished[1], z));
-        //std::cout << pL << " " << pV << " " << pL/pV-1 <<  std::endl;
-        if (with_deriv){
-            // Get drho/dT for both phases
-            auto dpsatdT = dpsatdT_pure(model, T_, rhoLrhoVpolished[0], rhoLrhoVpolished[1], z);
-            auto get_drhodT = [&z, R, dpsatdT](const Model& model, double T, double rho){
-                auto dpdrho = R*T*(1 + 2*tdx::get_Ar01(model, T, rho, z) + tdx::get_Ar02(model, T, rho, z));
-                auto dpdT = R*rho*(1 + tdx::get_Ar01(model, T, rho, z) - tdx::get_Ar11(model, T, rho, z));
-                return -dpdT/dpdrho + dpsatdT/dpdrho;
-            };
-            auto drhodTL = get_drhodT(model, T_, rhoLrhoVpolished[0]);
-            auto drhodTV = get_drhodT(model, T_, rhoLrhoVpolished[1]);
-            // Use the obtained derivative to calculate the step in rho from deltarho = (drhodT)*dT
-            auto DeltarhoL = dT*drhodTL, DeltarhoV = dT*drhodTV;
-            rhoLrhoVpolished[0] += DeltarhoL;
-            rhoLrhoVpolished[1] += DeltarhoV;
-        }
-        
-        // Updated values for densities at new T
-        if (!std::isfinite(rhoLrhoVpolished[0])){
-            throw teqp::IterationError("The density is no longer valid; try increasing Nstep");
-        }
-        if (rhoLrhoVpolished[0] == rhoLrhoVpolished[1]){
-            throw teqp::IterationError("Converged to trivial solution; try increasing Nstep");
-        }
-    }
-    return rhoLrhoVpolished;
-}
-
 /***
 * \brief Do a vapor-liquid phase equilibrium problem for a mixture (binary only for now) with mole fractions specified in the liquid phase
 * \param model The model to operate on
@@ -289,8 +73,8 @@ auto pure_trace_VLE(const Model& model, const double T, const nlohmann::json &sp
 * this component will not be allowed to change (they will stay zero, avoiding the possibility that 
 * they go to a negative value, which can cause trouble for some EOS)
 */
-template<typename Model, typename Scalar, typename Vector>
-auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vector& rhovecV0, const Vector& xspec, double atol, double reltol, double axtol, double relxtol, int maxiter) {
+inline auto mix_VLE_Tx(const AbstractModel& model, double T, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const Eigen::ArrayXd& xspec, double atol, double reltol, double axtol, double relxtol, int maxiter) {
+    using Scalar = double;
 
     const Eigen::Index N = rhovecL0.size();
     auto lengths = (Eigen::ArrayX<Eigen::Index>(3) << rhovecL0.size(), rhovecV0.size(), xspec.size()).finished();
@@ -300,18 +84,17 @@ auto mix_VLE_Tx(const Model& model, Scalar T, const Vector& rhovecL0, const Vect
     Eigen::MatrixXd J(2 * N, 2 * N), r(2 * N, 1), x(2 * N, 1);
     x.col(0).array().head(N) = rhovecL0;
     x.col(0).array().tail(N) = rhovecV0;
-    using isochoric = IsochoricDerivatives<Model, Scalar, Vector>;
 
     Eigen::Map<Eigen::ArrayXd> rhovecL(&(x(0)), N);
     Eigen::Map<Eigen::ArrayXd> rhovecV(&(x(0 + N)), N);
-    auto RT = model.R(xspec) * T;
+    auto RT = model.get_R(xspec) * T;
 
     VLE_return_code return_code = VLE_return_code::unset;
 
     for (int iter = 0; iter < maxiter; ++iter) {
 
-        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
-        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
+        auto [PsirL, PsirgradL, hessianL] = model.build_Psir_fgradHessian_autodiff(T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = model.build_Psir_fgradHessian_autodiff(T, rhovecV);
         auto rhoL = rhovecL.sum();
         auto rhoV = rhovecV.sum();
         Scalar pL = rhoL * RT - PsirL + (rhovecL.array() * PsirgradL.array()).sum(); // The (array*array).sum is a dot product
@@ -422,10 +205,9 @@ struct hybrj_functor__mix_VLE_Tp : Functor<double>
         const VectorXd::Index n = x.size() / 2;
         Eigen::Map<const Eigen::ArrayXd> rhovecL(&(x(0)), n);
         Eigen::Map<const Eigen::ArrayXd> rhovecV(&(x(0 + n)), n);
-        auto RT = model.R((rhovecL / rhovecL.sum()).eval()) * T;
-        using isochoric = IsochoricDerivatives<Model, Scalar, VectorXd>;
-        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
-        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
+        auto RT = model.get_R((rhovecL / rhovecL.sum()).eval()) * T;
+        auto [PsirL, PsirgradL, hessianL] = model.build_Psir_fgradHessian_autodiff(T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = model.build_Psir_fgradHessian_autodiff(T, rhovecV);
         auto rhoL = rhovecL.sum();
         auto rhoV = rhovecV.sum();
         Scalar pL = rhoL * RT - PsirL + (rhovecL.array() * PsirgradL.array()).sum(); // The (array*array).sum is a dot product
@@ -458,10 +240,9 @@ struct hybrj_functor__mix_VLE_Tp : Functor<double>
         assert(J.rows() == 2*n);
         assert(J.cols() == 2*n);
 
-        auto RT = model.R((rhovecL / rhovecL.sum()).eval()) * T;
-        using isochoric = IsochoricDerivatives<Model, Scalar, VectorXd>;
-        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
-        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
+        auto RT = model.get_R((rhovecL / rhovecL.sum()).eval()) * T;
+        auto [PsirL, PsirgradL, hessianL] = model.build_Psir_fgradHessian_autodiff(T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = model.build_Psir_fgradHessian_autodiff(T, rhovecV);
         auto dpdrhovecL = RT + (hessianL * rhovecL.matrix()).array();
         auto dpdrhovecV = RT + (hessianV * rhovecV.matrix()).array();
 
@@ -502,8 +283,8 @@ struct hybrj_functor__mix_VLE_Tp : Functor<double>
 * \param rhovecV0 Initial values for vapor mole concentrations
 * \param flags Flags controlling the iteration and stopping conditions
 */
-template<typename Model, typename Scalar, typename Vector>
-auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhovecL0, const Vector& rhovecV0, const std::optional<MixVLETpFlags>& flags_ = std::nullopt) {
+
+inline auto mix_VLE_Tp(const AbstractModel& model, double T, double pgiven, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<MixVLETpFlags>& flags_ = std::nullopt) {
     
     auto flags = flags_.value_or(MixVLETpFlags{});
 
@@ -519,7 +300,7 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
     VLE_return_code return_code = VLE_return_code::unset;
     std::string message = "";
 
-    using FunctorType = hybrj_functor__mix_VLE_Tp<Model>;
+    using FunctorType = hybrj_functor__mix_VLE_Tp<AbstractModel>;
     FunctorType functor(model, T, pgiven);
     Eigen::VectorXd initial_r(2 * N); initial_r.setZero();
     functor(x, initial_r);
@@ -615,8 +396,8 @@ auto mix_VLE_Tp(const Model& model, Scalar T, Scalar pgiven, const Vector& rhove
 
 * \param flags Additional flags
 */
-template<typename Model, typename Scalar, typename Vector>
-auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec, Scalar T0, const Vector& rhovecL0, const Vector& rhovecV0, const std::optional<MixVLEpxFlags>& flags_ = std::nullopt) {
+inline auto mixture_VLE_px(const AbstractModel& model, double p_spec, const Eigen::ArrayXd& xmolar_spec, double T0, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<MixVLEpxFlags>& flags_ = std::nullopt) {
+    using Scalar = double;
     
     auto flags = flags_.value_or(MixVLEpxFlags{});
 
@@ -636,7 +417,6 @@ auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec
     x(0) = T0;
     x.segment(1, N) = rhovecL0;
     x.tail(N) = rhovecV0;
-    using isochoric = IsochoricDerivatives<Model, Scalar>;
 
     Eigen::Map<Eigen::ArrayXd> rhovecL(&(x(1)), N);
     Eigen::Map<Eigen::ArrayXd> rhovecV(&(x(1 + N)), N);
@@ -647,15 +427,15 @@ auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec
 
     for (int iter = 0; iter < flags.maxiter; ++iter) {
 
-        auto RL = model.R(xmolar_spec);
+        auto RL = model.get_R(xmolar_spec);
         auto RLT = RL * T;
         auto RVT = RLT; // Note: this should not be exactly the same if you use mole-fraction-weighted gas constants
         
         // calculations from the EOS in the isochoric thermodynamics formalism
-        auto [PsirL, PsirgradL, hessianL] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecL);
-        auto [PsirV, PsirgradV, hessianV] = isochoric::build_Psir_fgradHessian_autodiff(model, T, rhovecV);
-        auto DELTAdmu_dT_res = (isochoric::build_d2PsirdTdrhoi_autodiff(model, T, rhovecL.eval()) 
-                              - isochoric::build_d2PsirdTdrhoi_autodiff(model, T, rhovecV.eval())).eval();
+        auto [PsirL, PsirgradL, hessianL] = model.build_Psir_fgradHessian_autodiff(T, rhovecL);
+        auto [PsirV, PsirgradV, hessianV] = model.build_Psir_fgradHessian_autodiff(T, rhovecV);
+        auto DELTAdmu_dT_res = (model.build_d2PsirdTdrhoi_autodiff(T, rhovecL.eval())
+                              - model.build_d2PsirdTdrhoi_autodiff(T, rhovecV.eval())).eval();
 
         auto make_diag = [](const Eigen::ArrayXd& v) -> Eigen::ArrayXXd {
             Eigen::MatrixXd A = Eigen::MatrixXd::Identity(v.size(), v.size());
@@ -690,10 +470,10 @@ auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec
         J.block(0, 1, N, N) = HtotL; // These are the concentration derivatives
         J.block(0, N+1, N, N) = -HtotV; // These are the concentration derivatives
         // Pressure contributions in Jacobian
-        J(N, 0) = isochoric::get_dpdT_constrhovec(model, T, rhovecL)/p_spec;
+        J(N, 0) = model.get_dpdT_constrhovec(T, rhovecL)/p_spec;
         J.block(N, 1, 1, N) = dpdrhovecL.transpose()/p_spec;
         // No vapor concentration derivatives
-        J(N+1, 0) = isochoric::get_dpdT_constrhovec(model, T, rhovecV)/p_spec;
+        J(N+1, 0) = model.get_dpdT_constrhovec(T, rhovecV)/p_spec;
         // No liquid concentration derivatives
         J.block(N+1, N+1, 1, N) = dpdrhovecV.transpose()/p_spec;
         // Mole fraction contributions in Jacobian
@@ -741,13 +521,11 @@ auto mixture_VLE_px(const Model& model, Scalar p_spec, const Vector& xmolar_spec
     return std::make_tuple(return_code, T, rhovecLfinal, rhovecVfinal);
 }
 
-
-template<class Model, class Scalar, class VecType>
-auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhovecL, const VecType& rhovecV) {
+inline auto get_drhovecdp_Tsat(const AbstractModel& model, const double &T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
     //tic = timeit.default_timer();
-    using id = IsochoricDerivatives<Model, Scalar, VecType>;
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = id::build_Psi_Hessian_autodiff(model, T, rhovecV).eval();
+    using Scalar = double;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = model.build_Psi_Hessian_autodiff(T, rhovecL).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = model.build_Psi_Hessian_autodiff(T, rhovecV).eval();
     //Hvap[~np.isfinite(Hvap)] = 1e20;
     //Hliq[~np.isfinite(Hliq)] = 1e20;
 
@@ -768,10 +546,10 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
     }
     else{
         // Special treatment for infinite dilution
-        auto murL = id::build_Psir_gradient_autodiff(model, T, rhovecL);
-        auto murV = id::build_Psir_gradient_autodiff(model, T, rhovecV);
-        auto RL = model.R(rhovecL / rhovecL.sum());
-        auto RV = model.R(rhovecV / rhovecV.sum());
+        auto murL = model.build_Psir_gradient_autodiff(T, rhovecL);
+        auto murV = model.build_Psir_gradient_autodiff(T, rhovecV);
+        auto RL = model.get_R(rhovecL / rhovecL.sum());
+        auto RV = model.get_R(rhovecV / rhovecV.sum());
 
         // First, for the liquid part
         for (auto i = 0; i < N; ++i) {
@@ -817,15 +595,13 @@ auto get_drhovecdp_Tsat(const Model& model, const Scalar &T, const VecType& rhov
 /**
  * Derivative of molar concentration vectors w.r.t. p along an isobar of the phase envelope for binary mixtures
 */
-template<class Model, class Scalar, class VecType>
-auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhovecL, const VecType& rhovecV) {
-    
-    using id = IsochoricDerivatives<Model, Scalar, VecType>;
+inline auto get_drhovecdT_psat(const AbstractModel& model, const double &T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
+    using Scalar = double;
     if (rhovecL.size() != 2) { throw std::invalid_argument("Binary mixtures only"); }
     assert(rhovecL.size() == rhovecV.size());
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = id::build_Psi_Hessian_autodiff(model, T, rhovecV).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = model.build_Psi_Hessian_autodiff(T, rhovecL).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = model.build_Psi_Hessian_autodiff(T, rhovecV).eval();
 
     auto N = rhovecL.size();
     Eigen::MatrixXd A = decltype(Hliq)::Zero(N, N);
@@ -840,9 +616,9 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
         A(1, 0) = Hliq.row(0).dot(rhovecL.matrix());
         A(1, 1) = Hliq.row(1).dot(rhovecL.matrix());
 
-        auto DELTAdmu_dT = (id::get_dchempotdT_autodiff(model, T, rhovecV) - id::get_dchempotdT_autodiff(model, T, rhovecL)).eval();
-        b(0) = DELTAdmu_dT.matrix().dot(rhovecV.matrix()) - id::get_dpdT_constrhovec(model, T, rhovecV);
-        b(1) = -id::get_dpdT_constrhovec(model, T, rhovecL);
+        auto DELTAdmu_dT = (model.get_dchempotdT_autodiff(T, rhovecV) - model.get_dchempotdT_autodiff(T, rhovecL)).eval();
+        b(0) = DELTAdmu_dT.matrix().dot(rhovecV.matrix()) - model.get_dpdT_constrhovec(T, rhovecV);
+        b(1) = -model.get_dpdT_constrhovec(T, rhovecL);
         // Calculate the derivatives of the liquid phase
         drhovecdT_liq = linsolve(A, b);
         // Calculate the derivatives of the vapor phase
@@ -850,17 +626,17 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
     }
     else{
         // Special treatment for infinite dilution
-        auto murL = id::build_Psir_gradient_autodiff(model, T, rhovecL);
-        auto murV = id::build_Psir_gradient_autodiff(model, T, rhovecV);
-        auto RL = model.R(rhovecL / rhovecL.sum());
-        auto RV = model.R(rhovecV / rhovecV.sum());
+        auto murL = model.build_Psir_gradient_autodiff(T, rhovecL);
+        auto murV = model.build_Psir_gradient_autodiff(T, rhovecV);
+        auto RL = model.get_R(rhovecL / rhovecL.sum());
+        auto RV = model.get_R(rhovecV / rhovecV.sum());
 
         // The dot product contains terms of the type:
         // rho'_i (R ln(rho"_i /rho'_i) + d mu ^ r"_i/d T - d mu^r'_i/d T)
 
         // Residual contribution to the difference in temperature derivative of chemical potential
         // It should be fine to evaluate with zero densities:
-        auto DELTAdmu_dT_res = (id::build_d2PsirdTdrhoi_autodiff(model, T, rhovecV) - id::build_d2PsirdTdrhoi_autodiff(model, T, rhovecL)).eval();
+        auto DELTAdmu_dT_res = (model.build_d2PsirdTdrhoi_autodiff(T, rhovecV) - model.build_d2PsirdTdrhoi_autodiff(T, rhovecL)).eval();
         // Now the ideal-gas part causes trouble, so multiply by the rhovec, once with liquid, another with vapor
         // Start off with the assumption that the rhovec is all positive (fix elements later)
         auto DELTAdmu_dT_rhoV_ideal = (rhovecV*(RV*log(rhovecV/rhovecL))).eval();
@@ -874,8 +650,8 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
         }
         double DELTAdmu_dT_rhoV = rhovecV.matrix().dot(DELTAdmu_dT_res.matrix()) + DELTAdmu_dT_rhoV_ideal.sum();
         
-        b(0) = DELTAdmu_dT_rhoV - id::get_dpdT_constrhovec(model, T, rhovecV);
-        b(1) = -id::get_dpdT_constrhovec(model, T, rhovecL);
+        b(0) = DELTAdmu_dT_rhoV - model.get_dpdT_constrhovec(T, rhovecV);
+        b(1) = -model.get_dpdT_constrhovec(T, rhovecL);
 
         // First, for the liquid part
         for (auto i = 0; i < N; ++i) {
@@ -933,20 +709,18 @@ auto get_drhovecdT_psat(const Model& model, const Scalar &T, const VecType& rhov
 * To keep the vapor mole fraction constant, just swap the input molar concentrations to this function, the first concentration 
 * vector is always the one with fixed mole fractions
 */
-template<class Model, class Scalar, class VecType>
-auto get_drhovecdT_xsat(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
-    using id = IsochoricDerivatives<Model, Scalar, VecType>;
-
+inline auto get_drhovecdT_xsat(const AbstractModel& model, const double& T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
+    using Scalar = double;
     if (rhovecL.size() != 2) { throw std::invalid_argument("Binary mixtures only"); }
     assert(rhovecL.size() == rhovecV.size());
 
-    VecType molefracL = rhovecL / rhovecL.sum();
-    VecType deltas = (id::get_dchempotdT_autodiff(model, T, rhovecV) - id::get_dchempotdT_autodiff(model, T, rhovecL)).eval();
-    Scalar deltabeta = (id::get_dpdT_constrhovec(model, T, rhovecV)- id::get_dpdT_constrhovec(model, T, rhovecL));
-    VecType deltarho = (rhovecV - rhovecL).eval();
+    Eigen::ArrayXd molefracL = rhovecL / rhovecL.sum();
+    Eigen::ArrayXd deltas = (model.get_dchempotdT_autodiff(T, rhovecV) - model.get_dchempotdT_autodiff(T, rhovecL)).eval();
+    Scalar deltabeta = (model.get_dpdT_constrhovec(T, rhovecV)- model.get_dpdT_constrhovec(T, rhovecL));
+    Eigen::ArrayXd deltarho = (rhovecV - rhovecL).eval();
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = id::build_Psi_Hessian_autodiff(model, T, rhovecL).eval();
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = id::build_Psi_Hessian_autodiff(model, T, rhovecV).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hliq = model.build_Psi_Hessian_autodiff(T, rhovecL).eval();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Hvap = model.build_Psi_Hessian_autodiff(T, rhovecV).eval();
     
     Eigen::MatrixXd drhodT_liq, drhodT_vap;
     if ((rhovecL != 0).all() && (rhovecV != 0).all()) {
@@ -986,21 +760,20 @@ auto get_drhovecdT_xsat(const Model& model, const Scalar& T, const VecType& rhov
 * \left(\frac{dp}{dT}\right)_{x, \sigma} = \left(\frac{\partial p}{\partial T}\right)_{\vec\rho}\frac{dT}{dT} + \sum_k \left(\frac{\partial p}{\partial \rho_k}\right)_{T,\rho_{j\neq k}} \left(\frac{\partial \rho_k}{\partial T}\right)_{x,\sigma}
 * \f]
 */
-template<class Model, class Scalar, class VecType>
-auto get_dpsat_dTsat_isopleth(const Model& model, const Scalar& T, const VecType& rhovecL, const VecType& rhovecV) {
+template<typename Model = AbstractModel>
+auto get_dpsat_dTsat_isopleth(const Model& model, const double& T, const Eigen::ArrayXd& rhovecL, const Eigen::ArrayXd& rhovecV) {
 
     // Derivative along phase envelope at constant composition (correct, tested)
     auto [drhovecLdT_xsat, drhovecVdT_xsat] = get_drhovecdT_xsat(model, T, rhovecL, rhovecV);
     // And the derivative of the total density 
     auto drhoLdT_sat = drhovecLdT_xsat.sum();
     
-    using tdx = TDXDerivatives<Model, Scalar, VecType>;
     double rhoL = rhovecL.sum();
     auto molefracL = rhovecL / rhoL;
-    auto RT = model.R(molefracL) * T;
-    auto derivs = tdx::template get_Ar0n<2>(model, T, rhoL, molefracL);
+    auto RT = model.get_R(molefracL) * T;
+    auto derivs = model.get_Ar02n(T, rhoL, molefracL);
     auto dpdrho = RT*(1 + 2 * derivs[1] + derivs[2]);
-    Scalar dpdT = model.R(molefracL) * rhoL * (1 + derivs[1] - tdx::get_Ar11(model, T, rhoL, molefracL));
+    double dpdT = model.get_R(molefracL) * rhoL * (1 + derivs[1] - model.get_Ar11(T, rhoL, molefracL));
     auto der = dpdT + dpdrho * drhoLdT_sat;
     return der;
 
@@ -1016,8 +789,7 @@ auto get_dpsat_dTsat_isopleth(const Model& model, const Scalar& T, const VecType
  * \brief Trace an isotherm with parametric tracing
  * \ note If options.revision is 2, the data will be returned in the "data" field, otherwise the data will be returned as root array
 */
-template<typename Model, typename Scalar, typename VecType>
-auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, VecType rhovecV0, const std::optional<TVLEOptions>& options = std::nullopt) 
+inline auto trace_VLE_isotherm_binary(const AbstractModel &model, double T, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<TVLEOptions>& options = std::nullopt)
 {
     // Get the options, or the default values if not provided
     TVLEOptions opt = options.value_or(TVLEOptions{});
@@ -1117,9 +889,8 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), N);
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + N, N);
             auto rhototL = rhovecL.sum(), rhototV = rhovecV.sum();
-            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-            double pL = rhototL * model.R(rhovecL / rhovecL.sum())*T + id::get_pr(model, T, rhovecL);
-            double pV = rhototV * model.R(rhovecV / rhovecV.sum())*T + id::get_pr(model, T, rhovecV);
+            double pL = rhototL * model.get_R(rhovecL / rhovecL.sum())*T + model.get_pr(T, rhovecL);
+            double pV = rhototV * model.get_R(rhovecV / rhovecV.sum())*T + model.get_pr(T, rhovecV);
 
             // Store the derivative
             try {
@@ -1144,9 +915,8 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
                 {"drho/dt", last_drhodt}
             };
             if (opt.calc_criticality) {
-                using ct = CriticalTracing<Model, Scalar, VecType>;
-                point["crit. conditions L"] = ct::get_criticality_conditions(model, T, rhovecL);
-                point["crit. conditions V"] = ct::get_criticality_conditions(model, T, rhovecV);
+                point["crit. conditions L"] = model.get_criticality_conditions(T, rhovecL);
+                point["crit. conditions V"] = model.get_criticality_conditions(T, rhovecV);
             }
             JSONdata.push_back(point);
             //std::cout << JSONdata.back().dump() << std::endl;
@@ -1198,14 +968,12 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + N, N);
             auto x = rhovecL / rhovecL.sum();
             auto y = rhovecV / rhovecV.sum();
-            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-            double p = rhovecL.sum()*model.R(x)*T + id::get_pr(model, T, rhovecL);
+            double p = rhovecL.sum()*model.get_R(x)*T + model.get_pr(T, rhovecL);
             
             // Check if the solution has gone mechanically unstable
             if (opt.calc_criticality) {
-                using ct = CriticalTracing<Model, Scalar, VecType>;
-                auto condsL = ct::get_criticality_conditions(model, T, rhovecL);
-                auto condsV = ct::get_criticality_conditions(model, T, rhovecV);
+                auto condsL = model.get_criticality_conditions(T, rhovecL);
+                auto condsV = model.get_criticality_conditions(T, rhovecV);
                 if (condsL[0] < opt.crit_termination || condsV[0] < opt.crit_termination){
                     return true;
                 }
@@ -1228,7 +996,7 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
             auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), N).eval();
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0 + N]), N).eval();
             auto x = (Eigen::ArrayXd(2) << rhovecL(0) / rhovecL.sum(), rhovecL(1) / rhovecL.sum()).finished(); // Mole fractions in the liquid phase (to be kept constant)
-            auto [return_code, rhovecLnew, rhovecVnew] = mix_VLE_Tx(model, T, rhovecL, rhovecV, x, 1e-10, 1e-8, 1e-10, 1e-8, 10);
+            auto [return_code, rhovecLnew, rhovecVnew] = model.mix_VLE_Tx(T, rhovecL, rhovecV, x, 1e-10, 1e-8, 1e-10, 1e-8, 10);
 
             // If the step is accepted, copy into x again ...
             auto rhovecLview = Eigen::Map<Eigen::ArrayXd>(&(x0[0]), N);
@@ -1263,8 +1031,8 @@ auto trace_VLE_isotherm_binary(const Model &model, Scalar T, VecType rhovecL0, V
 /***
 * \brief Trace an isobar with parametric tracing
 */
-template<typename Model, typename Scalar, typename VecType>
-auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rhovecL0, VecType rhovecV0, const std::optional<PVLEOptions>& options = std::nullopt)
+template<typename Model = AbstractModel>
+auto trace_VLE_isobar_binary(const Model& model, double p, double T0, const Eigen::ArrayXd& rhovecL0, const Eigen::ArrayXd& rhovecV0, const std::optional<PVLEOptions>& options = std::nullopt)
 {
     // Get the options, or the default values if not provided
     PVLEOptions opt = options.value_or(PVLEOptions{});
@@ -1368,9 +1136,8 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
             auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[1]), N);
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[1]) + N, N);
             auto rhototL = rhovecL.sum(), rhototV = rhovecV.sum();
-            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-            double pL = rhototL * model.R(rhovecL / rhovecL.sum()) * T + id::get_pr(model, T, rhovecL);
-            double pV = rhototV * model.R(rhovecV / rhovecV.sum()) * T + id::get_pr(model, T, rhovecV);
+            double pL = rhototL * model.R(rhovecL / rhovecL.sum()) * T + model.get_pr(T, rhovecL);
+            double pV = rhototV * model.R(rhovecV / rhovecV.sum()) * T + model.get_pr(T, rhovecV);
 
             // Store the derivative
             try {
@@ -1395,9 +1162,8 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
                 {"drho/dt", last_drhodt}
             };
             if (opt.calc_criticality) {
-                using ct = CriticalTracing<Model, Scalar, VecType>;
-                point["crit. conditions L"] = ct::get_criticality_conditions(model, T, rhovecL);
-                point["crit. conditions V"] = ct::get_criticality_conditions(model, T, rhovecV);
+                point["crit. conditions L"] = model.get_criticality_conditions(T, rhovecL);
+                point["crit. conditions V"] = model.get_criticality_conditions(T, rhovecV);
             }
             JSONdata.push_back(point);
             //std::cout << JSONdata.back().dump() << std::endl;
@@ -1452,9 +1218,8 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
             auto y = rhovecV / rhovecV.sum();
             // Check if the solution has gone mechanically unstable
             if (opt.calc_criticality) {
-                using ct = CriticalTracing<Model, Scalar, VecType>;
-                auto condsL = ct::get_criticality_conditions(model, T, rhovecL);
-                auto condsV = ct::get_criticality_conditions(model, T, rhovecV);
+                auto condsL = model.get_criticality_conditions(T, rhovecL);
+                auto condsV = model.get_criticality_conditions(T, rhovecV);
                 if (condsL[0] < 1e-12 || condsV[0] < 1e-12) {
                     return true;
                 }
@@ -1475,7 +1240,7 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
             auto rhovecL = Eigen::Map<const Eigen::ArrayXd>(&(x0[1]), N).eval();
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[1 + N]), N).eval();
             auto x = (Eigen::ArrayXd(2) << rhovecL(0) / rhovecL.sum(), rhovecL(1) / rhovecL.sum()).finished(); // Mole fractions in the liquid phase (to be kept constant)
-            auto [return_code, Tnew, rhovecLnew, rhovecVnew] = mixture_VLE_px(model, p, x, T, rhovecL, rhovecV);
+            auto [return_code, Tnew, rhovecLnew, rhovecVnew] = model.mixture_VLE_px(p, x, T, rhovecL, rhovecV);
 
             // If the step is accepted, copy into x again ...
             x0[0] = Tnew;
@@ -1492,5 +1257,34 @@ auto trace_VLE_isobar_binary(const Model& model, Scalar p, Scalar T0, VecType rh
     }
     return JSONdata;
 }
+
+#define VLE_FUNCTIONS_TO_WRAP \
+    X(trace_VLE_isobar_binary) \
+    X(trace_VLE_isotherm_binary) \
+    X(get_dpsat_dTsat_isopleth) \
+    X(get_drhovecdT_xsat) \
+    X(get_drhovecdT_psat) \
+    X(get_drhovecdp_Tsat) \
+    X(trace_critical_arclength_binary) \
+    X(mixture_VLE_px) \
+    X(mix_VLE_Tp) \
+    X(mix_VLE_Tx)
+
+#define X(f) template <typename TemplatedModel, typename ...Params, \
+typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, TemplatedModel>::value>::type> \
+inline auto f(const TemplatedModel& model, Params&&... params){ \
+    auto view = teqp::cppinterface::adapter::make_cview(model); \
+    const AbstractModel& am = *view.get(); \
+    return f(am, std::forward<Params>(params)...); \
+}
+    VLE_FUNCTIONS_TO_WRAP
+#undef X
+#undef VLE_FUNCTIONS_TO_WRAP
+
+//
+//template <typename TemplatedModel, typename ...Params, typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, TemplatedModel>::value>::type>
+//auto get_drhovecdT_psat(const TemplatedModel& model, Params&&... params){
+//    return get_drhovecdT_psat(teqp::cppinterface::adapter::make_cview(model), std::forward<Params>(params)...);
+//}
 
 }; /* namespace teqp*/

@@ -5,8 +5,10 @@
 #include "teqp/models/mie/mie.hpp"
 
 #include "teqp/exceptions.hpp"
+#include "teqp/cpp/deriv_adapter.hpp"
 
 #include "nlohmann/json.hpp"
+#include <memory>
 
 namespace teqp {
 
@@ -42,46 +44,7 @@ namespace teqp {
             return CPA::CPAfactory(spec);
         }
         else if (kind == "PCSAFT") {
-            using namespace PCSAFT;
-            std::optional<Eigen::ArrayXXd> kmat;
-            if (spec.contains("kmat") && spec.at("kmat").is_array() && spec.at("kmat").size() > 0){
-                kmat = build_square_matrix(spec["kmat"]);
-            }
-            
-            if (spec.contains("names")){
-                std::vector<std::string> names = spec["names"];
-                if (kmat && kmat.value().rows() != names.size()){
-                    throw teqp::InvalidArgument("Provided length of names of " + std::to_string(names.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
-                }
-                return PCSAFTMixture(names, kmat.value_or(Eigen::ArrayXXd{}));
-            }
-            else if (spec.contains("coeffs")){
-                std::vector<SAFTCoeffs> coeffs;
-                for (auto j : spec["coeffs"]) {
-                    SAFTCoeffs c;
-                    c.name = j.at("name");
-                    c.m = j.at("m");
-                    c.sigma_Angstrom = j.at("sigma_Angstrom");
-                    c.epsilon_over_k = j.at("epsilon_over_k");
-                    c.BibTeXKey = j.at("BibTeXKey");
-                    if (j.contains("(mu^*)^2") && j.contains("nmu")){
-                        c.mustar2 = j.at("(mu^*)^2");
-                        c.nmu = j.at("nmu");
-                    }
-                    if (j.contains("(Q^*)^2") && j.contains("nQ")){
-                        c.Qstar2 = j.at("(Q^*)^2");
-                        c.nQ = j.at("nQ");
-                    }
-                    coeffs.push_back(c);
-                }
-                if (kmat && kmat.value().rows() != coeffs.size()){
-                    throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
-                }
-                return PCSAFTMixture(coeffs, kmat.value_or(Eigen::ArrayXXd{}));
-            }
-            else{
-                throw std::invalid_argument("you must provide names or coeffs, but not both");
-            }
+            return PCSAFT::PCSAFTfactory(spec);
         }
         else if (kind == "SAFT-VR-Mie") {
             return SAFTVRMie::SAFTVRMiefactory(spec);

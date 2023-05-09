@@ -7,6 +7,12 @@
 namespace teqp {
 namespace SAFTpolar{
 
+// |x| = sqrt(x^2), the latter is well-suited to differentiation
+template<typename X>
+inline auto differentiable_abs(const X& x){
+    return forceeval(sqrt(x*x));
+};
+
 static const std::map<int, std::array<double, 12>> Luckas_J_coeffs = {
     {4,  {-1.38410152e00,  -7.05792933e-01, 2.60947023e00,  1.96828333e01, 1.13619510e01, -2.98510490e01,  -3.15686398e01, -2.00943290e01,  5.11029320e01, 1.44194150e01, 9.40061069e00,  -2.36844608e01}},
     {5,  {-6.89702637e-01, -1.62382602e-01, 1.16302441e00,  1.42067443e01, 4.59642681e00, -1.81421003e01,  -2.45012804e01, -8.42839734e00,  3.25579587e01, 1.16339969e01, 4.00080085e00,  -1.54419815e01}},
@@ -17,7 +23,7 @@ static const std::map<int, std::array<double, 12>> Luckas_J_coeffs = {
     {10, {-2.30585563e-01,  1.86890174e-02, 3.31660880e-01, 8.88275358e00, 5.90996555e-01, -9.19786291e00, -1.79530632e01, -1.12502567e00,  1.87717642e01, 9.25235661e00, 5.55909350e-01, -9.47729033e00}},
     {11, {-2.19221482e-01,  2.05982865e-02, 3.05823216e-01, 8.58399185e00, 4.60555635e-01, -8.78667564e00, -1.78552884e01, -8.80186074e-01, 1.84146650e01, 9.31691675e00, 4.43027169e-01, -9.40608814e00}},
     {12, {-2.13591301e-01,  2.15809377e-02, 2.89113218e-01, 8.37291362e00, 3.68864477e-01, -8.49747359e00, -1.79188678e01, -7.07751483e-01, 1.82906357e01, 9.45598216e00, 3.64636215e-01, -9.44579903e00}},
-    {13, {-2.11696363e-01,  2.20767096e-02, 2.78453228e-01, 8.23384704e00, 3.02478832e-01, -8.30238277e00,  1.81183432e01, -5.82685843e-01, 1.83497132e01, 9.65764061e00, 3.08765033e-01, -9.57226243e00}},
+    {13, {-2.11696363e-01,  2.20767096e-02, 2.78453228e-01, 8.23384704e00, 3.02478832e-01, -8.30238277e00, -1.81183432e01, -5.82685843e-01, 1.83497132e01, 9.65764061e00, 3.08765033e-01, -9.57226243e00}},
     {14, {-2.12238116e-01,  2.23157164e-02, 2.71883622e-01, 8.15208365e00, 2.53073339e-01, -8.17919021e00, -1.84273649e01, -4.89407317e-01, 1.85502740e01, 9.90906951e00, 2.67965960e-01, -9.76495200e00}},
     {15, {-2.14335965e-01,  2.24240261e-02, 2.68094773e-01, 8.11899188e00, 2.15506735e-01, -8.11465705e00, -1.88310645e01, -4.18309476e-01, 1.88679367e01, 1.02033085e01, 2.37674032e-01, -1.00120648e01}},
 };
@@ -38,14 +44,12 @@ public:
     
     template<typename TType, typename RhoType>
     auto get_J(const TType& Tstar, const RhoType& rhostar) const{
-        auto Z_1 = 0.3 + 0.05*n;
-        auto Z_2 = 1.0/n;
-        auto A_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
-        auto A_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
-        auto A_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
-        // |x| = sqrt(x^2), the latter is well-suited to differentiation
-        auto differentiable_abs = [](const auto& x){ return sqrt(x*x); };
-        std::common_type_t<TType, RhoType> out = (A_0 + A_1*pow(Tstar, Z_1) + A_2*pow(Tstar, Z_2))*exp(1.0/(Tstar + 4.0/pow(differentiable_abs(log(rhostar/sqrt(2.0))), 3.0)));
+        double Z_1 = 0.3 + 0.05*n;
+        double Z_2 = 1.0/n;
+        RhoType A_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
+        RhoType A_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
+        RhoType A_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
+        std::common_type_t<TType, RhoType> out = (A_0 + A_1*pow(Tstar, Z_1) + A_2*pow(Tstar, Z_2))*exp(1.0/(Tstar + 4.0/pow(differentiable_abs(log(forceeval(rhostar/sqrt(2.0)))), 3.0)));
         return out;
     }
 };
@@ -73,13 +77,13 @@ public:
     
     template<typename TType, typename RhoType>
     auto get_K(const TType& Tstar, const RhoType& rhostar) const{
-        auto Z_1 = 2.0;
-        auto Z_2 = 3.0;
-        auto Z_3 = 4.0;
-        auto b_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
-        auto b_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
-        auto b_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
-        auto b_3 = a03 + a13*rhostar + a23*rhostar*rhostar + a33*rhostar*rhostar*rhostar;
+        double Z_1 = 2.0;
+        double Z_2 = 3.0;
+        double Z_3 = 4.0;
+        RhoType b_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
+        RhoType b_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
+        RhoType b_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
+        RhoType b_3 = a03 + a13*rhostar + a23*rhostar*rhostar + a33*rhostar*rhostar*rhostar;
         std::common_type_t<TType, RhoType> out = b_0 + b_1*Tstar + b_2*pow(exp(pow(1.0-rhostar/sqrt(2.0),Z_3)), Z_1) + b_3*pow(exp(pow(1.0-rhostar/sqrt(2.0),Z_3)), Z_2);
         return out;
     }

@@ -12,6 +12,7 @@
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/algorithms/iteration.hpp"
+#include "teqp/cpp/deriv_adapter.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -45,31 +46,39 @@ void add_multifluid(py::module& m){
     m.def("get_departure_json", &get_departure_json, py::arg("name"), py::arg("root"));
 }
 
+template<typename TYPE>
+const TYPE& get_typed(const py::object& o){
+    using namespace teqp::cppinterface;
+    using namespace teqp::cppinterface::adapter;
+    // Cast Python-wrapped AbstractModel to the C++ AbstractModel
+    const AbstractModel* am = o.cast<const AbstractModel *>();
+    // Cast the C++ AbstractModel to the derived adapter class
+    return get_model_cref<TYPE>(am);
+}
+
+template<typename TYPE>
+TYPE& get_mutable_typed(py::object& o){
+    using namespace teqp::cppinterface;
+    using namespace teqp::cppinterface::adapter;
+    // Cast Python-wrapped AbstractModel to the C++ AbstractModel
+    AbstractModel* am = o.cast<AbstractModel *>();
+    // Cast the C++ AbstractModel to the derived adapter class
+    return get_model_ref<TYPE>(am);
+}
+
 void add_multifluid_mutant(py::module& m) {
     using namespace teqp;
     using namespace teqp::cppinterface;
 
     // A typedef for the base model
     using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"", ""}, "", ""));
-    
+
     // Wrap the function for generating a multifluid mutant
     m.def("_build_multifluid_mutant", [](const py::object& o, const nlohmann::json &j){
-        const auto& model = std::get<MultiFluid>(o.cast<const AbstractModel *>()->get_model());
-        AllowedModels mutant{build_multifluid_mutant(model, j)};
-        return emplace_model(std::move(mutant));
+        const MultiFluid& model = get_typed<MultiFluid>(o);
+        auto mutant{build_multifluid_mutant(model, j)};
+        return teqp::cppinterface::adapter::make_owned(mutant);
     });
-}
-
-template<typename TYPE>
-const TYPE& get_typed(py::object& o){
-    using namespace teqp::cppinterface;
-    return std::get<TYPE>(o.cast<const AbstractModel *>()->get_model());
-}
-
-template<typename TYPE>
-TYPE& get_mutable_typed(py::object& o){
-    using namespace teqp::cppinterface;
-    return std::get<TYPE>(o.cast<AbstractModel *>()->get_mutable_model());
 }
 
 template<typename TYPE>
@@ -85,26 +94,52 @@ void attach_multifluid_methods(py::object&obj){
     setattr("get_alpharij", MethodType(py::cpp_function([](py::object& o, const int i, const int j, const double tau, const double delta){ return get_typed<TYPE>(o).dep.get_alpharij(i,j,tau,delta); }, "self"_a, "i"_a, "j"_a, "tau"_a, "delta"_a), obj));
 }
 
+// Type index variables matching the model types, used for runtime attachment of model-specific methods
+const std::type_index vdWEOS1_i{std::type_index(typeid(vdWEOS1))};
+const std::type_index PCSAFT_i{std::type_index(typeid(PCSAFT_t))};
+const std::type_index SAFTVRMie_i{std::type_index(typeid(SAFTVRMie_t))};
+const std::type_index canonical_cubic_i{std::type_index(typeid(canonical_cubic_t))};
+const std::type_index AmmoniaWaterTillnerRoth_i{std::type_index(typeid(AmmoniaWaterTillnerRoth))};
+const std::type_index idealgas_i{std::type_index(typeid(idealgas_t))};
+const std::type_index multifluid_i{std::type_index(typeid(multifluid_t))};
+const std::type_index multifluidmutant_i{std::type_index(typeid(multifluidmutant_t))};
+const std::type_index SW_EspindolaHeredia2009_i{std::type_index(typeid(SW_EspindolaHeredia2009_t))};
+const std::type_index EXP6_Kataoka1992_i{std::type_index(typeid(EXP6_Kataoka1992_t))};
+const std::type_index twocenterLJF_i{std::type_index(typeid(twocenterLJF_t))};
+
+/**
+ At runtime we can add additional model-specific methods that only apply for a particular model.  We take in a Python-wrapped
+ object and use runtime instrospection to figure out what kind of model it is. Then, we attach methods that are evaluated
+ ad *runtime* to call methods of the instance. This is tricky, although it works just fine.
+ 
+ */
 // You cannot know at runtime what is contained in the model so you must iterate
 // over possible model types and attach methods accordingly
 void attach_model_specific_methods(py::object& obj){
     using namespace teqp::cppinterface;
-    const auto& model = obj.cast<AbstractModel *>()->get_model();
-    auto setattr = py::getattr(obj, "__setattr__");
-    auto MethodType = py::module_::import("types").attr("MethodType");
     
-    if (std::holds_alternative<vdWEOS1>(model)){
+    // Get things from Python (these are just for convenience to save typing)
+    auto MethodType = py::module_::import("types").attr("MethodType");
+    auto setattr = py::getattr(obj, "__setattr__");
+    
+    AbstractModel* am = obj.cast<AbstractModel *>();
+    if (am == nullptr){
+        throw std::invalid_argument("Bad cast of argument to C++ AbstractModel type");
+    }
+    const auto& index = am->get_type_index();
+    
+    if (index == vdWEOS1_i){
         setattr("get_a", MethodType(py::cpp_function([](py::object& o){ return get_typed<vdWEOS1>(o).get_a(); }), obj));
         setattr("get_b", MethodType(py::cpp_function([](py::object& o){ return get_typed<vdWEOS1>(o).get_b(); }), obj));
     }
-    else if (std::holds_alternative<PCSAFT_t>(model)){
+    else if (index == PCSAFT_i){
         setattr("get_m", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_m(); }), obj));
         setattr("get_sigma_Angstrom", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_sigma_Angstrom(); }), obj));
         setattr("get_epsilon_over_k_K", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_epsilon_over_k_K(); }), obj));
         setattr("max_rhoN", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<PCSAFT_t>(o).max_rhoN(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_kmat(); }), obj));
     }
-    else if (std::holds_alternative<SAFTVRMie_t>(model)){
+    else if (index == SAFTVRMie_i){
         setattr("get_m", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_m(); }), obj));
         setattr("get_sigma_Angstrom", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_sigma_Angstrom(); }), obj));
         setattr("get_sigma_m", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_sigma_m(); }), obj));
@@ -115,16 +150,15 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_kmat(); }), obj));
         setattr("get_core_calcs", MethodType(py::cpp_function([](py::object& o, double T, double rhomolar, REArrayd& molefrac){ return get_typed<SAFTVRMie_t>(o).get_core_calcs(T, rhomolar, molefrac); }, "self"_a, "T"_a, "rhomolar"_a, "molefrac"_a), obj));
     }
-    else if (std::holds_alternative<canonical_cubic_t>(model)){
+    else if (index == canonical_cubic_i){
         setattr("get_a", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_a(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("get_b", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_b(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<canonical_cubic_t>(o).superanc_rhoLV(T); }, "self"_a, "T"_a), obj));
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<canonical_cubic_t>(o).get_kmat(); }), obj));
         setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<canonical_cubic_t>(o).get_meta(); }), obj));
         setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<canonical_cubic_t>(o).set_meta(s); }, "self"_a, "s"_a), obj));
-        
     }
-    else if (std::holds_alternative<AmmoniaWaterTillnerRoth>(model)){
+    else if (index == AmmoniaWaterTillnerRoth_i){
         setattr("TcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).TcNH3);
         setattr("vcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).vcNH3);
         setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<AmmoniaWaterTillnerRoth>(o).get_Treducing(molefrac); }, "self"_a, "molefrac"_a), obj));
@@ -138,7 +172,7 @@ void attach_model_specific_methods(py::object& obj){
             return m.alphar_departure(tau, delta_, xNH3).imag()/h;
         }, "self"_a, "tau"_a, "delta"_a, "xNH3"_a), obj));
     }
-    else if (std::holds_alternative<multifluid_t>(model)){
+    else if (index == multifluid_i){
         attach_multifluid_methods<multifluid_t>(obj);
         setattr("build_ancillaries", MethodType(py::cpp_function([](py::object& o, std::optional<int> i = std::nullopt){
             const auto& c = get_typed<multifluid_t>(o);
@@ -154,7 +188,7 @@ void attach_model_specific_methods(py::object& obj){
             return teqp::MultiFluidVLEAncillaries(jancillaries);
         }, "self"_a, py::arg_v("i", std::nullopt, "None")), obj));
     }
-    else if (std::holds_alternative<idealgas_t>(model)){
+    else if (index == idealgas_i){
         // Here X-Macros are used to create functions like get_Aig00, get_Aig01, ....
         #define X(i,j) setattr(stringify(get_Aig ## i ## j), MethodType(py::cpp_function([](py::object& o, double T, double rho, REArrayd& molefrac){ \
                 using tdx = teqp::TDXDerivatives<idealgas_t, double, REArrayd>; \
@@ -163,17 +197,17 @@ void attach_model_specific_methods(py::object& obj){
             ARXY_args
         #undef X
     }
-    else if (std::holds_alternative<multifluidmutant_t>(model)){
+    else if (index == multifluidmutant_i){
         attach_multifluid_methods<multifluidmutant_t>(obj);
     }
-    else if (std::holds_alternative<SW_EspindolaHeredia2009_t>(model)){
+    else if (index == SW_EspindolaHeredia2009_i){
         // Have to use a method because lambda is a reserved word in Python
         setattr("get_lambda", MethodType(py::cpp_function([](py::object& o){ return get_typed<SW_EspindolaHeredia2009_t>(o).get_lambda(); }, "self"_a), obj));
     }
-    else if (std::holds_alternative<EXP6_Kataoka1992_t>(model)){
+    else if (index == EXP6_Kataoka1992_i){
         setattr("alpha", get_typed<EXP6_Kataoka1992_t>(obj).get_alpha());
     }
-    else if (std::holds_alternative<twocenterLJF_t>(model)){
+    else if (index == twocenterLJF_i){
         setattr("Lstar", get_typed<twocenterLJF_t>(obj).L);
         setattr("mustar_sq", get_typed<twocenterLJF_t>(obj).mu_sq);
     }
@@ -314,7 +348,7 @@ void init_teqp(py::module& m) {
     add_multifluid_mutant(m);
     
     using am = teqp::cppinterface::AbstractModel;
-    py::class_<AbstractModel, std::shared_ptr<AbstractModel>>(m, "AbstractModel", py::dynamic_attr())
+    py::class_<AbstractModel, std::unique_ptr<AbstractModel>>(m, "AbstractModel", py::dynamic_attr())
     
         .def("get_R", &am::get_R, "molefrac"_a.noconvert())
     

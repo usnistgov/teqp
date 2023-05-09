@@ -36,19 +36,18 @@ struct CriticalTracing {
         return std::make_tuple(es.eigenvalues(), es.eigenvectors());
     }
 
-    static auto eigen_problem(const Model& model, const Scalar T, const VecType& rhovec, const std::optional<VecType>& alignment_v0 = std::nullopt) {
+    static auto eigen_problem(const AbstractModel& model, const Scalar T, const VecType& rhovec, const std::optional<VecType>& alignment_v0 = std::nullopt) {
 
         EigenData ed;
 
         auto N = rhovec.size();
         Eigen::ArrayX<bool> mask = (rhovec != 0).eval();
 
-        using id = IsochoricDerivatives<decltype(model)>;
-
         // Build the Hessian for the residual part;
 #if defined(USE_AUTODIFF)
-        auto H = id::build_Psir_Hessian_autodiff(model, T, rhovec);
+        auto H = model.build_Psir_Hessian_autodiff(T, rhovec);
 #else
+        using id = IsochoricDerivatives<decltype(model)>;
         auto H = id::build_Psir_Hessian_mcx(model, T, rhovec);
 #endif
         // ... and add ideal-gas terms to H
@@ -123,11 +122,11 @@ struct CriticalTracing {
         EigenData ei;
     };
 
-    static auto get_minimum_eigenvalue_Psi_Hessian(const Model& model, const Scalar T, const VecType& rhovec) {
+    static auto get_minimum_eigenvalue_Psi_Hessian(const AbstractModel& model, const Scalar T, const VecType& rhovec) {
         return eigen_problem(model, T, rhovec).eigenvalues[0];
     }
 
-    static auto get_derivs(const Model& model, const Scalar T, const VecType& rhovec, const std::optional<VecType>& alignment_v0 = std::nullopt) {
+    static auto get_derivs(const AbstractModel& model, const double T, const VecType& rhovec, const std::optional<VecType>& alignment_v0 = std::nullopt) {
         auto molefrac = rhovec / rhovec.sum();
         auto R = model.R(molefrac);
 
@@ -147,19 +146,20 @@ struct CriticalTracing {
         }
 
 #if defined(USE_AUTODIFF)
-        // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
-        ArrayXdual4th v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
-        ArrayXdual4th rhovecad(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecad[i] = rhovec[i]; }
-        dual4th varsigma{ 0.0 };
-        auto wrapper = [&rhovecad, &v0, &T, &model](const auto& sigma_1) {
-            auto rhovecused = (rhovecad + sigma_1 * v0).eval();
-            auto rhotot = rhovecused.sum();
-            auto molefrac = (rhovecused / rhotot).eval();
-            return eval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
-        };
-        auto psir_derivs_ = derivatives(wrapper, wrt(varsigma), at(varsigma));
-        Eigen::ArrayXd psir_derivs; psir_derivs.resize(5);
-        for (auto i = 0; i < 5; ++i) { psir_derivs[i] = psir_derivs_[i]; }
+        auto psir_derivs = model.get_Psir_sigma_derivs(T, rhovec, ei.v0);
+//        // Calculate the first through fourth derivative of Psi^r w.r.t. sigma_1
+//        ArrayXdual4th v0(ei.v0.size()); for (auto i = 0; i < ei.v0.size(); ++i) { v0[i] = ei.v0[i]; }
+//        ArrayXdual4th rhovecad(rhovec.size());  for (auto i = 0; i < rhovec.size(); ++i) { rhovecad[i] = rhovec[i]; }
+//        dual4th varsigma{ 0.0 };
+//        auto wrapper = [&rhovecad, &v0, &T, &model](const auto& sigma_1) {
+//            auto rhovecused = (rhovecad + sigma_1 * v0).eval();
+//            auto rhotot = rhovecused.sum();
+//            auto molefrac = (rhovecused / rhotot).eval();
+//            return eval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
+//        };
+//        auto psir_derivs_ = derivatives(wrapper, wrt(varsigma), at(varsigma));
+//        Eigen::ArrayXd psir_derivs; psir_derivs.resize(5);
+//        for (auto i = 0; i < 5; ++i) { psir_derivs[i] = psir_derivs_[i]; }
 
 #else
         using namespace mcx;
@@ -202,11 +202,11 @@ struct CriticalTracing {
         return std::any_of(std::begin(foo), std::end(foo), [](const auto x) { return x; });
     }
 
-    static auto get_drhovec_dT_crit(const Model& model, const Scalar T, const VecType& rhovec) {
+    static auto get_drhovec_dT_crit(const AbstractModel& model, const Scalar& T, const VecType& rhovec) {
 
         // The derivatives of total Psi w.r.t.sigma_1 (numerical for residual, analytic for ideal)
         // Returns a tuple, with residual, ideal, total dicts with of number of derivatives, value of derivative
-        auto all_derivs = get_derivs(model, T, rhovec, Eigen::ArrayXd());
+        auto all_derivs = get_derivs(model, T, rhovec, std::nullopt);
         auto derivs = all_derivs.tot;
 
         // The temperature derivative of total Psi w.r.t.T from a centered finite difference in T
@@ -278,7 +278,7 @@ struct CriticalTracing {
         return drhovec_dT;
     }
 
-    static auto get_criticality_conditions(const Model& model, const Scalar T, const VecType& rhovec) {
+    static auto get_criticality_conditions(const AbstractModel& model, const Scalar T, const VecType& rhovec) {
         auto derivs = get_derivs(model, T, rhovec, Eigen::ArrayXd());
         return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
     }
@@ -288,7 +288,7 @@ struct CriticalTracing {
     * 
     * There is a typo in the paper: the last step should be rho + 2*drho*dir
     */
-    static auto EigenVectorPath(const Model& model, const Scalar T, const VecType& rhovec, const VecType &u1, Scalar drho) {
+    static auto EigenVectorPath(const AbstractModel& model, const Scalar T, const VecType& rhovec, const VecType &u1, Scalar drho) {
         VecType dir = u1/6.0;
         VecType rhoshift = rhovec + drho*u1;
         auto e1 = eigen_problem(model, T, rhoshift, u1);
@@ -313,7 +313,7 @@ struct CriticalTracing {
     /**
     * \brief The LocalStability function of Algorithm 2 from Deiters and Bell: https://dx.doi.org/10.1021/acs.iecr.0c03667
     */
-    static auto is_locally_stable(const Model& model, const Scalar T, const VecType& rhovec, const Scalar stability_rel_drho) {
+    static auto is_locally_stable(const AbstractModel& model, const Scalar T, const VecType& rhovec, const Scalar stability_rel_drho) {
         // At the critical point
         auto ezero = eigen_problem(model, T, rhovec);
         Scalar lambda1 = ezero.eigenvalues(0);
@@ -331,7 +331,7 @@ struct CriticalTracing {
     }
 
     /// Polish a critical point while keeping the overall composition constant and iterating for temperature and overall density
-    static auto critical_polish_fixedmolefrac(const Model& model, const Scalar T, const VecType& rhovec, const Scalar z0) {
+    static auto critical_polish_fixedmolefrac(const AbstractModel& model, const Scalar T, const VecType& rhovec, const Scalar z0) {
         auto polish_x_resid = [&model, &z0](const auto& x) {
             auto T = x[0];
             Eigen::ArrayXd rhovec(2); rhovec << z0*x[1], (1-z0)*x[1];
@@ -351,7 +351,7 @@ struct CriticalTracing {
         Eigen::ArrayXd rhovecsoln(2); rhovecsoln << x[1]*z0, x[1] * (1 - z0);
         return std::make_tuple(x[0], rhovecsoln);
     }
-    static auto critical_polish_fixedrho(const Model& model, const Scalar T, const VecType& rhovec, const int i) {
+    static auto critical_polish_fixedrho(const AbstractModel& model, const Scalar T, const VecType& rhovec, const int i) {
         Scalar rhoval = rhovec[i];
         auto polish_x_resid = [&model, &i, &rhoval](const auto& x) {
             auto T = x[0];
@@ -372,7 +372,7 @@ struct CriticalTracing {
         Eigen::ArrayXd rho = x.tail(x.size() - 1);
         return std::make_tuple(x[0], rho);
     }
-    static auto critical_polish_fixedT(const Model& model, const Scalar T, const VecType& rhovec) {
+    static auto critical_polish_fixedT(const AbstractModel& model, const Scalar T, const VecType& rhovec) {
         auto polish_T_resid = [&model, &T](const auto& x) {
             auto derivs = get_derivs(model, T, x);
             return (Eigen::ArrayXd(2) << derivs.tot[2], derivs.tot[3]).finished();
@@ -388,7 +388,7 @@ struct CriticalTracing {
         return x;
     }
 
-    static auto trace_critical_arclength_binary(const Model& model, const Scalar& T0, const VecType& rhovec0, const std::optional<std::string>& filename_ = std::nullopt, const std::optional<TCABOptions> &options_ = std::nullopt) -> nlohmann::json {
+    static auto trace_critical_arclength_binary(const AbstractModel& model, const Scalar& T0, const VecType& rhovec0, const std::optional<std::string>& filename_ = std::nullopt, const std::optional<TCABOptions> &options_ = std::nullopt) -> nlohmann::json {
         std::string filename = filename_.value_or("");
         TCABOptions options = options_.value_or(TCABOptions{});
 
@@ -474,10 +474,9 @@ struct CriticalTracing {
 
             // Calculate some other parameters, for debugging, or scientific interest
             auto rhotot = rhovec.sum();
-            using id = IsochoricDerivatives<decltype(model), Scalar, VecType>;
-            double p = rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec);
+            double p = rhotot * model.R(rhovec / rhovec.sum()) * T + model.get_pr(T, rhovec);
             auto conditions = get_criticality_conditions(model, T, rhovec);
-            double splus = id::get_splus(model, T, rhovec);
+            double splus = model.get_splus(T, rhovec);
             auto dxdt = x0;
             xprime(x0, dxdt, -1.0);
 
@@ -507,9 +506,8 @@ struct CriticalTracing {
             std::stringstream out;
             auto rhotot = rhovec.sum();
             double z0 = rhovec[0] / rhotot;
-            using id = IsochoricDerivatives<decltype(model)>;
             auto conditions = get_criticality_conditions(model, T, rhovec);
-            out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + id::get_pr(model, T, rhovec) << "," << c << "," << dt << "," << conditions(0) << "," << conditions(1) << std::endl;
+            out << z0 << "," << rhovec[0] << "," << rhovec[1] << "," << T << "," << rhotot * model.R(rhovec / rhovec.sum()) * T + model.get_pr(T, rhovec) << "," << c << "," << dt << "," << conditions(0) << "," << conditions(1) << std::endl;
             std::string sout(out.str());
             std::cout << sout;
             if (ofs.is_open()) {
@@ -595,22 +593,22 @@ struct CriticalTracing {
             }
 
             // The polishers to be tried, in order, to polish the critical point
-            using PolisherType = std::function<std::tuple<double, VecType>(const Model, const Scalar, const VecType&)>;
+            using PolisherType = std::function<std::tuple<double, VecType>(const AbstractModel&, const Scalar, const VecType&)>;
             std::vector<PolisherType> polishers = {
-                [&](const Model& model, const Scalar T, const VecType& rhovec) {
+                [&](const AbstractModel& model, const Scalar T, const VecType& rhovec) {
                     auto [Tnew, rhovecnew] = critical_polish_fixedmolefrac(model, T, rhovec, z0);
                     return std::make_tuple(Tnew, rhovecnew);
                 },
-                [&](const Model& model, const Scalar T, const VecType& rhovec) {
+                [&](const AbstractModel& model, const Scalar T, const VecType& rhovec) {
                     auto rhovecnew = critical_polish_fixedT(model, T, rhovec);
                     return std::make_tuple(T, rhovecnew);
                 },
-                [&](const Model& model, const Scalar T, const VecType& rhovec) {
+                [&](const AbstractModel& model, const Scalar T, const VecType& rhovec) {
                     int i = 0;
                     auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
                     return std::make_tuple(Tnew, rhovecnew);
                 },
-                [&](const Model& model, const Scalar T, const VecType& rhovec) {
+                [&](const AbstractModel& model, const Scalar T, const VecType& rhovec) {
                     int i = 1;
                     auto [Tnew, rhovecnew] = critical_polish_fixedrho(model, T, rhovec, i);
                     return std::make_tuple(Tnew, rhovecnew);
@@ -746,13 +744,39 @@ struct CriticalTracing {
     * \f]
     * where the derivatives on the RHS without the subscript $\CRL$ are homogeneous derivatives taken at the mixture statepoint, and are NOT along the critical curve.
     */
-    static auto get_dp_dT_crit(const Model& model, const Scalar& T, const VecType& rhovec) {
-        using id = IsochoricDerivatives<Model, Scalar, VecType>;
-        auto dpdrhovec = id::get_dpdrhovec_constT(model, T, rhovec);
-        Scalar v = id::get_dpdT_constrhovec(model, T, rhovec) + (dpdrhovec.array()*get_drhovec_dT_crit(model, T, rhovec).array()).sum();
+    static auto get_dp_dT_crit(const AbstractModel& model, const Scalar& T, const VecType& rhovec) {
+        auto dpdrhovec = model.get_dpdrhovec_constT(T, rhovec);
+        Scalar v = model.get_dpdT_constrhovec(T, rhovec) + (dpdrhovec.array()*get_drhovec_dT_crit(model, T, rhovec).array()).sum();
         return v;
     }
+    
+#define CRIT_FUNCTIONS_TO_WRAP \
+    X(get_dp_dT_crit) \
+    X(trace_critical_arclength_binary) \
+    X(critical_polish_fixedmolefrac)  \
+    X(get_drhovec_dT_crit) \
+    X(get_derivs) \
+    X(eigen_problem)
 
-}; // namespace VecType
+#define X(f) template <typename TemplatedModel, typename ...Params, \
+typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, TemplatedModel>::value>::type> \
+static auto f(const TemplatedModel& model, Params&&... params){ \
+    auto view = teqp::cppinterface::adapter::make_cview(model); \
+    const AbstractModel& am = *view.get(); \
+    return f(am, std::forward<Params>(params)...); \
+}
+    CRIT_FUNCTIONS_TO_WRAP
+#undef X
+#undef CRIT_FUNCTIONS_TO_WRAP
+    
+//template <typename TemplatedModel, typename ...Params,
+//typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, TemplatedModel>::value>::type>
+//static auto critical_polish_fixedmolefrac(const TemplatedModel& model, Params&&... params){
+//    auto view = teqp::cppinterface::adapter::make_cview(model);
+//    const AbstractModel& am = *view.get();
+//    return critical_polish_fixedmolefrac(am, std::forward<Params>(params)...);
+//}
+
+}; // namespace Critical
 
 }; // namespace teqp

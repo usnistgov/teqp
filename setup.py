@@ -247,7 +247,7 @@ try:
         description='Templated EQuation of state Package',
         long_description='',
         ext_modules=[CMakeExtension('teqp.teqp')], # teqp.teqp is the extension module that lives inside the teqp package
-        packages=['teqp'],
+        packages=['teqp','teqp.fluiddata.dev.fluids','teqp.fluiddata.dev.mixtures'],
         include_package_data=True,
         cmdclass=dict(build_ext=CMakeBuild),
         zip_safe=False,

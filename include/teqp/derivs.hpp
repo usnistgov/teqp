@@ -3,6 +3,7 @@
 #include <complex>
 #include <map>
 #include <tuple>
+#include <numeric>
 
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
@@ -31,6 +32,7 @@ typename ContainerType::value_type derivT(const FuncType& f, TType T, const Cont
     return f(std::complex<TType>(T, h), rho).imag() / h;
 }
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
 /***
 * \brief Given a function, use multicomplex derivatives to calculate the derivative with
 * respect to the first variable which here is temperature
@@ -42,6 +44,7 @@ typename ContainerType::value_type derivTmcx(const FuncType& f, TType T, const C
     auto ders = diff_mcx1(wrapper, T, 1);
     return ders[0];
 }
+#endif
 
 /***
 * \brief Given a function, use complex step derivatives to calculate the derivative with respect 
@@ -163,11 +166,11 @@ struct TDXDerivatives {
             }
         }
         else if constexpr (iT > 0 && iD == 0) {
-            auto Trecip = 1.0 / T;
+            Scalar Trecip = 1.0 / T;
             if constexpr (be == ADBackends::autodiff) {
                 // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
                 autodiff::Real<iT, Scalar> Trecipad = Trecip;
-                auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(1.0/Trecip__, rho, molefrac); };
+                auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(forceeval(1.0/Trecip__), rho, molefrac); };
                 return powi(Trecip, iT)*derivatives(f, along(1), at(Trecipad))[iT];
             }
             else if constexpr (iT == 1 && be == ADBackends::complex_step) {
@@ -196,7 +199,7 @@ struct TDXDerivatives {
                     return eval(w.alpha(T_, rho_, molefrac)); };
                 auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)));
                 auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad));
-                return powi(1.0 / T, iT) * powi(rho, iD) * der[der.size() - 1];
+                return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
             }
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
@@ -337,11 +340,11 @@ struct TDXDerivatives {
     template<int Nderiv, ADBackends be = ADBackends::autodiff, class AlphaWrapper>
     static auto get_Agenn0(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         std::valarray<Scalar> o(Nderiv+1);
-        auto Trecip = 1.0 / T;
+        Scalar Trecip = 1.0 / T;
         if constexpr (be == ADBackends::autodiff) {
             // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
             autodiff::Real<Nderiv, Scalar> Trecipad = Trecip;
-            auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(1.0/Trecip__, rho, molefrac); };
+            auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(forceeval(1.0/Trecip__), rho, molefrac); };
             auto ders = derivatives(f, along(1), at(Trecipad));
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = powi(Trecip, n) * ders[n];
@@ -483,9 +486,10 @@ struct VirialDerivatives {
     {
         std::map<int, double> dnalphardrhon;
         if constexpr(be == ADBackends::autodiff){
-            autodiff::HigherOrderDual<Nderiv, double> rhodual = 0.0;
             auto f = [&model, &T, &molefrac](const auto& rho_) { return model.alphar(T, rho_, molefrac); };
-            auto derivs = derivatives(f, wrt(rhodual), at(rhodual));
+            autodiff::Real<Nderiv, Scalar> rhoreal = 0.0;
+            auto derivs = derivatives(f, along(1), at(rhoreal));
+            
             for (auto n = 1; n < Nderiv; ++n){
                  dnalphardrhon[n] = derivs[n];
             }
@@ -519,7 +523,7 @@ struct VirialDerivatives {
     }
 
     /// This version of the get_Bnvir takes the maximum number of derivatives as a runtime argument
-    /// and then forwards all arguments to the templated function
+    /// and then forwards all arguments to the corresponding templated function
     template <ADBackends be = ADBackends::autodiff>
     static auto get_Bnvir_runtime(const int Nderiv, const Model& model, const Scalar &T, const VectorType& molefrac) {
         switch(Nderiv){
@@ -698,7 +702,7 @@ struct IsochoricDerivatives{
     */
     static auto get_dPsirdT_constrhovec(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot_ = rhovec.sum();
-        auto molefrac = rhovec / rhotot_;
+        auto molefrac = (rhovec / rhotot_).eval();
         autodiff::Real<1, Scalar> Tad = T;
         auto f = [&model, &rhotot_, &molefrac](const auto& T_) {return rhotot_*model.R(molefrac)*T_*model.alphar(T_, rhotot_, molefrac); };
         return derivatives(f, along(1), at(Tad))[1];
@@ -764,6 +768,7 @@ struct IsochoricDerivatives{
         return H;
     }
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
     /***
     * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations (residual contribution only)
     *
@@ -785,6 +790,7 @@ struct IsochoricDerivatives{
         auto H = get_Hessian<mattype, fcn_t, VectorType, HessianMethods::Multiple>(func, rho);
         return H;
     }
+#endif
 
     /***
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
@@ -802,6 +808,7 @@ struct IsochoricDerivatives{
         return val;
     }
 
+#if defined(TEQP_MULTICOMPLEX_ENABLED)
     /***
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
     *
@@ -821,6 +828,7 @@ struct IsochoricDerivatives{
         }
         return out;
     }
+#endif
     /***
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
     *
@@ -962,6 +970,21 @@ struct IsochoricDerivatives{
         auto ders = tdx::template get_Ar0n<2>(model, T, rhotot, molefrac);
         auto denominator = -pow2(rhotot)*RT*(1 + 2*ders[1] + ders[2]);
         return (numerator/denominator).eval();
+    }
+    
+    static VectorType get_Psir_sigma_derivs(const Model& model, const Scalar& T, const VectorType& rhovec, const VectorType& v) {
+        autodiff::Real<4, double> sigma = 0.0;
+        auto rhovecad = rhovec.template cast<decltype(sigma)>(), vad = v.template cast<decltype(sigma)>();
+        auto wrapper = [&rhovecad, &vad, &T, &model](const auto& sigma_1) {
+            auto rhovecused = (rhovecad + sigma_1 * vad).eval();
+            auto rhotot = rhovecused.sum();
+            auto molefrac = (rhovecused / rhotot).eval();
+            return forceeval(model.alphar(T, rhotot, molefrac) * model.R(molefrac) * T * rhotot);
+        };
+        auto der = derivatives(wrapper, along(1), at(sigma));
+        VectorType ret(der.size());
+        for (auto i = 0; i < ret.size(); ++i){ ret[i] = der[i];}
+        return ret;
     }
 };
 
