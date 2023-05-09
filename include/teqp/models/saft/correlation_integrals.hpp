@@ -7,6 +7,12 @@
 namespace teqp {
 namespace SAFTpolar{
 
+// |x| = sqrt(x^2), the latter is well-suited to differentiation
+template<typename X>
+inline auto differentiable_abs(const X& x){
+    return forceeval(sqrt(x*x));
+};
+
 static const std::map<int, std::array<double, 12>> Luckas_J_coeffs = {
     {4,  {-1.38410152e00,  -7.05792933e-01, 2.60947023e00,  1.96828333e01, 1.13619510e01, -2.98510490e01,  -3.15686398e01, -2.00943290e01,  5.11029320e01, 1.44194150e01, 9.40061069e00,  -2.36844608e01}},
     {5,  {-6.89702637e-01, -1.62382602e-01, 1.16302441e00,  1.42067443e01, 4.59642681e00, -1.81421003e01,  -2.45012804e01, -8.42839734e00,  3.25579587e01, 1.16339969e01, 4.00080085e00,  -1.54419815e01}},
@@ -40,12 +46,9 @@ public:
     auto get_J(const TType& Tstar, const RhoType& rhostar) const{
         double Z_1 = 0.3 + 0.05*n;
         double Z_2 = 1.0/n;
-        auto A_0 = forceeval(a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar);
-        auto A_1 = forceeval(a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar);
-        auto A_2 = forceeval(a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar);
-        // |x| = sqrt(x^2), the latter is well-suited to differentiation
-        auto differentiable_abs = [](const auto& x){ return forceeval(sqrt(x*x)); };
-//        return forceeval(A_2*differentiable_abs(Tstar));
+        RhoType A_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
+        RhoType A_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
+        RhoType A_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
         std::common_type_t<TType, RhoType> out = (A_0 + A_1*pow(Tstar, Z_1) + A_2*pow(Tstar, Z_2))*exp(1.0/(Tstar + 4.0/pow(differentiable_abs(log(forceeval(rhostar/sqrt(2.0)))), 3.0)));
         return out;
     }
@@ -77,10 +80,10 @@ public:
         double Z_1 = 2.0;
         double Z_2 = 3.0;
         double Z_3 = 4.0;
-        auto b_0 = forceeval(a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar);
-        auto b_1 = forceeval(a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar);
-        auto b_2 = forceeval(a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar);
-        auto b_3 = forceeval(a03 + a13*rhostar + a23*rhostar*rhostar + a33*rhostar*rhostar*rhostar);
+        RhoType b_0 = a00 + a10*rhostar + a20*rhostar*rhostar + a30*rhostar*rhostar*rhostar;
+        RhoType b_1 = a01 + a11*rhostar + a21*rhostar*rhostar + a31*rhostar*rhostar*rhostar;
+        RhoType b_2 = a02 + a12*rhostar + a22*rhostar*rhostar + a32*rhostar*rhostar*rhostar;
+        RhoType b_3 = a03 + a13*rhostar + a23*rhostar*rhostar + a33*rhostar*rhostar*rhostar;
         std::common_type_t<TType, RhoType> out = b_0 + b_1*Tstar + b_2*pow(exp(pow(1.0-rhostar/sqrt(2.0),Z_3)), Z_1) + b_3*pow(exp(pow(1.0-rhostar/sqrt(2.0),Z_3)), Z_2);
         return out;
     }

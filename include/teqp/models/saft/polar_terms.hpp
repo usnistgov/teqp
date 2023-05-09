@@ -406,17 +406,18 @@ public:
         const auto& x = mole_fractions; // concision
         
         const std::size_t N = mole_fractions.size();
+        using XTtype = std::common_type_t<TTYPE, decltype(mole_fractions[0])>;
         std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])> alpha2_112 = 0.0, alpha2_123 = 0.0, alpha2_224 = 0.0;
         
-        const auto factor_112 = forceeval(-2.0*PI_*rhoN/3.0);
-        const auto factor_123 = forceeval(-PI_*rhoN/3.0);
-        const auto factor_224 = forceeval(-14.0*PI_*rhoN/5.0);
+        const RhoType factor_112 = -2.0*PI_*rhoN/3.0;
+        const RhoType factor_123 = -PI_*rhoN/3.0;
+        const RhoType factor_224 = -14.0*PI_*rhoN/5.0;
         
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = 0; j < N; ++j){
 
                 TTYPE Tstari = forceeval(T/EPSKIJ(i, i)), Tstarj = forceeval(T/EPSKIJ(j, j));
-                auto leading = forceeval(x[i]*x[j]/(Tstari*Tstarj)); // common for all alpha_2 terms
+                XTtype leading = forceeval(x[i]*x[j]/(Tstari*Tstarj)); // common for all alpha_2 terms
                 TTYPE Tstarij = forceeval(T/EPSKIJ(i, j));
                 double sigmaij = SIGMAIJ(i,j);
                 {
@@ -442,6 +443,7 @@ public:
         const VecType& x = mole_fractions; // concision
         const std::size_t N = mole_fractions.size();
         using type = std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])>;
+        using XTtype = std::common_type_t<TTYPE, decltype(mole_fractions[0])>;
         type summerA_112_112_224 = 0.0, summerA_112_123_213 = 0.0, summerA_123_123_224 = 0.0, summerA_224_224_224 = 0.0;
         type summerB_112_112_112 = 0.0, summerB_112_123_123 = 0.0, summerB_123_123_224 = 0.0, summerB_224_224_224 = 0.0;
         
@@ -451,7 +453,7 @@ public:
                 TTYPE Tstari = forceeval(T/EPSKIJ(i,i)), Tstarj = forceeval(T/EPSKIJ(j,j));
                 TTYPE Tstarij = forceeval(T/EPSKIJ(i,j));
 
-                auto leading = forceeval(x[i]*x[j]/pow(forceeval(Tstari*Tstarj), 3.0/2.0)); // common for all alpha_3A terms
+                XTtype leading = forceeval(x[i]*x[j]/pow(forceeval(Tstari*Tstarj), 3.0/2.0)); // common for all alpha_3A terms
                 double sigmaij = SIGMAIJ(i,j);
                 double POW4sigmaij = powi(sigmaij, 4);
                 double POW8sigmaij = POW4sigmaij*POW4sigmaij;
@@ -482,7 +484,7 @@ public:
                     double sigmaik = SIGMAIJ(i,k), sigmajk = SIGMAIJ(j,k);
 
                     // Lorentz-Berthelot mixing rules for sigma
-                    auto leadingijk = forceeval(x[i]*x[j]*x[k]/(Tstari*Tstarj*Tstark));
+                    XTtype leadingijk = forceeval(x[i]*x[j]*x[k]/(Tstari*Tstarj*Tstark));
 
                     if (std::abs(mubar2[i]*mubar2[j]*mubar2[k]) > 0){
                         auto K222333 = get_Kijk(K222_333, rhostar, Tstarij, Tstarik, Tstarjk);
@@ -508,21 +510,21 @@ public:
             }
         }
         
-        type alpha3A_112_112_224 = forceeval(8.0*PI_*rhoN/25.0*summerA_112_112_224);
-        type alpha3A_112_123_213 = forceeval(8.0*PI_*rhoN/75.0*summerA_112_123_213);
-        type alpha3A_123_123_224 = forceeval(8.0*PI_*rhoN/35.0*summerA_123_123_224);
-        type alpha3A_224_224_224 = forceeval(144.0*PI_*rhoN/245.0*summerA_224_224_224);
+        type alpha3A_112_112_224 = 8.0*PI_*rhoN/25.0*summerA_112_112_224;
+        type alpha3A_112_123_213 = 8.0*PI_*rhoN/75.0*summerA_112_123_213;
+        type alpha3A_123_123_224 = 8.0*PI_*rhoN/35.0*summerA_123_123_224;
+        type alpha3A_224_224_224 = 144.0*PI_*rhoN/245.0*summerA_224_224_224;
 
-        type alpha3A = forceeval(3.0*alpha3A_112_112_224 + 6.0*alpha3A_112_123_213 + 6.0*alpha3A_123_123_224 + alpha3A_224_224_224);
+        type alpha3A = 3.0*alpha3A_112_112_224 + 6.0*alpha3A_112_123_213 + 6.0*alpha3A_123_123_224 + alpha3A_224_224_224;
 
         RhoType rhoN2 = rhoN*rhoN;
 
-        type alpha3B_112_112_112 = forceeval(32.0*POW3(PI_)*rhoN2/135.0*sqrt(14*PI_/5.0)*summerB_112_112_112);
-        type alpha3B_112_123_123 = forceeval(64.0*POW3(PI_)*rhoN2/315.0*sqrt(3.0*PI_)*summerB_112_123_123);
-        type alpha3B_123_123_224 = forceeval(-32.0*POW3(PI_)*rhoN2/45.0*sqrt(22.0*PI_/63.0)*summerB_123_123_224);
-        type alpha3B_224_224_224 = forceeval(32.0*POW3(PI_)*rhoN2/2025.0*sqrt(2002.0*PI_)*summerB_224_224_224);
+        type alpha3B_112_112_112 = 32.0*POW3(PI_)*rhoN2/135.0*sqrt(14*PI_/5.0)*summerB_112_112_112;
+        type alpha3B_112_123_123 = 64.0*POW3(PI_)*rhoN2/315.0*sqrt(3.0*PI_)*summerB_112_123_123;
+        type alpha3B_123_123_224 = -32.0*POW3(PI_)*rhoN2/45.0*sqrt(22.0*PI_/63.0)*summerB_123_123_224;
+        type alpha3B_224_224_224 = 32.0*POW3(PI_)*rhoN2/2025.0*sqrt(2002.0*PI_)*summerB_224_224_224;
 
-        type alpha3B = forceeval(alpha3B_112_112_112 + 3.0*alpha3B_112_123_123 + 3.0*alpha3B_123_123_224 + alpha3B_224_224_224);
+        type alpha3B = alpha3B_112_112_112 + 3.0*alpha3B_112_123_123 + 3.0*alpha3B_123_123_224 + alpha3B_224_224_224;
 
         return forceeval(alpha3A + alpha3B);
     }

@@ -835,19 +835,22 @@ public:
         // First values for the Mie chain with dispersion (always included)
         error_if_expr(T); error_if_expr(rhomolar);
         auto vals = terms.get_core_calcs(T, rhomolar, mole_fractions);
-        auto alphar = forceeval(vals.alphar_mono + vals.alphar_chain);
+        using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
+        type alphar = vals.alphar_mono + vals.alphar_chain;
+        type packing_fraction = vals.zeta[3];
         
        if (polar){ // polar term is present
            using mas = SAFTpolar::multipolar_argument_spec;
-           auto visitor = [&](const auto& contrib){
-               if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNA3_packingfraction_molefractions){
-                   auto rho_A3 = forceeval(rhomolar*N_A*1e-30);
-                   auto packing_fraction = forceeval(vals.zeta[3]);
-                   auto alpha = contrib.eval(T, rho_A3, packing_fraction, mole_fractions).alpha;
+           auto visitor = [&T, &rhomolar, &mole_fractions, &packing_fraction](const auto& contrib) -> type {
+               
+               constexpr mas arg_spec = std::decay_t<decltype(contrib)>::arg_spec;
+               if constexpr(arg_spec == mas::TK_rhoNA3_packingfraction_molefractions){
+                   RhoType rho_A3 = rhomolar*N_A*1e-30;
+                   type alpha = contrib.eval(T, rho_A3, packing_fraction, mole_fractions).alpha;
                    return alpha;
                }
-               else if constexpr(std::decay_t<decltype(contrib)>::arg_spec == mas::TK_rhoNm3_molefractions){
-                   auto rhoN_m3 = forceeval(rhomolar*N_A);
+               else if constexpr(arg_spec == mas::TK_rhoNm3_molefractions){
+                   RhoType rhoN_m3 = rhomolar*N_A;
                    return contrib.eval(T, rhoN_m3, mole_fractions).alpha;
                }
                else{
