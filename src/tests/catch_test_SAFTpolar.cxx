@@ -244,7 +244,7 @@ TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepol
     std::valarray<std::tuple<double, double>> mu2Q22CLJ = {{6,2}, {6,4}, {12,2}, {12,4}};
     
     SECTION("With mu&Q terms"){
-        const bool print = true;
+        const bool print = false;
         
         double Tstar_guess = Tstar_guess_init, rhostar_guess = rhostar_guess_init;
         if (print) std::cout << "(mu^*)^2, T^*, rho^*" << std::endl;
