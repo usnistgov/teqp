@@ -148,6 +148,7 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_lambda_a", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_lambda_a(); }), obj));
 //        setattr("max_rhoN", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<SAFTVRMie_t>(o).max_rhoN(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_kmat(); }), obj));
+        setattr("has_polar", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).has_polar(); }), obj));
         setattr("get_core_calcs", MethodType(py::cpp_function([](py::object& o, double T, double rhomolar, REArrayd& molefrac){ return get_typed<SAFTVRMie_t>(o).get_core_calcs(T, rhomolar, molefrac); }, "self"_a, "T"_a, "rhomolar"_a, "molefrac"_a), obj));
     }
     else if (index == canonical_cubic_i){
