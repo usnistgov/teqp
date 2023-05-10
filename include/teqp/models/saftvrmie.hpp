@@ -775,7 +775,7 @@ public:
     const auto& get_polar(){ return polar; }
     
     // Checker for whether a polar term is present
-    bool has_polar() const{ return polar; }
+    bool has_polar() const{ return polar.has_value(); }
     
     const auto& get_terms() const { return terms; }
     auto get_core_calcs(double T, double rhomolar, const Eigen::ArrayXd& mole_fractions) const {
