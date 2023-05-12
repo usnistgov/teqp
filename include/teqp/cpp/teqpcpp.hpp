@@ -1,6 +1,7 @@
 #pragma once 
 #include <memory>
 #include <typeindex>
+#include <optional>
 
 #include <Eigen/Dense>
 #include "nlohmann/json.hpp"
