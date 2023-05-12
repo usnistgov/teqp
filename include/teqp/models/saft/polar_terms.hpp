@@ -270,7 +270,12 @@ public:
 
 enum class multipolar_argument_spec {
     TK_rhoNA3_packingfraction_molefractions,
-    TK_rhoNm3_molefractions
+    TK_rhoNm3_rhostar_molefractions
+};
+
+enum class multipolar_rhostar_approach {
+    use_packing_fraction,
+    calculate_Gubbins_rhostar
 };
 
 template<typename type>
@@ -348,6 +353,7 @@ auto get_Kijk_334445(const KType& Kint, const RhoType& rhostar, const Txy &Tstar
     return forceeval(-pow(-forceeval(Kint.get_K(Tstarij, rhostar)*Kint.get_K(Tstarik, rhostar)*Kint.get_K(Tstarjk, rhostar)), 1.0/3.0));
 };
 
+
 /**
  \tparam JIntegral A type that can be indexed with a single integer n to give the J^{(n)} integral
  \tparam KIntegral A type that can be indexed with a two integers a and b to give the K(a,b) integral
@@ -357,7 +363,7 @@ auto get_Kijk_334445(const KType& Kint, const RhoType& rhostar, const Txy &Tstar
 template<class JIntegral, class KIntegral>
 class MultipolarContributionGubbinsTwu {
 public:
-    static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_molefractions;
+    static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_rhostar_molefractions;
 private:
     const Eigen::ArrayXd sigma_m, epsilon_over_k, mubar2, Qbar2;
     const bool has_a_polar;
@@ -376,9 +382,10 @@ private:
     const double epsilon_0 = 8.8541878128e-12; // https://en.wikipedia.org/wiki/Vacuum_permittivity, in F/m, or C^2⋅N^−1⋅m^−2
     const double PI_ = static_cast<double>(EIGEN_PI);
     Eigen::MatrixXd SIGMAIJ, EPSKIJ;
+    multipolar_rhostar_approach approach = multipolar_rhostar_approach::use_packing_fraction;
     
 public:
-    MultipolarContributionGubbinsTwu(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2), has_a_polar(mubar2.cwiseAbs().sum() > 0 || Qbar2.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)) {
+    MultipolarContributionGubbinsTwu(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2, multipolar_rhostar_approach approach) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2), has_a_polar(mubar2.cwiseAbs().sum() > 0 || Qbar2.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(approach) {
         // Check lengths match
         if (sigma_m.size() != mubar2.size()){
             throw teqp::InvalidArgument("bad size of mubar2");
@@ -529,27 +536,38 @@ public:
         return forceeval(alpha3A + alpha3B);
     }
     
+    template<typename RhoType, typename PFType, typename MoleFractions>
+    auto get_rhostar(const RhoType rhoN, const PFType& packing_fraction, const MoleFractions& mole_fractions) const{
+        using type = std::common_type_t<RhoType, PFType, decltype(mole_fractions[0])>;
+        type rhostar;
+        if (approach == multipolar_rhostar_approach::calculate_Gubbins_rhostar){
+            // Calculate the effective reduced diameter (cubed) to be used for evaluation
+            // Eq. 24 from Gubbins
+            type sigma_x3 = 0.0;
+            error_if_expr(sigma_m3);
+            auto N = mole_fractions.size();
+            for (auto i = 0; i < N; ++i){
+                for (auto j = 0; j < N; ++j){
+                    auto sigmaij = (sigma_m[i] + sigma_m[j])/2;
+                    sigma_x3 += mole_fractions[i]*mole_fractions[j]*POW3(sigmaij);
+                }
+            }
+            rhostar = forceeval(rhoN*sigma_x3);
+        }
+        else if (approach == multipolar_rhostar_approach::use_packing_fraction){
+            // The packing fraction is defined by eta = pi/6*rho^*, so use the (temperature-dependent) eta to obtain rho^*
+            rhostar = forceeval(packing_fraction/(static_cast<double>(EIGEN_PI)/6.0));
+        }
+        return rhostar;
+    }
+    
     /***
      * \brief Get the contribution to \f$ \alpha = A/(NkT) \f$
      */
-    template<typename TTYPE, typename RhoType, typename VecType>
-    auto eval(const TTYPE& T, const RhoType& rhoN, const VecType& mole_fractions) const {
+    template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType>
+    auto eval(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions) const {
         error_if_expr(T); error_if_expr(rhoN); error_if_expr(mole_fractions[0]);
-        using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
-        
-        // Calculate the effective reduced diameter (cubed) to be used for evaluation
-        // Eq. 24 from Gubbins
-        type sigma_x3 = 0.0;
-
-        error_if_expr(sigma_m3);
-        auto N = mole_fractions.size();
-        for (auto i = 0; i < N; ++i){
-            for (auto j = 0; j < N; ++j){
-                auto sigmaij = (sigma_m[i] + sigma_m[j])/2;
-                sigma_x3 += mole_fractions[i]*mole_fractions[j]*POW3(sigmaij);
-            }
-        }
-        type rhostar = forceeval(rhoN*sigma_x3);
+        using type = std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])>;
         
         type alpha2 = 0.0, alpha3 = 0.0, alpha = 0.0;
         if (has_a_polar){
@@ -559,7 +577,6 @@ public:
         }
         return MultipolarContributionGubbinsTwuTermsGT<type>{alpha2, alpha3, alpha};
     }
-    
 };
 
 /// The variant containing the multipolar types that can be provided
