@@ -8,6 +8,7 @@ using Catch::Approx;
 #include "teqp/models/saft/correlation_integrals.hpp"
 #include "teqp/models/saft/polar_terms.hpp"
 #include "teqp/types.hpp"
+#include "teqp/constants.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/finite_derivs.hpp"
 
