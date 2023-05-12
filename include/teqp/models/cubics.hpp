@@ -7,6 +7,7 @@ Implementations of the canonical cubic equations of state
 #include <vector>
 #include <variant>
 #include <valarray>
+#include <optional>
 
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
