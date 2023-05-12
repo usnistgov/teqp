@@ -4,7 +4,6 @@
 
 #include <Eigen/Dense>
 #include "nlohmann/json.hpp"
-#include "teqp/models/fwd.hpp"
 
 // The only headers that can be included here are
 // ones that define and use POD (plain ole' data) types

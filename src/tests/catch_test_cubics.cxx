@@ -14,6 +14,11 @@ using Catch::Approx;
 #include <boost/numeric/odeint/stepper/euler.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
 
+// Define the EOS types by interrogating the types returned by the respective
+// factory function or by alias of the class name
+using vad = std::valarray<double>;
+using canonical_cubic_t = decltype(teqp::canonical_PR(vad{}, vad{}, vad{}));
+
 using namespace teqp;
 
 TEST_CASE("Test construction of cubic", "[cubic]")

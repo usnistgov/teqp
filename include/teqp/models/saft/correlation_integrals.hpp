@@ -4,6 +4,8 @@
 #include <array>
 #include <cmath>
 
+#include "teqp/types.hpp"
+
 namespace teqp {
 namespace SAFTpolar{
 

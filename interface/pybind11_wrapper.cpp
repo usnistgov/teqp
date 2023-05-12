@@ -13,6 +13,7 @@
 #include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/algorithms/iteration.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
+#include "teqp/models/fwd.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
