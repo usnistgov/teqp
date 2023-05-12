@@ -61,9 +61,6 @@ public:
 //    template<typename T>
 //    DerivativeAdapter(const ConstViewer<T>&& mp): mp(mp) {} ;
     
-    const AllowedModels& get_model() const override { throw teqp::NotImplementedError(""); };
-    AllowedModels& get_mutable_model() override { throw teqp::NotImplementedError(""); };
-    
     virtual double get_R(const EArrayd& molefrac) const override {
         return mp.get_cref().R(molefrac);
     };
