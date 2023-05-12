@@ -152,7 +152,7 @@ public:
 };
 
 template <typename TCType, typename PCType, typename AcentricType>
-auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen::ArrayXXd& kmat = {}) {
+auto canonical_SRK(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) {
     double Delta1 = 1;
     double Delta2 = 0;
     AcentricType m = 0.48 + 1.574 * acentric - 0.176 * acentric * acentric;
@@ -173,8 +173,8 @@ auto canonical_SRK(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen:
         {"OmegaB", OmegaB},
         {"kind", "Soave-Redlich-Kwong"}
     };
-    
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::SRK_CODE, Tc_K, pc_K, std::move(alphas), kmat);
+    const std::size_t N = m.size();
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::SRK_CODE, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)));
     cub.set_meta(meta);
     return cub;
 }
@@ -190,7 +190,7 @@ inline auto make_canonicalSRK(const nlohmann::json& spec){
 }
 
 template <typename TCType, typename PCType, typename AcentricType>
-auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen::ArrayXXd& kmat = {}) {
+auto canonical_PR(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) {
     double Delta1 = 1+sqrt(2.0);
     double Delta2 = 1-sqrt(2.0);
     AcentricType m = acentric*0.0;
@@ -216,8 +216,9 @@ auto canonical_PR(TCType Tc_K, PCType pc_K, AcentricType acentric, const Eigen::
         {"OmegaB", OmegaB},
         {"kind", "Peng-Robinson"}
     };
-
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::PR_CODE, Tc_K, pc_K, std::move(alphas), kmat);
+    
+    const std::size_t N = m.size();
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::PR_CODE, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)));
     cub.set_meta(meta);
     return cub;
 }
