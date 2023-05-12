@@ -3849,7 +3849,7 @@ static inline double supercubic(int EOS, int prop, double Ttilde){
     }
 }
 
-const int VDW_CODE = 0, SRK_CODE = 1, PR_CODE = 2;
+const int VDW_CODE = 0, SRK_CODE = 1, PR_CODE = 2, UNKNOWN_CODE = -1;
 const int P_CODE = 100, RHOL_CODE = 101, RHOV_CODE = 102;
 
 }; // namespace CubicSuperAncillary

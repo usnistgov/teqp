@@ -13,9 +13,10 @@ namespace teqp {
         static std::unordered_map<std::string, makefunc> pointer_factory = {
             {"vdW1", [](const nlohmann::json& spec){ return make_owned(vdWEOS1(spec.at("a"), spec.at("b"))); }},
             {"vdW", [](const nlohmann::json& spec){ return make_owned(vdWEOS<double>(spec.at("Tcrit / K"), spec.at("pcrit / Pa"))); }},
-            
             {"PR", [](const nlohmann::json& spec){ return make_owned(make_canonicalPR(spec));}},
             {"SRK", [](const nlohmann::json& spec){ return make_owned(make_canonicalSRK(spec));}},
+            {"cubic", [](const nlohmann::json& spec){ return make_owned(make_generalizedcubic(spec));}},
+            
             {"CPA", [](const nlohmann::json& spec){ return make_owned(CPA::CPAfactory(spec));}},
             {"PCSAFT", [](const nlohmann::json& spec){ return make_owned(PCSAFT::PCSAFTfactory(spec));}},
             

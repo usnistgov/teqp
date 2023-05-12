@@ -37,8 +37,30 @@ public:
     }
 };
 
-// This could be extended with for instance Twu alpha functions, Mathias-Copeman alpha functions, etc.
-using AlphaFunctionOptions = std::variant<BasicAlphaFunction<double>>;
+/**
+ * \brief The Twu alpha function used by Peng-Robinson and SRK
+ * \f[
+ * \alpha_i = \left(\frac{T}{T_{ci}\right)^{c_2(c_1-1)}\exp\left[c_0(1-\left(\frac{T}{T_{ci}\right)^{c_1c_2})\right]
+ * \f]
+ */
+template<typename NumType>
+class TwuAlphaFunction {
+private:
+    NumType Tci; ///< The critical temperature
+    Eigen::Array3d c;
+public:
+    TwuAlphaFunction(NumType Tci, const Eigen::Array3d &c) : Tci(Tci), c(c) {
+        if (c.size()!= 3){
+            throw teqp::InvalidArgument("coefficients c for Twu alpha function must have length 3");
+        }
+    };
+    template<typename TType>
+    auto operator () (const TType& T) const {
+        return forceeval(pow(T/Tci,c[2]*(c[1]-1))*exp(c[0]*(1.0-pow(T/Tci, c[1]*c[2]))));
+    }
+};
+
+using AlphaFunctionOptions = std::variant<BasicAlphaFunction<double>, TwuAlphaFunction<double>>;
 
 template <typename NumType, typename AlphaFunctions>
 class GenericCubic {
@@ -232,5 +254,115 @@ inline auto make_canonicalPR(const nlohmann::json& spec){
     }
     return canonical_PR(Tc_K, pc_Pa, acentric, kmat);
 }
+
+/// A JSON-based factory function for the generalized cubic + alpha
+inline auto make_generalizedcubic(const nlohmann::json& spec){
+    // Tc, pc, and acentric factor must always be provided
+    std::valarray<double> Tc_K = spec.at("Tcrit / K"),
+    pc_Pa = spec.at("pcrit / Pa"),
+    acentric = spec.at("acentric");
+    
+    // If kmat is provided, then collect it
+    std::optional<Eigen::ArrayXXd> kmat;
+    if (spec.contains("kmat")){
+        kmat = build_square_matrix(spec.at("kmat"));
+    }
+    
+    int superanc_code = CubicSuperAncillary::UNKNOWN_CODE;
+    
+    // Build the list of alpha functions, one per component
+    std::vector<AlphaFunctionOptions> alphas;
+    
+    double Delta1, Delta2, OmegaA, OmegaB;
+    std::string kind = "custom";
+    
+    auto add_alphas = [&](const nlohmann::json& jalphas){
+        std::size_t i = 0;
+        for (auto alpha : jalphas){
+            std::string type = alpha.at("type");
+            std::valarray<double> c_ = alpha.at("c");
+            Eigen::Array3d c = Eigen::Map<Eigen::Array3d>(&(c_[0]), c_.size());
+            if (type == "Twu"){
+                alphas.emplace_back(TwuAlphaFunction(Tc_K[i], c));
+            }
+            else{
+                throw teqp::InvalidArgument("alpha type is not understood: "+type);
+            }
+            i++;
+        }
+    };
+    
+    if (spec.at("type") == "PR" ){
+        Delta1 = 1+sqrt(2.0);
+        Delta2 = 1-sqrt(2.0);
+        // See https://doi.org/10.1021/acs.iecr.1c00847
+        OmegaA = 0.45723552892138218938;
+        OmegaB = 0.077796073903888455972;
+        superanc_code = CubicSuperAncillary::PR_CODE;
+        kind = "Peng-Robinson";
+        
+        if (!spec.contains("alpha")){
+            for (auto i = 0; i < Tc_K.size(); ++i) {
+                double mi;
+                if (acentric[i] < 0.491) {
+                    mi = 0.37464 + 1.54226*acentric[i] - 0.26992*pow2(acentric[i]);
+                }
+                else {
+                    mi = 0.379642 + 1.48503*acentric[i] -0.164423*pow2(acentric[i]) + 0.016666*pow3(acentric[i]);
+                }
+                alphas.emplace_back(BasicAlphaFunction(Tc_K[i], mi));
+            }
+        }
+        else{
+            if (!spec["alpha"].is_array()){
+                throw teqp::InvalidArgument("alpha must be array of objects");
+            }
+            add_alphas(spec.at("alpha"));
+        }
+    }
+    else if (spec.at("type") == "SRK"){
+        Delta1 = 1;
+        Delta2 = 0;
+        if (!spec.contains("alpha")){
+            for (auto i = 0; i < Tc_K.size(); ++i) {
+                double mi = 0.48 + 1.574 * acentric[i] - 0.176 * acentric[i] * acentric[i];
+                alphas.emplace_back(BasicAlphaFunction(Tc_K[i], mi));
+            }
+        }
+        else{
+            if (!spec["alpha"].is_array()){
+                throw teqp::InvalidArgument("alpha must be array of objects");
+            }
+            add_alphas(spec.at("alpha"));
+        }
+        // See https://doi.org/10.1021/acs.iecr.1c00847
+        OmegaA = 1.0 / (9.0 * (cbrt(2) - 1));
+        OmegaB = (cbrt(2) - 1) / 3;
+        superanc_code = CubicSuperAncillary::SRK_CODE;
+        kind = "Soave-Redlich-Kwong";
+    }
+    else{
+        // Generalized handling of generic cubics (not yet implemented)
+        throw teqp::InvalidArgument("Generic cubic EOS are not yet supported (open an issue on github if you want this)");
+    }
+    
+    const std::size_t N = Tc_K.size();
+    nlohmann::json meta = {
+        {"Delta1", Delta1},
+        {"Delta2", Delta2},
+        {"OmegaA", OmegaA},
+        {"OmegaB", OmegaB},
+        {"kind", kind}
+    };
+    if (spec.contains("alpha")){
+        meta["alpha"] = spec.at("alpha");
+    }
+    
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, superanc_code, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)));
+    cub.set_meta(meta);
+    return cub;
+}
+
+
 
 }; // namespace teqp

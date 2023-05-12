@@ -483,3 +483,55 @@ TEST_CASE("Bad kmat options", "[PRkmat]"){
         CHECK_THROWS(teqp::cppinterface::make_model(j));
     }
 }
+
+TEST_CASE("Check generalized and alphas", "[PRalpha]"){
+    auto j0 = nlohmann::json::parse(R"(
+    {
+        "kind": "PR",
+        "model": {
+            "Tcrit / K": [190],
+            "pcrit / Pa": [3.5e6],
+            "acentric": [0.11]
+        }
+    }
+    )");
+    auto j1 = nlohmann::json::parse(R"(
+    {
+        "kind": "cubic",
+        "model": {
+            "type": "PR",
+            "Tcrit / K": [190],
+            "pcrit / Pa": [3.5e6],
+            "acentric": [0.11]
+        }
+    }
+    )");
+    auto j2 = nlohmann::json::parse(R"(
+    {
+        "kind": "cubic",
+        "model": {
+            "type": "PR",
+            "Tcrit / K": [190],
+            "pcrit / Pa": [3.5e6],
+            "acentric": [0.11],
+            "alpha": [
+                {"type": "Twu", "c": [1, 2, 3]}
+            ]
+        }
+    }
+    )");
+    
+    SECTION("canonical PR"){
+        const auto modelptr0 = teqp::cppinterface::make_model(j0);
+        const auto& m0 = teqp::cppinterface::adapter::get_model_cref<canonical_cubic_t>(modelptr0.get());
+        
+        const auto modelptr1 = teqp::cppinterface::make_model(j1);
+        const auto& m1 = teqp::cppinterface::adapter::get_model_cref<canonical_cubic_t>(modelptr1.get());
+        
+        const auto modelptr2 = teqp::cppinterface::make_model(j2);
+        const auto& m2 = teqp::cppinterface::adapter::get_model_cref<canonical_cubic_t>(modelptr2.get());
+        
+        CHECK(m1.get_meta() == m0.get_meta());
+        CHECK(m2.get_meta() != m0.get_meta());
+    }
+}
