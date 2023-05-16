@@ -455,10 +455,9 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
             std::string jstr = std::to_string(j);
             auto [BIP, swap_needed] = reducing::get_BIPdep(BIPcollection, { components[i], components[j] }, flags);
             std::string funcname = BIP.contains("function") ? BIP["function"] : "";
+            nlohmann::json jj;
             if (!funcname.empty()) {
-                auto jj = get_departure_json(funcname);
-                funcsmeta[istr][jstr] = { {"departure", jj}, {"BIP", BIP} };
-                funcsmeta[istr][jstr]["BIP"]["swap_needed"] = swap_needed;
+                jj = get_departure_json(funcname);
                 funcs[i][j] = build_departure_function(jj);
                 funcs[j][i] = build_departure_function(jj);
             }
@@ -466,6 +465,8 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
                 funcs[i][j].add_term(NullEOSTerm());
                 funcs[j][i].add_term(NullEOSTerm());
             }
+            funcsmeta[istr][jstr] = { {"departure", jj}, {"BIP", BIP} };
+            funcsmeta[istr][jstr]["BIP"]["swap_needed"] = swap_needed;
         }
     }
     return std::make_tuple(funcs, funcsmeta);
@@ -936,50 +937,18 @@ inline auto make_pure_components_JSON(const nlohmann::json& components, const st
     return pureJSON;
 }
 
-inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
-
+inline auto build_multifluid_model(const std::vector<std::string>& components, const std::string& root, const std::string& BIPcollectionpath = {}, const nlohmann::json& flags = {}, const std::string& departurepath = {}) {
     
-    auto is_valid_path = [](const std::string & s){
-        try{
-            std::filesystem::is_regular_file(s);
-            return true;
-        }
-        catch(...){
-            return false;
-        }
-    };
-    
+    // Convert the string representations to JSON using the existing routines (a bit slower, but more convenient, more DRY)
     nlohmann::json BIPcollection = nlohmann::json::array();
-    // If not provided, default values
-    if (BIPcollectionpath.empty()){
-        auto BIPpath = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
-        BIPcollection = load_a_JSON_file(BIPpath);
-    }
-    // If path to existing file, use it
-    else if (is_valid_path(BIPcollectionpath) && std::filesystem::is_regular_file(BIPcollectionpath)){
-        BIPcollection = load_a_JSON_file(BIPcollectionpath);
-    }
-    // Or assume it is a string in JSON format
-    else{
-        BIPcollection = nlohmann::json::parse(BIPcollectionpath);
+    nlohmann::json depcollection = nlohmann::json::array();
+    if (components.size() > 1){
+        nlohmann::json B = BIPcollectionpath, D = departurepath;
+        BIPcollection = multilevel_JSON_load(B, root + "/dev/mixtures/mixture_binary_pairs.json");
+        depcollection = multilevel_JSON_load(D, root + "/dev/mixtures/mixture_departure_functions.json");
     }
     
-    nlohmann::json depcollection = nlohmann::json::array();
-    // If not provided, default values
-    if (departurepath.empty()){
-        std::string deppath = coolprop_root + "/dev/mixtures/mixture_departure_functions.json";
-        depcollection = load_a_JSON_file(deppath);
-    }
-    // If path to existing file, use it
-    else if (is_valid_path(departurepath) && std::filesystem::is_regular_file(departurepath)){
-        depcollection = load_a_JSON_file(departurepath);
-    }
-    // Or assume it is a string in JSON format
-    else{
-        depcollection = nlohmann::json::parse(departurepath);
-    }
-
-    return _build_multifluid_model(make_pure_components_JSON(components, coolprop_root), BIPcollection, depcollection, flags);
+    return _build_multifluid_model(make_pure_components_JSON(components, root), BIPcollection, depcollection, flags);
 }
 
 /**
@@ -994,26 +963,13 @@ inline auto multifluidfactory(const nlohmann::json& spec) {
     
     std::string root = (spec.contains("root")) ? spec.at("root") : "";
     
-    auto get_json = [](const std::string& path1, const std::string& default_path){
-        try{
-            return load_a_JSON_file(path1);
-        }
-        catch(...){
-            return load_a_JSON_file(default_path);
-        }
-    };
-
     auto components = spec.at("components");
     
-    auto dep = spec.at("departure");
-    auto BIP = spec.at("BIP");
-    
-    auto depcollection = nlohmann::json::object();
-    auto BIPcollection = nlohmann::json::object();
-    // Only do this if it is a mixture; departure and BIP don't apply for pure fluids
+    nlohmann::json BIPcollection = nlohmann::json::array();
+    nlohmann::json depcollection = nlohmann::json::array();
     if (components.size() > 1){
-        depcollection = (dep.is_object()) ? dep : get_json(dep.get<std::string>(), root + "/dev/mixtures/mixture_departure_functions.json");
-        BIPcollection = (BIP.is_object()) ? BIP : get_json(BIP.get<std::string>(), root+"/dev/mixtures/mixture_binary_pairs.json");
+        BIPcollection = multilevel_JSON_load(spec.at("BIP"), root + "/dev/mixtures/mixture_binary_pairs.json");
+        depcollection = multilevel_JSON_load(spec.at("departure"), root + "/dev/mixtures/mixture_departure_functions.json");
     }
     nlohmann::json flags = (spec.contains("flags")) ? spec.at("flags") : nlohmann::json();
 

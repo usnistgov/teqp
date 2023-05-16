@@ -10,10 +10,13 @@ using Catch::Approx;
 #include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 #include "teqp/algorithms/VLE.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
+#include "teqp/cpp/deriv_adapter.hpp"
 #include "teqp/filesystem.hpp"
 #include "teqp/ideal_eosterms.hpp"
 
 using namespace teqp;
+using multifluid_t = decltype(build_multifluid_model({""}, ""));
 
 TEST_CASE("Test infinite dilution critical locus derivatives for multifluid", "[crit]")
 {
@@ -355,6 +358,63 @@ TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multif
     // Check that converted structures can be loaded
     auto aig = IdealHelmholtz(jaig);
 }
+
+TEST_CASE("Check that BIP can be set in a string", "[multifluida]") {
+    std::string root = "../mycp";
+    double T = 300, rhomolar = 300;
+    auto z = (Eigen::ArrayXd(2) << 0.4, 0.6).finished();
+    auto def = build_multifluid_model({"Nitrogen","Ethane"}, root); // default parameters
+    CHECK(TDXDerivatives<decltype(def)>::get_Ar01(def, T, rhomolar, z) == Approx(-0.026028104905899584));
+    std::string s = R"([{"BibTeX": "Kunz-JCED-2012", "CAS1": "7727-37-9", "CAS2": "74-84-0", "F": 1.0, "Name1": "Nitrogen", "Name2": "Ethane", "betaT": 1.01774814228, "betaV": 0.978880168, "function": "Nitrogen-Ethane", "gammaT": 1.0877732316831683, "gammaV": 1.042352891}])";
+    nlohmann::json model = {
+        {"components",{"Nitrogen","Ethane"}},
+        {"root", root},
+        {"BIP", s},
+        {"departure", ""}
+    };
+    nlohmann::json j = {
+        {"kind", "multifluid"},
+        {"model", model}
+    };
+    auto model_ = cppinterface::make_model(j);
+    CHECK(model_->get_Ar01(T, rhomolar, z) != Approx(-0.026028104905899584));
+}
+
+TEST_CASE("Check ammonia+argon", "[multifluidArNH3]") {
+    std::string root = "../mycp";
+    
+    // Check that default model (no departure function) prints the right
+    auto def = build_multifluid_model({"AMMONIA","ARGON"}, root); // default parameters
+    nlohmann::json mixdef = nlohmann::json::parse(def.get_meta())["mix"];
+//    std::cout << mix.dump(1) << std::endl;
+    CHECK(!mixdef.empty());
+    CAPTURE(mixdef.dump(1));
+    
+    std::string sBIP = R"([ {"BibTeX": "?", "CAS1": "7440-37-1", "CAS2": "7664-41-7", "F": 1.0, "Name1": "ARGON", "Name2": "AMMONIA", "betaT": 1.146326, "betaV": 0.756526, "function": "BAA", "gammaT": 0.998353, "gammaV": 1.041113}])";
+    std::string sdep = R"([{"BibTeX": "??", "Name": "BAA", "Npower": 1, "aliases": [], "beta": [0.0, 0.6, 0.5], "d": [3.0, 1.0, 1.0], "epsilon": [0.0, 0.31, 0.39], "eta": [0.0, 1.3, 1.5], "gamma": [0.0, 0.9, 1.5], "l": [1.0, 0.0, 0.0], "n": [0.02350785, -1.913776, 1.624062], "t": [2.3, 1.65, 0.42], "type": "Gaussian+Exponential"}])";
+    nlohmann::json jmodel = {
+        {"components", {"AMMONIA", "ARGON"}},
+        {"root", root},
+        {"BIP", sBIP},
+        {"departure", sdep}
+    };
+    nlohmann::json j = {
+        {"kind", "multifluid"},
+        {"model", jmodel}
+    };
+    auto model_ = cppinterface::make_model(j);
+    double T = 293.15, rhomolar = 40000;
+    auto z = (Eigen::ArrayXd(2) << 0.95, 0.05).finished();
+    double p_MPa = (model_->get_pr(T, rhomolar*z) + rhomolar*model_->get_R(z)*T)/1e6;
+    
+    const auto& mref = teqp::cppinterface::adapter::get_model_cref<multifluid_t>(model_.get());
+    nlohmann::json mix = nlohmann::json::parse(mref.get_meta())["mix"];
+//    std::cout << mix.dump(1) << std::endl;
+    CHECK(!mix.empty());
+    CAPTURE(mix.dump(1));
+    CHECK(p_MPa != Approx(129.07019029846455).margin(1e-3));
+}
+
 
 TEST_CASE("Check pure fluid throws with composition array of wrong length", "[virial]") {
     std::string root = "../mycp";

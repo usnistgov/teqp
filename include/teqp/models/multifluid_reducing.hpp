@@ -7,6 +7,12 @@ namespace teqp {
     namespace reducing {
 
         inline auto get_BIPdep(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags) {
+            if (!collection.is_array()){
+                throw teqp::InvalidArgument("collection provided to get_BIPdep must be an array");
+            }
+            if (collection.size() > 0 && !collection[0].is_object()){
+                throw teqp::InvalidArgument("entries in collection provided to get_BIPdep must be objects");
+            }
 
             // If force-estimate is provided in flags, the estimation will over-ride the provided model(s)
             if (flags.contains("force-estimate")) {
