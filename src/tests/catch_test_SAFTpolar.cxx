@@ -126,13 +126,13 @@ TEST_CASE("Check derivative of |x|", "[diffabs]")
         CHECK(safe_abs1(-3.1) == 3.1);
     }
     SECTION("sqrt(x^2)"){
-        CHECK(safe_abs1(std::complex<double>(3.1, h)).imag()/h == 1);
-        CHECK(safe_abs1(std::complex<double>(-3.1, h)).imag()/h == -1);
+        CHECK(safe_abs1(std::complex<double>(3.1, h)).imag()/h == Approx(1));
+        CHECK(safe_abs1(std::complex<double>(-3.1, h)).imag()/h == Approx(-1));
     }
     auto safe_abs2 = [](const auto&x) { return (getbaseval(x) < 0) ? -x : x; };
     SECTION("check base"){
-        CHECK(safe_abs2(std::complex<double>(3.1, h)).imag()/h == 1);
-        CHECK(safe_abs2(std::complex<double>(-3.1, h)).imag()/h == -1);
+        CHECK(safe_abs2(std::complex<double>(3.1, h)).imag()/h == Approx(1));
+        CHECK(safe_abs2(std::complex<double>(-3.1, h)).imag()/h == Approx(-1));
     }
 }
 
