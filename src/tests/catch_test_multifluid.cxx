@@ -412,7 +412,7 @@ TEST_CASE("Check ammonia+argon", "[multifluidArNH3]") {
 //    std::cout << mix.dump(1) << std::endl;
     CHECK(!mix.empty());
     CAPTURE(mix.dump(1));
-    CHECK(p_MPa != Approx(129.07019029846455).margin(1e-3));
+    CHECK(p_MPa == Approx(129.07019029846455).margin(1e-3));
 }
 
 
