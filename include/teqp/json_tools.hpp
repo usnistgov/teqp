@@ -101,5 +101,8 @@ namespace teqp{
                 return nlohmann::json::parse(s);
             }
         }
+        else{
+            throw teqp::InvalidArgument("Unable to load the argument to multilevel_JSON_load");
+        }
     }
 }
