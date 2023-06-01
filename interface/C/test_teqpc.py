@@ -21,9 +21,9 @@ class DLLCaller():
     def build_model(self, model):
         f = self._getfcn(self.dll, 'build_model')
         hrf = ct.create_string_buffer(json.dumps(model).encode('utf-8'))
-        uid = ct.create_string_buffer(200)
+        uid = ct.c_longlong()
         errmsg = ct.create_string_buffer(1000)
-        errcode = f(hrf, uid, errmsg, len(errmsg))
+        errcode = f(hrf, ct.byref(uid), errmsg, len(errmsg))
         if errcode == 0:
             return uid
         else:
@@ -43,13 +43,13 @@ class DLLCaller():
         errcode = f(uid, NT, ND, T, rho, molefrac, Ncomp, ct.byref(o), errmsg, len(errmsg))
         toc = timeit.default_timer()
         if errcode == 0:
-            return o
+            return o.value
         else:
             raise ValueError(trim(errmsg))
 
 if __name__ == '__main__':
     # Now load the library
-    c = DLLCaller(full_path = '../../bld/Release/teqpc.dll')
+    c = DLLCaller(full_path = '../../bld/Release/libteqpc.dylib') # or .dll on windows
     model = {
       'kind': 'vdW1',
       'model': {'a': 1, 'b': 2}
