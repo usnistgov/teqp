@@ -32,7 +32,7 @@ using namespace teqp;
 
 // An atomic is used here for thread safety
 // The max possible index is 18,446,744,073,709,551,615
-std::atomic<unsigned long long int> next_index{ 0 };
+std::atomic<long long int> next_index{ 0 };
 
 std::unordered_map<unsigned long long int, std::shared_ptr<teqp::cppinterface::AbstractModel>> library;
 
@@ -51,11 +51,11 @@ void exception_handler(int& errcode, char* message_buffer, const int buffer_leng
     }
 }
 
-EXPORT_CODE int CONVENTION build_model(const char* j, unsigned long long int* uuid, char* errmsg, int errmsg_length){
+EXPORT_CODE int CONVENTION build_model(const char* j, long long int* uuid, char* errmsg, int errmsg_length){
     int errcode = 0;
     try{
         nlohmann::json json = nlohmann::json::parse(j);
-        unsigned long long int uid = next_index++;
+        long long int uid = next_index++;
         try {
             library.emplace(std::make_pair(uid, cppinterface::make_model(json)));
         }
@@ -70,7 +70,7 @@ EXPORT_CODE int CONVENTION build_model(const char* j, unsigned long long int* uu
     return errcode;
 }
 
-EXPORT_CODE int CONVENTION free_model(const unsigned long long int uuid, char* errmsg, int errmsg_length) {
+EXPORT_CODE int CONVENTION free_model(const long long int uuid, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
         library.erase(uuid);
@@ -81,7 +81,7 @@ EXPORT_CODE int CONVENTION free_model(const unsigned long long int uuid, char* e
     return errcode;
 }
 
-EXPORT_CODE int CONVENTION get_Arxy(const unsigned long long int uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
+EXPORT_CODE int CONVENTION get_Arxy(const long long int uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
         // Make an Eigen view of the double buffer
@@ -105,7 +105,7 @@ EXPORT_CODE int CONVENTION get_Arxy(const unsigned long long int uuid, const int
 TEST_CASE("Use of C interface","[teqpc]") {
 
     constexpr int errmsg_length = 300;
-    unsigned long long int uuid, uuidPR, uuidMF;
+    long long int uuid, uuidPR, uuidMF;
     char errmsg[errmsg_length] = "";
     double val = -1;
     std::valarray<double> molefrac = { 1.0 };
