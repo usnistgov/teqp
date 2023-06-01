@@ -34,14 +34,7 @@ using namespace teqp;
 // The max possible index is 18,446,744,073,709,551,615
 std::atomic<unsigned long long int> next_index{ 0 };
 
-/// A function for returning a sequential index of the next 
-std::string get_uid(int N) {
-    auto s = std::to_string(next_index);
-    next_index++;
-    return std::string(N - s.size(), '0') + s;
-}
-
-std::unordered_map<std::string, std::shared_ptr<teqp::cppinterface::AbstractModel>> library;
+std::unordered_map<unsigned long long int, std::shared_ptr<teqp::cppinterface::AbstractModel>> library;
 
 void exception_handler(int& errcode, char* message_buffer, const int buffer_length)
 {
@@ -58,18 +51,18 @@ void exception_handler(int& errcode, char* message_buffer, const int buffer_leng
     }
 }
 
-EXPORT_CODE int CONVENTION build_model(const char* j, char* uuid, char* errmsg, int errmsg_length){
+EXPORT_CODE int CONVENTION build_model(const char* j, unsigned long long int* uuid, char* errmsg, int errmsg_length){
     int errcode = 0;
     try{
         nlohmann::json json = nlohmann::json::parse(j);
-        std::string uid = get_uid(32);
+        unsigned long long int uid = next_index++;
         try {
             library.emplace(std::make_pair(uid, cppinterface::make_model(json)));
         }
         catch (std::exception &e) {
             throw teqpcException(30, "Unable to load with error:" + std::string(e.what()));
         }
-        strcpy(uuid, uid.c_str());
+        *uuid = uid;
     }
     catch (...) {
         exception_handler(errcode, errmsg, errmsg_length);
@@ -77,10 +70,10 @@ EXPORT_CODE int CONVENTION build_model(const char* j, char* uuid, char* errmsg, 
     return errcode;
 }
 
-EXPORT_CODE int CONVENTION free_model(char* uuid, char* errmsg, int errmsg_length) {
+EXPORT_CODE int CONVENTION free_model(const unsigned long long int uuid, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
-        library.erase(std::string(uuid));
+        library.erase(uuid);
     }
     catch (...) {
         exception_handler(errcode, errmsg, errmsg_length);
@@ -88,13 +81,13 @@ EXPORT_CODE int CONVENTION free_model(char* uuid, char* errmsg, int errmsg_lengt
     return errcode;
 }
 
-EXPORT_CODE int CONVENTION get_Arxy(const char* uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
+EXPORT_CODE int CONVENTION get_Arxy(const unsigned long long int uuid, const int NT, const int ND, const double T, const double rho, const double* molefrac, const int Ncomp, double *val, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
         // Make an Eigen view of the double buffer
         Eigen::Map<const Eigen::ArrayXd> molefrac_(molefrac, Ncomp);
         // Call the function
-        *val = library.at(std::string(uuid))->get_Arxy(NT, ND, T, rho, molefrac_);
+        *val = library.at(uuid)->get_Arxy(NT, ND, T, rho, molefrac_);
     }
     catch (...) {
         exception_handler(errcode, errmsg, errmsg_length);
@@ -112,7 +105,8 @@ EXPORT_CODE int CONVENTION get_Arxy(const char* uuid, const int NT, const int ND
 TEST_CASE("Use of C interface","[teqpc]") {
 
     constexpr int errmsg_length = 300;
-    char uuid[33] = "", uuidPR[33] = "", uuidMF[33] = "", errmsg[errmsg_length] = "";
+    unsigned long long int uuid, uuidPR, uuidMF;
+    char errmsg[errmsg_length] = "";
     double val = -1;
     std::valarray<double> molefrac = { 1.0 };
 
@@ -126,7 +120,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
                 }
             }
         )";
-    build_model(j.c_str(), uuidPR, errmsg, errmsg_length);
+    build_model(j.c_str(), &uuidPR, errmsg, errmsg_length);
     {
         nlohmann::json jmodel = nlohmann::json::object();
         jmodel["departure"] = "";
@@ -139,7 +133,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
             {"model", jmodel}
         };
         std::string js = j.dump(2);
-        int e1 = build_model(js.c_str(), uuidMF, errmsg, errmsg_length);
+        int e1 = build_model(js.c_str(), &uuidMF, errmsg, errmsg_length);
     }
     {
         nlohmann::json jmodel = nlohmann::json::object();
@@ -153,7 +147,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
             {"model", jmodel}
         };
         std::string js = j.dump(2);
-        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(js.c_str(), &uuid, errmsg, errmsg_length);
         CAPTURE(errmsg);
         REQUIRE(e1 == 0);
     }
@@ -171,13 +165,22 @@ TEST_CASE("Use of C interface","[teqpc]") {
             {"model", jmodel}
         };
         std::string js = j.dump(2);
-        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(js.c_str(), &uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
     }
     
+    BENCHMARK("vdW1 parse string") {
+        std::string j = R"({"kind":"vdW1", "model":{"a":1.0, "b":2.0}})";
+        return nlohmann::json::parse(j);
+    };
+    BENCHMARK("vdW1 construct only") {
+        std::string j = R"({"kind":"vdW1", "model":{"a":1.0, "b":2.0}})";
+        int e1 = build_model(j.c_str(), &uuid, errmsg, errmsg_length);
+        return e1;
+    };
     BENCHMARK("vdW1") {
         std::string j = R"({"kind":"vdW1", "model":{"a":1.0, "b":2.0}})";
-        int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(j.c_str(), &uuid, errmsg, errmsg_length);
         int e2 = get_Arxy(uuid, 0, 0, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
@@ -196,7 +199,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
                 }
             }
         )";
-        int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(j.c_str(), &uuid, errmsg, errmsg_length);
         int e2 = get_Arxy(uuid, 0, 0, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
@@ -220,7 +223,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
                 }
             }
         )";
-        int e1 = build_model(j.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(j.c_str(), &uuid, errmsg, errmsg_length);
         int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
@@ -244,7 +247,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
             {"model", jCPA}
         };
         std::string jstring = j.dump();
-        int e1 = build_model(jstring.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(jstring.c_str(), &uuid, errmsg, errmsg_length);
         int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
@@ -266,7 +269,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
             {"model", model}
         };
         std::string js = j.dump(1);
-        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(js.c_str(), &uuid, errmsg, errmsg_length);
         CAPTURE(errmsg);
         CAPTURE(js);
         REQUIRE(e1 == 0);
@@ -289,7 +292,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
             {"model", jmodel}
         };
         std::string js = j.dump(2);
-        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(js.c_str(), &uuid, errmsg, errmsg_length);
         int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
@@ -311,7 +314,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
             {"model", jmodel}
         };
         std::string js = j.dump(2);
-        int e1 = build_model(js.c_str(), uuid, errmsg, errmsg_length);
+        int e1 = build_model(js.c_str(), &uuid, errmsg, errmsg_length);
         int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         REQUIRE(e1 == 0);
