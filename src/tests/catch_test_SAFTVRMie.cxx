@@ -342,7 +342,7 @@ TEST_CASE("Check ln(phi) and its derivatives", "[SAFTVRMielnphi]")
         auto err = ((findiff - analytical)/analytical).cwiseAbs().mean();
         CHECK(err < 1e-7);
     }
-    SECTION(""){
+    SECTION("dZdrho"){
         auto [lnZ, Z, dZdrho] = iso::get_lnZ_Z_dZdrho(model, T, rhovec);
         auto rhovecplus = rhovec*1.001, rhovecminus = rhovec*0.999;
         auto rhoplus = rhovecplus.sum(), rhominus = rhovecminus.sum();
@@ -372,62 +372,15 @@ TEST_CASE("Check ln(phi) and its derivatives", "[SAFTVRMielnphi]")
         for (auto i = 0; i < N; ++i){
             auto molefracsplus = molefracs; molefracsplus[i] += dx;
             auto molefracsminus = molefracs; molefracsminus[i] -= dx;
-            auto rhovecplus = (molefracsplus*rhotot).eval(), rhovecminus = (molefracsminus*rhotot).eval();
-            rhovecplus *= rhotot/rhovecplus.sum();
-            rhovecminus *= rhotot/rhovecminus.sum();
-            auto plus = iso::get_ln_fugacity_coefficients(model, T, rhovecplus);
-            auto minus = iso::get_ln_fugacity_coefficients(model, T, rhovecminus);
+            // Here you need to use the special method for testing that takes T, rho, molefracs because
+            // if you provide molar concentrations that are shifted, you introduce an inconsistency
+            // during the mole fraction calculation step. Either you get the right molar density or the
+            // right mole fraction, impossible to do both simultaneously.
+            auto plus = iso::get_ln_fugacity_coefficients_Trhomolefracs(model, T, rhotot, molefracsplus);
+            auto minus = iso::get_ln_fugacity_coefficients_Trhomolefracs(model, T, rhotot, molefracsminus);
             numerical.col(i) = (plus-minus)/(2*dx);
         }
-        std::cout << numerical << std::endl;
-        std::cout << analytical << std::endl;
+        auto worst_error = (analytical.array() - numerical.array()).cwiseAbs().maxCoeff();
+        CHECK(worst_error < 1e-10);
     }
-//    SECTION("mole frac derivs1"){
-//        auto analytical = iso::get_d_ln_fugacity_coefficients_dmolefracs_constTrho1(model, T, rhovec);
-//        auto rhotot = rhovec.sum();
-//        auto N = names.size();
-//        double dx = 1e-5;
-//        Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> numerical(N, N);
-//        for (auto i = 0; i < N; ++i){
-//            auto molefracsplus = molefracs; molefracsplus[i] += dx;
-//            auto molefracsminus = molefracs; molefracsminus[i] -= dx;
-//            auto rhovecplus = molefracsplus*rhotot, rhovecminus = molefracsminus*rhotot;
-//            auto plus = iso::get_ln_fugacity_coefficients1(model, T, rhovecplus);
-//            auto minus = iso::get_ln_fugacity_coefficients1(model, T, rhovecminus);
-//            numerical.col(i) = (plus-minus)/(2*dx);
-//        }
-//        std::cout << "num:" << numerical << std::endl;
-//        std::cout << "ana:" << analytical << std::endl;
-//    }
-    
-    SECTION("mole frac derivs2"){
-        auto rhotot = rhovec.sum();
-        
-        using tdx = TDXDerivatives<decltype(model)>;
-        auto Z = 1.0 + tdx::template get_Ar01(model, T, rhotot, molefracs);
-        auto dZdx = (rhotot*iso::build_d2alphardrhodxi_constT(model, T, rhotot, molefracs)).eval();
-        auto analytical = (dZdx/Z).eval();
-        
-        auto N = names.size();
-        double dx = 1e-5;
-        Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> numerical(N, N);
-        for (auto i = 0; i < N; ++i){
-            auto molefracsplus = molefracs; molefracsplus[i] += dx;
-            auto molefracsminus = molefracs; molefracsminus[i] -= dx;
-            auto rhovecplus = (molefracsplus*rhotot).eval(), rhovecminus = (molefracsminus*rhotot).eval();
-            rhovecplus *= rhotot/rhovecplus.sum(); // rescale to get the right total density, but destroying the mole fractions. hmm.
-            rhovecminus *= rhotot/rhovecminus.sum();
-            
-            auto plus = forceeval(-log(1+tdx::template get_Ar01(model, T, rhotot, molefracsplus)));
-            auto plus2 = iso::get_ln_fugacity_coefficients2(model, T, rhovecplus);
-            
-            auto minus = forceeval(-log(1+tdx::template get_Ar01(model, T, rhotot, molefracsminus)));
-            auto minus2 = iso::get_ln_fugacity_coefficients2(model, T, rhovecminus);
-            numerical.col(i) = (plus-minus)/(2*dx);
-        }
-        std::cout << numerical << std::endl;
-        std::cout << analytical << std::endl;
-    }
-
-    
 }

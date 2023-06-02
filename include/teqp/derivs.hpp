@@ -913,6 +913,18 @@ struct IsochoricDerivatives{
     }
     
     template<ADBackends be = ADBackends::autodiff>
+    static auto get_ln_fugacity_coefficients_Trhomolefracs(const Model& model, const Scalar& T, const Scalar& rhotot, const VectorType& molefrac) {
+        auto R = model.R(molefrac);
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Z = 1.0 + tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        auto rhovec = (rhotot*molefrac).eval();
+        auto grad = build_Psir_gradient<be>(model, T, rhovec).eval();
+        auto RT = R * T;
+        auto lnphi = ((grad / RT).array() - log(Z)).eval();
+        return forceeval(lnphi.eval());
+    }
+    
+    template<ADBackends be = ADBackends::autodiff>
     static auto get_ln_fugacity_coefficients1(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot = forceeval(rhovec.sum());
         auto molefrac = (rhovec / rhotot).eval();
