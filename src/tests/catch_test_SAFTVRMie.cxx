@@ -326,6 +326,22 @@ TEST_CASE("Check B and its temperature derivatives", "[SAFTVRMie],[B]")
     CHECK(TdBdT == Approx(TdBdTnondilute));
 }
 
+TEST_CASE("Check output of dmat", "[SAFTVRMiedmat]")
+{
+    auto j = nlohmann::json::parse(R"({
+        "kind": "SAFT-VR-Mie",
+        "model": {
+            "names": ["Methane", "Ethane"]
+        }
+    })");
+    CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    auto ptr = teqp::cppinterface::make_model(j);
+    const auto& model = teqp::cppinterface::adapter::get_model_cref<SAFTVRMie_t>(ptr.get());
+    auto z = (Eigen::ArrayXd(2) << 0.300, 0.7).finished();
+    auto jj = model.get_core_calcs(300, 0.5, z);
+    std::cout << jj.dump(2) << std::endl;
+}
+
 TEST_CASE("Check ln(phi) and its derivatives", "[SAFTVRMielnphi]")
 {
     std::vector<std::string> names = {"Methane", "Ethane"};

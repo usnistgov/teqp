@@ -784,7 +784,7 @@ public:
         auto fromArrayX = [](const Eigen::ArrayXd &x){std::valarray<double>n(x.size()); for (auto i =0; i < n.size(); ++i){ n[i] = x[i];} return n;};
         auto fromArrayXX = [](const Eigen::ArrayXXd &x){
             std::size_t N = x.rows();
-            std::vector<std::vector<double>> n; n.resize(x.size());
+            std::vector<std::vector<double>> n; n.resize(N);
             for (auto i = 0; i < N; ++i){
                 n[i].resize(N);
                 for (auto j = 0; j < N; ++j){
