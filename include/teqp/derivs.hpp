@@ -637,7 +637,93 @@ struct VirialDerivatives {
     }
 };
 
+/**
+ In the isochoric formalism, the fugacity coefficient array can be obtained by the gradient of the residual Helmholtz energy density (which is a scalar) and the compressibility factor \f$Z\f$  (which is also a scalar) in terms of the temperature \f$T\f$ and the molar concentration vector \f$\vec\rho\f$:
+ \begin{equation}
+     \ln\vec\phi = \frac{1}{RT}\frac{\partial \Psi^r}{d\vec\rho} - \ln(Z)
+ \end{equation}
 
+ \textbf{Easy}: temperature derivative at constant molar concentrations (implying constant volume and molar composition)
+ \begin{equation}
+     \deriv{ \ln\vec\phi}{T}{\vec\rho} = \frac{1}{RT}\frac{\partial^2 \Psi^r}{\partial \vec\rho\partial T} + \frac{-1}{RT^2}\deriv{\Psi^r}{\vec\rho}{T} - \frac{1}{Z}\deriv{Z}{T}{\vec\rho}
+ \end{equation}
+
+ \textbf{Medium}: molar density derivative at constant temperature and mole fractions
+ \begin{equation}
+     \deriv{ \ln\vec\phi}{\rho}{T,\vec x} = \frac{1}{RT}\frac{\partial^2 \Psi^r}{\partial \vec\rho\partial \rho}  - \frac{1}{Z}\deriv{Z}{\rho}{T,\vec x}
+ \end{equation}
+ \begin{equation}
+     Z = 1+\rho\deriv{\alpha^r}{\rho}{T}
+ \end{equation}
+ \begin{equation}
+ \deriv{Z}{\rho}{T,\vec x} = \rho\deriv{^2\alpha^r}{\rho^2}{T} + \deriv{\alpha^r}{\rho}{T}
+ \end{equation}
+
+ Back to basics, for a quantity \f$\chi\f$ that is a function of \f$T\f$ and \f$\vec\rho\f$, and then the derivative taken w.r.t. density at constant temperature and mole fractions:
+ \begin{equation}
+     \deriv{\chi}{\rho}{T, \vec x} =     \deriv{\chi}{T}{\vec \rho}\cancelto{0}{\deriv{T}{\rho}{T}} + \sum_i\deriv{\chi}{\rho_i}{T, \rho_{j\neq i}}\deriv{\rho_i}{\rho}{T,\vec x}
+ \end{equation}
+ with \f$\rho_i =x_i\rho\f$
+ \begin{equation}
+ \deriv{\rho_i}{\rho}{T, \vec x} = x_i
+ \end{equation}
+ thus
+ \begin{equation}\
+     \deriv{\chi}{\rho}{T, \vec x} =  \sum_i\deriv{\chi}{\rho_i}{T, \rho_{j\neq i}}x_i
+ \end{equation}
+
+ and following the pattern yields
+ \begin{equation}
+ \frac{\partial^2 \Psi^r}{\partial \vec\rho\partial \rho} =     \sum_i\deriv{\frac{\partial \Psi^r}{d\vec\rho} }{\rho_i}{T, \rho_{j\neq i}}x_i
+ \end{equation}
+ where the big thing is the Hessian of the residual Hessian matrix of the residual Helmholtz energy density.  This uses terms that are already developed.
+
+ \textbf{Medium+}: Volume derivative, based on the density derivative
+
+ \begin{equation}
+ \deriv{ \ln\vec\phi}{v}{T,\vec x} = \deriv{ \ln\vec\phi}{\rho}{T,\vec x}\deriv{ \rho}{v}{}
+ \end{equation}
+ \begin{equation}
+ \deriv{\rho}{v}{} = -1/v^2 = -\rho^2
+ \end{equation}
+
+ \textbf{Hard}: mole fraction derivatives (this results in a matrix rather than a vector)
+ \begin{equation}
+     \deriv{ \ln\vec\phi}{\vec x}{T,\rho} = ?
+ \end{equation}
+
+ The first term is conceptually tricky. Again, considering a generic quantity $\chi$
+ \begin{equation}
+     \deriv{\chi}{x_i}{T, \rho,  x_{j\neq i}} = \deriv{\chi}{T}{\vec \rho}\cancelto{0}{\deriv{T}{x_i}{T,\rho,x_{j\neq i}}} + \sum_i\deriv{\chi}{\rho_i}{T, \rho_{j\neq i}}\deriv{\rho_i}{x_i}{T,\rho, x_{j\neq i}}
+ \end{equation}
+ yields
+ \begin{equation}
+     \deriv{\chi}{x_i}{T, \rho,  x_{j\neq i}} = \rho \sum_i\deriv{\chi}{\rho_i}{T, \rho_{j\neq i}}
+ \end{equation}
+ so the first part becomes
+ \begin{equation}
+     \deriv{\frac{\partial \Psi^r}{d\vec\rho}}{x_i}{T, \rho,  x_{j\neq i}} = \rho \sum_i\deriv{\frac{\partial \Psi^r}{d\vec\rho}}{\rho_i}{T, \rho_{j\neq i}}
+ \end{equation}
+ or
+ \begin{equation}
+     \deriv{^2\partial \Psi^r}{\vec\rho \partial \vec x}{T, \rho} = \rho H(\Psi^r)
+ \end{equation}
+ which is somewhat surprising because the order of derivatives with respect to composition and density doesn't matter, as the Hessian is symmetric
+
+ The second part, from derivatives of \f$\ln Z\f$, with \f$Z\f$ given by
+ \begin{equation}
+     Z = 1+\rho\deriv{\alpha^r}{\rho}{T, \vec x}
+ \end{equation}
+ yields
+ \begin{equation}
+ \deriv{\ln Z}{x_i}{T,\rho,x_{k \neq j}} = \frac{1}{Z}\deriv{Z}{x_i}{T,\rho,x_{k \neq i}}
+ \end{equation}
+ which results in a vector because you have
+ \begin{equation}
+ \deriv{Z}{x_i}{T,\rho,x_{k \neq i}} = \rho \deriv{^2\alpha^r}{\rho\partial x_i}{T}
+ \end{equation}
+ 
+ */
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
 struct IsochoricDerivatives{
 
@@ -890,6 +976,17 @@ struct IsochoricDerivatives{
     */
     template<ADBackends be = ADBackends::autodiff>
     static auto get_fugacity_coefficients(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        VectorType lnphi = get_ln_fugacity_coefficients<be>(model, T, rhovec);
+        return exp(lnphi).eval();
+    }
+    
+    /***
+    * \brief Calculate the natural logarithm of fugacity coefficient of each component
+    *
+    * Uses autodiff to calculate derivatives by default
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_ln_fugacity_coefficients(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot = forceeval(rhovec.sum());
         auto molefrac = (rhovec / rhotot).eval();
         auto R = model.R(molefrac);
@@ -898,10 +995,42 @@ struct IsochoricDerivatives{
         auto grad = build_Psir_gradient<be>(model, T, rhovec).eval();
         auto RT = R * T;
         auto lnphi = ((grad / RT).array() - log(Z)).eval();
-        return exp(lnphi).eval();
+        return forceeval(lnphi.eval());
     }
-
-    static auto build_d2PsirdTdrhoi_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_ln_fugacity_coefficients_Trhomolefracs(const Model& model, const Scalar& T, const Scalar& rhotot, const VectorType& molefrac) {
+        auto R = model.R(molefrac);
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Z = 1.0 + tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        auto rhovec = (rhotot*molefrac).eval();
+        auto grad = build_Psir_gradient<be>(model, T, rhovec).eval();
+        auto RT = R * T;
+        auto lnphi = ((grad / RT).array() - log(Z)).eval();
+        return forceeval(lnphi.eval());
+    }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_ln_fugacity_coefficients1(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        auto grad = build_Psir_gradient<be>(model, T, rhovec).eval();
+        auto RT = R * T;
+        auto lnphi = ((grad / RT).array()).eval();
+        return forceeval(lnphi);
+    }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_ln_fugacity_coefficients2(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Z = 1.0 + tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        return forceeval(-log(Z));
+    }
+    
+    static Eigen::ArrayXd build_d2PsirdTdrhoi_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
         Eigen::ArrayXd deriv(rho.size());
         // d^2psir/dTdrho_i
         for (auto i = 0; i < rho.size(); ++i) {
@@ -917,6 +1046,131 @@ struct IsochoricDerivatives{
             deriv[i] = u11;
         }
         return deriv;
+    }
+    
+    static Eigen::ArrayXd build_d2alphardrhodxi_constT(const Model& model, const Scalar& T, const Scalar& rhomolar, const VectorType& molefrac) {
+        Eigen::ArrayXd deriv(molefrac.size());
+        // d^2alphar/drhodx_i|T
+        for (auto i = 0; i < molefrac.size(); ++i) {
+            auto alpharfunc = [&model, &T, &molefrac, i](const auto& rho, const auto& xi) {
+                ArrayXdual2nd molefracdual = molefrac.template cast<autodiff::dual2nd>();
+                molefracdual[i] = xi;
+                return forceeval(model.alphar(T, rho, molefracdual));
+            };
+            dual2nd rhodual = rhomolar, xidual = molefrac[i];
+            auto [u00, u10, u11] = derivatives(alpharfunc, wrt(rhodual, xidual), at(rhodual, xidual));
+            deriv[i] = u11;
+        }
+        return deriv;
+    }
+    
+    /***
+    * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. temperature at constant mole concentrations (implying constant mole fractions and density)
+    *
+    * Uses autodiff to calculate derivatives by default
+    * \f[
+    * \deriv{ \ln\vec\phi}{T}{\vec \rho}
+    * \f]
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_dT_constrhovec(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Z = 1.0 + tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        auto dZdT_Z = tdx::template get_Ar11<be>(model, T, rhotot, molefrac)/(-T)/Z; // Note: (1/T)dX/d(1/T) = -TdX/dT, the deriv in RHS is what we want, the left is what we get, so divide by -T
+        VectorType grad = build_Psir_gradient<be>(model, T, rhovec).eval();
+        VectorType Tgrad = build_d2PsirdTdrhoi_autodiff(model, T, rhovec);
+        return forceeval((1/(R*T)*(Tgrad - 1.0/T*grad)-dZdT_Z).eval());
+    }
+    
+    /***
+    * \brief Calculate ln(Z), Z, and dZ/drho at constant temperature and mole fractions
+    *
+    * Uses autodiff to calculate derivatives by default
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_lnZ_Z_dZdrho(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Ar01 = tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        auto Ar02 = tdx::template get_Ar02<be>(model, T, rhotot, molefrac);
+        auto Z = 1.0 + Ar01;
+        auto dZdrho = (Ar01 + Ar02)/rhotot; // (dZ/rhotot)_{T,x}
+        return std::make_tuple(log(Z), Z, dZdrho);
+    }
+    
+    /***
+    * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. molar density at constant temperature and mole fractions
+    *
+    * \f[
+    * \deriv{ \ln\vec\phi}{\rho}{T,\vec x} = \frac{1}{RT}H(\Psi_r)\vec x - \frac{1}{Z}\deriv{Z}{\rho}{T,\vec x}
+    * \f]
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_drho_constTmolefracs(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        auto [lnZ, Z, dZdrho] = get_lnZ_Z_dZdrho(model, T, rhovec);
+        auto hessian = build_Psir_Hessian_autodiff(model, T, rhovec);
+        return forceeval((1/(R*T)*(hessian*molefrac.matrix()).array() - dZdrho/Z).eval());
+    }
+    
+    /***
+    * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. molar volume at constant temperature and mole fractions
+    *
+    * \f[
+    * \deriv{ \ln\vec\phi}{v}{T,\vec x} = \deriv{ \ln\vec\phi}{\rho}{T,\vec x}\deriv{ \rho}{v}{}
+    * \f]
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_dv_constTmolefracs(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto drhodv = -rhotot*rhotot; //  rho = 1/v; drho/dv = -1/v^2 = -rho^2
+        return get_d_ln_fugacity_coefficients_drho_constTmolefracs(model, T, rhovec)*drhodv;
+    }
+    
+    /***
+    * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. mole fraction of each component, at constant temperature and molar density
+    *
+    * \f[
+    * \deriv{ \ln\vec\phi}{\vec x}{T, \rho}
+    * \f]
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_dmolefracs_constTrho(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Ar01 = tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        auto Z = 1.0 + Ar01;
+        VectorType dZdx = rhotot*build_d2alphardrhodxi_constT(model, T, rhotot, molefrac);
+        Eigen::RowVector<decltype(rhotot), Eigen::Dynamic> dZdx_Z = dZdx/Z;
+        
+        // Starting matrix is from the first term
+        auto hessian = build_Psir_Hessian_autodiff(model, T, rhovec);
+        Eigen::ArrayXXd out = rhotot/(R*T)*hessian;
+        
+        // Then each row gets the second part
+        out.rowwise() -= dZdx_Z.array();
+        return out;
+    }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_dmolefracs_constTrho1(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        
+        auto hessian = build_Psir_Hessian_autodiff(model, T, rhovec);
+        // Starting matrix is from the first term
+        Eigen::ArrayXXd out = 1/(R*T)*rhotot*hessian;
+        return out;
     }
 
     /***

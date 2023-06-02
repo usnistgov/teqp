@@ -1753,7 +1753,7 @@ FORMULA_FONTSIZE       = 10
 # to create new LaTeX commands to be used in formulas as building blocks. See
 # the section "Including formulas" for details.
 
-FORMULA_MACROFILE      =
+FORMULA_MACROFILE      = doc/macros.tex
 
 # Enable the USE_MATHJAX option to render LaTeX formulas using MathJax (see
 # https://www.mathjax.org) which uses client side JavaScript for the rendering
@@ -1775,7 +1775,7 @@ USE_MATHJAX            = YES
 # The default value is: MathJax_2.
 # This tag requires that the tag USE_MATHJAX is set to YES.
 
-MATHJAX_VERSION        = MathJax_2
+MATHJAX_VERSION        = MathJax_3
 
 # When MathJax is enabled you can set the default output format to be used for
 # the MathJax output. For more details about the output format see MathJax
@@ -1810,15 +1810,15 @@ MATHJAX_RELPATH        =
 
 # The MATHJAX_EXTENSIONS tag can be used to specify one or more MathJax
 # extension names that should be enabled during MathJax rendering. For example
-# for MathJax version 2 (see https://docs.mathjax.org/en/v2.7-latest/tex.html
-# #tex-and-latex-extensions):
+# for MathJax version 2 (see
+# https://docs.mathjax.org/en/v2.7-latest/tex.html#tex-and-latex-extensions):
 # MATHJAX_EXTENSIONS = TeX/AMSmath TeX/AMSsymbols
 # For example for MathJax version 3 (see
 # http://docs.mathjax.org/en/latest/input/tex/extensions/index.html):
 # MATHJAX_EXTENSIONS = ams
 # This tag requires that the tag USE_MATHJAX is set to YES.
 
-MATHJAX_EXTENSIONS     =
+MATHJAX_EXTENSIONS     = autoload
 
 # The MATHJAX_CODEFILE tag can be used to specify a file with javascript pieces
 # of code that will be used on startup of the MathJax code. See the MathJax site
@@ -2264,10 +2264,6 @@ DOCBOOK_OUTPUT         = docbook
 # The default value is: NO.
 
 GENERATE_AUTOGEN_DEF   = NO
-
-#---------------------------------------------------------------------------
-# Configuration options related to Sqlite3 output
-#---------------------------------------------------------------------------
 
 #---------------------------------------------------------------------------
 # Configuration options related to the Perl module output

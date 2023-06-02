@@ -325,3 +325,62 @@ TEST_CASE("Check B and its temperature derivatives", "[SAFTVRMie],[B]")
     auto TdBdT = Tspec*model->get_dmBnvirdTm(2, 1, Tspec, z);
     CHECK(TdBdT == Approx(TdBdTnondilute));
 }
+
+TEST_CASE("Check ln(phi) and its derivatives", "[SAFTVRMielnphi]")
+{
+    std::vector<std::string> names = {"Methane", "Ethane"};
+    SAFTVRMieMixture model{names};
+    double T = 300.0, dT = 1e-5;
+    auto rhovec = (Eigen::ArrayXd(2) << 300, 200).finished();
+    Eigen::ArrayXd molefracs = forceeval(rhovec/rhovec.sum());
+    using iso = IsochoricDerivatives<decltype(model)>;
+    SECTION("T deriv"){
+        auto lnphin1 = iso::get_ln_fugacity_coefficients(model, T-dT, rhovec);
+        auto lnphip1 = iso::get_ln_fugacity_coefficients(model, T+dT, rhovec);
+        auto analytical = iso::get_d_ln_fugacity_coefficients_dT_constrhovec(model, T, rhovec);
+        auto findiff = (lnphip1-lnphin1)/(2*dT);
+        auto err = ((findiff - analytical)/analytical).cwiseAbs().mean();
+        CHECK(err < 1e-7);
+    }
+    SECTION("dZdrho"){
+        auto [lnZ, Z, dZdrho] = iso::get_lnZ_Z_dZdrho(model, T, rhovec);
+        auto rhovecplus = rhovec*1.001, rhovecminus = rhovec*0.999;
+        auto rhoplus = rhovecplus.sum(), rhominus = rhovecminus.sum();
+        auto lnZn1 = std::get<0>(iso::get_lnZ_Z_dZdrho(model, T, rhovecminus));
+        auto lnZp1 = std::get<0>(iso::get_lnZ_Z_dZdrho(model, T, rhovecplus));
+        auto findiff = ((lnZp1-lnZn1)/(rhoplus-rhominus));
+        auto analytical = dZdrho/Z;
+        auto err = ((findiff - analytical)/analytical);
+        CHECK(err < 1e-7);
+    }
+    SECTION("rho deriv"){
+        auto analytical = iso::get_d_ln_fugacity_coefficients_drho_constTmolefracs(model, T, rhovec);
+        auto rhovecplus = rhovec*1.001, rhovecminus = rhovec*0.999;
+        auto rhoplus = rhovecplus.sum(), rhominus = rhovecminus.sum();
+        auto lnphin1 = iso::get_ln_fugacity_coefficients(model, T, rhovecminus);
+        auto lnphip1 = iso::get_ln_fugacity_coefficients(model, T, rhovecplus);
+        auto findiff = ((lnphip1-lnphin1)/(rhoplus-rhominus)).eval();
+        auto err = ((findiff - analytical)/analytical).cwiseAbs().mean();
+        CHECK(err < 1e-7);
+    }
+    SECTION("mole frac derivs"){
+        auto analytical = iso::get_d_ln_fugacity_coefficients_dmolefracs_constTrho(model, T, rhovec);
+        auto rhotot = rhovec.sum();
+        auto N = names.size();
+        double dx = 1e-5;
+        Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> numerical(N, N);
+        for (auto i = 0; i < N; ++i){
+            auto molefracsplus = molefracs; molefracsplus[i] += dx;
+            auto molefracsminus = molefracs; molefracsminus[i] -= dx;
+            // Here you need to use the special method for testing that takes T, rho, molefracs because
+            // if you provide molar concentrations that are shifted, you introduce an inconsistency
+            // during the mole fraction calculation step. Either you get the right molar density or the
+            // right mole fraction, impossible to do both simultaneously.
+            auto plus = iso::get_ln_fugacity_coefficients_Trhomolefracs(model, T, rhotot, molefracsplus);
+            auto minus = iso::get_ln_fugacity_coefficients_Trhomolefracs(model, T, rhotot, molefracsminus);
+            numerical.col(i) = (plus-minus)/(2*dx);
+        }
+        auto worst_error = (analytical.array() - numerical.array()).cwiseAbs().maxCoeff();
+        CHECK(worst_error < 1e-10);
+    }
+}
