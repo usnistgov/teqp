@@ -325,3 +325,109 @@ TEST_CASE("Check B and its temperature derivatives", "[SAFTVRMie],[B]")
     auto TdBdT = Tspec*model->get_dmBnvirdTm(2, 1, Tspec, z);
     CHECK(TdBdT == Approx(TdBdTnondilute));
 }
+
+TEST_CASE("Check ln(phi) and its derivatives", "[SAFTVRMielnphi]")
+{
+    std::vector<std::string> names = {"Methane", "Ethane"};
+    SAFTVRMieMixture model{names};
+    double T = 300.0, dT = 1e-5;
+    auto rhovec = (Eigen::ArrayXd(2) << 300, 200).finished();
+    Eigen::ArrayXd molefracs = forceeval(rhovec/rhovec.sum());
+    using iso = IsochoricDerivatives<decltype(model)>;
+    SECTION("T deriv"){
+        auto lnphin1 = iso::get_ln_fugacity_coefficients(model, T-dT, rhovec);
+        auto lnphip1 = iso::get_ln_fugacity_coefficients(model, T+dT, rhovec);
+        auto analytical = iso::get_d_ln_fugacity_coefficients_dT_constrhovec(model, T, rhovec);
+        auto findiff = (lnphip1-lnphin1)/(2*dT);
+        auto err = ((findiff - analytical)/analytical).cwiseAbs().mean();
+        CHECK(err < 1e-7);
+    }
+    SECTION(""){
+        auto [lnZ, Z, dZdrho] = iso::get_lnZ_Z_dZdrho(model, T, rhovec);
+        auto rhovecplus = rhovec*1.001, rhovecminus = rhovec*0.999;
+        auto rhoplus = rhovecplus.sum(), rhominus = rhovecminus.sum();
+        auto lnZn1 = std::get<0>(iso::get_lnZ_Z_dZdrho(model, T, rhovecminus));
+        auto lnZp1 = std::get<0>(iso::get_lnZ_Z_dZdrho(model, T, rhovecplus));
+        auto findiff = ((lnZp1-lnZn1)/(rhoplus-rhominus));
+        auto analytical = dZdrho/Z;
+        auto err = ((findiff - analytical)/analytical);
+        CHECK(err < 1e-7);
+    }
+    SECTION("rho deriv"){
+        auto analytical = iso::get_d_ln_fugacity_coefficients_drho_constTmolefracs(model, T, rhovec);
+        auto rhovecplus = rhovec*1.001, rhovecminus = rhovec*0.999;
+        auto rhoplus = rhovecplus.sum(), rhominus = rhovecminus.sum();
+        auto lnphin1 = iso::get_ln_fugacity_coefficients(model, T, rhovecminus);
+        auto lnphip1 = iso::get_ln_fugacity_coefficients(model, T, rhovecplus);
+        auto findiff = ((lnphip1-lnphin1)/(rhoplus-rhominus)).eval();
+        auto err = ((findiff - analytical)/analytical).cwiseAbs().mean();
+        CHECK(err < 1e-7);
+    }
+    SECTION("mole frac derivs"){
+        auto analytical = iso::get_d_ln_fugacity_coefficients_dmolefracs_constTrho(model, T, rhovec);
+        auto rhotot = rhovec.sum();
+        auto N = names.size();
+        double dx = 1e-5;
+        Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> numerical(N, N);
+        for (auto i = 0; i < N; ++i){
+            auto molefracsplus = molefracs; molefracsplus[i] += dx;
+            auto molefracsminus = molefracs; molefracsminus[i] -= dx;
+            auto rhovecplus = (molefracsplus*rhotot).eval(), rhovecminus = (molefracsminus*rhotot).eval();
+            rhovecplus *= rhotot/rhovecplus.sum();
+            rhovecminus *= rhotot/rhovecminus.sum();
+            auto plus = iso::get_ln_fugacity_coefficients(model, T, rhovecplus);
+            auto minus = iso::get_ln_fugacity_coefficients(model, T, rhovecminus);
+            numerical.col(i) = (plus-minus)/(2*dx);
+        }
+        std::cout << numerical << std::endl;
+        std::cout << analytical << std::endl;
+    }
+//    SECTION("mole frac derivs1"){
+//        auto analytical = iso::get_d_ln_fugacity_coefficients_dmolefracs_constTrho1(model, T, rhovec);
+//        auto rhotot = rhovec.sum();
+//        auto N = names.size();
+//        double dx = 1e-5;
+//        Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> numerical(N, N);
+//        for (auto i = 0; i < N; ++i){
+//            auto molefracsplus = molefracs; molefracsplus[i] += dx;
+//            auto molefracsminus = molefracs; molefracsminus[i] -= dx;
+//            auto rhovecplus = molefracsplus*rhotot, rhovecminus = molefracsminus*rhotot;
+//            auto plus = iso::get_ln_fugacity_coefficients1(model, T, rhovecplus);
+//            auto minus = iso::get_ln_fugacity_coefficients1(model, T, rhovecminus);
+//            numerical.col(i) = (plus-minus)/(2*dx);
+//        }
+//        std::cout << "num:" << numerical << std::endl;
+//        std::cout << "ana:" << analytical << std::endl;
+//    }
+    
+    SECTION("mole frac derivs2"){
+        auto rhotot = rhovec.sum();
+        
+        using tdx = TDXDerivatives<decltype(model)>;
+        auto Z = 1.0 + tdx::template get_Ar01(model, T, rhotot, molefracs);
+        auto dZdx = (rhotot*iso::build_d2alphardrhodxi_constT(model, T, rhotot, molefracs)).eval();
+        auto analytical = (dZdx/Z).eval();
+        
+        auto N = names.size();
+        double dx = 1e-5;
+        Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> numerical(N, N);
+        for (auto i = 0; i < N; ++i){
+            auto molefracsplus = molefracs; molefracsplus[i] += dx;
+            auto molefracsminus = molefracs; molefracsminus[i] -= dx;
+            auto rhovecplus = (molefracsplus*rhotot).eval(), rhovecminus = (molefracsminus*rhotot).eval();
+            rhovecplus *= rhotot/rhovecplus.sum(); // rescale to get the right total density, but destroying the mole fractions. hmm.
+            rhovecminus *= rhotot/rhovecminus.sum();
+            
+            auto plus = forceeval(-log(1+tdx::template get_Ar01(model, T, rhotot, molefracsplus)));
+            auto plus2 = iso::get_ln_fugacity_coefficients2(model, T, rhovecplus);
+            
+            auto minus = forceeval(-log(1+tdx::template get_Ar01(model, T, rhotot, molefracsminus)));
+            auto minus2 = iso::get_ln_fugacity_coefficients2(model, T, rhovecminus);
+            numerical.col(i) = (plus-minus)/(2*dx);
+        }
+        std::cout << numerical << std::endl;
+        std::cout << analytical << std::endl;
+    }
+
+    
+}

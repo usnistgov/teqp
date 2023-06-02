@@ -890,6 +890,17 @@ struct IsochoricDerivatives{
     */
     template<ADBackends be = ADBackends::autodiff>
     static auto get_fugacity_coefficients(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        VectorType lnphi = get_ln_fugacity_coefficients<be>(model, T, rhovec);
+        return exp(lnphi).eval();
+    }
+    
+    /***
+    * \brief Calculate the natural logarithm of fugacity coefficient of each component
+    *
+    * Uses autodiff to calculate derivatives by default
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_ln_fugacity_coefficients(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot = forceeval(rhovec.sum());
         auto molefrac = (rhovec / rhotot).eval();
         auto R = model.R(molefrac);
@@ -898,10 +909,30 @@ struct IsochoricDerivatives{
         auto grad = build_Psir_gradient<be>(model, T, rhovec).eval();
         auto RT = R * T;
         auto lnphi = ((grad / RT).array() - log(Z)).eval();
-        return exp(lnphi).eval();
+        return forceeval(lnphi.eval());
     }
-
-    static auto build_d2PsirdTdrhoi_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_ln_fugacity_coefficients1(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        auto grad = build_Psir_gradient<be>(model, T, rhovec).eval();
+        auto RT = R * T;
+        auto lnphi = ((grad / RT).array()).eval();
+        return forceeval(lnphi);
+    }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_ln_fugacity_coefficients2(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Z = 1.0 + tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        return forceeval(-log(Z));
+    }
+    
+    static Eigen::ArrayXd build_d2PsirdTdrhoi_autodiff(const Model& model, const Scalar& T, const VectorType& rho) {
         Eigen::ArrayXd deriv(rho.size());
         // d^2psir/dTdrho_i
         for (auto i = 0; i < rho.size(); ++i) {
@@ -917,6 +948,131 @@ struct IsochoricDerivatives{
             deriv[i] = u11;
         }
         return deriv;
+    }
+    
+    static Eigen::ArrayXd build_d2alphardrhodxi_constT(const Model& model, const Scalar& T, const Scalar& rhomolar, const VectorType& molefrac) {
+        Eigen::ArrayXd deriv(molefrac.size());
+        // d^2alphar/drhodx_i|T
+        for (auto i = 0; i < molefrac.size(); ++i) {
+            auto alpharfunc = [&model, &T, &molefrac, i](const auto& rho, const auto& xi) {
+                ArrayXdual2nd molefracdual = molefrac.template cast<autodiff::dual2nd>();
+                molefracdual[i] = xi;
+                return forceeval(model.alphar(T, rho, molefracdual));
+            };
+            dual2nd rhodual = rhomolar, xidual = molefrac[i];
+            auto [u00, u10, u11] = derivatives(alpharfunc, wrt(rhodual, xidual), at(rhodual, xidual));
+            deriv[i] = u11;
+        }
+        return deriv;
+    }
+    
+    /***
+    * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. temperature at constant mole concentrations (implying constant mole fractions and density)
+    *
+    * Uses autodiff to calculate derivatives by default
+    * \f[
+    * \deriv{ \ln\vec\phi}{T}{\vec \rho}
+    * \f]
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_dT_constrhovec(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Z = 1.0 + tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        auto dZdT_Z = tdx::template get_Ar11<be>(model, T, rhotot, molefrac)/(-T)/Z; // Note: (1/T)dX/d(1/T) = -TdX/dT, the deriv in RHS is what we want, the left is what we get, so divide by -T
+        VectorType grad = build_Psir_gradient<be>(model, T, rhovec).eval();
+        VectorType Tgrad = build_d2PsirdTdrhoi_autodiff(model, T, rhovec);
+        return forceeval((1/(R*T)*(Tgrad - 1.0/T*grad)-dZdT_Z).eval());
+    }
+    
+    /***
+    * \brief Calculate ln(Z), Z, and dZ/drho at constant temperature and mole fractions
+    *
+    * Uses autodiff to calculate derivatives by default
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_lnZ_Z_dZdrho(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Ar01 = tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        auto Ar02 = tdx::template get_Ar02<be>(model, T, rhotot, molefrac);
+        auto Z = 1.0 + Ar01;
+        auto dZdrho = (Ar01 + Ar02)/rhotot; // (dZ/rhotot)_{T,x}
+        return std::make_tuple(log(Z), Z, dZdrho);
+    }
+    
+    /***
+    * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. molar density at constant temperature and mole fractions
+    *
+    * \f[
+    * \deriv{ \ln\vec\phi}{\rho}{T,\vec x} = \frac{1}{RT}H(\Psi_r)\vec x - \frac{1}{Z}\deriv{Z}{\rho}{T,\vec x}
+    * \f]
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_drho_constTmolefracs(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        auto [lnZ, Z, dZdrho] = get_lnZ_Z_dZdrho(model, T, rhovec);
+        auto hessian = build_Psir_Hessian_autodiff(model, T, rhovec);
+        return forceeval((1/(R*T)*(hessian*molefrac.matrix()).array() - dZdrho/Z).eval());
+    }
+    
+    /***
+    * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. molar volume at constant temperature and mole fractions
+    *
+    * \f[
+    * \deriv{ \ln\vec\phi}{v}{T,\vec x} = \deriv{ \ln\vec\phi}{\rho}{T,\vec x}\deriv{ \rho}{v}{}
+    * \f]
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_dv_constTmolefracs(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto drhodv = -rhotot*rhotot; //  rho = 1/v; drho/dv = -1/v^2 = -rho^2
+        return get_d_ln_fugacity_coefficients_drho_constTmolefracs(model, T, rhovec)*drhodv;
+    }
+    
+    /***
+    * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. mole fraction of each component, at constant temperature and molar density
+    *
+    * \f[
+    * \deriv{ \ln\vec\phi}{\vec x}{T, \rho}
+    * \f]
+    */
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_dmolefracs_constTrho(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        
+        using tdx = TDXDerivatives<Model, Scalar, VectorType>;
+        auto Ar01 = tdx::template get_Ar01<be>(model, T, rhotot, molefrac);
+        auto Z = 1.0 + Ar01;
+        VectorType dZdx = rhotot*build_d2alphardrhodxi_constT(model, T, rhotot, molefrac);
+        Eigen::RowVector<decltype(rhotot), Eigen::Dynamic> dZdx_Z = dZdx/Z;
+        
+        // Starting matrix is from the first term
+        auto hessian = build_Psir_Hessian_autodiff(model, T, rhovec);
+        Eigen::ArrayXXd out = rhotot/(R*T)*hessian;
+        
+        // Then each row gets the second part
+        out.rowwise() -= dZdx_Z.array();
+        return out;
+    }
+    
+    template<ADBackends be = ADBackends::autodiff>
+    static auto get_d_ln_fugacity_coefficients_dmolefracs_constTrho1(const Model& model, const Scalar& T, const VectorType& rhovec) {
+        auto rhotot = forceeval(rhovec.sum());
+        auto molefrac = (rhovec / rhotot).eval();
+        auto R = model.R(molefrac);
+        
+        auto hessian = build_Psir_Hessian_autodiff(model, T, rhovec);
+        // Starting matrix is from the first term
+        Eigen::ArrayXXd out = 1/(R*T)*rhotot*hessian;
+        return out;
     }
 
     /***
