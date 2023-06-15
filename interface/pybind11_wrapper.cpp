@@ -385,7 +385,7 @@ void init_teqp(py::module& m) {
         .def("get_deriv_mat2", &am::get_deriv_mat2, "T"_a, "rho"_a, "molefrac"_a.noconvert())
     
         // Routines related to pure fluid critical point calculation
-        .def("get_pure_critical_conditions_Jacobian", &am::get_pure_critical_conditions_Jacobian, "T"_a, "rho"_a, py::arg_v("alternative_pure_index", -1), py::arg_v("alternative_length", 2))
+        .def("get_pure_critical_conditions_Jacobian", &am::get_pure_critical_conditions_Jacobian, "T"_a, "rho"_a, py::arg_v("alternative_pure_index", std::nullopt, "None"), py::arg_v("alternative_length", std::nullopt, "None"))
         .def("solve_pure_critical", &am::solve_pure_critical, "T"_a, "rho"_a, py::arg_v("flags", std::nullopt, "None"))
         .def("extrapolate_from_critical", &am::extrapolate_from_critical, "Tc"_a, "rhoc"_a, "T"_a)
     

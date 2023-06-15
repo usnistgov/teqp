@@ -14,7 +14,7 @@ namespace teqp{
         std::tuple<double, double> AbstractModel::solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& flags) const  {
             return teqp::solve_pure_critical(*this, T, rho, flags.value_or(nlohmann::json{}));
         }
-        std::tuple<EArrayd, EMatrixd> AbstractModel::get_pure_critical_conditions_Jacobian(const double T, const double rho, int alternative_pure_index, int alternative_length) const {
+        std::tuple<EArrayd, EMatrixd> AbstractModel::get_pure_critical_conditions_Jacobian(const double T, const double rho, const std::optional<std::size_t>& alternative_pure_index, const std::optional<std::size_t>& alternative_length) const {
             return teqp::get_pure_critical_conditions_Jacobian(*this, T, rho, alternative_pure_index, alternative_length);
         }
         EArray2 AbstractModel::extrapolate_from_critical(const double Tc, const double rhoc, const double Tnew) const {
