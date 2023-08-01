@@ -8,6 +8,7 @@
 #include <type_traits>
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/derivs.hpp"
+#include "teqp/algorithms/critical_pure.hpp"
 
 namespace teqp{
 
@@ -181,7 +182,7 @@ inline auto dpsatdT_pure(const teqp::cppinterface::AbstractModel& model, double 
  2. Take a small step away from the critical point (this is where the beta=0.5 assumption is invoked)
  3. Integrate from the near critical temperature to the temperature of interest
  */
-inline auto pure_trace_VLE(const AbstractModel& model, const double T, const nlohmann::json &spec){
+inline auto pure_trace_VLE(const teqp::cppinterface::AbstractModel& model, const double T, const nlohmann::json &spec){
     // Start at the true critical point, from the specified guess value
     nlohmann::json pure_spec;
     Eigen::ArrayXd z{Eigen::ArrayXd::Ones(1,1)};
