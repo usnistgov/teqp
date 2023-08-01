@@ -96,7 +96,7 @@ if (NOT TEQP_NO_TEQPCPP)
   target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
   target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
   set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
-  target_compile_definitions(teqpcpp PUBLIC -DMULTICOMPLEX_NO_MULTIPRECISION)
+  target_compile_definitions(teqpcpp PRIVATE -DMULTICOMPLEX_NO_MULTIPRECISION)
 
   if (TEQP_TESTTEQPCPP)
     add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/test_teqpcpp.cpp")
