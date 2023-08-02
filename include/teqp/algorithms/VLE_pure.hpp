@@ -247,7 +247,7 @@ inline auto pure_trace_VLE(const teqp::cppinterface::AbstractModel& model, const
     X(pure_trace_VLE)
 
 #define X(f) template <typename TemplatedModel, typename ...Params, \
-typename = typename std::enable_if<not std::is_base_of<teqp::cppinterface::AbstractModel, TemplatedModel>::value>::type> \
+typename = typename std::enable_if<is_not_AbstractModel<TemplatedModel>::value>::type> \
 inline auto f(const TemplatedModel& model, Params&&... params){ \
     auto view = teqp::cppinterface::adapter::make_cview(model); \
     const AbstractModel& am = *view.get(); \
