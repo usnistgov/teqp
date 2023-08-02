@@ -324,6 +324,27 @@ TEST_CASE("Trace a VLE isotherm for acetone + water", "[isothermacetonebenzene]"
     auto o = trace_VLE_isotherm_binary(model, T, rhovecL, rhovecV);
 }
 
+TEST_CASE("Calculate water at critical point", "[WATERcrit]") {
+    std::string root = "../mycp";
+    const auto model = build_multifluid_model({ "Water" }, root);
+    
+    using tdx = TDXDerivatives<decltype(model)>;
+    auto Tc = model.redfunc.Tc[0];
+    auto rhoc = 1/model.redfunc.vc[0];
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    auto a1 = tdx::get_Ar0n<1>(model, Tc, rhoc, z);
+    CHECK(std::isfinite(a1[1]));
+    auto a2 = tdx::get_Ar0n<2>(model, Tc, rhoc, z);
+    auto a3 = tdx::get_Ar0n<3>(model, Tc, rhoc, z);
+    auto a4 = tdx::get_Ar0n<3>(model, Tc, rhoc, z);
+    CHECK(a3[1] == a1[1]);
+    auto R = model.R(z);
+    auto dpdrho = R*Tc*(1 + 2*a4[1] + a4[2]);
+    auto d2pdrho2 = R*Tc/(rhoc)*(2*a4[1] + 4*a4[2] + a4[3]);
+    CHECK(dpdrho == Approx(0).margin(1e-9));
+    CHECK(d2pdrho2 == Approx(0).margin(1e-9));
+}
+
 TEST_CASE("Calculate partial molar volume for a CO2 containing mixture", "[partial_molar_volume]") {
     std::string root = "../mycp";
     const auto model = build_multifluid_model({ "CarbonDioxide", "Heptane" }, root);
