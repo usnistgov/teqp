@@ -17,8 +17,11 @@ int main() {
     // Get the already very accurate values from the superancillary equation
     auto [rhoLdbl, rhoVdbl] = modelPR.superanc_rhoLV(125);
     
-    // Now iterate in extended precision to find the VLE solution
-    my_float T = 125;
-    auto soln = teqp::pure_VLE_T<decltype(modelPR), my_float, teqp::ADBackends::multicomplex>(modelPR, T, static_cast<my_float>(rhoLdbl), static_cast<my_float>(rhoVdbl), 20).cast<double>();
+    // Now iterate in extended precision with the multicomplex backend to find the VLE solution
+    my_float T = 125, rhoL = rhoLdbl, rhoV = rhoVdbl;
+    
+    teqp::IsothermPureVLEResiduals<decltype(modelPR), my_float, teqp::ADBackends::multicomplex> residual(modelPR, T);
+    auto soln = teqp::do_pure_VLE_T<decltype(residual), my_float>(residual, rhoL, rhoV, 10).cast<double>();
+    
     std::cout << soln << std::endl;
 }
