@@ -349,7 +349,7 @@ public:
         std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])> summer = 0.0;
         for (auto i = 0; i < N; ++i){
             for (auto j = 0; j < N; ++j){
-                auto ninj = nQ[i]*nQ[j];
+                auto ninj = nmu[i]*nQ[j];
                 if (ninj > 0){
                     // Lorentz-Berthelot mixing rules
                     auto epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
@@ -374,8 +374,9 @@ public:
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = 0; j < N; ++j){
                 for (std::size_t k = 0; k < N; ++k){
-                    auto ninjnk = nQ[i]*nQ[j]*nQ[k];
-                    if (ninjnk > 0){
+                    auto ninjnk1 = nmu[i]*nmu[j]*nQ[k];
+                    auto ninjnk2 = nmu[i]*nQ[j]*nQ[k];
+                    if (ninjnk1 > 0 || ninjnk2){
                         // Lorentz-Berthelot mixing rules for sigma
                         auto sigmaij = (sigma[i]+sigma[j])/2;
                         auto sigmaik = (sigma[i]+sigma[k])/2;
@@ -383,8 +384,8 @@ public:
                         
                         auto mijk = std::min(pow(m[i]*m[j]*m[k], 1.0/3.0), 2.0);
                         double alpha_GV = 1.19374; // Table 3
-                        auto polars = mustar2[i]*mustar2[j]*Qstar2[k] + alpha_GV*mustar2[i]*Qstar2[j]*Qstar2[k];
-                        summer += x[i]*x[j]*x[k]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*epsilon_over_k[k]/T*POW4(sigma[i]*sigma[j]*sigma[k])/POW2(sigmaij*sigmaik*sigmajk)*ninjnk*polars*get_JDQ_3ijk(eta, mijk);
+                        auto polars = ninjnk1*mustar2[i]*mustar2[j]*Qstar2[k] + ninjnk2*alpha_GV*mustar2[i]*Qstar2[j]*Qstar2[k];
+                        summer += x[i]*x[j]*x[k]*epsilon_over_k[i]/T*epsilon_over_k[j]/T*epsilon_over_k[k]/T*POW4(sigma[i]*sigma[j]*sigma[k])/POW2(sigmaij*sigmaik*sigmajk)*polars*get_JDQ_3ijk(eta, mijk);
                     }
                 }
             }
@@ -455,7 +456,7 @@ public:
       const Eigen::ArrayX<double> &nQ)
     : di(((nmu.sum() > 0) ? decltype(di)(DipolarContributionGrossVrabec(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu)) : std::nullopt)),
       quad(((nQ.sum() > 0) ? decltype(quad)(QuadrupolarContributionGross(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ)) : std::nullopt)),
-      diquad(((nQ.sum() > 0) ? decltype(diquad)(DipolarQuadrupolarContributionVrabecGross(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu, Qstar2, nQ)) : std::nullopt))
+      diquad(((nQ.sum() > 0 && nmu.sum() > 0) ? decltype(diquad)(DipolarQuadrupolarContributionVrabecGross(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu, Qstar2, nQ)) : std::nullopt))
     {};
     
     template<typename TTYPE, typename RhoType, typename EtaType, typename VecType>
