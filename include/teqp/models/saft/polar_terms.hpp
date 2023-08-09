@@ -361,7 +361,7 @@ public:
                 }
             }
         }
-        return forceeval(-static_cast<double>(EIGEN_PI)*POW2(9.0/4.0)*rhoN_A3*summer);
+        return forceeval(-static_cast<double>(EIGEN_PI)*9.0/4.0*rhoN_A3*summer);
     }
     
     /// Eq. 15 from Vrabec and Gross
