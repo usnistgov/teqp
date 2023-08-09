@@ -376,7 +376,7 @@ public:
                 for (std::size_t k = 0; k < N; ++k){
                     auto ninjnk1 = nmu[i]*nmu[j]*nQ[k];
                     auto ninjnk2 = nmu[i]*nQ[j]*nQ[k];
-                    if (ninjnk1 > 0 || ninjnk2){
+                    if (ninjnk1 > 0 || ninjnk2 > 0){
                         // Lorentz-Berthelot mixing rules for sigma
                         auto sigmaij = (sigma[i]+sigma[j])/2;
                         auto sigmaik = (sigma[i]+sigma[k])/2;
