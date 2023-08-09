@@ -212,16 +212,16 @@ public:
 };
 
 /***
- * \brief The quadrupolar contribution from Gross and Vrabec
+ * \brief The quadrupolar contribution from Gross, AICHEJ, doi: 10.1002/aic.10502
  *
  */
-class QuadrupolarContributionGrossVrabec {
+class QuadrupolarContributionGross {
 private:
     const Eigen::ArrayXd m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ;
     
 public:
     const bool has_a_polar;
-    QuadrupolarContributionGrossVrabec(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &Qstar2, const Eigen::ArrayX<double> &nQ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), Qstar2(Qstar2), nQ(nQ), has_a_polar(Qstar2.cwiseAbs().sum() > 0) {
+    QuadrupolarContributionGross(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &Qstar2, const Eigen::ArrayX<double> &nQ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), Qstar2(Qstar2), nQ(nQ), has_a_polar(Qstar2.cwiseAbs().sum() > 0) {
         // Check lengths match
         if (m.size() != Qstar2.size()){
             throw teqp::InvalidArgument("bad size of mustar2");
@@ -230,9 +230,9 @@ public:
             throw teqp::InvalidArgument("bad size of n");
         }
     }
-    QuadrupolarContributionGrossVrabec& operator=( const QuadrupolarContributionGrossVrabec& ) = delete; // non copyable
+    QuadrupolarContributionGross& operator=( const QuadrupolarContributionGross& ) = delete; // non copyable
     
-    /// Eq. 9 from Gross and Vrabec
+    /// Eq. 9 from Gross, AICHEJ, doi: 10.1002/aic.10502
     template<typename TTYPE, typename RhoType, typename EtaType, typename VecType>
     auto get_alpha2QQ(const TTYPE& T, const RhoType& rhoN_A3, const EtaType& eta, const VecType& mole_fractions) const{
         const auto& x = mole_fractions; // concision
@@ -256,7 +256,7 @@ public:
         return forceeval(-static_cast<double>(EIGEN_PI)*POW2(3.0/4.0)*rhoN_A3*summer);
     }
     
-    /// Eq. 1 from Gross and Vrabec
+    /// Eq. 10 from Gross, AICHEJ, doi: 10.1002/aic.10502
     template<typename TTYPE, typename RhoType, typename EtaType, typename VecType>
     auto get_alpha3QQ(const TTYPE& T, const RhoType& rhoN_A3, const EtaType& eta, const VecType& mole_fractions) const{
         const auto& x = mole_fractions; // concision
@@ -454,7 +454,7 @@ public:
       const Eigen::ArrayX<double> &Qstar2,
       const Eigen::ArrayX<double> &nQ)
     : di(((nmu.sum() > 0) ? decltype(di)(DipolarContributionGrossVrabec(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu)) : std::nullopt)),
-      quad(((nQ.sum() > 0) ? decltype(quad)(QuadrupolarContributionGrossVrabec(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ)) : std::nullopt)),
+      quad(((nQ.sum() > 0) ? decltype(quad)(QuadrupolarContributionGross(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ)) : std::nullopt)),
       diquad(((nQ.sum() > 0) ? decltype(diquad)(DipolarQuadrupolarContributionVrabecGross(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu, Qstar2, nQ)) : std::nullopt))
     {};
     
