@@ -280,7 +280,7 @@ with the errors fixed as noted in a comment: https://doi.org/10.1021/acs.iecr.9b
 class PCSAFTMixture {
 public:
     using PCSAFTDipolarContribution = SAFTpolar::DipolarContributionGrossVrabec;
-    using PCSAFTQuadrupolarContribution = SAFTpolar::QuadrupolarContributionGrossVrabec;
+    using PCSAFTQuadrupolarContribution = SAFTpolar::QuadrupolarContributionGross;
 protected:
     Eigen::ArrayX<double> m, ///< number of segments
         mminus1, ///< m-1

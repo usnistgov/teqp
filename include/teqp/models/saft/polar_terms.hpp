@@ -443,7 +443,7 @@ public:
     static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNA3_packingfraction_molefractions;
     
     const std::optional<DipolarContributionGrossVrabec> di;
-    const std::optional<QuadrupolarContributionGrossVrabec> quad;
+    const std::optional<QuadrupolarContributionGross> quad;
     const std::optional<DipolarQuadrupolarContributionVrabecGross> diquad;
     
     MultipolarContributionGrossVrabec(
