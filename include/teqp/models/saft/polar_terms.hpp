@@ -314,7 +314,6 @@ private:
     const Eigen::ArrayXd m, sigma_Angstrom, epsilon_over_k, mustar2, nmu, Qstar2, nQ;
     
 public:
-    const bool has_a_polar;
     DipolarQuadrupolarContributionVrabecGross(
       const Eigen::ArrayX<double> &m,
       const Eigen::ArrayX<double> &sigma_Angstrom,
@@ -323,7 +322,7 @@ public:
       const Eigen::ArrayX<double> &nmu,
       const Eigen::ArrayX<double> &Qstar2,
       const Eigen::ArrayX<double> &nQ
-    ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), mustar2(mustar2), nmu(nmu), Qstar2(Qstar2), nQ(nQ), has_a_polar(Qstar2.cwiseAbs().sum() > 0 || mustar2.cwiseAbs().sum() > 0) {
+    ) : m(m), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), mustar2(mustar2), nmu(nmu), Qstar2(Qstar2), nQ(nQ) {
         // Check lengths match
         if (m.size() != Qstar2.size()){
             throw teqp::InvalidArgument("bad size of Qstar2");
@@ -336,6 +335,9 @@ public:
         }
         if (m.size() != nmu.size()){
             throw teqp::InvalidArgument("bad size of n");
+        }
+        if (Qstar2.cwiseAbs().sum() == 0 || mustar2.cwiseAbs().sum() == 0){
+            throw teqp::InvalidArgument("Invalid to have either missing polar or quadrupolar term in cross-polar term");
         }
     }
     DipolarQuadrupolarContributionVrabecGross& operator=( const DipolarQuadrupolarContributionVrabecGross& ) = delete; // non copyable
@@ -478,7 +480,7 @@ public:
         }
         
         type alpha2DQ = 0.0, alpha3DQ = 0.0, alphaDQ = 0.0;
-        if (diquad && diquad.value().has_a_polar){
+        if (diquad){
             alpha2DQ = diquad.value().get_alpha2DQ(T, rho_A3, eta, mole_fractions);
             alpha3DQ = diquad.value().get_alpha3DQ(T, rho_A3, eta, mole_fractions);
             alphaDQ = forceeval(alpha2DQ/(1.0-alpha3DQ/alpha2DQ));
