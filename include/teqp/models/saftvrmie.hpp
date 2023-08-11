@@ -964,7 +964,7 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
                         return j.at("Q_Cm2");
                     }
                     else if (j.contains("Q_DA")){
-                        return j.at("Q_DA").get<double>()*D_to_Cm*1e10;
+                        return j.at("Q_DA").get<double>()*D_to_Cm/1e10;
                     }
                     else{
                         return 0.0;
