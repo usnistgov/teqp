@@ -739,9 +739,211 @@ public:
     }
 };
 
+/**
+ \tparam JIntegral A type that can be indexed with a single integer n to give the J^{(n)} integral
+ \tparam KIntegral A type that can be indexed with a two integers a and b to give the K(a,b) integral
+ 
+ The flexibility was added to include J and K integrals from either Luckas et al. or Gubbins and Twu (or any others following the interface)
+ */
+template<class JIntegral, class KIntegral>
+class MultipolarContributionGrayGubbins {
+public:
+    static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_rhostar_molefractions;
+private:
+    const Eigen::ArrayXd sigma_m, epsilon_over_k, mu, Q, mu2, Q2, Q3;
+    const bool has_a_polar;
+    const Eigen::ArrayXd sigma_m3, sigma_m5;
+    
+    const JIntegral J6{6};
+    const JIntegral J8{8};
+    const JIntegral J10{10};
+    const JIntegral J11{11};
+    const JIntegral J13{13};
+    const JIntegral J15{15};
+    const KIntegral K222_333{222, 333};
+    const KIntegral K233_344{233, 344};
+    const KIntegral K334_445{334, 445};
+    const KIntegral K444_555{444, 555};
+    
+    const double PI_ = static_cast<double>(EIGEN_PI);
+    const double epsilon_0 = 8.8541878128e-12; // https://en.wikipedia.org/wiki/Vacuum_permittivity, in F/m, or C^2⋅N^−1⋅m^−2
+    const double k_e = 1.0/(4.0*PI_*epsilon_0); // coulomb constant, with units of N m^2 / C^2
+    
+    Eigen::MatrixXd SIGMAIJ, EPSKIJ;
+    multipolar_rhostar_approach approach = multipolar_rhostar_approach::use_packing_fraction;
+    
+public:
+    MultipolarContributionGrayGubbins(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mu, const Eigen::ArrayX<double> &Q, multipolar_rhostar_approach approach) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mu(mu), Q(Q), mu2(mu.pow(2)), Q2(Q.pow(2)), Q3(Q.pow(3)), has_a_polar(Q.cwiseAbs().sum() > 0 || mu.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(approach) {
+        // Check lengths match
+        if (sigma_m.size() != mu.size()){
+            throw teqp::InvalidArgument("bad size of mu");
+        }
+        if (sigma_m.size() != Q.size()){
+            throw teqp::InvalidArgument("bad size of Q");
+        }
+        // Pre-calculate the mixing terms;
+        const std::size_t N = sigma_m.size();
+        SIGMAIJ.resize(N, N); EPSKIJ.resize(N, N);
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < N; ++j){
+                // Lorentz-Berthelot mixing rules
+                double epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
+                double sigmaij = (sigma_m[i]+sigma_m[j])/2;
+                SIGMAIJ(i, j) = sigmaij;
+                EPSKIJ(i, j) = epskij;
+            }
+        }
+    }
+    MultipolarContributionGrayGubbins& operator=( const MultipolarContributionGrayGubbins& ) = delete; // non copyable
+    
+    /// Appendix B of Gray and Gubbins
+    template<typename Jintegral, typename TTYPE, typename RhoStarType>
+    auto get_In(const Jintegral& J, int n, double sigmaij, const TTYPE& Tstar, const RhoStarType& rhostar) const{
+        return 4.0*PI_/pow(sigmaij, n-3)*J.get_J(Tstar, rhostar);
+    }
+    
+    template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType>
+    auto get_alpha2(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions) const{
+        const auto& x = mole_fractions; // concision
+        
+        const std::size_t N = mole_fractions.size();
+        using XTtype = std::common_type_t<TTYPE, decltype(mole_fractions[0])>;
+        std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])> summer = 0.0;
+        
+        const auto k_B = 1.380649e-23;
+        const auto beta = 1.0/(k_B*T);
+        const auto muprime2 = mu2; // Polarizability ignored for now
+        const auto z1 = 1.0/3.0*beta*muprime2;
+        const auto z2 = 0.0*z1;
+        const auto gamma = 0.0*z1; // Anisotropy of polarizability also ignored
+        
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < N; ++j){
+                TTYPE Tstarij = forceeval(T/EPSKIJ(i, j));
+                double sigmaij = SIGMAIJ(i,j);
+                summer += x[i]*x[j]*(
+                     3.0/2.0*(z1[i]*z1[j] - z2[i]*z2[j])*get_In(J6, 6, sigmaij, Tstarij, rhostar)
+                    + 3.0/2.0*z1[i]*beta*Q2[j]*get_In(J8, 8, sigmaij, Tstarij, rhostar)
+                    +7.0/10*beta*beta*Q2[i]*Q2[j]*get_In(J10, 10, sigmaij, Tstarij, rhostar)
+                );
+            }
+        }
+        return forceeval(-rhoN*k_e*k_e*summer); // The factor of k_e^2 takes us from CGS to SI units
+    }
+    
+    template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType>
+    auto get_alpha3(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions) const{
+        const VecType& x = mole_fractions; // concision
+        const std::size_t N = mole_fractions.size();
+        using type = std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])>;
+        type summer_a = 0.0, summer_b = 0.0;
+        
+        const auto k_B = 1.380649e-23;
+        const auto beta = 1.0/(k_B*T);
+        const auto muprime2 = mu2; // Polarizability ignored for now
+        const auto z1 = 1.0/3.0*beta*muprime2;
+        const auto z2 = 0.0*z1;
+        const auto gamma = 0.0*z1; // Anisotropy of polarizability also ignored
+        
+        /// Following Appendix B of Gray and Gubbins
+        const double PI3 = POW3(PI_);
+        auto Immm = [&](std::size_t i, std::size_t j, std::size_t k, const auto& T, const auto& rhostar){
+            auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
+            const double coeff = 64.0*PI3/5.0*sqrt(14*PI_/5.0)/SIGMAIJ(i,j)/SIGMAIJ(i,k)/SIGMAIJ(j,k);
+            return coeff*get_Kijk(K222_333, rhostar, Tstarij, Tstarik, Tstarjk);
+        };
+        auto ImmQ = [&](std::size_t i, std::size_t j, std::size_t k, const auto& T, const auto& rhostar){
+            auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
+            const double coeff = 2048.0*PI3/7.0*sqrt(3.0*PI_)/SIGMAIJ(i,j)/POW2(SIGMAIJ(i,k)*SIGMAIJ(j,k));
+            return get_Kijk(K233_344, rhostar, Tstarij, Tstarik, Tstarjk);
+        };
+        auto ImQQ = [&](std::size_t i, std::size_t j, std::size_t k, const auto& T, const auto& rhostar){
+            auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
+            const double coeff = -4096.0*PI3/9.0*sqrt(22.0*PI_/7.0)/POW2(SIGMAIJ(i,j)*SIGMAIJ(i,k))/POW3(SIGMAIJ(j,k));
+            return get_Kijk_334445(K334_445, rhostar, Tstarij, Tstarik, Tstarjk);
+        };
+        auto IQQQ = [&](std::size_t i, std::size_t j, std::size_t k, const auto& T, const auto& rhostar){
+            auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
+            const double coeff = 8192.0*PI3/81.0*sqrt(2002.0*PI_)/POW3(SIGMAIJ(i,j)*SIGMAIJ(i,k)*SIGMAIJ(j,k));
+            return get_Kijk(K444_555, rhostar, Tstarij, Tstarik, Tstarjk);
+        };
+        
+        for (std::size_t i = 0; i < N; ++i){
+            for (std::size_t j = 0; j < N; ++j){
+                
+                TTYPE Tstarij = forceeval(T/EPSKIJ(i,j));
+                double sigmaij = SIGMAIJ(i,j);
+                
+                auto a_ij = ((2.0/5.0*beta*beta*muprime2[i]*muprime2[j] + 4.0/5.0*gamma[i]*beta*muprime2[j] + 4.0/25.0*gamma[i]*gamma[j])*beta*Q[i]*Q[j]*get_In(J11, 11, sigmaij, Tstarij, rhostar)
+                             +12.0/35.0*(beta*muprime2[i] + gamma[i])*beta*beta*Q[i]*POW3(Q[j])*get_In(J13, 13, sigmaij, Tstarij, rhostar)
+                             + 36.0/245.0*POW3(beta)*Q3[i]*Q3[j]*get_In(J15, 15, sigmaij, Tstarij, rhostar)
+                             );
+                summer_a += x[i]*x[j]*a_ij;
+                
+                double C = 1.0;
+                for (std::size_t k = 0; k < N; ++k){
+                    auto b_ijk = (
+                      1.0/2.0*(z1[i]*z1[j]*z1[k] - z2[i]*z2[j]*z2[k])*Immm(i, j, k, T, rhostar)
+                      +C*(3.0/160.0*z1[i]*z1[j]*beta*Q2[k]*ImmQ(i, j, k, T, rhostar) + 3.0/640.0*z1[i]*POW2(beta)*Q2[j]*Q2[k]*ImQQ(i,j,k,T, rhostar))
+                      +1.0/6400.0*POW3(beta)*Q2[i]*Q2[j]*Q2[k]*IQQQ(i, j, k, T, rhostar)
+                    );
+                    summer_b += x[i]*x[j]*x[k]*b_ijk;
+                }
+            }
+        }
+
+        return forceeval((rhoN*summer_a + rhoN*rhoN*summer_b)*k_e*k_e*k_e); // The factor of k_e^3 takes us from CGS to SI units
+    }
+    
+    template<typename RhoType, typename PFType, typename MoleFractions>
+    auto get_rhostar(const RhoType rhoN, const PFType& packing_fraction, const MoleFractions& mole_fractions) const{
+        using type = std::common_type_t<RhoType, PFType, decltype(mole_fractions[0])>;
+        type rhostar;
+        if (approach == multipolar_rhostar_approach::calculate_Gubbins_rhostar){
+            // Calculate the effective reduced diameter (cubed) to be used for evaluation
+            // Eq. 24 from Gubbins
+            type sigma_x3 = 0.0;
+            error_if_expr(sigma_m3);
+            auto N = mole_fractions.size();
+            for (auto i = 0; i < N; ++i){
+                for (auto j = 0; j < N; ++j){
+                    auto sigmaij = (sigma_m[i] + sigma_m[j])/2;
+                    sigma_x3 += mole_fractions[i]*mole_fractions[j]*POW3(sigmaij);
+                }
+            }
+            rhostar = forceeval(rhoN*sigma_x3);
+        }
+        else if (approach == multipolar_rhostar_approach::use_packing_fraction){
+            // The packing fraction is defined by eta = pi/6*rho^*, so use the (temperature-dependent) eta to obtain rho^*
+            rhostar = forceeval(packing_fraction/(static_cast<double>(EIGEN_PI)/6.0));
+        }
+        return rhostar;
+    }
+    
+    /***
+     * \brief Get the contribution to \f$ \alpha = A/(NkT) \f$
+     */
+    template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType>
+    auto eval(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions) const {
+        error_if_expr(T); error_if_expr(rhoN); error_if_expr(mole_fractions[0]);
+        using type = std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])>;
+        
+        type alpha2 = 0.0, alpha3 = 0.0, alpha = 0.0;
+        if (has_a_polar){
+            alpha2 = get_alpha2(T, rhoN, rhostar, mole_fractions);
+            alpha3 = get_alpha3(T, rhoN, rhostar, mole_fractions);
+            alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
+        }
+        return MultipolarContributionGubbinsTwuTermsGT<type>{alpha2, alpha3, alpha};
+    }
+};
+
 /// The variant containing the multipolar types that can be provided
 using multipolar_contributions_variant = std::variant<
     MultipolarContributionGrossVrabec,
+    MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>,
+    MultipolarContributionGrayGubbins<GottschalkJIntegral, GottschalkKIntegral>,
+    MultipolarContributionGrayGubbins<LuckasJIntegral, LuckasKIntegral>,
     MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>,
     MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>,
     MultipolarContributionGubbinsTwu<GottschalkJIntegral, GottschalkKIntegral>
