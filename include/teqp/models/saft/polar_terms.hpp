@@ -577,7 +577,7 @@ public:
         std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])> alpha2_112 = 0.0, alpha2_123 = 0.0, alpha2_224 = 0.0;
         
         const RhoType factor_112 = -2.0*PI_*rhoN/3.0;
-        const RhoType factor_123 = -PI_*rhoN/3.0;
+        const RhoType factor_123 = -PI_*rhoN;
         const RhoType factor_224 = -14.0*PI_*rhoN/5.0;
         
         for (std::size_t i = 0; i < N; ++i){
