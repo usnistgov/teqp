@@ -743,7 +743,8 @@ public:
 using multipolar_contributions_variant = std::variant<
     MultipolarContributionGrossVrabec,
     MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>,
-    MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>
+    MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>,
+    MultipolarContributionGubbinsTwu<GottschalkJIntegral, GottschalkKIntegral>
 >;
 
 }

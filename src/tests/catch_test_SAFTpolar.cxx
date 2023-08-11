@@ -46,20 +46,38 @@ TEST_CASE("Evaluation of J^{(n)}", "[checkJvals]")
     }
 }
 
-TEST_CASE("Evaluation of K^{(n,m)}", "[checkKvals]")
+TEST_CASE("Evaluation of different J^{(n)}", "[checkJvals]")
 {
     double Tstar = 2.0, rhostar = 0.4;
-    SECTION("Luckas v. G&T"){
+    SECTION("Luckas v. G&T v. Gottschalk"){
+        for (auto n = 4; n < 16; ++n){
+            CAPTURE(n);
+            auto L = LuckasJIntegral(n).get_J(Tstar, rhostar);
+            auto G = GubbinsTwuJIntegral(n).get_J(Tstar, rhostar);
+            auto Go = GottschalkJIntegral(n).get_J(Tstar, rhostar);
+            CHECK(L == Approx(G).margin(0.05));
+            CHECK(Go == Approx(G).margin(0.05));
+        }
+    }
+}
+
+TEST_CASE("Evaluation of K^{(n,m)}", "[checkKvals]")
+{
+    double Tstar = 1.095, rhostar = 0.88;
+    SECTION("Luckas v. G&T v. Gottschalk"){
         std::vector<std::tuple<int, int>> nm = {{222,333},{233,344},{334,445},{444,555}};
         for (auto [n,m] : nm){
             auto L = LuckasKIntegral(n,m).get_K(Tstar, rhostar);
             auto G = GubbinsTwuKIntegral(n,m).get_K(Tstar, rhostar);
+            auto Go = GottschalkKIntegral(n,m).get_K(Tstar, rhostar);
             CAPTURE(n);
             CAPTURE(m);
             CHECK(L == Approx(G).margin(std::abs(L)/2));
+            CHECK(Go == Approx(G).margin(std::abs(L)/2));
         }
     }
 }
+
 
 using my_float_type = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100U>>;
 

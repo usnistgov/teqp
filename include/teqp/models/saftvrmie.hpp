@@ -997,6 +997,13 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
                 return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
             }
+            if (polar_model == "GubbinsTwu+Gottschalk"){
+                using MCGG = MultipolarContributionGubbinsTwu<GottschalkJIntegral, GottschalkKIntegral>;
+                auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
+                auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
+                auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
+                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+            }
             if (polar_model == "GubbinsTwu+Luckas+GubbinsTwuRhostar"){
                 using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
