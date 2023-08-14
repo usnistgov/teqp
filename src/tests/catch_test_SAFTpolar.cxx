@@ -232,6 +232,16 @@ TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepol
     }
     
 }
+TEST_CASE("Test epsilon_ij approaches w/ Gray and Gubbins code", "[epsilon_ij]"){
+    SECTION("invalid epsilon_ij"){
+        std::string contents = R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [{"name": "R1234YF", "BibTeXKey": "Paricaud", "m": 1.3656, "sigma_Angstrom": 4.5307, "epsilon_over_k": 299.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}], "polar_model": "GrayGubbins+GubbinsTwu", "SAFTVRMie_flags": {"epsilon_ij", "??"} }})";
+        CHECK_THROWS(teqp::cppinterface::make_model(nlohmann::json::parse(contents)));
+    }
+    SECTION("valid epsilon_ij"){
+        std::string contents = R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [{"name": "R1234YF", "BibTeXKey": "Paricaud", "m": 1.3656, "sigma_Angstrom": 4.5307, "epsilon_over_k": 299.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}], "polar_model": "GrayGubbins+GubbinsTwu", "SAFTVRMie_flags": {"epsilon_ij", "Lorentz-Berthelot"} }})";
+        CHECK_THROWS(teqp::cppinterface::make_model(nlohmann::json::parse(contents)));
+    }
+}
 TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepolarmuQ]"){
     double rhostar_guess_init = 0.27;
     double Tstar_guess_init = 1.5;

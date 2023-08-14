@@ -34,6 +34,14 @@ struct SAFTVRMieCoeffs {
     std::string BibTeXKey; ///< The BibTeXKey for the reference for these coefficients
 };
 
+enum class EpsilonijFlags { kLorentzBerthelot=0, kLafitte=1 };
+
+// map EpsilonijFlags values to JSON as strings
+NLOHMANN_JSON_SERIALIZE_ENUM( EpsilonijFlags, {
+    {EpsilonijFlags::kLorentzBerthelot, "Lorentz-Berthelot"},
+    {EpsilonijFlags::kLafitte, "Lafitte"},
+})
+
 /// Manager class for SAFT-VR-Mie coefficients
 class SAFTVRMieLibrary {
     std::map<std::string, SAFTVRMieCoeffs> coeffs;
@@ -148,16 +156,35 @@ struct SAFTVRMieChainContributionTerms{
         }
         return sigma;
     }
-    /// Eq. A55
+    
+    /**
+        Build the matrix of epsilon_{ij}, two methods are available based upon the value of the epsilon_ij_flag enumeration
+     */
     auto get_epsilon_ij() const{
-        Eigen::ArrayXXd eps_(N,N);
-        for (auto i = 0; i < N; ++i){
-            for (auto j = i; j < N; ++j){
-                eps_(i,j) = (1.0-kmat(i,j))*sqrt(pow(sigma_ij(i,i),3)*pow(sigma_ij(j,j),3)*epsilon_over_k(i)*epsilon_over_k(j))/pow(sigma_ij(i,j), 3);
-                eps_(j,i) = eps_(i,j); // symmetric
+        if (epsilon_ij_flag == EpsilonijFlags::kLafitte){
+            /// Eq. A55 from Lafitte
+            Eigen::ArrayXXd eps_(N,N);
+            for (auto i = 0; i < N; ++i){
+                for (auto j = i; j < N; ++j){
+                    eps_(i,j) = (1.0-kmat(i,j))*sqrt(pow(sigma_ij(i,i),3)*pow(sigma_ij(j,j),3)*epsilon_over_k(i)*epsilon_over_k(j))/pow(sigma_ij(i,j), 3);
+                    eps_(j,i) = eps_(i,j); // symmetric
+                }
             }
+            return eps_;
         }
-        return eps_;
+        else if (epsilon_ij_flag == EpsilonijFlags::kLorentzBerthelot){
+            Eigen::ArrayXXd eps_(N,N);
+            for (auto i = 0; i < N; ++i){
+                for (auto j = i; j < N; ++j){
+                    eps_(i,j) = (1.0-kmat(i,j))*sqrt(epsilon_over_k(i)*epsilon_over_k(j));
+                    eps_(j,i) = eps_(i,j); // symmetric
+                }
+            }
+            return eps_;
+        }
+        else{
+            throw std::invalid_argument("epsilon_ij_flag is invalid");
+        }
     }
     std::size_t get_N(){
         auto sizes = (Eigen::ArrayXd(5) << m.size(), epsilon_over_k.size(), sigma_A.size(), lambda_a.size(), lambda_r.size()).finished();
@@ -208,6 +235,16 @@ struct SAFTVRMieChainContributionTerms{
         return get_cij(lambda_r_ij + lambda_a_ij);
     }
     
+    EpsilonijFlags get_epsilon_ij(const std::optional<nlohmann::json>& flags){
+        if (flags){
+            const nlohmann::json& j = flags.value();
+            if (j.contains("epsilon_ij")){
+                return j.at("epsilon_ij").get<EpsilonijFlags>();
+            }
+        }
+        return EpsilonijFlags::kLafitte;
+    }
+    
     public:
     
     // One entry per component
@@ -215,6 +252,7 @@ struct SAFTVRMieChainContributionTerms{
     const Eigen::ArrayXXd kmat;
 
     const std::size_t N;
+    const EpsilonijFlags epsilon_ij_flag = EpsilonijFlags::kLafitte;
 
     // Calculated matrices for the ij pair
     const Eigen::ArrayXXd lambda_r_ij, lambda_a_ij, C_ij, alpha_ij, sigma_ij, epsilon_ij; // Matrices of parameters
@@ -228,9 +266,11 @@ struct SAFTVRMieChainContributionTerms{
             const Eigen::ArrayXd& sigma_m,
             const Eigen::ArrayXd& lambda_r,
             const Eigen::ArrayXd& lambda_a,
-            const Eigen::ArrayXXd& kmat)
+            const Eigen::ArrayXXd& kmat,
+            const std::optional<nlohmann::json> & flags = std::nullopt)
     :   m(m), epsilon_over_k(epsilon_over_k), sigma_A(sigma_m*1e10), lambda_a(lambda_a), lambda_r(lambda_r), kmat(kmat),
         N(get_N()),
+        epsilon_ij_flag(get_epsilon_ij(flags)),
         lambda_r_ij(get_lambda_k_ij(lambda_r)), lambda_a_ij(get_lambda_k_ij(lambda_a)),
         C_ij(get_C_ij()), alpha_ij(C_ij*(1/(lambda_a_ij-3) - 1/(lambda_r_ij-3))),
         sigma_ij(get_sigma_ij()), epsilon_ij(get_epsilon_ij()),
@@ -715,7 +755,7 @@ private:
         return library.get_coeffs(names);
     }
 public:
-    static auto build_chain(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat){
+    static auto build_chain(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat, const std::optional<nlohmann::json>& flags = std::nullopt){
         if (kmat){
             check_kmat(kmat.value(), coeffs.size());
         }
@@ -731,11 +771,11 @@ public:
             i++;
         }
         if (kmat){
-            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(kmat.value()));
+            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(kmat.value()), flags);
         }
         else{
             auto mat = Eigen::ArrayXXd::Zero(N,N);
-            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(mat));
+            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(mat), flags);
         }
     }
     auto build_polar(const std::vector<SAFTVRMieCoeffs> &coeffs) -> decltype(this->polar){
@@ -760,8 +800,8 @@ public:
     }
     
 public:
-    SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat){};
-    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt) : terms(build_chain(coeffs, kmat)), polar(build_polar(coeffs)) {};
+    SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt, const std::optional<nlohmann::json>&flags = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat, flags){};
+    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt, const std::optional<nlohmann::json>&flags = std::nullopt) : terms(build_chain(coeffs, kmat, flags)), polar(build_polar(coeffs)) {};
     SAFTVRMieMixture(SAFTVRMieChainContributionTerms&& terms, std::optional<SAFTpolar::multipolar_contributions_variant> &&polar = std::nullopt) : terms(std::move(terms)), polar(std::move(polar)) {};
     
     
@@ -925,6 +965,10 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
             if (spec.contains("polar_model")){
                 polar_model = spec["polar_model"];
             }
+            std::optional<nlohmann::json> SAFTVRMie_flags = std::nullopt;
+            if (spec.contains("SAFTVRMie_flags")){
+                SAFTVRMie_flags = spec["SAFTVRMie_flags"];
+            }
             
             // Go back and extract the dipolar and quadrupolar terms from
             // the JSON, in base SI units
@@ -975,63 +1019,66 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
                 nQ(i) = (j.contains("nQ") ? j["nQ"].get<double>() : 0.0);
                 i++;
             };
+            nlohmann::json SAFTVRMieFlags;
+            
+            auto chain = SAFTVRMieMixture::build_chain(coeffs, kmat, SAFTVRMie_flags);
             
             using namespace SAFTpolar;
             if (polar_model == "GrossVrabec"){
                 auto mustar2 = (mustar2factor*mu_Cm.pow(2)/(ms*epsks*sigma_ms.pow(3))).eval();
                 auto Qstar2 = (Qstar2factor*Q_Cm2.pow(2)/(ms*epsks*sigma_ms.pow(5))).eval();
                 auto polar = MultipolarContributionGrossVrabec(ms, sigma_ms*1e10, epsks, mustar2, nmu, Qstar2, nQ);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             if (polar_model == "GubbinsTwu+Luckas"){
                 using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGTL(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             if (polar_model == "GubbinsTwu+GubbinsTwu"){
                 using MCGG = MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             if (polar_model == "GrayGubbins+GubbinsTwu"){
                 using MCGG = MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
                 auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             if (polar_model == "GrayGubbins+Gottschalk"){
                 using MCGG = MultipolarContributionGrayGubbins<GottschalkJIntegral, GottschalkKIntegral>;
                 auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             if (polar_model == "GrayGubbins+Luckas"){
                 using MCGG = MultipolarContributionGrayGubbins<LuckasJIntegral, LuckasKIntegral>;
                 auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             if (polar_model == "GubbinsTwu+Gottschalk"){
                 using MCGG = MultipolarContributionGubbinsTwu<GottschalkJIntegral, GottschalkKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             if (polar_model == "GubbinsTwu+Luckas+GubbinsTwuRhostar"){
                 using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGTL(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::calculate_Gubbins_rhostar);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             if (polar_model == "GubbinsTwu+GubbinsTwu+GubbinsTwuRhostar"){
                 using MCGG = MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::calculate_Gubbins_rhostar);
-                return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             throw teqp::InvalidArgument("didn't understand this polar_model:"+polar_model);
         }
