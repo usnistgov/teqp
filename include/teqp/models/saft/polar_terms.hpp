@@ -881,17 +881,17 @@ public:
         auto ImmQ = [&](std::size_t i, std::size_t j, std::size_t k, const auto& T, const auto& rhostar){
             auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
             const double coeff = 2048.0*PI3/7.0*sqrt(3.0*PI_)/SIGMAIJ(i,j)/POW2(SIGMAIJ(i,k)*SIGMAIJ(j,k));
-            return get_Kijk(K233_344, rhostar, Tstarij, Tstarik, Tstarjk);
+            return coeff*get_Kijk(K233_344, rhostar, Tstarij, Tstarik, Tstarjk);
         };
         auto ImQQ = [&](std::size_t i, std::size_t j, std::size_t k, const auto& T, const auto& rhostar){
             auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
             const double coeff = -4096.0*PI3/9.0*sqrt(22.0*PI_/7.0)/POW2(SIGMAIJ(i,j)*SIGMAIJ(i,k))/POW3(SIGMAIJ(j,k));
-            return get_Kijk_334445(K334_445, rhostar, Tstarij, Tstarik, Tstarjk);
+            return coeff*get_Kijk_334445(K334_445, rhostar, Tstarij, Tstarik, Tstarjk);
         };
         auto IQQQ = [&](std::size_t i, std::size_t j, std::size_t k, const auto& T, const auto& rhostar){
             auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
             const double coeff = 8192.0*PI3/81.0*sqrt(2002.0*PI_)/POW3(SIGMAIJ(i,j)*SIGMAIJ(i,k)*SIGMAIJ(j,k));
-            return get_Kijk(K444_555, rhostar, Tstarij, Tstarik, Tstarjk);
+            return coeff*get_Kijk(K444_555, rhostar, Tstarij, Tstarik, Tstarjk);
         };
         
         for (std::size_t i = 0; i < N; ++i){
