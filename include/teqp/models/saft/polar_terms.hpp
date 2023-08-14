@@ -648,7 +648,7 @@ public:
                     summerA_123_123_224 += leading*dbl*J13.get_J(Tstarij, rhostar);
                 }
                 {
-                    double dbl = pow(sigma_m[i]*sigma_m[j], 15.0/2.0)/POW12sigmaij*Qbar2[i]*Qbar2[j];
+                    double dbl = pow(sigma_m[i]*sigma_m[j], 15.0/2.0)/POW12sigmaij*pow(Qbar2[i], 3.0/2.0)*pow(Qbar2[j], 3.0/2.0);
                     summerA_224_224_224 += leading*dbl*J15.get_J(Tstarij, rhostar);
                 }
 
