@@ -35,7 +35,7 @@ release = teqp.__version__
 if os.path.exists(here+'/_static/'):
     shutil.rmtree(here+'/_static/')
 os.makedirs(here+'/_static')
-print(f"::debug::here+'/../..' = {here+'/../..'}"
+print(f"::debug::here+'/../..' = {here+'/../..'}")
 subprocess.check_call('doxygen Doxyfile', cwd=here+'/../..', shell=True)
 
 if on_rtd:
