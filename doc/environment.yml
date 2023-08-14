@@ -24,3 +24,4 @@ dependencies:
     - sphinxcontrib-doxylink
     - insipid-sphinx-theme
     - CoolProp
+    - -e .
