@@ -970,6 +970,14 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
             if (spec.contains("SAFTVRMie_flags")){
                 SAFTVRMie_flags = spec["SAFTVRMie_flags"];
             }
+            std::optional<nlohmann::json> polar_flags = std::nullopt;
+            if (spec.contains("polar_flags")){
+                polar_flags = spec["polar_flags"];
+            }
+            else{
+                // Set to the default value
+                polar_flags = nlohmann::json{{"approach", "use_packing_fraction"}};
+            }
             
             // Go back and extract the dipolar and quadrupolar terms from
             // the JSON, in base SI units
@@ -1045,21 +1053,6 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
                 return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
-            if (polar_model == "GrayGubbins+GubbinsTwu"){
-                using MCGG = MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
-                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
-            }
-            if (polar_model == "GrayGubbins+Gottschalk"){
-                using MCGG = MultipolarContributionGrayGubbins<GottschalkJIntegral, GottschalkKIntegral>;
-                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
-            }
-            if (polar_model == "GrayGubbins+Luckas"){
-                using MCGG = MultipolarContributionGrayGubbins<LuckasJIntegral, LuckasKIntegral>;
-                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
-            }
             if (polar_model == "GubbinsTwu+Gottschalk"){
                 using MCGG = MultipolarContributionGubbinsTwu<GottschalkJIntegral, GottschalkKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
@@ -1067,6 +1060,24 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
                 return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
+            
+            if (polar_model == "GrayGubbins+GubbinsTwu"){
+                using MCGG = MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
+                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, polar_flags);
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+            }
+            if (polar_model == "GrayGubbins+Gottschalk"){
+                using MCGG = MultipolarContributionGrayGubbins<GottschalkJIntegral, GottschalkKIntegral>;
+                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, polar_flags);
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+            }
+            if (polar_model == "GrayGubbins+Luckas"){
+                using MCGG = MultipolarContributionGrayGubbins<LuckasJIntegral, LuckasKIntegral>;
+                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, polar_flags);
+                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+            }
+            
+            
             if (polar_model == "GubbinsTwu+Luckas+GubbinsTwuRhostar"){
                 using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();

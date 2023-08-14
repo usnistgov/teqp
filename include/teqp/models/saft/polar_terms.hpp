@@ -422,9 +422,17 @@ enum class multipolar_argument_spec {
 };
 
 enum class multipolar_rhostar_approach {
+    kInvalid,
     use_packing_fraction,
     calculate_Gubbins_rhostar
 };
+
+// map multipolar_rhostar_approach values to JSON as strings
+NLOHMANN_JSON_SERIALIZE_ENUM( multipolar_rhostar_approach, {
+    {multipolar_rhostar_approach::kInvalid, nullptr},
+    {multipolar_rhostar_approach::use_packing_fraction, "use_packing_fraction"},
+    {multipolar_rhostar_approach::calculate_Gubbins_rhostar, "calculate_Gubbins_rhostar"},
+})
 
 template<typename type>
 struct MultipolarContributionGrossVrabecTerms{
@@ -772,8 +780,26 @@ private:
     Eigen::MatrixXd SIGMAIJ, EPSKIJ;
     multipolar_rhostar_approach approach = multipolar_rhostar_approach::use_packing_fraction;
     
+    // These values were adjusted in the model of Paricaud, JPCB, 2023
+    /// The C3b is the C of Paricaud, and C3 is the tau of Paricaud. They were renamed to be not cause confusion with the multifluid modeling approach
+    const double C3;
+    const double C3b;
+    
+    double get_C3(const std::optional<nlohmann::json>& flags){
+        if (flags){ return flags.value().value("C3", 1.0); }
+        return 1.0;
+    }
+    double get_C3b(const std::optional<nlohmann::json>& flags){
+        if (flags){ return flags.value().value("C3b", 1.0); }
+        return 1.0;
+    }
+    multipolar_rhostar_approach get_approach(const std::optional<nlohmann::json>& flags){
+        if (flags){ return flags.value().value("approach", multipolar_rhostar_approach::use_packing_fraction); }
+        return multipolar_rhostar_approach::use_packing_fraction;
+    }
+    
 public:
-    MultipolarContributionGrayGubbins(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mu, const Eigen::ArrayX<double> &Q, multipolar_rhostar_approach approach) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mu(mu), Q(Q), mu2(mu.pow(2)), Q2(Q.pow(2)), Q3(Q.pow(3)), has_a_polar(Q.cwiseAbs().sum() > 0 || mu.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(approach) {
+    MultipolarContributionGrayGubbins(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mu, const Eigen::ArrayX<double> &Q, const std::optional<nlohmann::json>& flags) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mu(mu), Q(Q), mu2(mu.pow(2)), Q2(Q.pow(2)), Q3(Q.pow(3)), has_a_polar(Q.cwiseAbs().sum() > 0 || mu.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(get_approach(flags)), C3(get_C3(flags)), C3b(get_C3b(flags)) {
         // Check lengths match
         if (sigma_m.size() != mu.size()){
             throw teqp::InvalidArgument("bad size of mu");
@@ -880,11 +906,10 @@ public:
                              );
                 summer_a += x[i]*x[j]*a_ij;
                 
-                double C = 1.0;
                 for (std::size_t k = 0; k < N; ++k){
                     auto b_ijk = (
                       1.0/2.0*(z1[i]*z1[j]*z1[k] - z2[i]*z2[j]*z2[k])*Immm(i, j, k, T, rhostar)
-                      +C*(3.0/160.0*z1[i]*z1[j]*beta*Q2[k]*ImmQ(i, j, k, T, rhostar) + 3.0/640.0*z1[i]*POW2(beta)*Q2[j]*Q2[k]*ImQQ(i,j,k,T, rhostar))
+                      +C3b*(3.0/160.0*z1[i]*z1[j]*beta*Q2[k]*ImmQ(i, j, k, T, rhostar) + 3.0/640.0*z1[i]*POW2(beta)*Q2[j]*Q2[k]*ImQQ(i,j,k,T, rhostar))
                       +1.0/6400.0*POW3(beta)*Q2[i]*Q2[j]*Q2[k]*IQQQ(i, j, k, T, rhostar)
                     );
                     summer_b += x[i]*x[j]*x[k]*b_ijk;
@@ -892,7 +917,7 @@ public:
             }
         }
 
-        return forceeval((rhoN*summer_a + rhoN*rhoN*summer_b)*k_e*k_e*k_e); // The factor of k_e^3 takes us from CGS to SI units
+        return forceeval(C3*(rhoN*summer_a + rhoN*rhoN*summer_b)*k_e*k_e*k_e); // The factor of k_e^3 takes us from CGS to SI units
     }
     
     template<typename RhoType, typename PFType, typename MoleFractions>
