@@ -813,7 +813,7 @@ public:
         SAFTVRMieMixture::build_chain(coeffs, kmat);
     }
     
-    const auto& get_polar(){ return polar; }
+    const auto& get_polar() const { return polar; }
     
     // Checker for whether a polar term is present
     bool has_polar() const{ return polar.has_value(); }
