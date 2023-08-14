@@ -34,10 +34,11 @@ struct SAFTVRMieCoeffs {
     std::string BibTeXKey; ///< The BibTeXKey for the reference for these coefficients
 };
 
-enum class EpsilonijFlags { kLorentzBerthelot=0, kLafitte=1 };
+enum class EpsilonijFlags { kInvalid, kLorentzBerthelot, kLafitte };
 
 // map EpsilonijFlags values to JSON as strings
 NLOHMANN_JSON_SERIALIZE_ENUM( EpsilonijFlags, {
+    {EpsilonijFlags::kInvalid, nullptr},
     {EpsilonijFlags::kLorentzBerthelot, "Lorentz-Berthelot"},
     {EpsilonijFlags::kLafitte, "Lafitte"},
 })
