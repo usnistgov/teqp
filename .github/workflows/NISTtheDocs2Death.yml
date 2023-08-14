@@ -1,0 +1,15 @@
+name: "Build Documentation"
+
+on: [push, pull_request, delete]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: usnistgov/NISTtheDocs2Death@conda
+        with:
+          docs-folder: doc/
+          conda-environment: doc/environment.yml
+          formats: |-
+            epub
+            pdf
