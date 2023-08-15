@@ -41,6 +41,7 @@ with os.scandir(here+'/../..') as it:
     for entry in it:
         print(f"::debug::   {entry.name}")
 
+
 subprocess.check_call('doxygen Doxyfile', cwd=here+'/../..', shell=True)
 
 if on_rtd:
