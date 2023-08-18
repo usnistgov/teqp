@@ -446,3 +446,30 @@ TEST_CASE("Check pure fluid throws with composition array of wrong length", "[vi
     CHECK_THROWS(vir::get_dmBnvirdTm<2,1>(model, T, z));
     CHECK_THROWS(vir::get_Bnvir<2>(model, T, z));
 }
+TEST_CASE("Test ECS for pure fluids", "[ECS]"){
+    std::string contents = R"({
+        "kind": "multifluid-ECS-HuberEly1994",
+        "model": {
+          "reference_fluid": {
+                "name": "../mycp/dev/fluids/R113.json",
+                "acentric": 0.25253,
+                "Z_crit": 0.280191,
+                "T_crit / K": 487.21,
+                "rhomolar_crit / mol/m^3": 2988.659106070714
+          },
+          "fluid": {
+                "name": "C4F10",
+                "acentric": 0.371,
+                "f_T_coeffs": [ 0.00776042865, -0.641975631],
+                "h_T_coeffs": [ 0.00278313281, -0.593657910],
+                "rhomolar_crit / mol/m^3": 2520.0,
+                "T_crit / K": 386.326,
+                "Z_crit": 0.28703530765310314
+          }
+        }
+    })";
+    auto model = teqp::cppinterface::make_model(nlohmann::json::parse(contents));
+    double T = 400, rho = 2700;
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    double alphar = model->get_Ar00(T, rho, z);
+}

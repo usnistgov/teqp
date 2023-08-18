@@ -18,6 +18,7 @@
 #include "teqp/models/saftvrmie.hpp"
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/multifluid_mutant.hpp"
+#include "teqp/models/ECSHuberEly.hpp"
 #include "teqp/ideal_eosterms.hpp"
 #include "teqp/models/ammonia_water.hpp"
 #include "teqp/models/model_potentials/squarewell.hpp"
