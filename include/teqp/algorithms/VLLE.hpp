@@ -150,7 +150,10 @@ namespace VLLE {
 
         Eigen::ArrayXd rhoL1(2), rhoL2(2), rhoV(2);
 
-        if (traces.size() == 1) {
+        if (traces.empty()) {
+            throw InvalidArgument("The traces variable is empty");
+        }
+        else if (traces.size() == 1) {
             // Build the arrays of values to find the self-intersection
             for (auto& el : traces[0]) {
                 auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
