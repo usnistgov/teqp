@@ -7,6 +7,9 @@ using Catch::Approx;
 
 #include "teqp/models/saft/correlation_integrals.hpp"
 #include "teqp/models/saft/polar_terms.hpp"
+#include "teqp/models/saftvrmie.hpp"
+#include "teqp/cpp/deriv_adapter.hpp"
+
 #include "teqp/types.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/derivs.hpp"
@@ -248,6 +251,17 @@ TEST_CASE("Test Paricaud model", "[Paricaud]"){
     std::cout << std::setprecision(20) << std::get<0>(Tcrhoc) << std::endl;
 }
 
+TEST_CASE("Test Paricaud model w/ mixtures", "[Paricaud]"){
+    std::string contents1 = R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [{"name": "R1234YF", "BibTeXKey": "Paricaud", "m": 1.3656, "sigma_Angstrom": 4.5307, "epsilon_over_k": 299.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}, {"name": "?", "BibTeXKey": "Paricaud", "m": 1.4656, "sigma_Angstrom": 4.7307, "epsilon_over_k": 289.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}], "polar_model": "GubbinsTwu+GubbinsTwu"}})";
+    std::string contents2 = R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [{"name": "R1234YF", "BibTeXKey": "Paricaud", "m": 1.3656, "sigma_Angstrom": 4.5307, "epsilon_over_k": 299.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}, {"name": "?", "BibTeXKey": "Paricaud", "m": 1.4656, "sigma_Angstrom": 4.7307, "epsilon_over_k": 289.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}], "polar_model": "GrayGubbins+GubbinsTwu"}})";
+    using _t = decltype(teqp::SAFTVRMie::SAFTVRMiefactory({}));
+    auto z = (Eigen::ArrayXd(2) << 0.7, 0.3).finished();
+    for (auto contents : {contents1, contents2}){
+        auto model = teqp::cppinterface::make_model(nlohmann::json::parse(contents));
+        const auto& m = teqp::cppinterface::adapter::get_model_cref<_t>(model.get());
+        std::cout << std::setprecision(18) << m.alphar(300.0, 5000.0, z) << std::endl;
+    }
+}
 
 
 TEST_CASE("Test epsilon_ij approaches w/ Gray and Gubbins code", "[epsilon_ij]"){
