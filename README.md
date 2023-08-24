@@ -42,6 +42,17 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.16 :
+
+  * Refactored the entire guts of teqp to allow for a thin C++ interface, making incremental builds of code *calling* teqp very fast
+  * Added polar contributions to PC-SAFT and especially SAFT-VR-Mie
+    * Implemented are Gray and Gubbins method with various correlation integrals (Gubbins&Twu, Luckas). Implemented but not enabled are those from Gottschalk
+    * Gross and Vrabec method
+  * Added the non-iterative ECS method with shape factors of Huber and Ely: https://github.com/usnistgov/teqp/issues/45
+  * Fixed VLLE solving
+  * Add Twu alpha functions for cubic models
+  * Added more mixture derivatives (not yet exposed)
+
 * 0.15.4 :
 
   * Fixed a serious bug with get_Ar0n (https://github.com/usnistgov/teqp/issues/41)
