@@ -23,7 +23,7 @@ namespace VLLE {
     * \param maxiter Maximum number of iterations permitted
     */
     
-    auto mix_VLLE_T(const AbstractModel& model, double T, const EArrayd& rhovecVinit, const EArrayd& rhovecL1init, const EArrayd& rhovecL2init, double atol, double reltol, double axtol, double relxtol, int maxiter) {
+    inline auto mix_VLLE_T(const AbstractModel& model, double T, const EArrayd& rhovecVinit, const EArrayd& rhovecL1init, const EArrayd& rhovecL2init, double atol, double reltol, double axtol, double relxtol, int maxiter) {
 
         const Eigen::Index N = rhovecVinit.size();
         Eigen::MatrixXd J(3 * N, 3 * N); J.setZero();
@@ -117,7 +117,7 @@ namespace VLLE {
     Derived from https://stackoverflow.com/a/17931809
     */
     template<typename Iterable>
-    auto get_self_intersections(Iterable& x, Iterable& y) {
+    inline auto get_self_intersections(Iterable& x, Iterable& y) {
         Eigen::Array22d A;
         std::vector<SelfIntersectionSolution> solns;
         for (auto j = 0; j < x.size() - 1; ++j) {
@@ -138,17 +138,47 @@ namespace VLLE {
         return solns;
     }
 
+    template<typename Iterable>
+    inline auto get_cross_intersections(Iterable& x1, Iterable& y1, Iterable& x2, Iterable& y2) {
+        Eigen::Array22d A;
+        std::vector<SelfIntersectionSolution> solns;
+        for (auto j = 0; j < x1.size() - 1; ++j) {
+            auto p0 = (Eigen::Array2d() << x1[j], y1[j]).finished();
+            auto p1 = (Eigen::Array2d() << x1[j + 1], y1[j + 1]).finished();
+            A.col(0) = p1 - p0;
+            for (auto k = 0; k < x2.size() - 1; ++k) {
+                auto q0 = (Eigen::Array2d() << x2[k], y2[k]).finished();
+                auto q1 = (Eigen::Array2d() << x2[k + 1], y2[k + 1]).finished();
+                A.col(1) = q0 - q1;
+                Eigen::Array2d params = A.matrix().colPivHouseholderQr().solve((q0 - p0).matrix());
+                if ((params > 0).binaryExpr((params < 1), [](auto x, auto y) {return x & y; }).all()) { // Both of the params are in (0,1)
+                    auto soln = p0 + params[0] * (p1 - p0);
+                    solns.emplace_back(SelfIntersectionSolution{ static_cast<std::size_t>(j), static_cast<std::size_t>(k), params[0], params[1], soln[0], soln[1] });
+                }
+            }
+        }
+        return solns;
+    }
+
     /**
     * \brief Given an isothermal VLE trace for a binary mixture, obtain the VLLE solution
     * \param model The Model to be used for the thermodynamics
     * \param traces The nlohmann::json formatted information from the traces, perhaps obtained from trace_VLE_isotherm_binary
     */
     
-    auto find_VLLE_T_binary(const AbstractModel& model, const std::vector<nlohmann::json>& traces, const std::optional<VLLEFinderOptions> options = std::nullopt) {
+    inline auto find_VLLE_T_binary(const AbstractModel& model, const std::vector<nlohmann::json>& traces, const std::optional<VLLEFinderOptions> options = std::nullopt) {
         std::vector<double> x, y;
         auto opt = options.value_or(VLLEFinderOptions{});
 
         Eigen::ArrayXd rhoL1(2), rhoL2(2), rhoV(2);
+        
+        // A convenience function to weight the values
+        auto avg_values = [](const nlohmann::json&j1, const nlohmann::json &j2, const std::string& key, const double w) -> Eigen::ArrayXd{
+            auto v1 = j1.at(key).template get<std::valarray<double>>();
+            auto v2 = j2.at(key).template get<std::valarray<double>>();
+            std::valarray<double> vs = v1*w + v2*(1 - w);
+            return Eigen::Map<Eigen::ArrayXd>(&(vs[0]), vs.size());
+        };
 
         if (traces.empty()) {
             throw InvalidArgument("The traces variable is empty");
@@ -165,30 +195,68 @@ namespace VLLE {
             //auto& trace = traces[0];
 
             auto process_intersection = [&](auto& trace, auto& i) {
-                auto rhoL1_j = traces[0][i.j].at("rhoL / mol/m^3").template get<std::valarray<double>>();
-                auto rhoL1_jp1 = traces[0][i.j + 1].at("rhoL / mol/m^3").template get<std::valarray<double>>();
-                std::valarray<double> rhoL1_ = rhoL1_j * i.s + rhoL1_jp1 * (1 - i.s);
-                Eigen::Map<Eigen::ArrayXd>(&(rhoL1[0]), rhoL1.size()) = Eigen::Map<Eigen::ArrayXd>(&(rhoL1_[0]), rhoL1_.size());
-
-                auto rhoL2_k = traces[0][i.k].at("rhoL / mol/m^3").template get<std::valarray<double>>();
-                auto rhoL2_kp1 = traces[0][i.k + 1].at("rhoL / mol/m^3").template get<std::valarray<double>>();
-                std::valarray<double> rhoL2_ = rhoL2_k * i.t + rhoL2_kp1 * (1 - i.t);
-                Eigen::Map<Eigen::ArrayXd>(&(rhoL2[0]), rhoL2.size()) = Eigen::Map<Eigen::ArrayXd>(&(rhoL2_[0]), rhoL2_.size());
-
-                auto rhoV_j = traces[0][i.j].at("rhoV / mol/m^3").template get<std::valarray<double>>();
-                auto rhoV_jp1 = traces[0][i.j + 1].at("rhoV / mol/m^3").template get<std::valarray<double>>();
-                std::valarray<double> rhoV_ = rhoV_j * i.s + rhoV_jp1 * (1 - i.s);
-                Eigen::Map<Eigen::ArrayXd>(&(rhoV[0]), rhoV.size()) = Eigen::Map<Eigen::ArrayXd>(&(rhoV_[0]), rhoV_.size());
+                rhoL1 = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoL / mol/m^3", i.s);
+                rhoL2 = avg_values(traces[0][i.k], traces[0][i.k + 1], "rhoL / mol/m^3", i.t);
+                rhoV = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoV / mol/m^3", i.s);
 
                 double T = traces[0][0].at("T / K");
 
                 // Polish the solution
                 auto [code, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_T(model, T, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
 
-                //double xL1 = rhoL1[0] / rhoL1.sum(), xL2 = rhoL2[0] / rhoL2.sum(), xV = rhoV[0] / rhoV.sum();
-                //double xL1f = rhoL1final[0] / rhoL1final.sum(),
-                //       xL2f = rhoL2final[0] / rhoL2final.sum(),
-                //       xVf = rhoVfinal[0] / rhoVfinal.sum();
+                return nlohmann::json{
+                    {"approximate", {rhoV, rhoL1, rhoL2} },
+                    {"polished", {rhoVfinal, rhoL1final, rhoL2final} },
+                    {"polisher_return_code", static_cast<int>(code)}
+                };
+            };
+            std::vector<nlohmann::json> solutions;
+            
+            for (auto& intersection : intersections) {
+                try {
+                    auto soln = process_intersection(traces[0], intersection);
+                    auto rhovecL1 = soln.at("polished")[1].template get<std::valarray<double>>();
+                    auto rhovecL2 = soln.at("polished")[2].template get<std::valarray<double>>();
+                    auto rhodiff = 100*(rhovecL1.sum() / rhovecL2.sum() - 1);
+                    if (std::abs(rhodiff) > opt.rho_trivial_threshold) {
+                        // Only keep non-trivial solutions
+                        solutions.push_back(soln);
+                    }
+                }
+                catch(...) {
+                    // Additional sanity checking goes here...
+                    ;
+                }
+            }
+            return solutions;
+        }
+        else if (traces.size() == 2) {
+            
+            std::vector<double> x1, y1, x2, y2;
+            // Build the arrays of values to find the cross-intersection
+            for (auto& el : traces[0]) {
+                auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
+                auto p = el.at("pL / Pa").get<double>();
+                x1.push_back(rhoV[0] / rhoV.sum()); // Mole fractions in the vapor phase
+                y1.push_back(p);
+            }
+            for (auto& el : traces[1]) {
+                auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
+                auto p = el.at("pL / Pa").get<double>();
+                x2.push_back(rhoV[0] / rhoV.sum()); // Mole fractions in the vapor phase
+                y2.push_back(p);
+            }
+            auto intersections = get_cross_intersections(x1, y1, x2, y2);
+
+            auto process_intersection = [&](auto& trace, auto& i) {
+                rhoL1 = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoL / mol/m^3", i.s);
+                rhoL2 = avg_values(traces[1][i.k], traces[1][i.k + 1], "rhoL / mol/m^3", i.t);
+                rhoV = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoV / mol/m^3", i.s);
+                
+                double T = traces[0][0].at("T / K");
+
+                // Polish the solution
+                auto [code, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_T(model, T, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
 
                 return nlohmann::json{
                     {"approximate", {rhoV, rhoL1, rhoL2} },
