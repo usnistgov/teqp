@@ -799,25 +799,13 @@ private:
     }
     
 public:
-    MultipolarContributionGrayGubbins(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mu, const Eigen::ArrayX<double> &Q, const std::optional<nlohmann::json>& flags) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mu(mu), Q(Q), mu2(mu.pow(2)), Q2(Q.pow(2)), Q3(Q.pow(3)), has_a_polar(Q.cwiseAbs().sum() > 0 || mu.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(get_approach(flags)), C3(get_C3(flags)), C3b(get_C3b(flags)) {
+    MultipolarContributionGrayGubbins(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::MatrixXd& SIGMAIJ, const Eigen::MatrixXd& EPSKIJ, const Eigen::ArrayX<double> &mu, const Eigen::ArrayX<double> &Q, const std::optional<nlohmann::json>& flags) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), SIGMAIJ(SIGMAIJ), EPSKIJ(EPSKIJ), mu(mu), Q(Q), mu2(mu.pow(2)), Q2(Q.pow(2)), Q3(Q.pow(3)), has_a_polar(Q.cwiseAbs().sum() > 0 || mu.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(get_approach(flags)), C3(get_C3(flags)), C3b(get_C3b(flags)) {
         // Check lengths match
         if (sigma_m.size() != mu.size()){
             throw teqp::InvalidArgument("bad size of mu");
         }
         if (sigma_m.size() != Q.size()){
             throw teqp::InvalidArgument("bad size of Q");
-        }
-        // Pre-calculate the mixing terms;
-        const std::size_t N = sigma_m.size();
-        SIGMAIJ.resize(N, N); EPSKIJ.resize(N, N);
-        for (std::size_t i = 0; i < N; ++i){
-            for (std::size_t j = 0; j < N; ++j){
-                // Lorentz-Berthelot mixing rules
-                double epskij = sqrt(epsilon_over_k[i]*epsilon_over_k[j]);
-                double sigmaij = (sigma_m[i]+sigma_m[j])/2;
-                SIGMAIJ(i, j) = sigmaij;
-                EPSKIJ(i, j) = epskij;
-            }
         }
     }
     MultipolarContributionGrayGubbins& operator=( const MultipolarContributionGrayGubbins& ) = delete; // non copyable

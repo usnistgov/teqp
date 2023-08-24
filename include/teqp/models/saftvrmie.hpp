@@ -280,6 +280,11 @@ struct SAFTVRMieChainContributionTerms{
         fkij(get_fkij())
     {}
     
+    /// Get the matrix of \f$\varepsilon_{ij}/k_B\f$ with the entries in K
+    auto get_EPSKIJ_K_matrix() const { return epsilon_ij; }
+    /// Get the matrix of \f$\sigma_{ij}\f$ with the entries in m
+    auto get_SIGMAIJ_m_matrix() const { return sigma_ij/1e10; }
+    
     /// Eq. A2 from Lafitte
     template<typename RType>
     auto get_uii_over_kB(std::size_t i, const RType& r) const {
@@ -858,6 +863,8 @@ public:
     auto get_kmat() const { return terms.kmat; }
     auto get_lambda_r() const { return terms.lambda_r; }
     auto get_lambda_a() const { return terms.lambda_a; }
+    auto get_EPSKIJ_matrix() const { return terms.get_EPSKIJ_K_matrix(); }
+    auto get_SIGMAIJ_matrix() const { return terms.get_SIGMAIJ_m_matrix(); }
     
     // template<typename VecType>
     // double max_rhoN(const double T, const VecType& mole_fractions) const {
@@ -1031,6 +1038,8 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
             nlohmann::json SAFTVRMieFlags;
             
             auto chain = SAFTVRMieMixture::build_chain(coeffs, kmat, SAFTVRMie_flags);
+            auto EPSKIJ = chain.get_EPSKIJ_K_matrix(); // In units of K
+            auto SIGMAIJ = chain.get_SIGMAIJ_m_matrix(); // In units of m
             
             using namespace SAFTpolar;
             if (polar_model == "GrossVrabec"){
@@ -1063,17 +1072,17 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
             
             if (polar_model == "GrayGubbins+GubbinsTwu"){
                 using MCGG = MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
-                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, polar_flags);
+                auto polar = MCGG(sigma_ms, epsks, SIGMAIJ, EPSKIJ, mu_Cm, Q_Cm2, polar_flags);
                 return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
-            if (polar_model == "GrayGubbins+Gottschalk"){
-                using MCGG = MultipolarContributionGrayGubbins<GottschalkJIntegral, GottschalkKIntegral>;
-                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, polar_flags);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
-            }
+//            if (polar_model == "GrayGubbins+Gottschalk"){
+//                using MCGG = MultipolarContributionGrayGubbins<GottschalkJIntegral, GottschalkKIntegral>;
+//                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, polar_flags);
+//                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+//            }
             if (polar_model == "GrayGubbins+Luckas"){
                 using MCGG = MultipolarContributionGrayGubbins<LuckasJIntegral, LuckasKIntegral>;
-                auto polar = MCGG(sigma_ms, epsks, mu_Cm, Q_Cm2, polar_flags);
+                auto polar = MCGG(sigma_ms, epsks, SIGMAIJ, EPSKIJ, mu_Cm, Q_Cm2, polar_flags);
                 return SAFTVRMieMixture(std::move(chain), std::move(polar));
             }
             
