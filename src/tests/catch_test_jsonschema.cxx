@@ -45,7 +45,7 @@ TEST_CASE("Test JSON validation with json-schema-validator", "[JSON]")
     CHECK(!jv.is_valid(bad_person));
     CHECK(jv.is_valid(good_person));
     
-    for (auto err : jv.get_validation_errors(bad_person)){
-        std::cout << err << std::endl;
-    }
+//    for (auto err : jv.get_validation_errors(bad_person)){
+//        std::cout << err << std::endl;
+//    }
 }
