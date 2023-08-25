@@ -124,14 +124,14 @@ TEST_CASE("Test for pressure for 2-Center Lennard-Jones Model (Lisal et al.) plu
     std::valarray<double> eps_u = { 0.045 , 0.045 , 0.015 , 0.025 };
       
 
-    // The dipolar moment input here is the square of the quadrupolar moment
-    std::valarray<double> mu_sq = { 0.0 , 0.5 , 1.0 , 4.0 };
+    // The polar moment input here is the square of the quadrupolar moment
+    std::valarray<double> Q_sq = { 0.0 , 0.5 , 1.0 , 4.0 };
     std::valarray<double> p_sim = { 0.146 , 0.145 , 0.153 , 0.286 };
     std::valarray<double> u_sim = { -1.598 , -1.621 , -11.75 , -11.465 };
     std::valarray<double> molefrac = { 1.0 };
     for (size_t i = 0; i < T.size(); i++)
     {
-        const auto model = build_two_center_model_quadrupole("2CLJF_Lisal", L[i], mu_sq[i]);
+        const auto model = build_two_center_model_quadrupole("2CLJF_Lisal", L[i], Q_sq[i]);
         using tdx = TDXDerivatives<decltype(model)>;
         auto rhovec = (Eigen::ArrayXd(1) << rho[i]).finished();
         auto p = rho[i] * T[i] * (1.0 + tdx::get_Ar01(model, T[i], rho[i], rhovec));
