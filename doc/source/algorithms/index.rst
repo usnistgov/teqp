@@ -6,6 +6,7 @@ Algorithms
    :caption: Contents:
 
    VLE
+   VLLE
    critical_curves
 
 Information
