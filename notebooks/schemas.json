@@ -1,0 +1,146 @@
+{
+  "vdW1": {
+    "properties": {
+      "a": {
+        "annotation": "The parameter a in vdW",
+        "title": "A",
+        "type": "number"
+      },
+      "b": {
+        "annotation": "The parameter b in vdW",
+        "title": "B",
+        "type": "number"
+      }
+    },
+    "required": [
+      "a",
+      "b"
+    ],
+    "title": "vdW1",
+    "type": "object"
+  },
+  "vdW": {
+    "properties": {
+      "Tcrit / K": {
+        "annotation": "The critical temperaturess in K",
+        "items": {
+          "type": "number"
+        },
+        "title": "Tcrit / K",
+        "type": "array"
+      },
+      "pcrit / Pa": {
+        "annotation": "The critical pressures in Pa",
+        "items": {
+          "type": "number"
+        },
+        "title": "Pcrit / Pa",
+        "type": "array"
+      }
+    },
+    "required": [
+      "Tcrit / K",
+      "pcrit / Pa"
+    ],
+    "title": "vdW",
+    "type": "object"
+  },
+  "PR": {
+    "$defs": {
+      "AlphaOptions": {
+        "const": "Twu",
+        "title": "AlphaOptions",
+        "type": "string"
+      },
+      "CubicAlpha": {
+        "properties": {
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/AlphaOptions"
+              }
+            ],
+            "annotation": "The type of the alpha function"
+          },
+          "c": {
+            "annotation": "The set of coefficients",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "C",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "c"
+        ],
+        "title": "CubicAlpha",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "Tcrit / K": {
+        "annotation": "The critical temperaturess in K",
+        "items": {
+          "type": "number"
+        },
+        "title": "Tcrit / K",
+        "type": "array"
+      },
+      "pcrit / Pa": {
+        "annotation": "The critical pressures in Pa",
+        "items": {
+          "type": "number"
+        },
+        "title": "Pcrit / Pa",
+        "type": "array"
+      },
+      "acentric": {
+        "annotation": "The acentric factors",
+        "items": {
+          "type": "number"
+        },
+        "title": "Acentric",
+        "type": "array"
+      },
+      "alpha": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/CubicAlpha"
+          }
+        ],
+        "annotation": "The alpha function used in the attractive part",
+        "default": null
+      },
+      "kmat": {
+        "annotation": "The NxN matrix of kij factors",
+        "anyOf": [
+          {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Kmat"
+      }
+    },
+    "required": [
+      "Tcrit / K",
+      "pcrit / Pa",
+      "acentric"
+    ],
+    "title": "PR",
+    "type": "object"
+  }
+}

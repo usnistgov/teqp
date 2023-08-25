@@ -175,5 +175,8 @@ namespace teqp {
         );
     
         std::unique_ptr<AbstractModel> build_model_ptr(const nlohmann::json& json);
+    
+        /// Return the schema for the given model kind
+        nlohmann::json get_model_schema(const std::string& kind);
     }
 }

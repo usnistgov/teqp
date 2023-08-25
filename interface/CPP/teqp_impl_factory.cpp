@@ -2,6 +2,10 @@
 #include "teqp/json_builder.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 
+// This large block of schema definitions is populated by cmake
+// at cmake configuration time
+extern const nlohmann::json model_schema_library;
+
 namespace teqp {
     namespace cppinterface {
 
@@ -9,6 +13,8 @@ namespace teqp {
 
         using makefunc = std::function<std::unique_ptr<teqp::cppinterface::AbstractModel>(const nlohmann::json &j)>;
         using namespace teqp::cppinterface::adapter;
+    
+        nlohmann::json get_model_schema(const std::string& kind) { model_schema_library.at(kind); }
 
         static std::unordered_map<std::string, makefunc> pointer_factory = {
             {"vdW1", [](const nlohmann::json& spec){ return make_owned(vdWEOS1(spec.at("a"), spec.at("b"))); }},
@@ -45,6 +51,13 @@ namespace teqp {
             
             auto itr = pointer_factory.find(kind);
             if (itr != pointer_factory.end()){
+                if (model_schema_library.contains(kind)){
+                    // This block is not thread-safe, needs a mutex or something
+                    JSONValidator validator(model_schema_library.at(kind));
+                    if (!validator.is_valid(spec)){
+                        throw teqp::JSONValidationError(validator.get_validation_errors(spec));
+                    }
+                }
                 return (itr->second)(spec);
             }
             else{

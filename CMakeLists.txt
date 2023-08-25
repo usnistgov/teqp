@@ -99,6 +99,15 @@ if (NOT TEQP_NO_TEQPCPP)
   set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
   target_compile_definitions(teqpcpp PRIVATE -DMULTICOMPLEX_NO_MULTIPRECISION)
   target_compile_definitions(teqpcpp PUBLIC -DUSE_AUTODIFF)
+  
+  # Populate the model schema cpp file with the contents
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/notebooks/schemas.json" MODEL_SCHEMA_CONTENTS)
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/dev/templates/model_schema.cpp.in" MODEL_JSON_SCHEMA_TEMPLATE)
+  file(CONFIGURE
+       OUTPUT model_schemas.cpp
+       CONTENT ${MODEL_JSON_SCHEMA_TEMPLATE}
+       @ONLY)
+  target_sources(teqpcpp PRIVATE model_schemas.cpp)
 
   if (TEQP_TESTTEQPCPP)
     add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/test_teqpcpp.cpp")

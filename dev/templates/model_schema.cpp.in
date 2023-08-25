@@ -1,0 +1,5 @@
+#include "nlohmann/json.hpp"
+
+const nlohmann::json model_schema_library = R"(
+@MODEL_SCHEMA_CONTENTS@
+)"_json\;
