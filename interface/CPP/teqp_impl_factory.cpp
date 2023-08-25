@@ -36,7 +36,7 @@ namespace teqp {
             {"LJ126_Johnson1993", [](const nlohmann::json& spec){ return make_owned(LJ126Johnson1993());}},
             {"Mie_Pohl2023", [](const nlohmann::json& spec){ return make_owned(Mie::Mie6Pohl2023(spec.at("lambda_a")));}},
             {"2CLJF-Dipole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_dipole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2")));}},
-            {"2CLJF-Quadrupole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_quadrupole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2")));}},
+            {"2CLJF-Quadrupole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_quadrupole(spec.at("author"), spec.at("L^*"), spec.at("(Q^*)^2")));}},
             {"IdealHelmholtz", [](const nlohmann::json& spec){ return make_owned(IdealHelmholtz(spec));}},
             
             // Implemented in its own compilation unit to help with compilation time
