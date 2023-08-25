@@ -545,5 +545,436 @@
     ],
     "title": "MultifluidECSHuberEly1994",
     "type": "object"
+  },
+  "IdealHelmholtz": {
+    "$defs": {
+      "IdealHelmholtzConstant": {
+        "properties": {
+          "type": {
+            "const": "Constant",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "a": {
+            "title": "A",
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "a"
+        ],
+        "title": "IdealHelmholtzConstant",
+        "type": "object"
+      },
+      "IdealHelmholtzCp0Constant": {
+        "properties": {
+          "type": {
+            "const": "Cp0Constant",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "C"
+          },
+          "T_0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "T 0"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "c",
+          "T_0"
+        ],
+        "title": "IdealHelmholtzCp0Constant",
+        "type": "object"
+      },
+      "IdealHelmholtzCp0PowerT": {
+        "properties": {
+          "type": {
+            "const": "Cp0PowerT",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "C"
+          },
+          "t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "T"
+          },
+          "T_0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "T 0"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "c",
+          "t",
+          "T_0"
+        ],
+        "title": "IdealHelmholtzCp0PowerT",
+        "type": "object"
+      },
+      "IdealHelmholtzGERG2004Cosh": {
+        "properties": {
+          "type": {
+            "const": "GERG2004Cosh",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "n": {
+            "items": {
+              "type": "number"
+            },
+            "title": "N",
+            "type": "array"
+          },
+          "theta": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Theta",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "n",
+          "theta"
+        ],
+        "title": "IdealHelmholtzGERG2004Cosh",
+        "type": "object"
+      },
+      "IdealHelmholtzGERG2004Sinh": {
+        "properties": {
+          "type": {
+            "const": "GERG2004Sinh",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "n": {
+            "items": {
+              "type": "number"
+            },
+            "title": "N",
+            "type": "array"
+          },
+          "theta": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Theta",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "n",
+          "theta"
+        ],
+        "title": "IdealHelmholtzGERG2004Sinh",
+        "type": "object"
+      },
+      "IdealHelmholtzLead": {
+        "properties": {
+          "type": {
+            "const": "Lead",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "a_1": {
+            "title": "A 1",
+            "type": "number"
+          },
+          "a_2": {
+            "title": "A 2",
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "a_1",
+          "a_2"
+        ],
+        "title": "IdealHelmholtzLead",
+        "type": "object"
+      },
+      "IdealHelmholtzLogT": {
+        "properties": {
+          "type": {
+            "const": "LogT",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "a": {
+            "title": "A",
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "a"
+        ],
+        "title": "IdealHelmholtzLogT",
+        "type": "object"
+      },
+      "IdealHelmholtzPlanckEinstein": {
+        "properties": {
+          "type": {
+            "const": "PlanckEinstein",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "n": {
+            "items": {
+              "type": "number"
+            },
+            "title": "N",
+            "type": "array"
+          },
+          "theta": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Theta",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "n",
+          "theta"
+        ],
+        "title": "IdealHelmholtzPlanckEinstein",
+        "type": "object"
+      },
+      "IdealHelmholtzPlanckEinsteinGeneralized": {
+        "properties": {
+          "type": {
+            "const": "PlanckEinsteinGeneralized",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "n": {
+            "items": {
+              "type": "number"
+            },
+            "title": "N",
+            "type": "array"
+          },
+          "c": {
+            "items": {
+              "type": "number"
+            },
+            "title": "C",
+            "type": "array"
+          },
+          "d": {
+            "items": {
+              "type": "number"
+            },
+            "title": "D",
+            "type": "array"
+          },
+          "theta": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Theta",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "n",
+          "c",
+          "d",
+          "theta"
+        ],
+        "title": "IdealHelmholtzPlanckEinsteinGeneralized",
+        "type": "object"
+      },
+      "IdealHelmholtzPowerT": {
+        "properties": {
+          "type": {
+            "const": "PowerT",
+            "title": "Type"
+          },
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "n": {
+            "items": {
+              "type": "number"
+            },
+            "title": "N",
+            "type": "array"
+          },
+          "t": {
+            "items": {
+              "type": "number"
+            },
+            "title": "T",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "R",
+          "n",
+          "t"
+        ],
+        "title": "IdealHelmholtzPowerT",
+        "type": "object"
+      },
+      "IdealHelmholtzPure": {
+        "properties": {
+          "R": {
+            "title": "R",
+            "type": "number"
+          },
+          "terms": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/IdealHelmholtzConstant"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzLead"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzLogT"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzPowerT"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzPlanckEinstein"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzPlanckEinsteinGeneralized"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzGERG2004Cosh"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzGERG2004Sinh"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzCp0Constant"
+                },
+                {
+                  "$ref": "#/$defs/IdealHelmholtzCp0PowerT"
+                }
+              ]
+            },
+            "title": "Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "R",
+          "terms"
+        ],
+        "title": "IdealHelmholtzPure",
+        "type": "object"
+      }
+    },
+    "items": {
+      "$ref": "#/$defs/IdealHelmholtzPure"
+    },
+    "type": "array"
   }
 }
