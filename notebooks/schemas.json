@@ -142,5 +142,188 @@
     ],
     "title": "PR",
     "type": "object"
+  },
+  "CPA": {
+    "$defs": {
+      "CPACubicEnum": {
+        "enum": [
+          "PR",
+          "SRK"
+        ],
+        "title": "CPACubicEnum",
+        "type": "string"
+      },
+      "CPAPure": {
+        "properties": {
+          "a0i / Pa m^6/mol^2": {
+            "title": "A0I / Pa M^6/Mol^2",
+            "type": "number"
+          },
+          "bi / m^3/mol": {
+            "title": "Bi / M^3/Mol",
+            "type": "number"
+          },
+          "c1": {
+            "title": "C1",
+            "type": "number"
+          },
+          "Tc / K": {
+            "title": "Tc / K",
+            "type": "number"
+          },
+          "epsABi / J/mol": {
+            "title": "Epsabi / J/Mol",
+            "type": "number"
+          },
+          "betaABi": {
+            "title": "Betaabi",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a0i / Pa m^6/mol^2",
+          "bi / m^3/mol",
+          "c1",
+          "Tc / K",
+          "epsABi / J/mol",
+          "betaABi"
+        ],
+        "title": "CPAPure",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "cubic": {
+        "$ref": "#/$defs/CPACubicEnum"
+      },
+      "pures": {
+        "items": {
+          "$ref": "#/$defs/CPAPure"
+        },
+        "title": "Pures",
+        "type": "array"
+      },
+      "R_gas / J/mol/K": {
+        "title": "R Gas / J/Mol/K",
+        "type": "number"
+      }
+    },
+    "required": [
+      "cubic",
+      "pures",
+      "R_gas / J/mol/K"
+    ],
+    "title": "CPA",
+    "type": "object"
+  },
+  "SW_EspindolaHeredia2009": {
+    "properties": {
+      "lambda": {
+        "annotation": "The well width, where the attractive part goes includes r=(sigma,lambda*sigma)",
+        "title": "Lambda",
+        "type": "number"
+      }
+    },
+    "required": [
+      "lambda"
+    ],
+    "title": "SW_EspindolaHeredia2009",
+    "type": "object"
+  },
+  "EXP6_Kataoka1992": {
+    "properties": {
+      "alpha": {
+        "annotation": "The alpha parameter controlling the hardness of the EXP-6 potential",
+        "title": "Alpha",
+        "type": "number"
+      }
+    },
+    "required": [
+      "alpha"
+    ],
+    "title": "EXP6_Kataoka1992",
+    "type": "object"
+  },
+  "Mie_Pohl2023": {
+    "properties": {
+      "lambda_a": {
+        "annotation": "The attractive exponent; the repulsive exponent is 6",
+        "title": "Lambda A",
+        "type": "number"
+      }
+    },
+    "required": [
+      "lambda_a"
+    ],
+    "title": "Mie_Pohl2023",
+    "type": "object"
+  },
+  "2CLJF-Dipole": {
+    "$defs": {
+      "TwoCLJFAuthors": {
+        "enum": [
+          "2CLJF_Mecke",
+          "2CLJF_Lisal"
+        ],
+        "title": "TwoCLJFAuthors",
+        "type": "string"
+      }
+    },
+    "properties": {
+      "author": {
+        "$ref": "#/$defs/TwoCLJFAuthors"
+      },
+      "Lstar2": {
+        "annotation": "The dimensionless separation of centers",
+        "title": "Lstar2",
+        "type": "number"
+      },
+      "mustar2": {
+        "annotation": "The dipole moment squared, expressed in simulation units",
+        "title": "Mustar2",
+        "type": "number"
+      }
+    },
+    "required": [
+      "author",
+      "Lstar2",
+      "mustar2"
+    ],
+    "title": "TwoCJLF_Dipole",
+    "type": "object"
+  },
+  "2CLJF-Quadrupole": {
+    "$defs": {
+      "TwoCLJFAuthors": {
+        "enum": [
+          "2CLJF_Mecke",
+          "2CLJF_Lisal"
+        ],
+        "title": "TwoCLJFAuthors",
+        "type": "string"
+      }
+    },
+    "properties": {
+      "author": {
+        "$ref": "#/$defs/TwoCLJFAuthors"
+      },
+      "Lstar2": {
+        "annotation": "The dimensionless separation of centers",
+        "title": "Lstar2",
+        "type": "number"
+      },
+      "Qstar2": {
+        "annotation": "The quadrupole moment squared, expressed in simulation units",
+        "title": "Qstar2",
+        "type": "number"
+      }
+    },
+    "required": [
+      "author",
+      "Lstar2",
+      "Qstar2"
+    ],
+    "title": "TwoCJLF_Quadrupole",
+    "type": "object"
   }
 }
