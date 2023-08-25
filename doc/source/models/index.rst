@@ -13,3 +13,4 @@ Models
    multifluid
    multifluid_mutant
    SAFT-VR-Mie
+   ECS
