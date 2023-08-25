@@ -339,7 +339,7 @@ TEST_CASE("Check output of dmat", "[SAFTVRMiedmat]")
     const auto& model = teqp::cppinterface::adapter::get_model_cref<SAFTVRMie_t>(ptr.get());
     auto z = (Eigen::ArrayXd(2) << 0.300, 0.7).finished();
     auto jj = model.get_core_calcs(300, 0.5, z);
-    std::cout << jj.dump(2) << std::endl;
+    // std::cout << jj.dump(2) << std::endl;
 }
 
 TEST_CASE("Check ln(phi) and its derivatives", "[SAFTVRMielnphi]")
