@@ -325,5 +325,225 @@
     ],
     "title": "TwoCJLF_Quadrupole",
     "type": "object"
+  },
+  "multifluid-ECS-HuberEly1994": {
+    "$defs": {
+      "ECSHuberEly1994Fluid": {
+        "properties": {
+          "acentric": {
+            "annotation": "The acentric factor",
+            "title": "Acentric",
+            "type": "number"
+          },
+          "Z_crit": {
+            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
+            "title": "Z Crit",
+            "type": "number"
+          },
+          "T_crit / K": {
+            "annotation": "The critical temperature",
+            "title": "T Crit / K",
+            "type": "number"
+          },
+          "rhomolar_crit / mol/m^3": {
+            "annotation": "The critical density",
+            "title": "Rhomolar Crit / Mol/M^3",
+            "type": "number"
+          },
+          "f_T_coeffs": {
+            "annotation": "The array containing the coefficients alpha_1 and alpha_2 used in f",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "F T Coeffs",
+            "type": "array"
+          },
+          "h_T_coeffs": {
+            "annotation": "The array containing the coefficients beta_1 and beta_2 used in h",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "H T Coeffs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "acentric",
+          "Z_crit",
+          "T_crit / K",
+          "rhomolar_crit / mol/m^3",
+          "f_T_coeffs",
+          "h_T_coeffs"
+        ],
+        "title": "ECSHuberEly1994Fluid",
+        "type": "object"
+      },
+      "ECSHuberEly1994ReferenceFluid": {
+        "properties": {
+          "name": {
+            "annotation": "The name of the fluid, could be an absolute path to the .json of a multifluid EOS",
+            "title": "Name",
+            "type": "string"
+          },
+          "acentric": {
+            "annotation": "The acentric factor",
+            "title": "Acentric",
+            "type": "number"
+          },
+          "Z_crit": {
+            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
+            "title": "Z Crit",
+            "type": "number"
+          },
+          "T_crit / K": {
+            "annotation": "The critical temperature",
+            "title": "T Crit / K",
+            "type": "number"
+          },
+          "rhomolar_crit / mol/m^3": {
+            "annotation": "The critical density",
+            "title": "Rhomolar Crit / Mol/M^3",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "acentric",
+          "Z_crit",
+          "T_crit / K",
+          "rhomolar_crit / mol/m^3"
+        ],
+        "title": "ECSHuberEly1994ReferenceFluid",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "reference_fluid": {
+        "$ref": "#/$defs/ECSHuberEly1994ReferenceFluid"
+      },
+      "fluid": {
+        "$ref": "#/$defs/ECSHuberEly1994Fluid"
+      }
+    },
+    "required": [
+      "reference_fluid",
+      "fluid"
+    ],
+    "title": "MultifluidECSHuberEly1994",
+    "type": "object"
+  },
+  "MultifluidECSHuberEly1994": {
+    "$defs": {
+      "ECSHuberEly1994Fluid": {
+        "properties": {
+          "acentric": {
+            "annotation": "The acentric factor",
+            "title": "Acentric",
+            "type": "number"
+          },
+          "Z_crit": {
+            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
+            "title": "Z Crit",
+            "type": "number"
+          },
+          "T_crit / K": {
+            "annotation": "The critical temperature",
+            "title": "T Crit / K",
+            "type": "number"
+          },
+          "rhomolar_crit / mol/m^3": {
+            "annotation": "The critical density",
+            "title": "Rhomolar Crit / Mol/M^3",
+            "type": "number"
+          },
+          "f_T_coeffs": {
+            "annotation": "The array containing the coefficients alpha_1 and alpha_2 used in f",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "F T Coeffs",
+            "type": "array"
+          },
+          "h_T_coeffs": {
+            "annotation": "The array containing the coefficients beta_1 and beta_2 used in h",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "H T Coeffs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "acentric",
+          "Z_crit",
+          "T_crit / K",
+          "rhomolar_crit / mol/m^3",
+          "f_T_coeffs",
+          "h_T_coeffs"
+        ],
+        "title": "ECSHuberEly1994Fluid",
+        "type": "object"
+      },
+      "ECSHuberEly1994ReferenceFluid": {
+        "properties": {
+          "name": {
+            "annotation": "The name of the fluid, could be an absolute path to the .json of a multifluid EOS",
+            "title": "Name",
+            "type": "string"
+          },
+          "acentric": {
+            "annotation": "The acentric factor",
+            "title": "Acentric",
+            "type": "number"
+          },
+          "Z_crit": {
+            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
+            "title": "Z Crit",
+            "type": "number"
+          },
+          "T_crit / K": {
+            "annotation": "The critical temperature",
+            "title": "T Crit / K",
+            "type": "number"
+          },
+          "rhomolar_crit / mol/m^3": {
+            "annotation": "The critical density",
+            "title": "Rhomolar Crit / Mol/M^3",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "acentric",
+          "Z_crit",
+          "T_crit / K",
+          "rhomolar_crit / mol/m^3"
+        ],
+        "title": "ECSHuberEly1994ReferenceFluid",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "reference_fluid": {
+        "$ref": "#/$defs/ECSHuberEly1994ReferenceFluid"
+      },
+      "fluid": {
+        "$ref": "#/$defs/ECSHuberEly1994Fluid"
+      }
+    },
+    "required": [
+      "reference_fluid",
+      "fluid"
+    ],
+    "title": "MultifluidECSHuberEly1994",
+    "type": "object"
   }
 }
