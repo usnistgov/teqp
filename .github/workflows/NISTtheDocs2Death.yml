@@ -16,8 +16,9 @@ jobs:
             doxygen Doxyfile
             for file in $(find . -name "*.ipynb")
             do
-                # if '.ipynb_checkpoints' not in path
-                jupyter nbconvert  --to notebook --output "${file}" --execute "${file}"
+                if [ ! -d "${file%/*}/.ipynb_checkpoints"]; then
+                    jupyter nbconvert  --to notebook --inplace --execute "${file}"
+                fi
             done
             sphinx-apidoc -f -o api `python -c "import teqp; import os; print(os.path.dirname(teqp.__file__))"`
           formats: |-
