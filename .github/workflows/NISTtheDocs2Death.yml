@@ -10,6 +10,13 @@ jobs:
         with:
           docs-folder: doc/
           conda-environment: doc/environment.yml
+          pre-build-command: |-
+            rm -rf doc/source/_static
+            && mkdir -p doc/source/_static
+            && doxygen Doxyfile
+            && sphinx-apidoc -f -o api
+#             for glob("**/*.ipynb":
+#                 jupyter nbconvert  --to notebook --output {file} --execute {file}
           formats: |-
             epub
             pdf
