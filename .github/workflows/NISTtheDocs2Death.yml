@@ -14,10 +14,12 @@ jobs:
             rm -rf doc/source/_static
             mkdir -p doc/source/_static
             doxygen Doxyfile
+            for file in $(find . -name "*.ipynb")
+            do
+                # if '.ipynb_checkpoints' not in path
+                jupyter nbconvert  --to notebook --output "${file}" --execute "${file}"
+            done
             sphinx-apidoc -f -o api `python -c "import teqp; import os; print(os.path.dirname(teqp.__file__))"`
-#             for glob("**/*.ipynb":
-#                 jupyter nbconvert  --to notebook --output {file} --execute {file}
           formats: |-
             epub
             pdf
-
