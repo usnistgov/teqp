@@ -14,7 +14,7 @@ jobs:
             rm -rf doc/source/_static
             mkdir -p doc/source/_static
             doxygen Doxyfile
-            sphinx-apidoc -f -o api
+            sphinx-apidoc -f -o api `python -c "import fipy; import os; print(os.path.dirname(fipy.__file__))"`
 #             for glob("**/*.ipynb":
 #                 jupyter nbconvert  --to notebook --output {file} --execute {file}
           formats: |-
