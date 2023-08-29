@@ -1,0 +1,27 @@
+name: "Build Documentation"
+
+on: [push, pull_request, delete]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: usnistgov/NISTtheDocs2Death@0.4
+        with:
+          docs-folder: doc/
+          conda-environment: doc/environment.yml
+          pre-build-command: |-
+            rm -rf doc/source/_static
+            mkdir -p doc/source/_static
+            doxygen Doxyfile
+            for file in $(find . -name "*.ipynb")
+            do
+                if [ ! -d "${file%/*}/.ipynb_checkpoints"]; then
+                    echo "${file}"
+                    jupyter nbconvert  --to notebook --inplace --execute "${file}"
+                fi
+            done
+            sphinx-apidoc -f -o api `python -c "import teqp; import os; print(os.path.dirname(teqp.__file__))"`
+          formats: |-
+            epub
+            pdf
