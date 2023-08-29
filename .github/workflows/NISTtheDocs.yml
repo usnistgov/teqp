@@ -18,7 +18,7 @@ jobs:
             do
                 if [ ! -d "${file%/*}/.ipynb_checkpoints"]; then
                     echo "${file}"
-                    jupyter nbconvert  --to notebook --inplace --execute "${file}"
+                    jupyter nbconvert  --to notebook --inplace --execute --allow-errors "${file}"
                 fi
             done
             sphinx-apidoc -f -o api `python -c "import teqp; import os; print(os.path.dirname(teqp.__file__))"`
