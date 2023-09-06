@@ -279,6 +279,9 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
     
     auto add_alphas = [&](const nlohmann::json& jalphas){
         std::size_t i = 0;
+        if (jalphas.size() != Tc_K.size()){
+            throw teqp::InvalidArgument("alpha must be the same length as components");
+        }
         for (auto alpha : jalphas){
             std::string type = alpha.at("type");
             std::valarray<double> c_ = alpha.at("c");

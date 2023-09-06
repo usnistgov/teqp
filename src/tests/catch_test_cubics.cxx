@@ -526,6 +526,36 @@ TEST_CASE("Check generalized and alphas", "[PRalpha]"){
     }
     )");
     
+    auto j3 = nlohmann::json::parse(R"(
+    {
+        "kind": "PR",
+        "model": {
+            "Tcrit / K": [190],
+            "pcrit / Pa": [3.5e6],
+            "acentric": [0.11],
+            "alpha": [
+                {"type": "Twu", "c": [1, 2, 3]}
+            ]
+        }
+    }
+    )");
+    
+    auto j4 = nlohmann::json::parse(R"(
+    {
+        "kind": "cubic",
+        "model": {
+            "type": "PR",
+            "Tcrit / K": [190],
+            "pcrit / Pa": [3.5e6],
+            "acentric": [0.11],
+            "alpha": [
+                {"type": "Twu", "c": [1, 2, 3]},
+                {"type": "Twu", "c": [4, 5, 6]}
+            ]
+        }
+    }
+    )");
+    
     SECTION("canonical PR"){
         const auto modelptr0 = teqp::cppinterface::make_model(j0);
         const auto& m0 = teqp::cppinterface::adapter::get_model_cref<canonical_cubic_t>(modelptr0.get());
@@ -538,5 +568,8 @@ TEST_CASE("Check generalized and alphas", "[PRalpha]"){
         
         CHECK(m1.get_meta() == m0.get_meta());
         CHECK(m2.get_meta() != m0.get_meta());
+        
+        CHECK_THROWS(teqp::cppinterface::make_model(j3));
+        CHECK_THROWS(teqp::cppinterface::make_model(j4));
     }
 }
