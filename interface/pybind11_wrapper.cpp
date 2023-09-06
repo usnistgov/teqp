@@ -412,6 +412,7 @@ void init_teqp(py::module& m) {
     
         .def("mix_VLLE_T", &am::mix_VLLE_T, "T"_a, "rhovecVinit"_a.noconvert(), "rhovecL1init"_a.noconvert(), "rhovecL2init"_a.noconvert(), "atol"_a, "reltol"_a, "axtol"_a, "relxtol"_a, "maxiter"_a)
         .def("find_VLLE_T_binary", &am::find_VLLE_T_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"))
+        .def("find_VLLE_p_binary", &am::find_VLLE_p_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"))
     ;
     
     m.def("_make_model", &teqp::cppinterface::make_model);

@@ -113,6 +113,137 @@ namespace VLLE {
         return std::make_tuple(return_code, rhovecVfinal, rhovecL1final, rhovecL2final);
     }
 
+    /***
+    * \brief Do a vapor-liquid-liquid phase equilibrium problem for a mixture (binary only for now)
+    * \param model The model to operate on
+    * \param T Temperature
+    * \param rhovecVinit Initial values for vapor mole concentrations
+    * \param rhovecL1init Initial values for liquid #1 mole concentrations
+    * \param rhovecL2init Initial values for liquid #2 mole concentrations
+    * \param atol Absolute tolerance on function values
+    * \param reltol Relative tolerance on function values
+    * \param axtol Absolute tolerance on steps in independent variables
+    * \param relxtol Relative tolerance on steps in independent variables
+    * \param maxiter Maximum number of iterations permitted
+    */
+
+    inline auto mix_VLLE_p(const AbstractModel& model, double p, double Tinit, const EArrayd& rhovecVinit, const EArrayd& rhovecL1init, const EArrayd& rhovecL2init, double atol, double reltol, double axtol, double relxtol, int maxiter) {
+
+        const Eigen::Index N = rhovecVinit.size();
+        Eigen::MatrixXd J(3*N+1, 3*N+1); J.setZero();
+        Eigen::VectorXd r(3*N+1), x(3*N+1);
+
+        x.head(N) = rhovecVinit;
+        x.segment(N, N) = rhovecL1init;
+        x.segment(2*N, N) = rhovecL2init;
+        x(x.size()-1) = Tinit;
+
+        Eigen::Map<Eigen::ArrayXd> rhovecV (&(x(0)), N);
+        Eigen::Map<Eigen::ArrayXd> rhovecL1(&(x(0+N)), N);
+        Eigen::Map<Eigen::ArrayXd> rhovecL2(&(x(0+2*N)), N);
+
+        VLLE_return_code return_code = VLLE_return_code::unset;
+
+        double T = -1;
+        for (int iter = 0; iter < maxiter; ++iter) {
+            T = x(x.size()-1);
+
+            auto [PsirV, PsirgradV, hessianV] = model.build_Psir_fgradHessian_autodiff(T, rhovecV);
+            auto [PsirL1, PsirgradL1, hessianL1] = model.build_Psir_fgradHessian_autodiff(T, rhovecL1);
+            auto [PsirL2, PsirgradL2, hessianL2] = model.build_Psir_fgradHessian_autodiff(T, rhovecL2);
+            
+            auto HtotV = model.build_Psi_Hessian_autodiff(T, rhovecV);
+            auto HtotL1 = model.build_Psi_Hessian_autodiff(T, rhovecL1);
+            auto HtotL2 = model.build_Psi_Hessian_autodiff(T, rhovecL2);
+
+            auto zV = rhovecV/rhovecV.sum(), zL1 = rhovecL1 / rhovecL1.sum(), zL2 = rhovecL2 / rhovecL2.sum();
+            double RL1 = model.get_R(zL1), RL2 = model.get_R(zL2), RV = model.get_R(zV);
+            double RTL1 = RL1*T, RTL2 = RL2*T, RTV = RV*T;
+
+            auto rhoL1 = rhovecL1.sum();
+            auto rhoL2 = rhovecL2.sum();
+            auto rhoV = rhovecV.sum();
+            double pL1 = rhoL1 * RTL1 - PsirL1 + (rhovecL1.array() * PsirgradL1.array()).sum(); // The (array*array).sum is a dot product
+            double pL2 = rhoL2 * RTL2 - PsirL2 + (rhovecL2.array() * PsirgradL2.array()).sum(); // The (array*array).sum is a dot product
+            double pV = rhoV * RTV - PsirV + (rhovecV.array() * PsirgradV.array()).sum();
+            auto dpdrhovecL1 = RTL1 + (hessianL1 * rhovecL1.matrix()).array();
+            auto dpdrhovecL2 = RTL2 + (hessianL2 * rhovecL2.matrix()).array();
+            auto dpdrhovecV = RTV + (hessianV * rhovecV.matrix()).array();
+            
+            auto DELTAVL1dmu_dT_res = (model.build_d2PsirdTdrhoi_autodiff(T, rhovecV.eval())
+                                  - model.build_d2PsirdTdrhoi_autodiff(T, rhovecL1.eval())).eval();
+            auto DELTAL1L2dmu_dT_res = (model.build_d2PsirdTdrhoi_autodiff(T, rhovecL1.eval())
+                                  - model.build_d2PsirdTdrhoi_autodiff(T, rhovecL2.eval())).eval();
+            auto DELTAVL1_dchempot_dT = (DELTAVL1dmu_dT_res + RV*log(rhovecV) - RL1*log(rhovecL1)).eval();
+            auto DELTAL1L2_dchempot_dT = (DELTAL1L2dmu_dT_res + RL1*log(rhovecL1) - RL2*log(rhovecL2)).eval();
+
+            // 2N rows are equality of chemical equilibria
+            r.head(N) = PsirgradV + RTV*log(rhovecV) - (PsirgradL1 + RTL1*log(rhovecL1));
+            r.segment(N,N) = PsirgradL1 + RTL1 * log(rhovecL1) - (PsirgradL2 + RTL2 * log(rhovecL2));
+            // Followed by 2 pressure equilibria for the phases
+            r(2*N) = pV - pL1;
+            r(2*N+1) = pL1 - pL2;
+            // And finally, the pressure must equal the specified one
+            r(2*N+2) = pV - p;
+            
+
+            // Chemical potential contributions in Jacobian
+            J.block(0,0,N,N) = HtotV;
+            J.block(0,N,N,N) = -HtotL1;
+            //J.block(0,2*N,N,N) = 0;  // For L2, following the pattern, to make clear the structure
+            J.block(0,2*N+2, N, 1) = DELTAVL1_dchempot_dT;
+            
+            //J.block(N,0,N,N) = 0;   // For V, following the pattern, to make clear the structure)
+            J.block(N,N, N, N) = HtotL1;
+            J.block(N,2* N, N, N) = -HtotL2;
+            J.block(N,2*N+2, N, 1) = DELTAL1L2_dchempot_dT;
+            // So far, 2*N constraints...
+            
+            // Pressure contributions in Jacobian
+            J.block(2*N, 0, 1, N) = dpdrhovecV.transpose();
+            J.block(2*N, N, 1, N) = -dpdrhovecL1.transpose();
+            J(2*N, 2*N+2) = model.get_dpdT_constrhovec(T, rhovecV) - model.get_dpdT_constrhovec(T, rhovecL1);
+            J.block(2 * N + 1, N, 1, N) = dpdrhovecL1.transpose();
+            J.block(2 * N + 1, 2 * N, 1, N) = -dpdrhovecL2.transpose();
+            J(2*N+1, 2*N+2) = model.get_dpdT_constrhovec(T, rhovecL1) - model.get_dpdT_constrhovec(T, rhovecL2);
+            
+            J.block(2*N+2, 0, 1, N) = dpdrhovecV.transpose();
+            J(2*N+2, 2*N+2) = model.get_dpdT_constrhovec(T, rhovecV);
+            // Takes us to 2*N + 3 constraints, or 3*N+1 for N=2
+
+            // Solve for the step
+            Eigen::ArrayXd dx = J.colPivHouseholderQr().solve(-r);
+            x.array() += dx;
+            T = x(x.size()-1);
+
+            auto xtol_threshold = (axtol + relxtol * x.array().cwiseAbs()).eval();
+            if ((dx.array() < xtol_threshold).all()) {
+                return_code = VLLE_return_code::xtol_satisfied;
+                break;
+            }
+
+            auto error_threshold = (atol + reltol * r.array().cwiseAbs()).eval();
+            if ((r.array().cwiseAbs() < error_threshold).all()) {
+                return_code = VLLE_return_code::functol_satisfied;
+                break;
+            }
+
+            // If the solution has stopped improving, stop. The change in x is equal to dx in infinite precision, but
+            // not when finite precision is involved, use the minimum non-denormal float as the determination of whether
+            // the values are done changing
+            if (((x.array() - dx.array()).cwiseAbs() < std::numeric_limits<double>::min()).all()) {
+                return_code = VLLE_return_code::xtol_satisfied;
+                break;
+            }
+            if (iter == maxiter - 1) {
+                return_code = VLLE_return_code::maxiter_met;
+            }
+        }
+        double Tfinal = T;
+        Eigen::ArrayXd rhovecVfinal = rhovecV, rhovecL1final = rhovecL1, rhovecL2final = rhovecL2;
+        return std::make_tuple(return_code, Tfinal, rhovecVfinal, rhovecL1final, rhovecL2final);
+    }
+
     /**
     Derived from https://stackoverflow.com/a/17931809
     */
@@ -160,17 +291,15 @@ namespace VLLE {
         return solns;
     }
 
-    /**
-    * \brief Given an isothermal VLE trace for a binary mixture, obtain the VLLE solution
-    * \param model The Model to be used for the thermodynamics
-    * \param traces The nlohmann::json formatted information from the traces, perhaps obtained from trace_VLE_isotherm_binary
-    */
     
-    inline auto find_VLLE_T_binary(const AbstractModel& model, const std::vector<nlohmann::json>& traces, const std::optional<VLLEFinderOptions> options = std::nullopt) {
+    
+    inline auto find_VLLE_gen_binary(const AbstractModel& model, const std::vector<nlohmann::json>& traces, const std::string& key, const std::optional<VLLEFinderOptions> options = std::nullopt) {
         std::vector<double> x, y;
         auto opt = options.value_or(VLLEFinderOptions{});
 
         Eigen::ArrayXd rhoL1(2), rhoL2(2), rhoV(2);
+        std::string xkey = (key == "T") ? "T / K" : "pL / Pa";
+        std::string ykey = (key == "T") ? "pL / Pa" : "T / K";
         
         // A convenience function to weight the values
         auto avg_values = [](const nlohmann::json&j1, const nlohmann::json &j2, const std::string& key, const double w) -> Eigen::ArrayXd{
@@ -178,6 +307,12 @@ namespace VLLE {
             auto v2 = j2.at(key).template get<std::valarray<double>>();
             std::valarray<double> vs = v1*w + v2*(1 - w);
             return Eigen::Map<Eigen::ArrayXd>(&(vs[0]), vs.size());
+        };
+        // A convenience function to weight a double value
+        auto avg_value = [](const nlohmann::json&j1, const nlohmann::json &j2, const std::string& key, const double w) -> double{
+            auto v1 = j1.at(key).template get<double>();
+            auto v2 = j2.at(key).template get<double>();
+            return v1*w + v2*(1 - w);
         };
 
         if (traces.empty()) {
@@ -187,9 +322,9 @@ namespace VLLE {
             // Build the arrays of values to find the self-intersection
             for (auto& el : traces[0]) {
                 auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
-                auto p = el.at("pL / Pa").get<double>();
+                auto y_ = el.at(ykey).get<double>();
                 x.push_back(rhoV[0] / rhoV.sum()); // Mole fractions in the vapor phase
-                y.push_back(p);
+                y.push_back(y_);
             }
             auto intersections = get_self_intersections(x, y);
             //auto& trace = traces[0];
@@ -199,16 +334,35 @@ namespace VLLE {
                 rhoL2 = avg_values(traces[0][i.k], traces[0][i.k + 1], "rhoL / mol/m^3", i.t);
                 rhoV = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoV / mol/m^3", i.s);
 
-                double T = traces[0][0].at("T / K");
-
-                // Polish the solution
-                auto [code, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_T(model, T, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
-
-                return nlohmann::json{
-                    {"approximate", {rhoV, rhoL1, rhoL2} },
-                    {"polished", {rhoVfinal, rhoL1final, rhoL2final} },
-                    {"polisher_return_code", static_cast<int>(code)}
-                };
+                if (key == "T"){
+                    double T = traces[0][0].at("T / K"); // All at same temperature
+                    
+                    // Polish the solution
+                    auto [code, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_T(model, T, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
+                    
+                    return nlohmann::json{
+                        {"variables", "rhoV, rhoL1, rhoL2"},
+                        {"approximate", {rhoV, rhoL1, rhoL2} },
+                        {"polished", {rhoVfinal, rhoL1final, rhoL2final} },
+                        {"polisher_return_code", static_cast<int>(code)}
+                    };
+                }
+                else if (key == "P"){
+                    double p = traces[0][0].at("pL / Pa"); // all at same pressure
+                    
+                    // Polish the solution
+                    auto [code, Tfinal, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_p(model, p, i.y, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
+                    
+                    return nlohmann::json{
+                        {"variables", "rhoV, rhoL1, rhoL2, T"},
+                        {"approximate", {rhoV, rhoL1, rhoL2, i.y} },
+                        {"polished", {rhoVfinal, rhoL1final, rhoL2final, Tfinal} },
+                        {"polisher_return_code", static_cast<int>(code)}
+                    };
+                }
+                else{
+                    throw teqp::InvalidArgument("Bad key");
+                }
             };
             std::vector<nlohmann::json> solutions;
             
@@ -236,15 +390,15 @@ namespace VLLE {
             // Build the arrays of values to find the cross-intersection
             for (auto& el : traces[0]) {
                 auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
-                auto p = el.at("pL / Pa").get<double>();
+                auto y_ = el.at(ykey).get<double>();
                 x1.push_back(rhoV[0] / rhoV.sum()); // Mole fractions in the vapor phase
-                y1.push_back(p);
+                y1.push_back(y_);
             }
             for (auto& el : traces[1]) {
                 auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
-                auto p = el.at("pL / Pa").get<double>();
+                auto y_ = el.at(ykey).get<double>();
                 x2.push_back(rhoV[0] / rhoV.sum()); // Mole fractions in the vapor phase
-                y2.push_back(p);
+                y2.push_back(y_);
             }
             auto intersections = get_cross_intersections(x1, y1, x2, y2);
 
@@ -253,16 +407,35 @@ namespace VLLE {
                 rhoL2 = avg_values(traces[1][i.k], traces[1][i.k + 1], "rhoL / mol/m^3", i.t);
                 rhoV = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoV / mol/m^3", i.s);
                 
-                double T = traces[0][0].at("T / K");
-
-                // Polish the solution
-                auto [code, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_T(model, T, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
-
-                return nlohmann::json{
-                    {"approximate", {rhoV, rhoL1, rhoL2} },
-                    {"polished", {rhoVfinal, rhoL1final, rhoL2final} },
-                    {"polisher_return_code", static_cast<int>(code)}
-                };
+                if (key == "T"){
+                    double T = traces[0][0].at(xkey);
+                    
+                    // Polish the solution
+                    auto [code, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_T(model, T, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
+                    
+                    return nlohmann::json{
+                        {"variables", "rhoV, rhoL1, rhoL2"},
+                        {"approximate", {rhoV, rhoL1, rhoL2} },
+                        {"polished", {rhoVfinal, rhoL1final, rhoL2final} },
+                        {"polisher_return_code", static_cast<int>(code)}
+                    };
+                }
+                else if (key == "P"){
+                    double p = traces[0][0].at(xkey);
+                    
+                    // Polish the solution
+                    auto [code, Tfinal, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_p(model, p, i.y, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
+                    
+                    return nlohmann::json{
+                        {"variables", "rhoV, rhoL1, rhoL2, T"},
+                        {"approximate", {rhoV, rhoL1, rhoL2, i.y} },
+                        {"polished", {rhoVfinal, rhoL1final, rhoL2final, Tfinal} },
+                        {"polisher_return_code", static_cast<int>(code)}
+                    };
+                }
+                else{
+                    throw teqp::InvalidArgument("Bad key");
+                }
             };
             std::vector<nlohmann::json> solutions;
             
@@ -287,6 +460,24 @@ namespace VLLE {
         else {
             throw InvalidArgument("No cross intersection between traces implemented yet");
         }
+    }
+
+    /**
+    * \brief Given an isothermal VLE trace(s) for a binary mixture, obtain the VLLE solution
+    * \param model The Model to be used for the thermodynamics
+    * \param traces The nlohmann::json formatted information from the traces, perhaps obtained from trace_VLE_isotherm_binary
+    */
+    inline auto find_VLLE_T_binary(const AbstractModel& model, const std::vector<nlohmann::json>& traces, const std::optional<VLLEFinderOptions>& options = std::nullopt){
+        return find_VLLE_gen_binary(model, traces, "T", options);
+    }
+
+    /**
+    * \brief Given an isobaric VLE trace(s) for a binary mixture, obtain the VLLE solution
+    * \param model The Model to be used for the thermodynamics
+    * \param traces The nlohmann::json formatted information from the traces, perhaps obtained from trace_VLE_isobar_binary
+    */
+    inline auto find_VLLE_p_binary(const AbstractModel& model, const std::vector<nlohmann::json>& traces, const std::optional<VLLEFinderOptions>& options = std::nullopt){
+        return find_VLLE_gen_binary(model, traces, "P", options);
     }
 }
 }
