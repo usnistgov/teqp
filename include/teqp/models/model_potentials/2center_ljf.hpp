@@ -424,7 +424,7 @@ namespace teqp {
         }
 
         // build the 2-center Lennard-Jones model with quadrupole
-        inline auto build_two_center_model_quadrupole(const std::string& model_version, const double& L = 0.0, const double& mu_sq = 0.0) {
+        inline auto build_two_center_model_quadrupole(const std::string& model_version, const double& L = 0.0, const double& Q_sq = 0.0) {
 
             // Get reducing for temperature and density
             auto DC_funcs = get_density_reducing(model_version);
@@ -438,7 +438,7 @@ namespace teqp {
             auto EOS_quadrupolar = get_Quadrupolar_contribution(model_version);
 
             // Build the 2-center Lennard-Jones model
-            auto model = Twocenterljf(std::move(DC_funcs), std::move(TC_func), std::move(EOS_hard), std::move(EOS_att), std::move(EOS_quadrupolar), L, mu_sq);
+            auto model = Twocenterljf(std::move(DC_funcs), std::move(TC_func), std::move(EOS_hard), std::move(EOS_att), std::move(EOS_quadrupolar), L, Q_sq);
 
             return model;
         }

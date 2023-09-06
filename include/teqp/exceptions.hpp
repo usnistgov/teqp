@@ -43,4 +43,20 @@ namespace teqp {
         NotImplementedError(const std::string& msg) : teqpException(200, msg) {};
     };
 
+    /// Validation of a JSON schema failed
+    class JSONValidationError : public teqpException {
+    private:
+        auto errors_to_string(const std::vector<std::string> &errors, const std::string delim = "|/|\\|"){
+            std::string o = "";
+            if (errors.empty()){ return o; }
+            o = errors[0];
+            for (auto j = 1; j < errors.size(); ++j){
+                o += delim + errors[j];
+            }
+            return o;
+        }
+    public:
+        JSONValidationError(const std::vector<std::string>& errors) : teqpException(300, errors_to_string(errors)) {};
+    };
+
 }; // namespace teqp

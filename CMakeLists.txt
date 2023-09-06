@@ -32,6 +32,7 @@ target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/json-schema-validator")
 
 set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
 set(EIGEN3_VERSION_OK TRUE CACHE BOOL "Yes eigen is fine")
@@ -93,11 +94,20 @@ if (NOT TEQP_NO_TEQPCPP)
   # doesn't require a full compile for a single LOC change
   file(GLOB sources "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/*.cpp")
   add_library(teqpcpp STATIC ${sources})
-  target_link_libraries(teqpcpp PUBLIC teqpinterface PUBLIC autodiff)
+  target_link_libraries(teqpcpp PUBLIC nlohmann_json_schema_validator PUBLIC teqpinterface PUBLIC autodiff)
   target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
   set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
   target_compile_definitions(teqpcpp PRIVATE -DMULTICOMPLEX_NO_MULTIPRECISION)
   target_compile_definitions(teqpcpp PUBLIC -DUSE_AUTODIFF)
+  
+  # Populate the model schema cpp file with the contents
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/notebooks/schemas.json" MODEL_SCHEMA_CONTENTS)
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/dev/templates/model_schema.cpp.in" MODEL_JSON_SCHEMA_TEMPLATE)
+  file(CONFIGURE
+       OUTPUT model_schemas.cpp
+       CONTENT ${MODEL_JSON_SCHEMA_TEMPLATE}
+       @ONLY)
+  target_sources(teqpcpp PRIVATE model_schemas.cpp)
 
   if (TEQP_TESTTEQPCPP)
     add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/test_teqpcpp.cpp")
@@ -134,7 +144,7 @@ if (NOT TEQP_NO_PYTHON)
     file(GLOB pybind11_files "${CMAKE_CURRENT_SOURCE_DIR}/interface/*.cpp")
     pybind11_add_module(teqp "${pybind11_files}")
     target_include_directories(teqp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11_json/include")
-    target_link_libraries(teqp PRIVATE autodiff PRIVATE teqpinterface PRIVATE teqpcpp)
+    target_link_libraries(teqp PRIVATE teqpcpp PRIVATE autodiff PRIVATE teqpinterface )
     target_compile_definitions(teqp PUBLIC -DUSE_AUTODIFF)
     if (MSVC)
       target_compile_options(teqp PRIVATE "/Zm1000")
@@ -151,7 +161,8 @@ if (NOT TEQP_NO_TESTS)
   endif()
   target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
   target_compile_definitions(catch_tests PRIVATE -DTEQP_MULTICOMPLEX_ENABLED)
-  target_link_libraries(catch_tests PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain PUBLIC teqpcpp)
+  target_compile_definitions(catch_tests PRIVATE -DTEQP_MULTIPRECISION_ENABLED)
+  target_link_libraries(catch_tests PUBLIC teqpcpp PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain)
   add_test(normal_tests catch_tests)
 endif()
 
@@ -202,7 +213,7 @@ if (TEQP_SNIPPETS)
       target_sources(${snippet_exe} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
     endif()
 
-    target_link_libraries(${snippet_exe} PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain PRIVATE teqpcpp)
+    target_link_libraries(${snippet_exe} PRIVATE teqpcpp PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain )
     if(UNIX)
       target_link_libraries (${snippet_exe} PRIVATE ${CMAKE_DL_LIBS})
     endif()

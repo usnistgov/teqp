@@ -13,3 +13,6 @@
 [submodule "externals/Catch2"]
 	path = externals/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "externals/json-schema-validator"]
+	path = externals/json-schema-validator
+	url = https://github.com/pboettch/json-schema-validator

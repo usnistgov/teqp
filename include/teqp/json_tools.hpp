@@ -1,10 +1,16 @@
 #pragma once
 #include "nlohmann/json.hpp"
+#include <nlohmann/json-schema.hpp>
 
 #include <set>
 #include <filesystem>
 #include <fstream>
 #include "teqp/exceptions.hpp"
+
+#include <Eigen/Dense>
+
+using nlohmann::json;
+using nlohmann::json_schema::json_validator;
 
 namespace teqp{
     
@@ -105,4 +111,43 @@ namespace teqp{
             throw teqp::InvalidArgument("Unable to load the argument to multilevel_JSON_load");
         }
     }
+
+    /**
+    This class is not thread-safe for construction because the validator is not
+     */
+    class JSONValidator{
+    public:
+        const nlohmann::json schema;
+        
+        json_validator validator; // create validator
+        
+        // Instantiate the validator object, will throw if the schema is invalid
+        JSONValidator(const nlohmann::json& schema) : schema(schema) {
+            validator.set_root_schema(schema); // insert root-schema
+        }
+        
+        // Return the validation errors when trying to validate the JSON
+        std::vector<std::string> get_validation_errors(const nlohmann::json& j) const{
+
+            /* Custom error handler */
+            class custom_error_handler : public nlohmann::json_schema::basic_error_handler
+            {
+            public:
+                std::vector<std::string> errors;
+                void error(const nlohmann::json::json_pointer &ptr, const json &instance, const std::string &message) override
+                {
+                    nlohmann::json_schema::basic_error_handler::error(ptr, instance, message);
+                    std::stringstream ss;
+                    ss << ptr << ":" << instance << "': " << message << "\n";
+                    errors.push_back(ss.str());
+                }
+            } handler;
+            validator.validate(j, handler); // validate the document
+            return handler.errors;
+        }
+        
+        // A quick checker for validation of the JSON
+        bool is_valid(const nlohmann::json&j ) const { return get_validation_errors(j).empty(); }
+    };
+
 }
