@@ -250,6 +250,10 @@
           "betaABi": {
             "title": "Betaabi",
             "type": "number"
+          },
+          "class": {
+            "title": "Class",
+            "type": "string"
           }
         },
         "required": [
@@ -258,7 +262,8 @@
           "c1",
           "Tc / K",
           "epsABi / J/mol",
-          "betaABi"
+          "betaABi",
+          "class"
         ],
         "title": "CPAPure",
         "type": "object"
@@ -324,6 +329,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "(Mu^*)^2"
           },
           "nmu": {
@@ -336,6 +342,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Nmu"
           },
           "(Q^*)^2": {
@@ -348,6 +355,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "(Q^*)^2"
           },
           "nQ": {
@@ -360,6 +368,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Nq"
           }
         },
@@ -368,11 +377,7 @@
           "m",
           "sigma_Angstrom",
           "epsilon_over_k",
-          "BibTeXKey",
-          "(mu^*)^2",
-          "nmu",
-          "(Q^*)^2",
-          "nQ"
+          "BibTeXKey"
         ],
         "title": "PCSAFTCoeff",
         "type": "object"
@@ -471,6 +476,19 @@
       "ECSHuberEly1994Fluid": {
         "additionalProperties": false,
         "properties": {
+          "name": {
+            "annotation": "The name of the fluid, could be an absolute path to the .json of a multifluid EOS",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Name"
+          },
           "acentric": {
             "annotation": "The acentric factor",
             "title": "Acentric",
@@ -1138,7 +1156,7 @@
   },
   "SAFT-VR-Mie": {
     "$defs": {
-      "SAFTVRMieCoeff": {
+      "SAFTVRMieCoeffsigmaAngstrom": {
         "additionalProperties": false,
         "properties": {
           "name": {
@@ -1147,10 +1165,6 @@
           },
           "m": {
             "title": "M",
-            "type": "number"
-          },
-          "sigma_Angstrom": {
-            "title": "Sigma Angstrom",
             "type": "number"
           },
           "epsilon_over_k": {
@@ -1179,6 +1193,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Mu Cm"
           },
           "mu_D": {
@@ -1191,9 +1206,10 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Mu D"
           },
-          "Q_Cm": {
+          "Q_Cm2": {
             "annotation": "The quadrupolar moment, in Debye",
             "anyOf": [
               {
@@ -1203,9 +1219,10 @@
                 "type": "null"
               }
             ],
-            "title": "Q Cm"
+            "default": null,
+            "title": "Q Cm2"
           },
-          "Q_D": {
+          "Q_DA": {
             "annotation": "The quadrupolar moment, in C*m",
             "anyOf": [
               {
@@ -1215,7 +1232,8 @@
                 "type": "null"
               }
             ],
-            "title": "Q D"
+            "default": null,
+            "title": "Q Da"
           },
           "nmu": {
             "annotation": "The number of dipole moments, consider it a weighting parameter",
@@ -1227,6 +1245,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Nmu"
           },
           "nQ": {
@@ -1239,25 +1258,146 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Nq"
+          },
+          "sigma_Angstrom": {
+            "title": "Sigma Angstrom",
+            "type": "number"
           }
         },
         "required": [
           "name",
           "m",
-          "sigma_Angstrom",
           "epsilon_over_k",
           "BibTeXKey",
           "lambda_r",
           "lambda_a",
-          "mu_Cm",
-          "mu_D",
-          "Q_Cm",
-          "Q_D",
-          "nmu",
-          "nQ"
+          "sigma_Angstrom"
         ],
-        "title": "SAFTVRMieCoeff",
+        "title": "SAFTVRMieCoeffsigmaAngstrom",
+        "type": "object"
+      },
+      "SAFTVRMieCoeffsigmaMeter": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "m": {
+            "title": "M",
+            "type": "number"
+          },
+          "epsilon_over_k": {
+            "title": "Epsilon Over K",
+            "type": "number"
+          },
+          "BibTeXKey": {
+            "title": "Bibtexkey",
+            "type": "string"
+          },
+          "lambda_r": {
+            "title": "Lambda R",
+            "type": "number"
+          },
+          "lambda_a": {
+            "title": "Lambda A",
+            "type": "number"
+          },
+          "mu_Cm": {
+            "annotation": "The dipole moment, in Debye",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mu Cm"
+          },
+          "mu_D": {
+            "annotation": "The dipole moment, in C*m",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mu D"
+          },
+          "Q_Cm2": {
+            "annotation": "The quadrupolar moment, in Debye",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Q Cm2"
+          },
+          "Q_DA": {
+            "annotation": "The quadrupolar moment, in C*m",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Q Da"
+          },
+          "nmu": {
+            "annotation": "The number of dipole moments, consider it a weighting parameter",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Nmu"
+          },
+          "nQ": {
+            "annotation": "The number of quadrupolar moments, consider it a weighting parameter",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Nq"
+          },
+          "sigma_m": {
+            "title": "Sigma M",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "m",
+          "epsilon_over_k",
+          "BibTeXKey",
+          "lambda_r",
+          "lambda_a",
+          "sigma_m"
+        ],
+        "title": "SAFTVRMieCoeffsigmaMeter",
         "type": "object"
       },
       "SAFTVRMieWithCoeffs": {
@@ -1291,6 +1431,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Polar Model"
           },
           "SAFTVRMie_flags": {
@@ -1302,6 +1443,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Saftvrmie Flags"
           },
           "polar_flags": {
@@ -1313,27 +1455,25 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Polar Flags"
           },
           "coeffs": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/$defs/SAFTVRMieCoeff"
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SAFTVRMieCoeffsigmaAngstrom"
                 },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Coeffs"
+                {
+                  "$ref": "#/$defs/SAFTVRMieCoeffsigmaMeter"
+                }
+              ]
+            },
+            "title": "Coeffs",
+            "type": "array"
           }
         },
         "required": [
-          "polar_model",
-          "SAFTVRMie_flags",
-          "polar_flags",
           "coeffs"
         ],
         "title": "SAFTVRMieWithCoeffs",
@@ -1370,6 +1510,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Polar Model"
           },
           "SAFTVRMie_flags": {
@@ -1381,6 +1522,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Saftvrmie Flags"
           },
           "polar_flags": {
@@ -1392,6 +1534,7 @@
                 "type": "null"
               }
             ],
+            "default": null,
             "title": "Polar Flags"
           },
           "names": {
@@ -1403,9 +1546,6 @@
           }
         },
         "required": [
-          "polar_model",
-          "SAFTVRMie_flags",
-          "polar_flags",
           "names"
         ],
         "title": "SAFTVRMieWithNames",
