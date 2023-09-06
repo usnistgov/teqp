@@ -38,16 +38,31 @@ std::unordered_map<unsigned long long int, std::shared_ptr<teqp::cppinterface::A
 
 void exception_handler(int& errcode, char* message_buffer, const int buffer_length)
 {
+    auto write_error = [&](const std::string& msg){
+        if (msg.size() < buffer_length){
+            strcpy(message_buffer, msg.c_str());
+        }
+        else{
+            std::string toolong_message = "Error message too long for buffer";
+            if (toolong_message.size() < buffer_length){
+                strcpy(message_buffer, toolong_message.c_str());
+            }
+            else if (buffer_length > 1){
+                strcpy(message_buffer, "?");
+            }
+        }
+    };
+    
     try{
         throw; // Rethrow the error so that we can handle it here
     }
     catch (teqpcException& e) {
         errcode = e.code;
-        strcpy(message_buffer, e.msg.c_str());
+        write_error(e.msg);
     }
     catch (std::exception e) {
         errcode = 9999;
-        strcpy(message_buffer, e.what());
+        write_error(e.what());
     }
 }
 
@@ -104,7 +119,7 @@ EXPORT_CODE int CONVENTION get_Arxy(const long long int uuid, const int NT, cons
 
 TEST_CASE("Use of C interface","[teqpc]") {
 
-    constexpr int errmsg_length = 300;
+    constexpr int errmsg_length = 3000;
     long long int uuid, uuidPR, uuidMF;
     char errmsg[errmsg_length] = "";
     double val = -1;
@@ -250,6 +265,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         int e1 = build_model(jstring.c_str(), &uuid, errmsg, errmsg_length);
         int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
+        CAPTURE(jstring);
         REQUIRE(e1 == 0);
         REQUIRE(e2 == 0);
         REQUIRE(e3 == 0);
