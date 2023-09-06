@@ -1,5 +1,6 @@
 {
   "vdW1": {
+    "additionalProperties": false,
     "properties": {
       "a": {
         "annotation": "The parameter a in vdW",
@@ -20,6 +21,7 @@
     "type": "object"
   },
   "vdW": {
+    "additionalProperties": false,
     "properties": {
       "Tcrit / K": {
         "annotation": "The critical temperaturess in K",
@@ -46,41 +48,7 @@
     "type": "object"
   },
   "PR": {
-    "$defs": {
-      "AlphaOptions": {
-        "const": "Twu",
-        "title": "AlphaOptions",
-        "type": "string"
-      },
-      "CubicAlpha": {
-        "properties": {
-          "type": {
-            "allOf": [
-              {
-                "$ref": "#/$defs/AlphaOptions"
-              }
-            ],
-            "annotation": "The type of the alpha function"
-          },
-          "c": {
-            "annotation": "The set of coefficients",
-            "items": {
-              "type": "number"
-            },
-            "maxItems": 3,
-            "minItems": 3,
-            "title": "C",
-            "type": "array"
-          }
-        },
-        "required": [
-          "type",
-          "c"
-        ],
-        "title": "CubicAlpha",
-        "type": "object"
-      }
-    },
+    "additionalProperties": false,
     "properties": {
       "Tcrit / K": {
         "annotation": "The critical temperaturess in K",
@@ -105,15 +73,6 @@
         },
         "title": "Acentric",
         "type": "array"
-      },
-      "alpha": {
-        "allOf": [
-          {
-            "$ref": "#/$defs/CubicAlpha"
-          }
-        ],
-        "annotation": "The alpha function used in the attractive part",
-        "default": null
       },
       "kmat": {
         "annotation": "The NxN matrix of kij factors",
@@ -143,6 +102,118 @@
     "title": "PR",
     "type": "object"
   },
+  "cubic": {
+    "$defs": {
+      "AlphaOptions": {
+        "const": "Twu",
+        "title": "AlphaOptions",
+        "type": "string"
+      },
+      "CubicAlpha": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/AlphaOptions"
+              }
+            ],
+            "annotation": "The type of the alpha function"
+          },
+          "c": {
+            "annotation": "The set of coefficients",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "C",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "c"
+        ],
+        "title": "CubicAlpha",
+        "type": "object"
+      },
+      "GenericCubicEnum": {
+        "enum": [
+          "PR",
+          "SRK"
+        ],
+        "title": "GenericCubicEnum",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "$ref": "#/$defs/GenericCubicEnum"
+      },
+      "Tcrit / K": {
+        "annotation": "The critical temperaturess in K",
+        "items": {
+          "type": "number"
+        },
+        "title": "Tcrit / K",
+        "type": "array"
+      },
+      "pcrit / Pa": {
+        "annotation": "The critical pressures in Pa",
+        "items": {
+          "type": "number"
+        },
+        "title": "Pcrit / Pa",
+        "type": "array"
+      },
+      "acentric": {
+        "annotation": "The acentric factors",
+        "items": {
+          "type": "number"
+        },
+        "title": "Acentric",
+        "type": "array"
+      },
+      "alpha": {
+        "annotation": "The alpha function used in the attractive part",
+        "default": null,
+        "items": {
+          "$ref": "#/$defs/CubicAlpha"
+        },
+        "title": "Alpha",
+        "type": "array"
+      },
+      "kmat": {
+        "annotation": "The NxN matrix of kij factors",
+        "anyOf": [
+          {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Kmat"
+      }
+    },
+    "required": [
+      "type",
+      "Tcrit / K",
+      "pcrit / Pa",
+      "acentric"
+    ],
+    "title": "GenericCubic",
+    "type": "object"
+  },
   "CPA": {
     "$defs": {
       "CPACubicEnum": {
@@ -154,6 +225,7 @@
         "type": "string"
       },
       "CPAPure": {
+        "additionalProperties": false,
         "properties": {
           "a0i / Pa m^6/mol^2": {
             "title": "A0I / Pa M^6/Mol^2",
@@ -192,6 +264,7 @@
         "type": "object"
       }
     },
+    "additionalProperties": false,
     "properties": {
       "cubic": {
         "$ref": "#/$defs/CPACubicEnum"
@@ -216,7 +289,298 @@
     "title": "CPA",
     "type": "object"
   },
+  "PCSAFT": {
+    "$defs": {
+      "PCSAFTCoeff": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "m": {
+            "title": "M",
+            "type": "number"
+          },
+          "sigma_Angstrom": {
+            "title": "Sigma Angstrom",
+            "type": "number"
+          },
+          "epsilon_over_k": {
+            "title": "Epsilon Over K",
+            "type": "number"
+          },
+          "BibTeXKey": {
+            "title": "Bibtexkey",
+            "type": "string"
+          },
+          "(mu^*)^2": {
+            "annotation": "The reduced dipole moment squared, as defined by Gross and co-workers. Watch out for missing factor of Coulomb's constant",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "(Mu^*)^2"
+          },
+          "nmu": {
+            "annotation": "The number of dipole moments",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nmu"
+          },
+          "(Q^*)^2": {
+            "annotation": "The reduced quadrupolar moment squared, as defined by Gross and co-workers. Watch out for missing factor of Coulomb's constant",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "(Q^*)^2"
+          },
+          "nQ": {
+            "annotation": "The number of quadrupolar moments",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nq"
+          }
+        },
+        "required": [
+          "name",
+          "m",
+          "sigma_Angstrom",
+          "epsilon_over_k",
+          "BibTeXKey",
+          "(mu^*)^2",
+          "nmu",
+          "(Q^*)^2",
+          "nQ"
+        ],
+        "title": "PCSAFTCoeff",
+        "type": "object"
+      },
+      "PCSAFTWithCoeffs": {
+        "additionalProperties": false,
+        "properties": {
+          "kmat": {
+            "annotation": "The NxN matrix of kij factors",
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Kmat"
+          },
+          "coeffs": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/$defs/PCSAFTCoeff"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coeffs"
+          }
+        },
+        "required": [
+          "coeffs"
+        ],
+        "title": "PCSAFTWithCoeffs",
+        "type": "object"
+      },
+      "PCSAFTWithNames": {
+        "additionalProperties": false,
+        "properties": {
+          "kmat": {
+            "annotation": "The NxN matrix of kij factors",
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Kmat"
+          },
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "names"
+        ],
+        "title": "PCSAFTWithNames",
+        "type": "object"
+      }
+    },
+    "anyOf": [
+      {
+        "$ref": "#/$defs/PCSAFTWithNames"
+      },
+      {
+        "$ref": "#/$defs/PCSAFTWithCoeffs"
+      }
+    ]
+  },
+  "multifluid-ECS-HuberEly1994": {
+    "$defs": {
+      "ECSHuberEly1994Fluid": {
+        "additionalProperties": false,
+        "properties": {
+          "acentric": {
+            "annotation": "The acentric factor",
+            "title": "Acentric",
+            "type": "number"
+          },
+          "Z_crit": {
+            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
+            "title": "Z Crit",
+            "type": "number"
+          },
+          "T_crit / K": {
+            "annotation": "The critical temperature",
+            "title": "T Crit / K",
+            "type": "number"
+          },
+          "rhomolar_crit / mol/m^3": {
+            "annotation": "The critical density",
+            "title": "Rhomolar Crit / Mol/M^3",
+            "type": "number"
+          },
+          "f_T_coeffs": {
+            "annotation": "The array containing the coefficients alpha_1 and alpha_2 used in f",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "F T Coeffs",
+            "type": "array"
+          },
+          "h_T_coeffs": {
+            "annotation": "The array containing the coefficients beta_1 and beta_2 used in h",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "H T Coeffs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "acentric",
+          "Z_crit",
+          "T_crit / K",
+          "rhomolar_crit / mol/m^3",
+          "f_T_coeffs",
+          "h_T_coeffs"
+        ],
+        "title": "ECSHuberEly1994Fluid",
+        "type": "object"
+      },
+      "ECSHuberEly1994ReferenceFluid": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "annotation": "The name of the fluid, could be an absolute path to the .json of a multifluid EOS",
+            "title": "Name",
+            "type": "string"
+          },
+          "acentric": {
+            "annotation": "The acentric factor",
+            "title": "Acentric",
+            "type": "number"
+          },
+          "Z_crit": {
+            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
+            "title": "Z Crit",
+            "type": "number"
+          },
+          "T_crit / K": {
+            "annotation": "The critical temperature",
+            "title": "T Crit / K",
+            "type": "number"
+          },
+          "rhomolar_crit / mol/m^3": {
+            "annotation": "The critical density",
+            "title": "Rhomolar Crit / Mol/M^3",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "acentric",
+          "Z_crit",
+          "T_crit / K",
+          "rhomolar_crit / mol/m^3"
+        ],
+        "title": "ECSHuberEly1994ReferenceFluid",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "reference_fluid": {
+        "$ref": "#/$defs/ECSHuberEly1994ReferenceFluid"
+      },
+      "fluid": {
+        "$ref": "#/$defs/ECSHuberEly1994Fluid"
+      }
+    },
+    "required": [
+      "reference_fluid",
+      "fluid"
+    ],
+    "title": "MultifluidECSHuberEly1994",
+    "type": "object"
+  },
   "SW_EspindolaHeredia2009": {
+    "additionalProperties": false,
     "properties": {
       "lambda": {
         "annotation": "The well width, where the attractive part goes includes r=(sigma,lambda*sigma)",
@@ -231,6 +595,7 @@
     "type": "object"
   },
   "EXP6_Kataoka1992": {
+    "additionalProperties": false,
     "properties": {
       "alpha": {
         "annotation": "The alpha parameter controlling the hardness of the EXP-6 potential",
@@ -245,6 +610,7 @@
     "type": "object"
   },
   "Mie_Pohl2023": {
+    "additionalProperties": false,
     "properties": {
       "lambda_a": {
         "annotation": "The attractive exponent; the repulsive exponent is 6",
@@ -269,6 +635,7 @@
         "type": "string"
       }
     },
+    "additionalProperties": false,
     "properties": {
       "author": {
         "$ref": "#/$defs/TwoCLJFAuthors"
@@ -303,6 +670,7 @@
         "type": "string"
       }
     },
+    "additionalProperties": false,
     "properties": {
       "author": {
         "$ref": "#/$defs/TwoCLJFAuthors"
@@ -326,229 +694,10 @@
     "title": "TwoCJLF_Quadrupole",
     "type": "object"
   },
-  "multifluid-ECS-HuberEly1994": {
-    "$defs": {
-      "ECSHuberEly1994Fluid": {
-        "properties": {
-          "acentric": {
-            "annotation": "The acentric factor",
-            "title": "Acentric",
-            "type": "number"
-          },
-          "Z_crit": {
-            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
-            "title": "Z Crit",
-            "type": "number"
-          },
-          "T_crit / K": {
-            "annotation": "The critical temperature",
-            "title": "T Crit / K",
-            "type": "number"
-          },
-          "rhomolar_crit / mol/m^3": {
-            "annotation": "The critical density",
-            "title": "Rhomolar Crit / Mol/M^3",
-            "type": "number"
-          },
-          "f_T_coeffs": {
-            "annotation": "The array containing the coefficients alpha_1 and alpha_2 used in f",
-            "items": {
-              "type": "number"
-            },
-            "maxItems": 2,
-            "minItems": 2,
-            "title": "F T Coeffs",
-            "type": "array"
-          },
-          "h_T_coeffs": {
-            "annotation": "The array containing the coefficients beta_1 and beta_2 used in h",
-            "items": {
-              "type": "number"
-            },
-            "maxItems": 2,
-            "minItems": 2,
-            "title": "H T Coeffs",
-            "type": "array"
-          }
-        },
-        "required": [
-          "acentric",
-          "Z_crit",
-          "T_crit / K",
-          "rhomolar_crit / mol/m^3",
-          "f_T_coeffs",
-          "h_T_coeffs"
-        ],
-        "title": "ECSHuberEly1994Fluid",
-        "type": "object"
-      },
-      "ECSHuberEly1994ReferenceFluid": {
-        "properties": {
-          "name": {
-            "annotation": "The name of the fluid, could be an absolute path to the .json of a multifluid EOS",
-            "title": "Name",
-            "type": "string"
-          },
-          "acentric": {
-            "annotation": "The acentric factor",
-            "title": "Acentric",
-            "type": "number"
-          },
-          "Z_crit": {
-            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
-            "title": "Z Crit",
-            "type": "number"
-          },
-          "T_crit / K": {
-            "annotation": "The critical temperature",
-            "title": "T Crit / K",
-            "type": "number"
-          },
-          "rhomolar_crit / mol/m^3": {
-            "annotation": "The critical density",
-            "title": "Rhomolar Crit / Mol/M^3",
-            "type": "number"
-          }
-        },
-        "required": [
-          "name",
-          "acentric",
-          "Z_crit",
-          "T_crit / K",
-          "rhomolar_crit / mol/m^3"
-        ],
-        "title": "ECSHuberEly1994ReferenceFluid",
-        "type": "object"
-      }
-    },
-    "properties": {
-      "reference_fluid": {
-        "$ref": "#/$defs/ECSHuberEly1994ReferenceFluid"
-      },
-      "fluid": {
-        "$ref": "#/$defs/ECSHuberEly1994Fluid"
-      }
-    },
-    "required": [
-      "reference_fluid",
-      "fluid"
-    ],
-    "title": "MultifluidECSHuberEly1994",
-    "type": "object"
-  },
-  "MultifluidECSHuberEly1994": {
-    "$defs": {
-      "ECSHuberEly1994Fluid": {
-        "properties": {
-          "acentric": {
-            "annotation": "The acentric factor",
-            "title": "Acentric",
-            "type": "number"
-          },
-          "Z_crit": {
-            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
-            "title": "Z Crit",
-            "type": "number"
-          },
-          "T_crit / K": {
-            "annotation": "The critical temperature",
-            "title": "T Crit / K",
-            "type": "number"
-          },
-          "rhomolar_crit / mol/m^3": {
-            "annotation": "The critical density",
-            "title": "Rhomolar Crit / Mol/M^3",
-            "type": "number"
-          },
-          "f_T_coeffs": {
-            "annotation": "The array containing the coefficients alpha_1 and alpha_2 used in f",
-            "items": {
-              "type": "number"
-            },
-            "maxItems": 2,
-            "minItems": 2,
-            "title": "F T Coeffs",
-            "type": "array"
-          },
-          "h_T_coeffs": {
-            "annotation": "The array containing the coefficients beta_1 and beta_2 used in h",
-            "items": {
-              "type": "number"
-            },
-            "maxItems": 2,
-            "minItems": 2,
-            "title": "H T Coeffs",
-            "type": "array"
-          }
-        },
-        "required": [
-          "acentric",
-          "Z_crit",
-          "T_crit / K",
-          "rhomolar_crit / mol/m^3",
-          "f_T_coeffs",
-          "h_T_coeffs"
-        ],
-        "title": "ECSHuberEly1994Fluid",
-        "type": "object"
-      },
-      "ECSHuberEly1994ReferenceFluid": {
-        "properties": {
-          "name": {
-            "annotation": "The name of the fluid, could be an absolute path to the .json of a multifluid EOS",
-            "title": "Name",
-            "type": "string"
-          },
-          "acentric": {
-            "annotation": "The acentric factor",
-            "title": "Acentric",
-            "type": "number"
-          },
-          "Z_crit": {
-            "annotation": "The critical compressibility factor; Z = p/(rho*R*T)",
-            "title": "Z Crit",
-            "type": "number"
-          },
-          "T_crit / K": {
-            "annotation": "The critical temperature",
-            "title": "T Crit / K",
-            "type": "number"
-          },
-          "rhomolar_crit / mol/m^3": {
-            "annotation": "The critical density",
-            "title": "Rhomolar Crit / Mol/M^3",
-            "type": "number"
-          }
-        },
-        "required": [
-          "name",
-          "acentric",
-          "Z_crit",
-          "T_crit / K",
-          "rhomolar_crit / mol/m^3"
-        ],
-        "title": "ECSHuberEly1994ReferenceFluid",
-        "type": "object"
-      }
-    },
-    "properties": {
-      "reference_fluid": {
-        "$ref": "#/$defs/ECSHuberEly1994ReferenceFluid"
-      },
-      "fluid": {
-        "$ref": "#/$defs/ECSHuberEly1994Fluid"
-      }
-    },
-    "required": [
-      "reference_fluid",
-      "fluid"
-    ],
-    "title": "MultifluidECSHuberEly1994",
-    "type": "object"
-  },
   "IdealHelmholtz": {
     "$defs": {
       "IdealHelmholtzConstant": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "Constant",
@@ -572,6 +721,7 @@
         "type": "object"
       },
       "IdealHelmholtzCp0Constant": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "Cp0Constant",
@@ -620,6 +770,7 @@
         "type": "object"
       },
       "IdealHelmholtzCp0PowerT": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "Cp0PowerT",
@@ -683,6 +834,7 @@
         "type": "object"
       },
       "IdealHelmholtzGERG2004Cosh": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "GERG2004Cosh",
@@ -717,6 +869,7 @@
         "type": "object"
       },
       "IdealHelmholtzGERG2004Sinh": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "GERG2004Sinh",
@@ -751,6 +904,7 @@
         "type": "object"
       },
       "IdealHelmholtzLead": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "Lead",
@@ -779,6 +933,7 @@
         "type": "object"
       },
       "IdealHelmholtzLogT": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "LogT",
@@ -802,6 +957,7 @@
         "type": "object"
       },
       "IdealHelmholtzPlanckEinstein": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "PlanckEinstein",
@@ -836,6 +992,7 @@
         "type": "object"
       },
       "IdealHelmholtzPlanckEinsteinGeneralized": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "PlanckEinsteinGeneralized",
@@ -886,6 +1043,7 @@
         "type": "object"
       },
       "IdealHelmholtzPowerT": {
+        "additionalProperties": false,
         "properties": {
           "type": {
             "const": "PowerT",
@@ -920,6 +1078,7 @@
         "type": "object"
       },
       "IdealHelmholtzPure": {
+        "additionalProperties": false,
         "properties": {
           "R": {
             "title": "R",
@@ -976,5 +1135,290 @@
       "$ref": "#/$defs/IdealHelmholtzPure"
     },
     "type": "array"
+  },
+  "SAFT-VR-Mie": {
+    "$defs": {
+      "SAFTVRMieCoeff": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "m": {
+            "title": "M",
+            "type": "number"
+          },
+          "sigma_Angstrom": {
+            "title": "Sigma Angstrom",
+            "type": "number"
+          },
+          "epsilon_over_k": {
+            "title": "Epsilon Over K",
+            "type": "number"
+          },
+          "BibTeXKey": {
+            "title": "Bibtexkey",
+            "type": "string"
+          },
+          "lambda_r": {
+            "title": "Lambda R",
+            "type": "number"
+          },
+          "lambda_a": {
+            "title": "Lambda A",
+            "type": "number"
+          },
+          "mu_Cm": {
+            "annotation": "The dipole moment, in Debye",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mu Cm"
+          },
+          "mu_D": {
+            "annotation": "The dipole moment, in C*m",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mu D"
+          },
+          "Q_Cm": {
+            "annotation": "The quadrupolar moment, in Debye",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q Cm"
+          },
+          "Q_D": {
+            "annotation": "The quadrupolar moment, in C*m",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q D"
+          },
+          "nmu": {
+            "annotation": "The number of dipole moments, consider it a weighting parameter",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nmu"
+          },
+          "nQ": {
+            "annotation": "The number of quadrupolar moments, consider it a weighting parameter",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nq"
+          }
+        },
+        "required": [
+          "name",
+          "m",
+          "sigma_Angstrom",
+          "epsilon_over_k",
+          "BibTeXKey",
+          "lambda_r",
+          "lambda_a",
+          "mu_Cm",
+          "mu_D",
+          "Q_Cm",
+          "Q_D",
+          "nmu",
+          "nQ"
+        ],
+        "title": "SAFTVRMieCoeff",
+        "type": "object"
+      },
+      "SAFTVRMieWithCoeffs": {
+        "additionalProperties": false,
+        "properties": {
+          "kmat": {
+            "annotation": "The NxN matrix of kij factors",
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Kmat"
+          },
+          "polar_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polar Model"
+          },
+          "SAFTVRMie_flags": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saftvrmie Flags"
+          },
+          "polar_flags": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polar Flags"
+          },
+          "coeffs": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/$defs/SAFTVRMieCoeff"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coeffs"
+          }
+        },
+        "required": [
+          "polar_model",
+          "SAFTVRMie_flags",
+          "polar_flags",
+          "coeffs"
+        ],
+        "title": "SAFTVRMieWithCoeffs",
+        "type": "object"
+      },
+      "SAFTVRMieWithNames": {
+        "additionalProperties": false,
+        "properties": {
+          "kmat": {
+            "annotation": "The NxN matrix of kij factors",
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Kmat"
+          },
+          "polar_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polar Model"
+          },
+          "SAFTVRMie_flags": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saftvrmie Flags"
+          },
+          "polar_flags": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polar Flags"
+          },
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "polar_model",
+          "SAFTVRMie_flags",
+          "polar_flags",
+          "names"
+        ],
+        "title": "SAFTVRMieWithNames",
+        "type": "object"
+      }
+    },
+    "anyOf": [
+      {
+        "$ref": "#/$defs/SAFTVRMieWithNames"
+      },
+      {
+        "$ref": "#/$defs/SAFTVRMieWithCoeffs"
+      }
+    ]
   }
 }
