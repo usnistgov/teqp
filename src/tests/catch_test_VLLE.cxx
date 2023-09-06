@@ -24,7 +24,7 @@ TEST_CASE("Test intersection for trisectrix", "[VLLE]"){
     CHECK(crintersections.size() == 3);
 }
 
-TEST_CASE("Test VLLE for nitrogen + ethane", "[VLLE]")
+TEST_CASE("Test VLLE for nitrogen + ethane for isotherm", "[VLLE]")
 {
     // As in the examples in https://doi.org/10.1021/acs.iecr.1c04703
     std::vector<std::string> names = {"Nitrogen", "Ethane"};
@@ -65,4 +65,46 @@ TEST_CASE("Test VLLE for nitrogen + ethane", "[VLLE]")
     }
     CHECK(rho0s.min() == Approx(3669.84793));
     CHECK(rho0s.max() == Approx(19890.1584));
+}
+
+TEST_CASE("Test VLLE for nitrogen + ethane for isobar", "[VLLE]")
+{
+    // As in the examples in https://doi.org/10.1021/acs.iecr.1c04703
+    std::vector<std::string> names = {"Nitrogen", "Ethane"};
+    using namespace teqp::cppinterface;
+    auto model = make_multifluid_model(names, "../mycp");
+    std::vector<decltype(model)> pures;
+    pures.emplace_back(make_multifluid_model({names[0]}, "../mycp"));
+    pures.emplace_back(make_multifluid_model({names[1]}, "../mycp"));
+
+    double p = 29.0e5; // [Pa] # From Antolovic
+    std::vector<nlohmann::json> traces;
+    for (int ipure : {1, 0}){
+
+        // Init at the pure fluid endpoint for ethane
+        auto m0 = build_multifluid_model({names[ipure]}, "../mycp");
+        auto pure0 = nlohmann::json::parse(m0.get_meta()).at("pures")[0];
+        auto jancillaries = pure0.at("ANCILLARIES");
+        auto anc = teqp::MultiFluidVLEAncillaries(jancillaries);
+
+        double T0 = anc.pV.T_r*0.9;
+        for (auto counter = 0; counter < 5; ++counter){
+            auto r = anc.pL(T0) - p;
+            auto drdT = pures[ipure]->dpsatdT_pure(T0, anc.rhoL(T0), anc.rhoV(T0));
+            T0 -= r/drdT;
+        }
+        auto rhoLpurerhoVpure = pures[ipure]->pure_VLE_T(T0, anc.rhoL(T0), anc.rhoV(T0), 10);
+
+        auto rhovecL = (Eigen::ArrayXd(2) << 0.0, 0.0).finished();
+        auto rhovecV = (Eigen::ArrayXd(2) << 0.0, 0.0).finished();
+        rhovecL[ipure] = rhoLpurerhoVpure[0];
+        rhovecV[ipure] = rhoLpurerhoVpure[1];
+//        PVLEOptions opt; opt.p_termination = 1e8; opt.crit_termination=1e-4; opt.calc_criticality=true;
+        auto trace = model->trace_VLE_isobar_binary(p, T0, rhovecL, rhovecV);
+        traces.push_back(trace);
+
+    }
+    auto VLLEsoln = VLLE::find_VLLE_p_binary(*model, traces);
+    CHECK(VLLEsoln.size() == 1);
+    CHECK(VLLEsoln[0].at("polished")[3].get<double>() == Approx(125.14).margin(0.1));
 }

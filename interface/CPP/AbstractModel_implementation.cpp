@@ -35,7 +35,10 @@ namespace teqp{
         }
 
         std::vector<nlohmann::json> AbstractModel::find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options) const{
-            return VLLE::find_VLLE_T_binary(*this, traces, options);;
+            return VLLE::find_VLLE_T_binary(*this, traces, options);
+        }
+        std::vector<nlohmann::json> AbstractModel::find_VLLE_p_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options) const{
+            return VLLE::find_VLLE_p_binary(*this, traces, options);
         }
     
     std::tuple<VLE_return_code,EArrayd,EArrayd> AbstractModel::mix_VLE_Tx(const double T, const REArrayd& rhovecL0, const REArrayd& rhovecV0, const REArrayd& xspec, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const{
