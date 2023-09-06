@@ -14,7 +14,7 @@ namespace teqp {
         using makefunc = std::function<std::unique_ptr<teqp::cppinterface::AbstractModel>(const nlohmann::json &j)>;
         using namespace teqp::cppinterface::adapter;
     
-        nlohmann::json get_model_schema(const std::string& kind) { model_schema_library.at(kind); }
+        nlohmann::json get_model_schema(const std::string& kind) { return model_schema_library.at(kind); }
 
         static std::unordered_map<std::string, makefunc> pointer_factory = {
             {"vdW1", [](const nlohmann::json& spec){ return make_owned(vdWEOS1(spec.at("a"), spec.at("b"))); }},
