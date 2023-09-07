@@ -315,9 +315,9 @@ namespace VLLE {
         else if (traces.size() == 1) {
             // Build the arrays of values to find the self-intersection
             for (auto& el : traces[0]) {
-                auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
+                auto rhoV_ = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
                 auto y_ = el.at(ykey).get<double>();
-                x.push_back(rhoV[0] / rhoV.sum()); // Mole fractions in the vapor phase
+                x.push_back(rhoV_[0] / rhoV_.sum()); // Mole fractions in the vapor phase
                 y.push_back(y_);
             }
             auto intersections = get_self_intersections(x, y);
@@ -383,15 +383,15 @@ namespace VLLE {
             std::vector<double> x1, y1, x2, y2;
             // Build the arrays of values to find the cross-intersection
             for (auto& el : traces[0]) {
-                auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
+                auto rhoV_ = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
                 auto y_ = el.at(ykey).get<double>();
-                x1.push_back(rhoV[0] / rhoV.sum()); // Mole fractions in the vapor phase
+                x1.push_back(rhoV_[0] / rhoV_.sum()); // Mole fractions in the vapor phase
                 y1.push_back(y_);
             }
             for (auto& el : traces[1]) {
-                auto rhoV = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
+                auto rhoV_ = el.at("rhoV / mol/m^3").get<std::valarray<double>>();
                 auto y_ = el.at(ykey).get<double>();
-                x2.push_back(rhoV[0] / rhoV.sum()); // Mole fractions in the vapor phase
+                x2.push_back(rhoV_[0] / rhoV_.sum()); // Mole fractions in the vapor phase
                 y2.push_back(y_);
             }
             auto intersections = get_cross_intersections(x1, y1, x2, y2);
