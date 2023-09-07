@@ -54,8 +54,8 @@ namespace teqp{
                 if (row.size() != mat.rows()){
                     throw std::invalid_argument("provided matrix is not square");
                 }
-                for (auto j = 0; j < row.size(); ++j){
-                    mat(i, j) = row[j];
+                for (auto k = 0; k < row.size(); ++k){
+                    mat(i, k) = row[k];
                 }
             }
             return mat;

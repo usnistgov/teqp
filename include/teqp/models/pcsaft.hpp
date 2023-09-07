@@ -304,9 +304,9 @@ protected:
             throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components");
         }
     };
-    auto get_coeffs_from_names(const std::vector<std::string> &names){
+    auto get_coeffs_from_names(const std::vector<std::string> &the_names){
         PCSAFTLibrary library;
-        return library.get_coeffs(names);
+        return library.get_coeffs(the_names);
     }
     auto build_hardchain(const std::vector<SAFTCoeffs> &coeffs){
         check_kmat(coeffs.size());

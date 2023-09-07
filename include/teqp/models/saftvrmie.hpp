@@ -188,8 +188,8 @@ struct SAFTVRMieChainContributionTerms{
         }
     }
     std::size_t get_N(){
-        auto sizes = (Eigen::ArrayXd(5) << m.size(), epsilon_over_k.size(), sigma_A.size(), lambda_a.size(), lambda_r.size()).finished();
-        if (sizes.mean() != sizes.minCoeff()){
+        auto sizes = (Eigen::ArrayX<Eigen::Index>(5) << m.size(), epsilon_over_k.size(), sigma_A.size(), lambda_a.size(), lambda_r.size()).finished();
+        if (sizes.maxCoeff() != sizes.minCoeff()){
             throw teqp::InvalidArgument("sizes of pure component arrays are not all the same");
         }
         return sizes[0];

@@ -72,7 +72,8 @@ namespace teqp {
     */
     class IdealHelmholtzPowerT {
     public:
-        const std::valarray<double> n, t, R;
+        const std::valarray<double> n, t;
+        const double R;
         IdealHelmholtzPowerT(const std::valarray<double>& n, const std::valarray<double>& t, double R) : n(n), t(t), R(R) {};
 
         template<typename TType, typename RhoType>
@@ -90,7 +91,8 @@ namespace teqp {
     */
     class IdealHelmholtzPlanckEinstein {
     public:
-        const std::valarray<double> n, theta, R;
+        const std::valarray<double> n, theta;
+        const double R;
         IdealHelmholtzPlanckEinstein(const std::valarray<double>& n, const std::valarray<double>& theta, double R) : n(n), theta(theta), R(R) {};
 
         template<typename TType, typename RhoType>
@@ -108,7 +110,8 @@ namespace teqp {
     */
     class IdealHelmholtzPlanckEinsteinGeneralized {
     public:
-        const std::valarray<double> n, c, d, theta, R;
+        const std::valarray<double> n, c, d, theta;
+        const double R;
         IdealHelmholtzPlanckEinsteinGeneralized(
             const std::valarray<double>& n,
             const std::valarray<double>& c,
@@ -134,7 +137,8 @@ namespace teqp {
     */
     class IdealHelmholtzGERG2004Cosh {
     public:
-        const std::valarray<double> n, theta, R;
+        const std::valarray<double> n, theta;
+        const double R;
         IdealHelmholtzGERG2004Cosh(const std::valarray<double>& n, const std::valarray<double>& theta, double R) : n(n), theta(theta), R(R) {};
 
         template<typename TType, typename RhoType>
@@ -156,7 +160,8 @@ namespace teqp {
     */
     class IdealHelmholtzGERG2004Sinh {
     public:
-        const std::valarray<double> n, theta, R;
+        const std::valarray<double> n, theta;
+        const double R;
         IdealHelmholtzGERG2004Sinh(const std::valarray<double>& n, const std::valarray<double>& theta, double R) : n(n), theta(theta), R(R) {};
 
         template<typename TType, typename RhoType>
@@ -180,7 +185,8 @@ namespace teqp {
     */
     class IdealHelmholtzCp0Constant {
     public:
-        const double c, T_0, R;
+        const double c, T_0;
+        const double R;
         IdealHelmholtzCp0Constant(
           const double c, const double T_0, const double R
         ) : c(c), T_0(T_0), R(R) {};
@@ -203,7 +209,8 @@ namespace teqp {
     */
     class IdealHelmholtzCp0PowerT {
     public:
-        const double c, t, T_0, R;
+        const double c, t, T_0;
+        const double R;
         IdealHelmholtzCp0PowerT(
             const double c, const double t, const double T_0, const double R
         ) : c(c), t(t), T_0(T_0), R(R) {};
