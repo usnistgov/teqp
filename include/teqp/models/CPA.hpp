@@ -187,7 +187,7 @@ private:
     const std::vector<int> N_sites; 
     const double R_gas;
 
-    auto get_N_sites(const std::vector<association_classes> &classes) {
+    auto get_N_sites(const std::vector<association_classes> &the_classes) {
         std::vector<int> N_sites_out;
         auto get_N = [](auto cl) {
             switch (cl) {
@@ -198,7 +198,7 @@ private:
             default: throw std::invalid_argument("Bad association class");
             }
         };
-        for (auto cl : classes) {  
+        for (auto cl : the_classes) {  
             N_sites_out.push_back(get_N(cl));
         }
         return N_sites_out;
