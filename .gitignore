@@ -15,3 +15,6 @@
 doc/source/_static/doxygen
 doc/source/api/*.rst
 doc/source/examples/*.pdf
+interface/CPP/model_schemas.cpp
+
+interface/CPP/model_schemas.json

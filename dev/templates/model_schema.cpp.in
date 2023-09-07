@@ -1,9 +1,0 @@
-#include "nlohmann/json.hpp"
-
-// The contents of this file are populated by CMake
-// Note the protectparens( ... )protectparens is to ensure that ( can be used inside the raw string literal
-extern const nlohmann::json model_schema_library = R"protectparens(
-@MODEL_SCHEMA_CONTENTS@
-)protectparens"_json\;
-
-

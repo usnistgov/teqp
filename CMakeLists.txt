@@ -23,6 +23,15 @@ else()
     message(FATAL_ERROR "tar.xz of boost sources needed for teqp cannot be found")
 endif()
 
+set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/model_schemas.tar.xz")
+if (EXISTS ${ZIPFN})
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xJf ${ZIPFN} 
+                  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
+  message(STATUS "Untarred model schemas")
+else()
+  message(FATAL_ERROR "tar.xz of thermodynamic model schemas needed for teqp cannot be found")
+endif()
+
 add_library(teqpinterface INTERFACE)
 
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -101,14 +110,8 @@ if (NOT TEQP_NO_TEQPCPP)
   target_compile_definitions(teqpcpp PRIVATE -DMULTICOMPLEX_NO_MULTIPRECISION)
   target_compile_definitions(teqpcpp PUBLIC -DUSE_AUTODIFF)
   
-  # Populate the model schema cpp file with the contents
-  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/notebooks/schemas.json" MODEL_SCHEMA_CONTENTS)
-  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/dev/templates/model_schema.cpp.in" MODEL_JSON_SCHEMA_TEMPLATE)
-  file(CONFIGURE
-       OUTPUT model_schemas.cpp
-       CONTENT ${MODEL_JSON_SCHEMA_TEMPLATE}
-       @ONLY)
-  target_sources(teqpcpp PRIVATE model_schemas.cpp)
+  # Add the schema file
+  target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/model_schemas.cpp")
 
   if (TEQP_TESTTEQPCPP)
     add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/test_teqpcpp.cpp")
