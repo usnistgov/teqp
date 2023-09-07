@@ -758,7 +758,9 @@ class MultipolarContributionGrayGubbins {
 public:
     static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_rhostar_molefractions;
 private:
-    const Eigen::ArrayXd sigma_m, epsilon_over_k, mu, Q, mu2, Q2, Q3;
+    const Eigen::ArrayXd sigma_m, epsilon_over_k;
+    Eigen::MatrixXd SIGMAIJ, EPSKIJ;
+    const Eigen::ArrayXd mu, Q, mu2, Q2, Q3;
     const bool has_a_polar;
     const Eigen::ArrayXd sigma_m3, sigma_m5;
     
@@ -777,7 +779,6 @@ private:
     const double epsilon_0 = 8.8541878128e-12; // https://en.wikipedia.org/wiki/Vacuum_permittivity, in F/m, or C^2⋅N^−1⋅m^−2
     const double k_e = 1.0/(4.0*PI_*epsilon_0); // coulomb constant, with units of N m^2 / C^2
     
-    Eigen::MatrixXd SIGMAIJ, EPSKIJ;
     multipolar_rhostar_approach approach = multipolar_rhostar_approach::use_packing_fraction;
     
     // These values were adjusted in the model of Paricaud, JPCB, 2023
@@ -829,7 +830,7 @@ public:
         const auto muprime2 = mu2; // Polarizability ignored for now
         const auto z1 = 1.0/3.0*beta*muprime2;
         const auto z2 = 0.0*z1;
-        const auto gamma = 0.0*z1; // Anisotropy of polarizability also ignored
+//        const auto gamma = 0.0*z1; // Anisotropy of polarizability also ignored
         
         for (std::size_t i = 0; i < N; ++i){
             for (std::size_t j = 0; j < N; ++j){
