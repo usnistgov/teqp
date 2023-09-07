@@ -33,6 +33,7 @@ target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/json-schema-validator")
+set_property(TARGET nlohmann_json_schema_validator PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
 set(EIGEN3_VERSION_OK TRUE CACHE BOOL "Yes eigen is fine")
