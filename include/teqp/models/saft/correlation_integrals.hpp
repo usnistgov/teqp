@@ -368,7 +368,7 @@ public:
     template<typename TType, typename RhoType>
     auto get_K(const TType& Tstar, const RhoType& rhostar) const{
         std::common_type_t<TType, RhoType> summer = 0.0;
-        int N1 = 8, N2 = 8, N3 = 24;
+        int N1 = 8, N2 = 8; // N3 = 24
         
         for (auto i = 0; i <= 3; ++i){
             for (auto j = 1; j <= 2; ++j){

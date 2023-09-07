@@ -825,7 +825,7 @@ public:
         const auto& x = mole_fractions; // concision
         
         const std::size_t N = mole_fractions.size();
-        using XTtype = std::common_type_t<TTYPE, decltype(mole_fractions[0])>;
+        
         std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])> summer = 0.0;
         
         const auto k_B = 1.380649e-23;

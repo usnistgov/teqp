@@ -113,6 +113,12 @@ if (NOT TEQP_NO_TEQPCPP)
   # Add the schema file
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/model_schemas.cpp")
 
+  target_compile_options(teqpcpp PRIVATE
+     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+          -Wall -Wpedantic -Wno-c++98-compat >
+     $<$<CXX_COMPILER_ID:MSVC>:
+          /W4 /wd4127>)
+
   if (TEQP_TESTTEQPCPP)
     add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/test_teqpcpp.cpp")
     target_link_libraries(test_teqpcpp PUBLIC teqpcpp)

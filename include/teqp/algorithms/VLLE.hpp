@@ -308,12 +308,6 @@ namespace VLLE {
             std::valarray<double> vs = v1*w + v2*(1 - w);
             return Eigen::Map<Eigen::ArrayXd>(&(vs[0]), vs.size());
         };
-        // A convenience function to weight a double value
-        auto avg_value = [](const nlohmann::json&j1, const nlohmann::json &j2, const std::string& key, const double w) -> double{
-            auto v1 = j1.at(key).template get<double>();
-            auto v2 = j2.at(key).template get<double>();
-            return v1*w + v2*(1 - w);
-        };
 
         if (traces.empty()) {
             throw InvalidArgument("The traces variable is empty");

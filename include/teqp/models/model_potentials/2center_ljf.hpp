@@ -273,7 +273,6 @@ namespace teqp {
             // EQ(2)
             template<typename TauType, typename DeltaType>
             auto alphar(const TauType& tau, const DeltaType& delta, const double& alpha) const {
-                using result = std::common_type_t<TauType, DeltaType>;
 
                 auto eta = forceeval((delta / (a + (1.0 - a) * pow(tau, g))));
                 auto r = (pow(alpha, 2) - 1.0) * log(1.0 - eta) + ((pow(alpha, 2) + 3 * alpha) * eta - 3 * alpha * pow(eta, 2)) / (pow(1.0 - eta, 2));

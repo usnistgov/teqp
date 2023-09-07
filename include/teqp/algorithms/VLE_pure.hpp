@@ -63,7 +63,6 @@ public:
         const EigenArray1 rhovecV = rhovec.tail(1);
         const auto rhomolarL = rhovecL.sum(), rhomolarV = rhovecV.sum();
 
-        const TYPE &T = m_T;
         //const TYPE R = m_model.R(molefracs);
         double R0_over_Rr = R0 / Rr;
         
@@ -207,7 +206,7 @@ inline auto pure_trace_VLE(const teqp::cppinterface::AbstractModel& model, const
     double R = model.R(z);
     bool with_deriv = spec.at("with_deriv");
     double dT = -(Tclose-T)/(Nstep-1);
-    using tdx = TDXDerivatives<decltype(model)>;
+    
     for (auto T_: Eigen::ArrayXd::LinSpaced(Nstep, Tclose, T)){
         rhoLrhoVpolished = pure_VLE_T(model, T_, rhoLrhoVpolished[0], rhoLrhoVpolished[1], spec.value("NVLE", 10), z);
         

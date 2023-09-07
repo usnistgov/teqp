@@ -304,7 +304,7 @@ public:
 class NullEOSTerm {
 public:
     template<typename TauType, typename DeltaType>
-    auto alphar(const TauType& tau, const DeltaType& delta) const {
+    auto alphar(const TauType& /*tau*/, const DeltaType& /*delta*/) const {
         return static_cast<std::common_type_t<TauType, DeltaType>>(0.0);
     }
 };
