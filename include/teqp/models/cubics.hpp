@@ -128,20 +128,19 @@ public:
     const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
     
     template<class VecType>
-    auto R(const VecType& molefrac) const {
+    auto R(const VecType& /*molefrac*/) const {
         return Ru;
     }
     
     template<typename TType, typename CompType>
     auto get_a(TType T, const CompType& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> a_ = 0.0;
-        auto ai = this->ai;
         for (auto i = 0; i < molefracs.size(); ++i) {
             auto alphai = forceeval(std::visit([&](auto& t) { return t(T); }, alphas[i]));
-            auto ai_ = forceeval(ai[i] * alphai);
+            auto ai_ = forceeval(this->ai[i] * alphai);
             for (auto j = 0; j < molefracs.size(); ++j) {
                 auto alphaj = forceeval(std::visit([&](auto& t) { return t(T); }, alphas[j]));
-                auto aj_ = ai[j] * alphaj;
+                auto aj_ = this->ai[j] * alphaj;
                 auto aij = forceeval((1 - kmat(i,j)) * sqrt(ai_ * aj_));
                 a_ = a_ + molefracs[i] * molefracs[j] * aij;
             }

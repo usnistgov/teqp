@@ -27,7 +27,7 @@ public:
     /// \brief Get the universal gas constant 
     /// \note Here the real universal gas constant, with no composition dependence
     template<class VecType>
-    auto R(const VecType& molefrac) const { return Ru; }
+    auto R(const VecType& /*molefrac*/) const { return Ru; }
 
     /// The evaluation of \f$ \alpha^{\rm r}=a/(RT) \f$
     /// \param T The temperature
@@ -78,15 +78,13 @@ public:
     }; 
     
     /// \brief Calculate the a parameter, based on quadratic mixing rules
-    /// \param T Temperature
     /// \param molefracs Array of mole fractions
     template<typename TType, typename CompType>
-    auto a(TType T, const CompType& molefracs) const {
+    auto a(TType /*T*/, const CompType& molefracs) const {
         typename CompType::value_type a_ = 0.0;
-        auto ai = this->ai;
         for (auto i = 0; i < molefracs.size(); ++i) {
             for (auto j = 0; j < molefracs.size(); ++j) {
-                auto aij = (1 - k[i][j]) * sqrt(ai[i] * ai[j]);
+                auto aij = (1 - k[i][j]) * sqrt(this->ai[i] * this->ai[j]);
                 a_ = a_ + molefracs[i] * molefracs[j] * aij;
             }
         }

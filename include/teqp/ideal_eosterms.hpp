@@ -38,7 +38,7 @@ namespace teqp {
         IdealHelmholtzLogT(double a, double R) : a(a), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             using otype = std::common_type_t <TType, RhoType>;
             return forceeval(static_cast<otype>(a * log(T)));
         }
@@ -77,7 +77,7 @@ namespace teqp {
         IdealHelmholtzPowerT(const std::valarray<double>& n, const std::valarray<double>& t, double R) : n(n), t(t), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
                 summer += n[i] * pow(T, t[i]);
@@ -96,7 +96,7 @@ namespace teqp {
         IdealHelmholtzPlanckEinstein(const std::valarray<double>& n, const std::valarray<double>& theta, double R) : n(n), theta(theta), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
                 summer += n[i] * log(1.0 - exp(-theta[i] / T));
@@ -121,7 +121,7 @@ namespace teqp {
         ) : n(n), c(c), d(d), theta(theta), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
                 summer += n[i] * log(c[i] + d[i]*exp(theta[i] / T));
@@ -142,7 +142,7 @@ namespace teqp {
         IdealHelmholtzGERG2004Cosh(const std::valarray<double>& n, const std::valarray<double>& theta, double R) : n(n), theta(theta), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
                 using std::abs;
@@ -165,7 +165,7 @@ namespace teqp {
         IdealHelmholtzGERG2004Sinh(const std::valarray<double>& n, const std::valarray<double>& theta, double R) : n(n), theta(theta), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
             for (auto i = 0; i < n.size(); ++i) {
                 using std::abs;
@@ -192,7 +192,7 @@ namespace teqp {
         ) : c(c), T_0(T_0), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             using otype = std::common_type_t <TType, RhoType>;
             return forceeval(static_cast<otype>(
                 c*((T-T_0)/T-log(T/T_0))
@@ -216,7 +216,7 @@ namespace teqp {
         ) : c(c), t(t), T_0(T_0), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             using otype = std::common_type_t <TType, RhoType>;
             return forceeval(static_cast<otype>(
                 c*(pow(T,t)*(1/(t+1)-1/t) - pow(T_0,t+1)/(T*(t+1)) + pow(T_0,t)/t)
