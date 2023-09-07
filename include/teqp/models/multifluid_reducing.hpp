@@ -77,7 +77,7 @@ namespace teqp {
             auto [el, swap_needed] = get_BIPdep(collection, identifiers, flags);
 
             double betaT, gammaT, betaV, gammaV;
-            if (el.contains("betaT") && el.contains("gammaT") && el.contains("betaV") & el.contains("gammaV")) {
+            if (el.contains("betaT") && el.contains("gammaT") && el.contains("betaV") && el.contains("gammaV")) {
                 betaT = el["betaT"]; gammaT = el["gammaT"]; betaV = el["betaV"]; gammaV = el["gammaV"];
                 // Backwards order of components, flip beta values
                 if (swap_needed) {
