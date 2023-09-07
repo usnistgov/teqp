@@ -115,9 +115,9 @@ if (NOT TEQP_NO_TEQPCPP)
 
   target_compile_options(teqpcpp PRIVATE
      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
-          -Wall -Wpedantic -Wno-c++98-compat >
+        -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic>
      $<$<CXX_COMPILER_ID:MSVC>:
-          /W4 /wd4127>)
+          /W4 /wd4127 /wd4389 /wd4100>)
 
   if (TEQP_TESTTEQPCPP)
     add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/test_teqpcpp.cpp")
