@@ -464,8 +464,8 @@ public:
       const Eigen::ArrayX<double> &nmu,
       const Eigen::ArrayX<double> &Qstar2,
       const Eigen::ArrayX<double> &nQ)
-    : di((((nmu*mustar2 > 0).sum() > 0) ? decltype(di)(DipolarContributionGrossVrabec(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu)) : std::nullopt)),
-      quad((((nQ*Qstar2 > 0).sum() > 0) ? decltype(quad)(QuadrupolarContributionGross(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ)) : std::nullopt)),
+    : di((((nmu*mustar2 > 0).cast<int>().sum() > 0) ? decltype(di)(DipolarContributionGrossVrabec(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu)) : std::nullopt)),
+      quad((((nQ*Qstar2 > 0).cast<int>().sum() > 0) ? decltype(quad)(QuadrupolarContributionGross(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ)) : std::nullopt)),
       diquad((di && quad) ? decltype(diquad)(DipolarQuadrupolarContributionVrabecGross(m, sigma_Angstrom, epsilon_over_k, mustar2, nmu, Qstar2, nQ)) : std::nullopt)
     {};
     
