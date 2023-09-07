@@ -934,6 +934,9 @@ public:
             // The packing fraction is defined by eta = pi/6*rho^*, so use the (temperature-dependent) eta to obtain rho^*
             rhostar = forceeval(packing_fraction/(static_cast<double>(EIGEN_PI)/6.0));
         }
+        else{
+            throw teqp::InvalidArgument("The method used to determine rho^* is invalid");
+        }
         return rhostar;
     }
     
