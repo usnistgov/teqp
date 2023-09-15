@@ -1,0 +1,15 @@
+version: '3.2'
+
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    environment:
+      DEBIAN_FRONTEND: noninteractive
+    mem_limit: 10000000000
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /teqp
+        read_only: false
