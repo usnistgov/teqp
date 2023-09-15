@@ -26,6 +26,13 @@ TEST_CASE("Single alphar check value", "[PCSAFT]")
     CHECK(tdx::get_Ar00(model, T, Dmolar, z) == Approx(-0.032400020930842724));
 }
 
+TEST_CASE("Check get_names", "[PCSAFT]")
+{
+    std::vector<std::string> names = { "Methane" };
+    auto model = PCSAFTMixture(names);
+    CHECK(model.get_names()[0] == "Methane");
+}
+
 TEST_CASE("Check 0n derivatives", "[PCSAFT]")
 {
     std::vector<std::string> names = { "Methane", "Ethane" };

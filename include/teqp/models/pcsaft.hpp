@@ -327,6 +327,13 @@ protected:
         }
         return PCSAFTHardChainContribution(m, mminus1, sigma_Angstrom, epsilon_over_k, kmat);
     }
+    auto extract_names(const std::vector<SAFTCoeffs> &coeffs){
+        std::vector<std::string> names;
+        for (const auto& c: coeffs){
+            names.push_back(c.name);
+        }
+        return names;
+    }
     auto build_dipolar(const std::vector<SAFTCoeffs> &coeffs) -> std::optional<PCSAFTDipolarContribution>{
         Eigen::ArrayXd mustar2(coeffs.size()), nmu(coeffs.size());
         auto i = 0;
@@ -357,7 +364,7 @@ protected:
     }
 public:
     PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), kmat){};
-    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : kmat(kmat), hardchain(build_hardchain(coeffs)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
+    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : names(extract_names(coeffs)), kmat(kmat), hardchain(build_hardchain(coeffs)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
     
 //    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
     PCSAFTMixture& operator=( const PCSAFTMixture& ) = delete; // non copyable
@@ -366,6 +373,7 @@ public:
     auto get_sigma_Angstrom() const { return sigma_Angstrom; }
     auto get_epsilon_over_k_K() const { return epsilon_over_k; }
     auto get_kmat() const { return kmat; }
+    auto get_names() const { return names;}
 
     auto print_info() {
         std::string s = std::string("i m sigma / A e/kB / K \n  ++++++++++++++") + "\n";
