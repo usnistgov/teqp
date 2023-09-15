@@ -5,6 +5,7 @@
 #include "teqp/cpp/derivs.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
+#include "teqp/models/multifluid.hpp"
 
 using namespace teqp;
 
@@ -63,8 +64,9 @@ TEST_CASE("multifluid derivatives via DerivativeAdapter", "[mf]")
             {"departure", "../mycp/dev/mixtures/mixture_departure_functions.json"}
         }
     }};
-    auto am = teqp::cppinterface::make_model(j);
-    auto model = multifluidfactory(j["model"]);
+    const auto am = teqp::cppinterface::make_model(j);
+    using multifluid_t = decltype(multifluidfactory(nlohmann::json{}));
+    auto model = teqp::cppinterface::adapter::get_model_cref<multifluid_t>(am.get());
 
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     

@@ -231,6 +231,7 @@ if (TEQP_SNIPPETS)
       target_link_libraries (${snippet_exe} PRIVATE ${CMAKE_DL_LIBS})
     endif()
     target_compile_definitions(${snippet_exe} PRIVATE -DTEQP_MULTICOMPLEX_ENABLED)
+    target_compile_definitions(${snippet_exe} PRIVATE -DTEQP_MULTIPRECISION_ENABLED)
     target_compile_definitions(${snippet_exe} PRIVATE -DUSE_AUTODIFF)
 
     if(TEQP_JAVASCRIPT_HTML)

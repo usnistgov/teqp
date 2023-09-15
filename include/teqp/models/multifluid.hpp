@@ -99,7 +99,7 @@ public:
     /// Call a single departure term at i,j 
     template<typename TauType, typename DeltaType>
     auto get_alpharij(const int i, const int j,     const TauType& tau, const DeltaType& delta) const {
-        int N = funcs.size();
+        std::size_t N = funcs.size();
         if (i < 0 || j < 0){
             throw teqp::InvalidArgument("i or j is negative");
         }

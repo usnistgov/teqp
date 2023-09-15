@@ -24,14 +24,15 @@ TEST_CASE("multifluid derivatives", "[mf]")
     nlohmann::json jigs = nlohmann::json::array(); jigs.push_back(jig);
     auto aig = teqp::IdealHelmholtz(jigs);
     
-    auto amm = teqp::cppinterface::make_multifluid_model(names, "../mycp");
-    auto aigg = teqp::cppinterface::make_model({{"kind","IdealHelmholtz"}, {"model", jigs}});
+    using namespace teqp::cppinterface;
+    std::shared_ptr<AbstractModel> amm = teqp::cppinterface::make_multifluid_model(names, "../mycp");
+    std::shared_ptr<AbstractModel> aigg = teqp::cppinterface::make_model({{"kind","IdealHelmholtz"}, {"model", jigs}});
     
     std::vector<char> vars = {'P', 'S'};
     const auto vals = (Eigen::ArrayXd(2) << 300.0, 400.0).finished();
     
     Eigen::Ref<const Eigen::ArrayXd> rvals = vals, rz = z;
-    teqp::iteration::NRIterator NR(amm, aigg, vars, rvals, T, rho, rz);
+    teqp::iteration::NRIterator NR(amm.get(), aigg.get(), vars, rvals, T, rho, rz);
     
     BENCHMARK("alphar") {
         return model.alphar(T, rho, z);
@@ -53,7 +54,7 @@ TEST_CASE("multifluid derivatives", "[mf]")
     };
     
     BENCHMARK("Newton-Raphson construction") {
-        return teqp::iteration::NRIterator(amm, aigg, vars, rvals, T, rho, rz);
+        return teqp::iteration::NRIterator(amm.get(), aigg.get(), vars, rvals, T, rho, rz);
     };
     BENCHMARK("Newton-Raphson calc_step") {
         return NR.calc_step(T, rho);

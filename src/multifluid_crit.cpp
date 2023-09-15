@@ -44,7 +44,7 @@ void trace_critical_loci(const std::string &coolprop_root, const nlohmann::json 
                double zi = rhovec[i] / rhovec.sum();
                double T = zi * model.redfunc.Tc[i] + (1 - zi) * model.redfunc.Tc[1L - i];
                double z0 = (i == 0) ? zi : 1-zi;
-               auto [Tnew, rhonew] = ct::critical_polish_molefrac(model, T, rhovec, z0);
+               auto [Tnew, rhonew] = ct::critical_polish_fixedmolefrac(model, T, rhovec, z0);
                T0 = Tnew;
                rhoc0 = rhovec.sum();
            }

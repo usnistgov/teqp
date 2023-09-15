@@ -161,10 +161,15 @@ auto with_teqp_and_boost(const Model &model, double T, double rho, const VECTOR 
 
     // Now do the third-order derivative of alphar, as a further test
     // Define a generic lambda function taking rho
-    auto ff = [&](const auto& rho){ return model.alphar(T, rho, z); };
+    auto ff = [&](const my_float& rho) -> my_float {
+        auto tau = forceeval(Tc/T);
+        auto delta = forceeval(rho/rhoc);
+        return alphar_Lemmon2009<my_float>(tau, delta);
+    };
     my_float drho = 1e-30*rho;
 
-    o.Ar02exact = static_cast<double>(centered_diff<2,6>(ff,static_cast<my_float>(rho),drho)*pow(rho, 2));
+    auto Ar02_extended = centered_diff<2,6>(ff,static_cast<my_float>(rho),drho)*pow(rho, 2);
+    o.Ar02exact = static_cast<double>(Ar02_extended);
     o.Ar02teqp = tdx::template get_Ar0n<2>(model, T, rho, z)[2];
 
     o.Ar03exact = static_cast<double>(centered_diff<3,6>(ff,static_cast<my_float>(rho),drho)*pow(rho, 3));
