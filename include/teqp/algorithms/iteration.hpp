@@ -13,14 +13,14 @@ using namespace cppinterface;
  */
 class NRIterator{
 private:
-    const std::shared_ptr<AbstractModel> ar, aig;
+    const AbstractModel *ar, *aig;
     const std::vector<char>  vars;
     const Eigen::Ref<const Eigen::ArrayXd> vals;
     double T, rho;
     const Eigen::Ref<const Eigen::ArrayXd> z;
     
 public:
-    NRIterator(const std::shared_ptr<AbstractModel> &ar, const std::shared_ptr<AbstractModel> &aig, const std::vector<char>& vars, const Eigen::Ref<const Eigen::ArrayXd>& vals, double T, double rho, const Eigen::Ref<const Eigen::ArrayXd>& z) : ar(ar), aig(aig), vars(vars), vals(vals), T(T), rho(rho), z(z){}
+    NRIterator(const AbstractModel* ar, const AbstractModel* aig, const std::vector<char>& vars, const Eigen::Ref<const Eigen::ArrayXd>& vals, double T, double rho, const Eigen::Ref<const Eigen::ArrayXd>& z) : ar(ar), aig(aig), vars(vars), vals(vals), T(T), rho(rho), z(z){}
     
     /// Return the variables that are being used in the iteration
     std::vector<char> get_vars() const { return vars; }

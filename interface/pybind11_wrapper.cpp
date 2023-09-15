@@ -420,7 +420,7 @@ void init_teqp(py::module& m) {
     
     using namespace teqp::iteration;
     py::class_<NRIterator>(m, "NRIterator")
-        .def(py::init<const std::shared_ptr<AbstractModel> &, const std::shared_ptr<AbstractModel> &, const std::vector<char>&, const Eigen::Ref<const Eigen::ArrayXd>&, double, double, const Eigen::Ref<const Eigen::ArrayXd>&>())
+        .def(py::init<const AbstractModel *, const AbstractModel *, const std::vector<char>&, const Eigen::Ref<const Eigen::ArrayXd>&, double, double, const Eigen::Ref<const Eigen::ArrayXd>&>())
         .def("take_step", &NRIterator::take_step)
         .def("take_steps", &NRIterator::take_steps)
         .def("get_vars", &NRIterator::get_vars)
