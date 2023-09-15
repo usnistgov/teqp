@@ -6,6 +6,7 @@
 #include "teqp/models/multifluid.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/json_builder.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 
 #include <array>
 
@@ -101,7 +102,7 @@ int main() {
             {"kind", "multifluid"},
             {"model", jmodel}
         };
-        auto m = teqp::build_model(j);
+        auto m = teqp::cppinterface::make_model(j);
 
         for (auto& el : data) {
             auto [T_, rho_, p, ur, cvr, w, a] = el;
@@ -116,10 +117,10 @@ int main() {
             };
 
             // Now call the visitor function to get the value
-            auto Ar00 = std::visit(f, m);
-            NT = 0; ND = 1; auto Ar01 = std::visit(f, m);
-            NT = 1; ND = 0; auto Ar10 = std::visit(f, m);
-            NT = 2; ND = 0; auto Ar20 = std::visit(f, m);
+            auto Ar00 = m->get_Ar00(T, rho, molefrac);
+            auto Ar01 = m->get_Ar01(T, rho, molefrac);
+            auto Ar10 = m->get_Ar10(T, rho, molefrac);
+            auto Ar20 = m->get_Ar20(T, rho, molefrac);
 
             double pcalc = T * rho * (1 + Ar01);
             double urcalc = T * Ar10;
