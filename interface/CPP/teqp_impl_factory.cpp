@@ -11,7 +11,7 @@ namespace teqp {
 
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_SAFTVRMie(const nlohmann::json &j);
 
-        using makefunc = std::function<std::unique_ptr<teqp::cppinterface::AbstractModel>(const nlohmann::json &j)>;
+        using makefunc = ModelPointerFactoryFunction;
         using namespace teqp::cppinterface::adapter;
     
         nlohmann::json get_model_schema(const std::string& kind) { return model_schema_library.at(kind); }
@@ -71,6 +71,15 @@ namespace teqp {
     
         std::unique_ptr<AbstractModel> make_model(const nlohmann::json& j) {
             return build_model_ptr(j);
+        }
+    
+        void add_model_pointer_factory_function(const std::string& key, ModelPointerFactoryFunction& func){
+            if (pointer_factory.find(key) == pointer_factory.end()){
+                pointer_factory[key] = func;
+            }
+            else{
+                throw teqp::InvalidArgument("key is already present, overwriting is not currently allowed");
+            }
         }
     }
 }

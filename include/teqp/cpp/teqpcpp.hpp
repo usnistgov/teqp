@@ -179,5 +179,16 @@ namespace teqp {
     
         /// Return the schema for the given model kind
         nlohmann::json get_model_schema(const std::string& kind);
+    
+        
+        using ModelPointerFactoryFunction = std::function<std::unique_ptr<teqp::cppinterface::AbstractModel>(const nlohmann::json &j)>;
+    
+        /**
+         * \brief This function allows you to inject your own model factory function into the set of factory functions implemented in teqp. This allows you to add your own model at runtime. As an example of how to do this, see src/test_runtime_model_inclusion.cpp
+         * \param key The key used to define the model
+         * \param func The ModelPointerFactoryFunction factory function used to generate the wrapped model
+         */
+        void add_model_pointer_factory_function(const std::string& key, ModelPointerFactoryFunction& func);
+        
     }
 }
