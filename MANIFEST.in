@@ -3,6 +3,7 @@ graft interface
 graft src
 graft externals
 graft dev
-graft CMakeLists.txt
+graft teqp
+
 include CMakeLists.txt
 prune .git
