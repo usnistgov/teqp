@@ -1,0 +1,9 @@
+graft include
+graft interface
+graft src
+graft externals
+graft dev
+graft teqp
+
+include CMakeLists.txt
+prune .git
