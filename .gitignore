@@ -1,12 +1,11 @@
 /bld
 /bldgcc
 /build
+/dist
 /interface/teqpversion.hpp
 /pypirc
 /boost_teqp
 /teqp.egg-info
-/MANIFEST.in
-/teqp
 /dev/docker/valgrind/output
 /dev/docker/gcov/output
 /**/.ipynb_checkpoints
