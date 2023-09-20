@@ -416,7 +416,7 @@ void init_teqp(py::module& m) {
         .def("find_VLLE_p_binary", &am::find_VLLE_p_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"))
     ;
     
-    m.def("_make_model", &teqp::cppinterface::make_model);
+    m.def("_make_model", &teqp::cppinterface::make_model, "json_data"_a, py::arg_v("validate", true));
     m.def("attach_model_specific_methods", &attach_model_specific_methods);
     
     using namespace teqp::iteration;

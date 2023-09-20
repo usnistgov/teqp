@@ -161,7 +161,7 @@ namespace teqp {
         };
         
         // Generic JSON-based interface where the model description is encoded as JSON
-        std::unique_ptr<AbstractModel> make_model(const nlohmann::json &);
+        std::unique_ptr<AbstractModel> make_model(const nlohmann::json &, bool validate = true);
 
         // Expose specialized factory functions for different models
         // Mostly these are just adapter functions that prepare some
@@ -175,7 +175,7 @@ namespace teqp {
             const std::string& departurepath = {}
         );
     
-        std::unique_ptr<AbstractModel> build_model_ptr(const nlohmann::json& json);
+        std::unique_ptr<AbstractModel> build_model_ptr(const nlohmann::json& json, bool validate = true);
     
         /// Return the schema for the given model kind
         nlohmann::json get_model_schema(const std::string& kind);

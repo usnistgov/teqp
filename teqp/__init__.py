@@ -39,8 +39,12 @@ def make_vdW1(a, b):
 def vdWEOS1(*args):
     return make_vdW1(*args)
     
-def make_model(*args):
-    AS = _make_model(*args)
+def make_model(*args, **kwargs):
+    """
+    This function is in two parts; first the make_model function (renamed to _make_model in the Python interface)
+    is used to make the model and then the model-specific methods are attached to the instance
+    """
+    AS = _make_model(*args, **kwargs)
     attach_model_specific_methods(AS)
     return AS
 

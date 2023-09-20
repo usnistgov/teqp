@@ -43,7 +43,7 @@ namespace teqp {
             {"SAFT-VR-Mie", [](const nlohmann::json& spec){ return make_SAFTVRMie(spec); }}
         };
 
-        std::unique_ptr<teqp::cppinterface::AbstractModel> build_model_ptr(const nlohmann::json& json) {
+        std::unique_ptr<teqp::cppinterface::AbstractModel> build_model_ptr(const nlohmann::json& json, const bool validate) {
             
             // Extract the name of the model and the model parameters
             std::string kind = json.at("kind");
@@ -51,11 +51,13 @@ namespace teqp {
             
             auto itr = pointer_factory.find(kind);
             if (itr != pointer_factory.end()){
-                if (model_schema_library.contains(kind)){
-                    // This block is not thread-safe, needs a mutex or something
-                    JSONValidator validator(model_schema_library.at(kind));
-                    if (!validator.is_valid(spec)){
-                        throw teqp::JSONValidationError(validator.get_validation_errors(spec));
+                if (validate){
+                    if (model_schema_library.contains(kind)){
+                        // This block is not thread-safe, needs a mutex or something
+                        JSONValidator validator(model_schema_library.at(kind));
+                        if (!validator.is_valid(spec)){
+                            throw teqp::JSONValidationError(validator.get_validation_errors(spec));
+                        }
                     }
                 }
                 return (itr->second)(spec);
@@ -69,8 +71,8 @@ namespace teqp {
             return make_owned(build_multifluid_model(components, coolprop_root, BIPcollectionpath, flags, departurepath));
         }
     
-        std::unique_ptr<AbstractModel> make_model(const nlohmann::json& j) {
-            return build_model_ptr(j);
+        std::unique_ptr<AbstractModel> make_model(const nlohmann::json& j, const bool validate) {
+            return build_model_ptr(j, validate);
         }
     
         void add_model_pointer_factory_function(const std::string& key, ModelPointerFactoryFunction& func){
