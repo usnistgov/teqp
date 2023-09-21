@@ -5,6 +5,10 @@
 #include "teqp/algorithms/VLLE_types.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
 
+// Imports from boost
+#include <boost/numeric/odeint/stepper/controlled_runge_kutta.hpp>
+#include <boost/numeric/odeint/stepper/runge_kutta_cash_karp54.hpp>
+
 namespace teqp {
 namespace VLLE {
     
@@ -473,5 +477,144 @@ namespace VLLE {
     inline auto find_VLLE_p_binary(const AbstractModel& model, const std::vector<nlohmann::json>& traces, const std::optional<VLLEFinderOptions>& options = std::nullopt){
         return find_VLLE_gen_binary(model, traces, "P", options);
     }
+
+    inline auto get_drhovecdT_VLLE_binary(const AbstractModel& model, double T, const EArrayd &rhovecV, const EArrayd& rhovecL1, const EArrayd& rhovecL2){
+        
+        auto dot = [](const EArrayd&a, const EArrayd &b){ return a.cwiseProduct(b).sum(); };
+        
+        Eigen::MatrixXd LHS(2, 2);
+        Eigen::MatrixXd RHS(2, 1);
+        Eigen::MatrixXd PSIV = model.build_Psi_Hessian_autodiff(T, rhovecV);
+        Eigen::MatrixXd PSIL1 = model.build_Psi_Hessian_autodiff(T, rhovecL1);
+        Eigen::MatrixXd PSIL2 = model.build_Psi_Hessian_autodiff(T, rhovecL2);
+        double dpdTV = model.get_dpdT_constrhovec(T, rhovecV);
+        double dpdTL1 = model.get_dpdT_constrhovec(T, rhovecL1);
+        double dpdTL2 = model.get_dpdT_constrhovec(T, rhovecL2);
+        
+        // here mu is not the entire chemical potential, rather it is just the residual part and
+        // the density-dependent part from the ideal-gas
+        double RV = model.R(rhovecV/rhovecV.sum());
+        double RL1 = model.R(rhovecL1/rhovecL1.sum());
+        double RL2 = model.R(rhovecL2/rhovecL2.sum());
+        EArrayd dmudTV = model.build_d2PsirdTdrhoi_autodiff(T, rhovecV) + RV*log(rhovecV);
+        EArrayd dmudTL1 = model.build_d2PsirdTdrhoi_autodiff(T, rhovecL1) + RL1*log(rhovecL1);
+        EArrayd dmudTL2 = model.build_d2PsirdTdrhoi_autodiff(T, rhovecL2) + RL2*log(rhovecL2);
+        
+        LHS.row(0) = PSIV*(rhovecL1-rhovecV).matrix();
+        LHS.row(1) = PSIV*(rhovecL2-rhovecV).matrix();
+        RHS(0) = dot(dmudTL1-dmudTV, rhovecL1) - (dpdTL1-dpdTV);
+        RHS(1) = dot(dmudTL2-dmudTV, rhovecL2) - (dpdTL2-dpdTV);
+        
+        Eigen::ArrayXd drhovecVdT = LHS.colPivHouseholderQr().solve(RHS);
+        Eigen::VectorXd AV = PSIV*drhovecVdT.matrix();
+        Eigen::ArrayXd drhovecL1dT = PSIL1.colPivHouseholderQr().solve((AV.array() - (dmudTL1-dmudTV)).matrix());
+        Eigen::ArrayXd drhovecL2dT = PSIL2.colPivHouseholderQr().solve((AV.array() - (dmudTL2-dmudTV)).matrix());
+        
+        return std::make_tuple(drhovecVdT, drhovecL1dT, drhovecL2dT);
+    };
+
+    /**
+    \brief Given an initial VLLE solution, trace the VLLE curve. We know the VLLE curve is a function of only one state variable by Gibbs' rule
+     */
+    inline auto trace_VLLE_binary(const teqp::VLLE::AbstractModel& model, const double Tinit, const EArrayd& rhovecV, const EArrayd& rhovecL1, const EArrayd& rhovecL2, const std::optional<VLLETracerOptions>& options_ = std::nullopt){
+        auto options = options_.value_or(VLLETracerOptions());
+        
+        // Typedefs for the types for odeint for simple Euler and RK45 integrators
+        using state_type = std::vector<double>;
+        using namespace boost::numeric::odeint;
+        
+        typedef runge_kutta_cash_karp54< state_type > error_stepper_type;
+        typedef controlled_runge_kutta< error_stepper_type > controlled_stepper_type;
+        
+        auto xprime = [&](const state_type& x, state_type& dxdt, const double T)
+        {
+            // Unpack the inputs
+            const auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x[0]), 2),
+                       rhovecL1 = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 2, 2),
+                       rhovecL2 = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 4, 2);
+            
+            auto [drhovecVdT, drhovecL1dT, drhovecL2dT] = VLLE::get_drhovecdT_VLLE_binary(model, T, rhovecV, rhovecL1, rhovecL2);
+            Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]), 2) = drhovecVdT;
+            Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 2, 2) = drhovecL1dT;
+            Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 4, 2) = drhovecL2dT;
+        };
+        
+        // Define the tolerances
+        double abs_err = options.abs_err, rel_err = options.rel_err, a_x = 1.0, a_dxdt = 1.0;
+        controlled_stepper_type controlled_stepper(default_error_checker< double, range_algebra, default_operations >(abs_err, rel_err, a_x, a_dxdt));
+        
+        double T = Tinit, dT = options.init_dT;
+        state_type x0(3*2);
+        Eigen::Map<Eigen::ArrayXd>(&(x0[0]), 2) = rhovecV;
+        Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 2, 2) = rhovecL1;
+        Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 4, 2) = rhovecL2;
+        
+        nlohmann::json data_collector = nlohmann::json::array();
+        for (auto iter = 0; iter < options.max_step_count; ++iter) {
+            int retry_count = 0;
+            
+            auto res = controlled_step_result::fail;
+            try {
+                res = controlled_stepper.try_step(xprime, x0, T, dT);
+            }
+            catch (const std::exception &e) {
+                if (options.verbosity > 0) {
+                    std::cout << e.what() << std::endl;
+                }
+                break;
+            }
+            
+            if (res != controlled_step_result::success) {
+                // Try again, with a smaller step size
+                iter--;
+                retry_count++;
+                continue;
+            }
+            else {
+                retry_count = 0;
+            }
+            // Reduce step size if greater than the specified max step size
+            dT = std::min(dT, options.max_dT);
+            
+            // Polish if requested
+            if (options.polish){
+                auto [code, rhovecVnew, rhovecL1new, rhovecL2new] = teqp::VLLE::mix_VLLE_T(model, T, rhovecV, rhovecL1, rhovecL2, 1e-10, 1e-10, 1e-10, 1e-10, options.max_polish_steps);
+                Eigen::Map<Eigen::ArrayXd>(&(x0[0]), 2) = rhovecVnew;
+                Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 2, 2) = rhovecL1new;
+                Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 4, 2) = rhovecL2new;
+            }
+            
+            const auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), 2),
+                       rhovecL1 = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 2, 2),
+                       rhovecL2 = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 4, 2);
+            
+            auto critV = model.get_criticality_conditions(T, rhovecV);
+            auto critL1 = model.get_criticality_conditions(T, rhovecL1);
+            auto critL2 = model.get_criticality_conditions(T, rhovecL2);
+            
+            if (options.verbosity > 100){
+                std::cout << "[T,x0L1,x0L2,x0V]: " << T << "," << rhovecL1[0]/rhovecL1.sum() << "," << rhovecL2[0]/rhovecL2.sum() << "," << rhovecV[0]/rhovecV.sum() << std::endl;
+                std::cout << "[crits]: " << critV << "," << critL1 << "," << critL2 << std::endl;
+            }
+            
+            if (options.terminate_composition){
+                auto x0 = (Eigen::ArrayXd(3) << rhovecL1[0]/rhovecL1.sum(), rhovecL2[0]/rhovecL2.sum(), rhovecV[0]/rhovecV.sum()).finished();
+                auto diffs = (Eigen::ArrayXd(3) << x0[0]-x0[1], x0[0]-x0[2], x0[1]-x0[2]).finished();
+                if ((diffs.cwiseAbs() < options.terminate_composition_tol).any()){
+                    break;
+                }
+            }
+            
+            nlohmann::json entry{
+                {"T / K", T},
+                {"rhoL1 / mol/m^3", rhovecL1},
+                {"rhoL2 / mol/m^3", rhovecL2},
+                {"rhoV / mol/m^3", rhovecV}
+            };
+            data_collector.push_back(entry);
+        }
+        return data_collector;
+    }
+
 }
 }

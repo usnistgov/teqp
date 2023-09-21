@@ -20,5 +20,19 @@ struct VLLEFinderOptions {
     double rho_trivial_threshold = 1e-16; ///< The relative difference between densities of liquid solutions that indicates a non-trivial solution has been found
 };
 
+struct VLLETracerOptions{
+    int max_step_count = 300;
+    double abs_err = 1e-10;
+    double rel_err = 1e-10;
+    int verbosity = 0;
+    double init_dT = 1e-5;
+    double max_dT = 10;
+    bool polish = true;
+    int max_polish_steps = 10;
+    bool terminate_composition = true;
+    double terminate_composition_tol = 1e-4;
+    double T_limit = 100000;
+};
+
 }
 }

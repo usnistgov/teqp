@@ -150,6 +150,7 @@ namespace teqp {
             std::tuple<VLLE::VLLE_return_code,EArrayd,EArrayd,EArrayd> mix_VLLE_T(const double T, const REArrayd& rhovecVinit, const REArrayd& rhovecL1init, const REArrayd& rhovecL2init, const double atol, const double reltol, const double axtol, const double relxtol, const int maxiter) const;
             std::vector<nlohmann::json> find_VLLE_T_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options = std::nullopt) const;
             std::vector<nlohmann::json> find_VLLE_p_binary(const std::vector<nlohmann::json>& traces, const std::optional<VLLE::VLLEFinderOptions> options = std::nullopt) const;
+            nlohmann::json trace_VLLE_binary(const double T, const REArrayd& rhovecV, const REArrayd& rhovecL1, const REArrayd& rhovecL2, const std::optional<VLLE::VLLETracerOptions> options) const;
             
             virtual nlohmann::json trace_critical_arclength_binary(const double T0, const EArrayd& rhovec0, const std::optional<std::string>& = std::nullopt, const std::optional<TCABOptions> & = std::nullopt) const;
             virtual EArrayd get_drhovec_dT_crit(const double T, const REArrayd& rhovec) const;

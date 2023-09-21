@@ -280,6 +280,22 @@ void init_teqp(py::module& m) {
         .def_readwrite("max_steps", &VLLE::VLLEFinderOptions::max_steps)
         .def_readwrite("rho_trivial_threshold", &VLLE::VLLEFinderOptions::rho_trivial_threshold)
         ;
+    
+    // The options class for the finder of VLLE solutions from VLE tracing, not tied to a particular model
+    py::class_<VLLE::VLLETracerOptions>(m, "VLLETracerOptions")
+        .def(py::init<>())
+        .def_readwrite("max_step_count", &VLLE::VLLETracerOptions::max_step_count)
+        .def_readwrite("abs_err", &VLLE::VLLETracerOptions::abs_err)
+        .def_readwrite("rel_err", &VLLE::VLLETracerOptions::rel_err)
+        .def_readwrite("verbosity", &VLLE::VLLETracerOptions::verbosity)
+        .def_readwrite("init_dT", &VLLE::VLLETracerOptions::init_dT)
+        .def_readwrite("max_dT", &VLLE::VLLETracerOptions::max_dT)
+        .def_readwrite("polish", &VLLE::VLLETracerOptions::polish)
+        .def_readwrite("max_polish_steps", &VLLE::VLLETracerOptions::max_polish_steps)
+        .def_readwrite("terminate_composition", &VLLE::VLLETracerOptions::terminate_composition)
+        .def_readwrite("terminate_composition_tol", &VLLE::VLLETracerOptions::terminate_composition_tol)
+        .def_readwrite("T_limit", &VLLE::VLLETracerOptions::T_limit)
+        ;
 
     py::class_<MixVLETpFlags>(m, "MixVLETpFlags")
         .def(py::init<>())
@@ -414,6 +430,7 @@ void init_teqp(py::module& m) {
         .def("mix_VLLE_T", &am::mix_VLLE_T, "T"_a, "rhovecVinit"_a.noconvert(), "rhovecL1init"_a.noconvert(), "rhovecL2init"_a.noconvert(), "atol"_a, "reltol"_a, "axtol"_a, "relxtol"_a, "maxiter"_a)
         .def("find_VLLE_T_binary", &am::find_VLLE_T_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"))
         .def("find_VLLE_p_binary", &am::find_VLLE_p_binary, "traces"_a, py::arg_v("options", std::nullopt, "None"))
+        .def("trace_VLLE_binary", &am::trace_VLLE_binary, "T"_a, "rhovecV"_a.noconvert(), "rhovecL1"_a.noconvert(), "rhovecL2"_a.noconvert(), py::arg_v("options", std::nullopt, "None"))
     ;
     
     m.def("_make_model", &teqp::cppinterface::make_model, "json_data"_a, py::arg_v("validate", true));

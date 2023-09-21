@@ -108,3 +108,64 @@ TEST_CASE("Test VLLE for nitrogen + ethane for isobar", "[VLLE]")
     CHECK(VLLEsoln.size() == 1);
     CHECK(VLLEsoln[0].at("polished")[3].get<double>() == Approx(125.14).margin(0.1));
 }
+
+TEST_CASE("Test VLLE tracing", "[VLLE]")
+{
+    // As in the examples in https://doi.org/10.1021/acs.iecr.1c04703
+    std::vector<std::string> names = {"Nitrogen", "Ethane"};
+    using namespace teqp::cppinterface;
+    std::string root = "../mycp";
+    auto model = make_multifluid_model(names, root);
+    std::vector<decltype(model)> pures;
+    pures.emplace_back(make_multifluid_model({names[0]}, root));
+    pures.emplace_back(make_multifluid_model({names[1]}, root));
+
+    double T = 118.0;
+    std::vector<nlohmann::json> traces;
+    for (int ipure : {0, 1}){
+
+        // Init at the pure fluid endpoint
+        auto m0 = build_multifluid_model({names[ipure]}, root);
+        auto pure0 = nlohmann::json::parse(m0.get_meta()).at("pures")[0];
+        auto jancillaries = pure0.at("ANCILLARIES");
+        auto anc = teqp::MultiFluidVLEAncillaries(jancillaries);
+
+        auto rhoLpurerhoVpure = pures[ipure]->pure_VLE_T(T, anc.rhoL(T), anc.rhoV(T), 10);
+        auto rhovecL = (Eigen::ArrayXd(2) << 0.0, 0.0).finished();
+        auto rhovecV = (Eigen::ArrayXd(2) << 0.0, 0.0).finished();
+        rhovecL[ipure] = rhoLpurerhoVpure[0];
+        rhovecV[ipure] = rhoLpurerhoVpure[1];
+        TVLEOptions opt; opt.p_termination = 1e8; opt.crit_termination=1e-4; opt.calc_criticality=true;
+        auto trace = model->trace_VLE_isotherm_binary(T, rhovecL, rhovecV, opt);
+        traces.push_back(trace);
+
+    }
+    auto VLLEsoln = VLLE::find_VLLE_T_binary(*model, traces);
+    CHECK(VLLEsoln.size() == 1);
+    
+    auto get_array = [](const nlohmann::json& j){ Eigen::ArrayXd o(j.size()); for (auto i = 0; i < o.size(); ++i){ o[i] = j[i]; } return o; };
+    
+    {
+        // Trace to the temperature from above
+        auto rhovecV = get_array(VLLEsoln[0].at("polished")[0]),
+             rhovecL1 = get_array(VLLEsoln[0].at("polished")[1]),
+             rhovecL2 = get_array(VLLEsoln[0].at("polished")[2]);
+        double Tincrement = 0.001;
+        for (; T <= 120.3420; T += Tincrement){
+            auto [drhovecV, drhovecL1, drhovecL2] = VLLE::get_drhovecdT_VLLE_binary(*model, T, rhovecV, rhovecL1, rhovecL2);
+            rhovecV += drhovecV*Tincrement;
+            rhovecL1 += drhovecL1*Tincrement;
+            rhovecL2 += drhovecL2*Tincrement;
+        }
+        CHECK(rhovecV[0] == Approx(3669.84793));
+        CHECK(rhovecL2[0] == Approx(5640.76015));
+        CHECK(rhovecL1[0] == Approx(19890.1584));
+    }
+    
+    VLLETraceOptions flags; flags.verbosity = 1000; flags.init_dT = 0.01; flags.T_limit = 140;
+    auto rhovecV = get_array(VLLEsoln[0].at("polished")[0]),
+         rhovecL1 = get_array(VLLEsoln[0].at("polished")[1]),
+         rhovecL2 = get_array(VLLEsoln[0].at("polished")[2]);
+    auto trace = trace_VLLE_binary(*model, 118.0, rhovecV, rhovecL1, rhovecL2, flags);
+    std::cout << trace.dump(1) << std::endl;
+}
