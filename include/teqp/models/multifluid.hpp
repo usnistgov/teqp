@@ -20,6 +20,7 @@
 
 #include "multifluid_eosterms.hpp"
 #include "multifluid_reducing.hpp"
+#include "multifluid_gas_constant.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 
@@ -119,10 +120,12 @@ public:
     const ReducingFunctions redfunc;
     const CorrespondingTerm corr;
     const DepartureTerm dep;
+    using GasConstantCalculator = multifluid::gasconstant::GasConstantCalculator;
+    const GasConstantCalculator Rcalc;
 
     template<class VecType>
-    auto R(const VecType& molefrac) const {
-        return get_R_gas<decltype(molefrac[0])>();
+    auto R(const VecType& molefracs) const {
+        return std::visit([&molefracs](const auto& el){ return el.get_R(molefracs); }, Rcalc);
     }
 
     /// Store some sort of metadata in string form (perhaps a JSON representation of the model?)
@@ -130,7 +133,7 @@ public:
     /// Get the metadata stored in string form
     auto get_meta() const { return meta; }
 
-    MultiFluid(ReducingFunctions&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep) : redfunc(redfunc), corr(corr), dep(dep) {};
+    MultiFluid(ReducingFunctions&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep, GasConstantCalculator&& Rcalc) : redfunc(redfunc), corr(corr), dep(dep), Rcalc(Rcalc) {};
 
     template<typename TType, typename RhoType>
     auto alphar(TType T,
@@ -819,11 +822,22 @@ inline auto build_alias_map(const std::string& root) {
     return aliasmap;
 }
 
+
 /// Internal method for actually constructing the model with the provided JSON data structures
 inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON, const nlohmann::json& BIPcollection, const nlohmann::json& depcollection, const nlohmann::json& flags = {}) {
+    
+    auto get_Rvals = [](const std::vector<nlohmann::json> &pureJSON) -> std::vector<double>{
+        std::vector<double> o;
+        for (auto pure : pureJSON){
+            o.push_back(pure.at("EOS")[0].at("gas_constant"));
+        }
+        return o;
+    };
 
     auto [Tc, vc] = reducing::get_Tcvc(pureJSON);
     auto EOSs = get_EOSs(pureJSON);
+    // Array of gas constants for each fluid
+    auto Rvals = get_Rvals(pureJSON);
 
     // Extract the set of possible identifiers to be used to match parameters
     auto identifierset = collect_identifiers(pureJSON);
@@ -834,6 +848,13 @@ inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON,
     auto F = reducing::get_F_matrix(BIPcollection, identifiers, flags);
     auto [funcs, funcsmeta] = get_departure_function_matrix(depcollection, BIPcollection, identifiers, flags);
     auto [betaT, gammaT, betaV, gammaV] = reducing::get_BIP_matrices(BIPcollection, identifiers, flags, Tc, vc);
+    
+    multifluid::gasconstant::GasConstantCalculator Rcalc = multifluid::gasconstant::MoleFractionWeighted(Rvals);
+    
+    if (flags.contains("Rmodel") && flags.at("Rmodel") == "CODATA"){
+        Rcalc = multifluid::gasconstant::CODATA();
+    }
+    
 
     nlohmann::json meta = {
         {"pures", pureJSON},
@@ -845,7 +866,8 @@ inline auto _build_multifluid_model(const std::vector<nlohmann::json> &pureJSON,
     auto model = MultiFluid(
         std::move(redfunc),
         CorrespondingStatesContribution(std::move(EOSs)),
-        DepartureContribution(std::move(F), std::move(funcs))
+        DepartureContribution(std::move(F), std::move(funcs)),
+        std::move(Rcalc)
     );
     model.set_meta(meta.dump(1));
     return model;

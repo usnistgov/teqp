@@ -473,3 +473,40 @@ TEST_CASE("Test ECS for pure fluids", "[ECS]"){
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     double alphar = model->get_Ar00(T, rho, z);
 }
+
+TEST_CASE("Check models for R", "[multifluidR]") {
+    std::string root = "../mycp";
+    
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    SECTION("Default, mole fraction weighted"){
+        nlohmann::json model = {
+            {"components", {"Water"}},
+            {"root", root},
+            {"BIP", ""},
+            {"departure", ""}
+        };
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", model}
+        };
+        auto model_ = cppinterface::make_model(j);
+        CHECK(model_->get_R(z) == 8.314371357587);
+    }
+    
+    SECTION("CODATA"){
+        nlohmann::json model = {
+            {"components", {"Water"}},
+            {"root", root},
+            {"BIP", ""},
+            {"departure", ""},
+            {"flags", {{"Rmodel", "CODATA"}}}
+        };
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", model}
+        };
+        auto model_ = cppinterface::make_model(j);
+        CHECK(model_->get_R(z) == 8.31446261815324);
+    }
+}
