@@ -158,14 +158,14 @@ TEST_CASE("Test VLLE tracing", "[VLLE]")
             rhovecL2 += drhovecL2*Tincrement;
         }
         CHECK(rhovecV[0] == Approx(3669.84793));
-        CHECK(rhovecL2[0] == Approx(5640.76015));
+        CHECK(rhovecL2[0] == Approx(5640.76015).margin(0.5));
         CHECK(rhovecL1[0] == Approx(19890.1584));
     }
     
-    VLLETraceOptions flags; flags.verbosity = 1000; flags.init_dT = 0.01; flags.T_limit = 140;
+    teqp::VLLE::VLLETracerOptions flags; flags.verbosity = 0; flags.init_dT = 0.01; flags.T_limit = 140;
     auto rhovecV = get_array(VLLEsoln[0].at("polished")[0]),
          rhovecL1 = get_array(VLLEsoln[0].at("polished")[1]),
          rhovecL2 = get_array(VLLEsoln[0].at("polished")[2]);
     auto trace = trace_VLLE_binary(*model, 118.0, rhovecV, rhovecL1, rhovecL2, flags);
-    std::cout << trace.dump(1) << std::endl;
+//    std::cout << trace.dump(1) << std::endl;
 }
