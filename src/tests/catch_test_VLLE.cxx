@@ -162,7 +162,7 @@ TEST_CASE("Test VLLE tracing", "[VLLE]")
         CHECK(rhovecL1[0] == Approx(19890.1584));
     }
     
-    VLLETraceOptions flags; flags.verbosity = 1000; flags.init_dT = 0.01; flags.T_limit = 140;
+    VLLETracerOptions flags; flags.verbosity = 1000; flags.init_dT = 0.01; flags.T_limit = 140;
     auto rhovecV = get_array(VLLEsoln[0].at("polished")[0]),
          rhovecL1 = get_array(VLLEsoln[0].at("polished")[1]),
          rhovecL2 = get_array(VLLEsoln[0].at("polished")[2]);
