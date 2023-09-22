@@ -61,7 +61,37 @@ public:
     }
 };
 
-using AlphaFunctionOptions = std::variant<BasicAlphaFunction<double>, TwuAlphaFunction<double>>;
+/**
+ * \brief The Mathias-Copeman alpha function used by Peng-Robinson and SRK
+ *
+ ** \f[
+ * \alpha_i = (1+c_0x + c_1x^2 + c_2x^3)^2
+ * \f]
+ * with
+ * \f[
+ * x = 1-\sqrt{\frac{T}{T_{ci}}}
+ * \f]
+ */
+template<typename NumType>
+class MathiasCopemanAlphaFunction {
+private:
+    NumType Tci; ///< The critical temperature
+    Eigen::Array3d c;
+public:
+    MathiasCopemanAlphaFunction(NumType Tci, const Eigen::Array3d &c) : Tci(Tci), c(c) {
+        if (c.size()!= 3){
+            throw teqp::InvalidArgument("coefficients c for Mathias-Copeman alpha function must have length 3");
+        }
+    };
+    template<typename TType>
+    auto operator () (const TType& T) const {
+        auto x = 1.0 - sqrt(T/Tci);
+        auto paren = 1.0 + c[0]*x + c[1]*x*x + c[2]*x*x*x;
+        return forceeval(paren*paren);
+    }
+};
+
+using AlphaFunctionOptions = std::variant<BasicAlphaFunction<double>, TwuAlphaFunction<double>, MathiasCopemanAlphaFunction<double>>;
 
 template <typename NumType, typename AlphaFunctions>
 class GenericCubic {
@@ -287,6 +317,9 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
             Eigen::Array3d c = Eigen::Map<Eigen::Array3d>(&(c_[0]), c_.size());
             if (type == "Twu"){
                 alphas.emplace_back(TwuAlphaFunction(Tc_K[i], c));
+            }
+            else if (type == "Mathias-Copeman"){
+                alphas.emplace_back(MathiasCopemanAlphaFunction(Tc_K[i], c));
             }
             else{
                 throw teqp::InvalidArgument("alpha type is not understood: "+type);

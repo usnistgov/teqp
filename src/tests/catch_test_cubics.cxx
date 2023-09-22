@@ -526,6 +526,22 @@ TEST_CASE("Check generalized and alphas", "[PRalpha]"){
     }
     )");
     
+    // Parameters from Horstmann et al., doi:10.1016/j.fluid.2004.11.002
+    auto j2MC = R"(
+    {
+        "kind": "cubic",
+        "model": {
+            "type": "SRK",
+            "Tcrit / K": [647.30],
+            "pcrit / Pa": [22048.321e3],
+            "acentric": [0.11],
+            "alpha": [
+                {"type": "Mathias-Copeman", "c": [1.07830, -0.58321, 0.54619]}
+            ]
+        }
+    }
+    )"_json;
+    
     auto j3 = nlohmann::json::parse(R"(
     {
         "kind": "PR",
@@ -566,10 +582,23 @@ TEST_CASE("Check generalized and alphas", "[PRalpha]"){
         const auto modelptr2 = teqp::cppinterface::make_model(j2);
         const auto& m2 = teqp::cppinterface::adapter::get_model_cref<canonical_cubic_t>(modelptr2.get());
         
+        const auto modelptr2MC = teqp::cppinterface::make_model(j2MC);
+        const auto& m2MC = teqp::cppinterface::adapter::get_model_cref<canonical_cubic_t>(modelptr2MC.get());
+        
         CHECK(m1.get_meta() == m0.get_meta());
         CHECK(m2.get_meta() != m0.get_meta());
         
         CHECK_THROWS(teqp::cppinterface::make_model(j3));
         CHECK_THROWS(teqp::cppinterface::make_model(j4));
+    }
+    SECTION("water with Mathias-Copeman"){
+        const auto m = teqp::cppinterface::make_model(j2MC);
+        const auto& mptr = teqp::cppinterface::adapter::get_model_cref<canonical_cubic_t>(m.get());
+        double T = 99.9 + 273.15;
+        auto [rhoL, rhoV] = mptr.superanc_rhoLV(T);
+        auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+        double R = m->get_R(z);
+        double p = rhoL*R*T*(1+m->get_Ar01(T, rhoL, z));
+        CHECK(p == Approx(101325).margin(1000));
     }
 }
