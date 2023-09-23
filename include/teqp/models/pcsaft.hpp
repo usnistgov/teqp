@@ -286,7 +286,7 @@ protected:
         mminus1, ///< m-1
         sigma_Angstrom, ///< 
         epsilon_over_k; ///< depth of pair potential divided by Boltzman constant
-    std::vector<std::string> names;
+    std::vector<std::string> names, bibtex;
     Eigen::ArrayXXd kmat; ///< binary interaction parameter matrix
     
     PCSAFTHardChainContribution hardchain;
@@ -316,6 +316,7 @@ protected:
         sigma_Angstrom.resize(coeffs.size());
         epsilon_over_k.resize(coeffs.size());
         names.resize(coeffs.size());
+        bibtex.resize(coeffs.size());
         auto i = 0;
         for (const auto &coeff : coeffs) {
             m[i] = coeff.m;
@@ -323,6 +324,7 @@ protected:
             sigma_Angstrom[i] = coeff.sigma_Angstrom;
             epsilon_over_k[i] = coeff.epsilon_over_k;
             names[i] = coeff.name;
+            bibtex[i] = coeff.BibTeXKey;
             i++;
         }
         return PCSAFTHardChainContribution(m, mminus1, sigma_Angstrom, epsilon_over_k, kmat);
@@ -374,6 +376,7 @@ public:
     auto get_epsilon_over_k_K() const { return epsilon_over_k; }
     auto get_kmat() const { return kmat; }
     auto get_names() const { return names;}
+    auto get_BibTeXKeys() const { return bibtex;}
 
     auto print_info() {
         std::string s = std::string("i m sigma / A e/kB / K \n  ++++++++++++++") + "\n";

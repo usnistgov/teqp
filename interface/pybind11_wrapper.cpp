@@ -138,10 +138,13 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_sigma_Angstrom", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_sigma_Angstrom(); }), obj));
         setattr("get_epsilon_over_k_K", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_epsilon_over_k_K(); }), obj));
         setattr("get_names", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_names(); }), obj));
+        setattr("get_BibTeXKeys", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_BibTeXKeys(); }), obj));
         setattr("max_rhoN", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<PCSAFT_t>(o).max_rhoN(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<PCSAFT_t>(o).get_kmat(); }), obj));
     }
     else if (index == SAFTVRMie_i){
+        setattr("get_names", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_names(); }), obj));
+        setattr("get_BibTeXKeys", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_BibTeXKeys(); }), obj));
         setattr("get_m", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_m(); }), obj));
         setattr("get_sigma_Angstrom", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_sigma_Angstrom(); }), obj));
         setattr("get_sigma_m", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_sigma_m(); }), obj));

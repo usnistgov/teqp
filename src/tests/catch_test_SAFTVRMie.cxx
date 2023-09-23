@@ -22,6 +22,14 @@ using namespace teqp;
 #include "boost/multiprecision/cpp_complex.hpp"
 #include "teqp/math/quadrature.hpp"
 
+TEST_CASE("Check get_names and get_BibTeXKeys", "[SAFTVRMIE]")
+{
+    std::vector<std::string> names = { "Methane", "Ethane" };
+    auto model = SAFTVRMieMixture(names);
+    CHECK(model.get_names()[0] == "Methane");
+    CHECK(model.get_BibTeXKeys()[0] == "Lafitte-JCP-2001");
+}
+
 TEST_CASE("Check integration", "[SAFTVRMIE]"){
     std::function<double(double)> f = [](const double&x){ return x*sin(x); };
     auto exact = -2*cos(1) + 2*sin(1);

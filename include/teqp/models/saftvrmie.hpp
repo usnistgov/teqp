@@ -741,7 +741,7 @@ struct SAFTVRMieChainContributionTerms{
 class SAFTVRMieMixture {
 private:
     
-    std::vector<std::string> names;
+    std::vector<std::string> names, bibtex;
     const SAFTVRMieChainContributionTerms terms;
     const std::optional<SAFTpolar::multipolar_contributions_variant> polar; // Can be present or not
 
@@ -759,6 +759,20 @@ private:
     static auto get_coeffs_from_names(const std::vector<std::string> &names){
         SAFTVRMieLibrary library;
         return library.get_coeffs(names);
+    }
+    auto get_names(const std::vector<SAFTVRMieCoeffs> &coeffs){
+        std::vector<std::string> names_;
+        for (auto c : coeffs){
+            names_.push_back(c.name);
+        }
+        return names_;
+    }
+    auto get_bibtex(const std::vector<SAFTVRMieCoeffs> &coeffs){
+        std::vector<std::string> keys_;
+        for (auto c : coeffs){
+            keys_.push_back(c.BibTeXKey);
+        }
+        return keys_;
     }
 public:
     static auto build_chain(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat, const std::optional<nlohmann::json>& flags = std::nullopt){
@@ -807,8 +821,8 @@ public:
     
 public:
     SAFTVRMieMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt, const std::optional<nlohmann::json>&flags = std::nullopt) : SAFTVRMieMixture(get_coeffs_from_names(names), kmat, flags){};
-    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt, const std::optional<nlohmann::json>&flags = std::nullopt) : terms(build_chain(coeffs, kmat, flags)), polar(build_polar(coeffs)) {};
-    SAFTVRMieMixture(SAFTVRMieChainContributionTerms&& terms, std::optional<SAFTpolar::multipolar_contributions_variant> &&polar = std::nullopt) : terms(std::move(terms)), polar(std::move(polar)) {};
+    SAFTVRMieMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt, const std::optional<nlohmann::json>&flags = std::nullopt) : names(get_names(coeffs)), bibtex(get_bibtex(coeffs)), terms(build_chain(coeffs, kmat, flags)), polar(build_polar(coeffs)) {};
+    SAFTVRMieMixture(SAFTVRMieChainContributionTerms&& terms, const std::vector<SAFTVRMieCoeffs> &coeffs, std::optional<SAFTpolar::multipolar_contributions_variant> &&polar = std::nullopt) : names(get_names(coeffs)), bibtex(get_bibtex(coeffs)), terms(std::move(terms)), polar(std::move(polar)) {};
     
     
 //    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
@@ -855,7 +869,8 @@ public:
             {"alphar_chain", val.alphar_chain}
         };
     }
-    
+    auto get_names() const { return names; }
+    auto get_BibTeXKeys() const { return bibtex; }
     auto get_m() const { return terms.m; }
     auto get_sigma_Angstrom() const { return (terms.sigma_A).eval(); }
     auto get_sigma_m() const { return terms.sigma_A/1e10; }
@@ -965,7 +980,7 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
         
         if (!something_polar){
             // Nonpolar, just m, epsilon, sigma and possibly a kmat matrix with kij coefficients
-            return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat));
+            return SAFTVRMieMixture(SAFTVRMieMixture::build_chain(coeffs, kmat), coeffs);
         }
         else{
             // Polar term is also provided, along with the chain terms
@@ -1046,34 +1061,34 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
                 auto mustar2 = (mustar2factor*mu_Cm.pow(2)/(ms*epsks*sigma_ms.pow(3))).eval();
                 auto Qstar2 = (Qstar2factor*Q_Cm2.pow(2)/(ms*epsks*sigma_ms.pow(5))).eval();
                 auto polar = MultipolarContributionGrossVrabec(ms, sigma_ms*1e10, epsks, mustar2, nmu, Qstar2, nQ);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
             if (polar_model == "GubbinsTwu+Luckas"){
                 using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGTL(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
             if (polar_model == "GubbinsTwu+GubbinsTwu"){
                 using MCGG = MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
             if (polar_model == "GubbinsTwu+Gottschalk"){
                 using MCGG = MultipolarContributionGubbinsTwu<GottschalkJIntegral, GottschalkKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::use_packing_fraction);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
             
             if (polar_model == "GrayGubbins+GubbinsTwu"){
                 using MCGG = MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
                 auto polar = MCGG(sigma_ms, epsks, SIGMAIJ, EPSKIJ, mu_Cm, Q_Cm2, polar_flags);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
 //            if (polar_model == "GrayGubbins+Gottschalk"){
 //                using MCGG = MultipolarContributionGrayGubbins<GottschalkJIntegral, GottschalkKIntegral>;
@@ -1083,7 +1098,7 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
             if (polar_model == "GrayGubbins+Luckas"){
                 using MCGG = MultipolarContributionGrayGubbins<LuckasJIntegral, LuckasKIntegral>;
                 auto polar = MCGG(sigma_ms, epsks, SIGMAIJ, EPSKIJ, mu_Cm, Q_Cm2, polar_flags);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
             
             
@@ -1092,14 +1107,14 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGTL(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::calculate_Gubbins_rhostar);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
             if (polar_model == "GubbinsTwu+GubbinsTwu+GubbinsTwuRhostar"){
                 using MCGG = MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
                 auto mubar2 = (mustar2factor*mu_Cm.pow(2)/(epsks*sigma_ms.pow(3))).eval();
                 auto Qbar2 = (Qstar2factor*Q_Cm2.pow(2)/(epsks*sigma_ms.pow(5))).eval();
                 auto polar = MCGG(sigma_ms, epsks, mubar2, Qbar2, multipolar_rhostar_approach::calculate_Gubbins_rhostar);
-                return SAFTVRMieMixture(std::move(chain), std::move(polar));
+                return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
             throw teqp::InvalidArgument("didn't understand this polar_model:"+polar_model);
         }
