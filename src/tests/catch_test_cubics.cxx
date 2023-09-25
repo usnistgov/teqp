@@ -602,3 +602,26 @@ TEST_CASE("Check generalized and alphas", "[PRalpha]"){
         CHECK(p == Approx(101325).margin(1000));
     }
 }
+
+TEST_CASE("QCPR", "[QCPR]"){
+    
+    /// Naming convention of variables follows the paper, not teqp
+    auto j = R"(
+    {
+        "kind": "QCPRAasen",
+        "model": {
+            "Ls": [156.21, 0.40453],
+            "Ms": [-0.0062072, 0.95861],
+            "Ns": [5.047, 0.8396],
+            "As": [3.0696, 0.4673],
+            "Bs": [12.682, 2.4634],
+            "cs": [-3.8139, -2.4665],
+            "Tcrit / K": [33.19, 44.492],
+            "pcrit / Pa": [12.964e5, 26.79],
+            "kmat": [[0.0, 0.18], [0.18, 0.0]],
+            "lmat": [[0.0, 0.0], [0.0, 0.0]]
+        }
+    }
+    )"_json;
+    make_model(j);
+}

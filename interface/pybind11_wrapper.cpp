@@ -107,6 +107,7 @@ const std::type_index multifluidmutant_i{std::type_index(typeid(multifluidmutant
 const std::type_index SW_EspindolaHeredia2009_i{std::type_index(typeid(SW_EspindolaHeredia2009_t))};
 const std::type_index EXP6_Kataoka1992_i{std::type_index(typeid(EXP6_Kataoka1992_t))};
 const std::type_index twocenterLJF_i{std::type_index(typeid(twocenterLJF_t))};
+const std::type_index QuantumPR_i{std::type_index(typeid(QuantumPR_t))};
 
 /**
  At runtime we can add additional model-specific methods that only apply for a particular model.  We take in a Python-wrapped
@@ -163,6 +164,16 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<canonical_cubic_t>(o).get_kmat(); }), obj));
         setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<canonical_cubic_t>(o).get_meta(); }), obj));
         setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<canonical_cubic_t>(o).set_meta(s); }, "self"_a, "s"_a), obj));
+    }
+    else if (index == QuantumPR_i){
+        setattr("get_ab", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<QuantumPR_t>(o).get_ab(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
+        setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<QuantumPR_t>(o).superanc_rhoLV(T); }, "self"_a, "T"_a), obj));
+        setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<QuantumPR_t>(o).get_kmat(); }), obj));
+        setattr("get_lmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<QuantumPR_t>(o).get_lmat(); }), obj));
+        setattr("get_Tc_K", MethodType(py::cpp_function([](py::object& o){ return get_typed<QuantumPR_t>(o).get_Tc_K(); }), obj));
+        setattr("get_pc_Pa", MethodType(py::cpp_function([](py::object& o){ return get_typed<QuantumPR_t>(o).get_pc_Pa(); }), obj));
+//        setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<canonical_cubic_t>(o).get_meta(); }), obj));
+//        setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<canonical_cubic_t>(o).set_meta(s); }, "self"_a, "s"_a), obj));
     }
     else if (index == AmmoniaWaterTillnerRoth_i){
         setattr("TcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).TcNH3);

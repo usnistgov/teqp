@@ -14,6 +14,7 @@ Implementations of the canonical cubic equations of state
 #include "teqp/exceptions.hpp"
 #include "cubicsuperancillary.hpp"
 #include "teqp/json_tools.hpp"
+#include "teqp/math/pow_templates.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -399,6 +400,110 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
     return cub;
 }
 
-
+/**
+ The quantum corrected Peng-Robinson model as developed in
+ 
+ Ailo Aasen, Morten Hammer, Silvia Lasala, Jean-Noël Jaubert, Øivind Wilhelmsen
+ "Accurate quantum-corrected cubic equations of state for helium, neon, hydrogen, deuterium and their mixtures"
+ Fluid Phase Equilibria 524 (2020) 112790
+ https://doi.org/10.1016/j.fluid.2020.112790
+ */
+class QuantumCorrectedPR{
+private:
+    std::vector<double> Tc_K, pc_Pa;
+    std::vector<AlphaFunctionOptions> alphas;
+    std::vector<double> As, Bs;
+    Eigen::ArrayXXd kmat, lmat;
+    
+    auto build_alphas(const nlohmann::json& j){
+        std::vector<AlphaFunctionOptions> alphas_;
+        std::vector<double> L = j.at("Ls"), M = j.at("Ms"), N = j.at("Ns");
+        if (L.size() != M.size() || M.size() != N.size()){
+            throw teqp::InvalidArgument("L,M,N must all be the same length");
+        }
+        for (auto i = 0; i < L.size(); ++i){
+            auto coeffs = (Eigen::Array3d() << L[i], M[i], N[i]).finished();
+            alphas_.emplace_back(TwuAlphaFunction(Tc_K[i], coeffs));
+        }
+        return alphas_;
+    }
+public:
+    
+    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(j.at("Tcrit / K")), pc_Pa(j.at("pcrit / Pa")), alphas(build_alphas(j)), As(j.at("As")), Bs(j.at("Bs")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))) {}
+    
+    const double Ru = get_R_gas<double>(); /// Universal gas constant, exact number
+    
+    template<class VecType>
+    auto R(const VecType& /*molefrac*/) const {
+        return Ru;
+    }
+    auto get_kmat() const { return kmat; }
+    auto get_lmat() const { return lmat; }
+    auto get_Tc_K() const { return Tc_K; }
+    auto get_pc_Pa() const { return pc_Pa; }
+    
+    template<typename TType>
+    auto get_bi(std::size_t i, const TType& T) const {
+        auto beta = POW3(1.0 + As[i]/(T+Bs[i]))/POW3(1.0+As[i]/(Tc_K[i]+Bs[i]));
+        // See https://doi.org/10.1021/acs.iecr.1c00847 for the exact value: OmegaB = 0.077796073903888455972;
+        auto b = 0.07780*Tc_K[i]*Ru/pc_Pa[i];
+        return forceeval(b*beta);
+    }
+    
+    template<typename TType>
+    auto get_ai(std::size_t i, const TType& T) const {
+        auto alphai = forceeval(std::visit([&](auto& t) { return t(T); }, alphas[i]));
+        // See https://doi.org/10.1021/acs.iecr.1c00847
+        auto OmegaA = 0.45723552892138218938;
+        auto a = OmegaA*POW2(Tc_K[i]*Ru)/pc_Pa[i];
+        return forceeval(a*alphai);
+    }
+    
+    template<typename TType, typename FractionsType>
+    auto get_ab(const TType& T, const FractionsType& z) const{
+        using numtype = std::common_type_t<TType, decltype(z[0])>;
+        numtype b = 0.0;
+        numtype a = 0.0;
+        std::size_t N = alphas.size();
+        for (auto i = 0; i < N; ++i){
+            auto bi = get_bi(i, T);
+            auto ai = get_ai(i, T);
+            for (auto j = 0; j < N; ++j){
+                auto bj = get_bi(j, T);
+                auto aj = get_ai(j, T);
+                b += z[i]*z[j]*(bi + bj)/2.0*(1.0 - lmat(i,j));
+                a += z[i]*z[j]*sqrt(ai*aj)*(1.0 - kmat(i,j));
+            }
+        }
+        return std::make_tuple(a, b);
+    }
+    
+    template<typename TType, typename RhoType, typename FractionsType>
+    auto alphar(const TType& T, const RhoType& rho, const FractionsType& molefrac) const {
+        auto Delta1 = 1.0 + sqrt(2.0);
+        auto Delta2 = 1.0 - sqrt(2.0);
+        auto [a, b] = get_ab(T, molefrac);
+        auto Psiminus = -log(1.0 - b * rho);
+        auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
+        auto val = Psiminus - a / (Ru * T) * Psiplus;
+        return forceeval(val);
+    }
+    
+    /// Return a tuple of saturated liquid and vapor densities for the EOS given the temperature
+    /// Uses the superancillary equations from Bell and Deiters:
+    auto superanc_rhoLV(double T) const {
+        if (Tc_K.size() != 1) {
+            throw std::invalid_argument("function only available for pure species");
+        }
+        const std::valarray<double> z = { 1.0 };
+        auto [a, b] = get_ab(T, z);
+        auto Ttilde = R(z)*T*b/a;
+        auto superanc_index = CubicSuperAncillary::PR_CODE;
+        return std::make_tuple(
+                               CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)/b,
+                               CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)/b
+                               );
+    }
+};
 
 }; // namespace teqp
