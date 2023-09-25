@@ -48,6 +48,7 @@ namespace teqp {
     using LJ126KolafaNezbeda1994_t = LJ126KolafaNezbeda1994;
     using LJ126Johnson1993_t = LJ126Johnson1993;
     using Mie6Pohl2023_t = Mie::Mie6Pohl2023;
+    using QuantumPR_t = QuantumCorrectedPR;
 
     using idealgas_t = IdealHelmholtz;
 
