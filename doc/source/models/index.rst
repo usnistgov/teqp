@@ -7,10 +7,12 @@ Models
 
    make_model
    cubics
+   QuantumPR
    model_potentials
    CPA
    PCSAFT
    multifluid
    multifluid_mutant
    SAFT-VR-Mie
+   SAFT-VR-Mie-Polar   
    ECS
