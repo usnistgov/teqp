@@ -7,6 +7,7 @@ Algorithms
 
    VLE
    VLLE
+   VLLE-p
    critical_curves
 
 Information
