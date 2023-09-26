@@ -5,7 +5,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os, subprocess, shutil
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
+on_actions = os.getenv('GITHUB_ACTIONS') != None
 
 # -- Path setup --------------------------------------------------------------
 
@@ -13,9 +13,9 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('.'))
 
 here = os.path.dirname(__file__)
 
@@ -29,26 +29,14 @@ author = 'Ian Bell'
 import teqp
 release = teqp.__version__
 
-# -- Execute all notebooks --------------------------------------------------
-
-# Run doxygen (always)
-if os.path.exists(here+'/_static/'):
-    shutil.rmtree(here+'/_static/')
-os.makedirs(here+'/_static')
-subprocess.check_call('doxygen Doxyfile', cwd=here+'/../..', shell=True)
-
-if on_rtd:
-    # subprocess.check_output(f'jupyter nbconvert --version', shell=True)
-    for path, dirs, files in os.walk('.'):
-        for file in files:
-            if file.endswith('.ipynb') and '.ipynb_checkpoints' not in path:
-                subprocess.check_output(f'jupyter nbconvert  --to notebook --output {file} --execute {file}', shell=True, cwd=path)
-                # --ExecutePreprocessor.allow_errors=True      (this allows you to allow errors globally, but a raises-exception cell tag is better)
-
+if not on_actions:
+    import sphinx_pre_run
+    sphinx_pre_run.run()
 
 ### -- Auto-generate API documentation -----------------------------------------
-
 subprocess.check_output(f'sphinx-apidoc -f -o api {os.path.dirname(teqp.__file__)}', shell=True, cwd=here)
+
+# -- Execute all notebooks --------------------------------------------------
 
 # -- General configuration ---------------------------------------------------
 
