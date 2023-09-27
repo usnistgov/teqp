@@ -429,7 +429,7 @@ private:
     }
 public:
     
-    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(j.at("Tcrit / K")), pc_Pa(j.at("pcrit / Pa")), alphas(build_alphas(j)), As(j.at("As")), Bs(j.at("Bs")), cs_m3mol(j.at("cs / m^3/mol")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))) {}
+    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(std::move(j.at("Tcrit / K"))), pc_Pa(std::move(j.at("pcrit / Pa"))), alphas(build_alphas(j)), As(std::move(j.at("As"))), Bs(std::move(j.at("Bs"))), cs_m3mol(std::move(j.at("cs / m^3/mol"))), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))) {}
     
     const double Ru = get_R_gas<double>(); /// Universal gas constant, exact number
     
