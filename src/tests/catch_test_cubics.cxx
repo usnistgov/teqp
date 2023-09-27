@@ -615,7 +615,7 @@ TEST_CASE("QCPR", "[QCPR]"){
             "Ns": [5.047, 0.8396],
             "As": [3.0696, 0.4673],
             "Bs": [12.682, 2.4634],
-            "cs": [-3.8139, -2.4665],
+            "cs / m^3/mol": [-3.8139, -2.4665],
             "Tcrit / K": [33.19, 44.492],
             "pcrit / Pa": [12.964e5, 26.79],
             "kmat": [[0.0, 0.18], [0.18, 0.0]],
@@ -623,5 +623,8 @@ TEST_CASE("QCPR", "[QCPR]"){
         }
     }
     )"_json;
-    make_model(j);
+    auto model = make_model(j);
+    double T = 50.0;
+    auto z = (Eigen::ArrayXd(2) << 0.3, 0.7).finished();
+    CHECK(std::isfinite(model->get_B12vir(T, z)));
 }
