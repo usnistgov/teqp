@@ -17,6 +17,7 @@ So far the following EOS are implemented:
     * van der Waals
     * Peng-Robinson
     * Soave-Redlich-Kwong
+    * quantum-corrected Peng-Robinson for cryogens
 * SAFT*ish*:
     * PC-SAFT (+dipoles, +quadrupoles, but no association)
     * SAFT-VR-Mie (mixtures, but no association)
