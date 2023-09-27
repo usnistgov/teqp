@@ -412,7 +412,7 @@ class QuantumCorrectedPR{
 private:
     std::vector<double> Tc_K, pc_Pa;
     std::vector<AlphaFunctionOptions> alphas;
-    std::vector<double> As, Bs;
+    std::vector<double> As, Bs, cs_m3mol;
     Eigen::ArrayXXd kmat, lmat;
     
     auto build_alphas(const nlohmann::json& j){
@@ -429,7 +429,7 @@ private:
     }
 public:
     
-    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(j.at("Tcrit / K")), pc_Pa(j.at("pcrit / Pa")), alphas(build_alphas(j)), As(j.at("As")), Bs(j.at("Bs")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))) {}
+    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(j.at("Tcrit / K")), pc_Pa(j.at("pcrit / Pa")), alphas(build_alphas(j)), As(j.at("As")), Bs(j.at("Bs")), cs_m3mol(j.at("cs / m^3/mol")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))) {}
     
     const double Ru = get_R_gas<double>(); /// Universal gas constant, exact number
     
@@ -477,9 +477,22 @@ public:
         }
         return std::make_tuple(a, b);
     }
+    template<typename TType, typename FractionsType>
+    auto get_c(const TType& T, const FractionsType& z) const{
+        using numtype = std::common_type_t<TType, decltype(z[0])>;
+        numtype c = 0.0;
+        std::size_t N = alphas.size();
+        for (auto i = 0; i < N; ++i){
+            c += z[i]*cs_m3mol[i];
+        }
+        return c;
+    }
     
     template<typename TType, typename RhoType, typename FractionsType>
-    auto alphar(const TType& T, const RhoType& rho, const FractionsType& molefrac) const {
+    auto alphar(const TType& T, const RhoType& rhoinit, const FractionsType& molefrac) const {
+        // First shift the volume by the volume translation
+        auto c = get_c(T, molefrac);
+        auto rho = 1.0/(1.0/rhoinit + c);
         auto Delta1 = 1.0 + sqrt(2.0);
         auto Delta2 = 1.0 - sqrt(2.0);
         auto [a, b] = get_ab(T, molefrac);

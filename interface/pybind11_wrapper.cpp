@@ -167,6 +167,7 @@ void attach_model_specific_methods(py::object& obj){
     }
     else if (index == QuantumPR_i){
         setattr("get_ab", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<QuantumPR_t>(o).get_ab(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
+        setattr("get_c", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<QuantumPR_t>(o).get_c(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("superanc_rhoLV", MethodType(py::cpp_function([](py::object& o, double T){ return get_typed<QuantumPR_t>(o).superanc_rhoLV(T); }, "self"_a, "T"_a), obj));
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<QuantumPR_t>(o).get_kmat(); }), obj));
         setattr("get_lmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<QuantumPR_t>(o).get_lmat(); }), obj));
