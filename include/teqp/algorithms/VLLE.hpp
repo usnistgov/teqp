@@ -529,11 +529,11 @@ namespace VLLE {
         auto xprime = [&](const state_type& x, state_type& dxdt, const double T)
         {
             // Unpack the inputs
-            const auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x[0]), 2),
-                       rhovecL1 = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 2, 2),
-                       rhovecL2 = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 4, 2);
+            const auto rhovecV_ = Eigen::Map<const Eigen::ArrayXd>(&(x[0]), 2),
+                       rhovecL1_ = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 2, 2),
+                       rhovecL2_ = Eigen::Map<const Eigen::ArrayXd>(&(x[0]) + 4, 2);
             
-            auto [drhovecVdT, drhovecL1dT, drhovecL2dT] = VLLE::get_drhovecdT_VLLE_binary(model, T, rhovecV, rhovecL1, rhovecL2);
+            auto [drhovecVdT, drhovecL1dT, drhovecL2dT] = VLLE::get_drhovecdT_VLLE_binary(model, T, rhovecV_, rhovecL1_, rhovecL2_);
             Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]), 2) = drhovecVdT;
             Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 2, 2) = drhovecL1dT;
             Eigen::Map<Eigen::ArrayXd>(&(dxdt[0]) + 4, 2) = drhovecL2dT;
@@ -584,16 +584,16 @@ namespace VLLE {
                 Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 4, 2) = rhovecL2new;
             }
             
-            const auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), 2),
-                       rhovecL1 = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 2, 2),
-                       rhovecL2 = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 4, 2);
+            const auto rhovecV_ = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), 2),
+                       rhovecL1_ = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 2, 2),
+                       rhovecL2_ = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 4, 2);
             
-            auto critV = model.get_criticality_conditions(T, rhovecV);
-            auto critL1 = model.get_criticality_conditions(T, rhovecL1);
-            auto critL2 = model.get_criticality_conditions(T, rhovecL2);
+            auto critV = model.get_criticality_conditions(T, rhovecV_);
+            auto critL1 = model.get_criticality_conditions(T, rhovecL1_);
+            auto critL2 = model.get_criticality_conditions(T, rhovecL2_);
             
             if (options.verbosity > 100){
-                std::cout << "[T,x0L1,x0L2,x0V]: " << T << "," << rhovecL1[0]/rhovecL1.sum() << "," << rhovecL2[0]/rhovecL2.sum() << "," << rhovecV[0]/rhovecV.sum() << std::endl;
+                std::cout << "[T,x0L1,x0L2,x0V]: " << T << "," << rhovecL1_[0]/rhovecL1_.sum() << "," << rhovecL2_[0]/rhovecL2_.sum() << "," << rhovecV_[0]/rhovecV_.sum() << std::endl;
                 std::cout << "[crits]: " << critV << "," << critL1 << "," << critL2 << std::endl;
             }
             
