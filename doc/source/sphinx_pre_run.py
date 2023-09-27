@@ -9,9 +9,12 @@ def run():
     os.makedirs(here+'/_static')
     subprocess.check_call('doxygen Doxyfile', cwd=here+'/../..', shell=True)
 
-    # subprocess.check_output(f'jupyter nbconvert --version', shell=True)
+    # Execute all the notebooks
     for path, dirs, files in os.walk('.'):
         for file in files:
             if file.endswith('.ipynb') and '.ipynb_checkpoints' not in path:
                 subprocess.check_output(f'jupyter nbconvert --allow-errors --to notebook --output {file} --execute {file}', shell=True, cwd=path)
-                # --ExecutePreprocessor.allow_errors=True      (this allows you to allow errors globally, but a raises-exception cell tag is better)
+
+if __name__ == '__main__':
+    print('running sphinx_pre_run.py...')
+    run()
