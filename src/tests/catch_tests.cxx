@@ -3,7 +3,6 @@
 
 using Catch::Approx;
 
-#include "teqp/core.hpp"
 #include "teqp/models/cubicsuperancillary.hpp"
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/vdW.hpp"

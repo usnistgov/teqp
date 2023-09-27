@@ -5,12 +5,11 @@ using Catch::Approx;
 
 #include <fstream>
 
-#include "teqp/core.hpp"
+#include "teqp/types.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/models/saftvrmie.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/math/finite_derivs.hpp"
-#include "teqp/json_builder.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/algorithms/critical_pure.hpp"
@@ -344,7 +343,7 @@ TEST_CASE("Check output of dmat", "[SAFTVRMiedmat]")
     })");
     CHECK_NOTHROW(teqp::cppinterface::make_model(j));
     auto ptr = teqp::cppinterface::make_model(j);
-    const auto& model = teqp::cppinterface::adapter::get_model_cref<SAFTVRMie_t>(ptr.get());
+    const auto& model = teqp::cppinterface::adapter::get_model_cref<SAFTVRMie::SAFTVRMieMixture>(ptr.get());
     auto z = (Eigen::ArrayXd(2) << 0.300, 0.7).finished();
     auto jj = model.get_core_calcs(300, 0.5, z);
     // std::cout << jj.dump(2) << std::endl;

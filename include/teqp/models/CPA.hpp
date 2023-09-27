@@ -1,6 +1,8 @@
 #pragma once
 
 #include "nlohmann/json.hpp"
+#include <Eigen/Dense>
+#include "teqp/types.hpp"
 
 namespace teqp {
 

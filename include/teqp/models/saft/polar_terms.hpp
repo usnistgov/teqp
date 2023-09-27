@@ -11,7 +11,7 @@
 #include "teqp/exceptions.hpp"
 #include "correlation_integrals.hpp"
 #include <optional>
-#include <Eigen/Dense>
+#include <Eigen/Dense>  
 #include "teqp/math/pow_templates.hpp"
 #include <variant>
 
@@ -829,9 +829,9 @@ public:
         std::common_type_t<TTYPE, RhoType, RhoStarType, decltype(mole_fractions[0])> summer = 0.0;
         
         const auto k_B = 1.380649e-23;
-        const auto beta = 1.0/(k_B*T);
-        const auto muprime2 = mu2; // Polarizability ignored for now
-        const auto z1 = 1.0/3.0*beta*muprime2;
+        const TTYPE beta = forceeval(1.0/(k_B*T));
+        const Eigen::ArrayXd muprime2 = mu2; // Polarizability ignored for now
+        const auto z1 = (1.0/3.0*muprime2).cast<TTYPE>() * beta;
         const auto z2 = 0.0*z1;
 //        const auto gamma = 0.0*z1; // Anisotropy of polarizability also ignored
         
@@ -857,9 +857,9 @@ public:
         type summer_a = 0.0, summer_b = 0.0;
         
         const auto k_B = 1.380649e-23;
-        const auto beta = 1.0/(k_B*T);
-        const auto muprime2 = mu2; // Polarizability ignored for now
-        const auto z1 = 1.0/3.0*beta*muprime2;
+        const TTYPE beta = forceeval(1.0/(k_B*T));
+        const Eigen::ArrayXd muprime2 = mu2; // Polarizability ignored for now
+        const auto z1 = (1.0/3.0*muprime2).cast<TTYPE>() * beta;
         const auto z2 = 0.0*z1;
         const auto gamma = 0.0*z1; // Anisotropy of polarizability also ignored
         

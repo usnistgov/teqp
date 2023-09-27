@@ -52,7 +52,8 @@ namespace teqp {
 
     using idealgas_t = IdealHelmholtz;
 
-	// The set of these models is exposed in the variant
+	/*
+     // The set of these models is exposed in the variant
 	using AllowedModels = std::variant<
 		vdWEOS1,
         vdWEOS_t,
@@ -71,4 +72,5 @@ namespace teqp {
         LJ126Johnson1993_t,
         Mie6Pohl2023_t
 	>;
+     */
 }

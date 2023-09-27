@@ -3,11 +3,10 @@
 
 using Catch::Approx;
 
-#include "teqp/core.hpp"
+#include "teqp/types.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/finite_derivs.hpp"
-#include "teqp/json_builder.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/algorithms/critical_pure.hpp"
 using namespace teqp::PCSAFT;

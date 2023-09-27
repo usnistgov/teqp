@@ -448,7 +448,7 @@ struct SAFTVRMieChainContributionTerms{
         auto k3 = forceeval((-POW4(zeta_x) + 3.0*POW2(zeta_x) + 3.0*zeta_x)/(6.0*X3));
         
         // Pre-calculate the cubes of the diameters
-        auto dmat3 = dmat.array().pow(3).eval();
+        auto dmat3 = dmat.array().cube().eval();
         
         NumType a1kB = 0.0;
         NumType a2kB2 = 0.0;

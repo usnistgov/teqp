@@ -211,6 +211,14 @@ namespace teqp {
         }
         return o;
     }
+    template<typename T>
+    auto pow(const Eigen::ArrayX<mcx::MultiComplex<T>>& x, const int& e) {
+        auto y = x;
+        for (auto i = 0; i < x.size(); ++i) {
+            y[i] = powi(x[i], e);
+        }
+        return y;
+    }
 #endif
 
 }; // namespace teqp

@@ -237,7 +237,7 @@ public:
         std::vector<ta> zeta(4);
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
-            auto dn = c.d.pow(n).eval();
+            auto dn = pow(c.d, static_cast<int>(n));
             TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()*dn.template cast<TRHOType>().array()).sum());
             zeta[n] = forceeval(pi6*rho_A3*xmdn);
         }

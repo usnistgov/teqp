@@ -1,5 +1,5 @@
 #include "teqp/cpp/teqpcpp.hpp"
-#include "teqp/json_builder.hpp"
+#include "teqp/models/fwd.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 
 // This large block of schema definitions is populated by cmake

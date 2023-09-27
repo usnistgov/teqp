@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma message("Header `teqp/json_builder.hpp` is deprecated!")
+
 #include "teqp/models/fwd.hpp"
 #include "teqp/models/mie/lennardjones.hpp"
 #include "teqp/models/mie/mie.hpp"
@@ -12,6 +14,7 @@
 
 namespace teqp {
 
+/*
     inline AllowedModels build_model(const nlohmann::json& json) {
 
         // Extract the name of the model and the model parameters
@@ -86,5 +89,6 @@ namespace teqp {
             throw teqpcException(30, "Unknown kind:" + kind);
         }
     }
+*/
 
 };
