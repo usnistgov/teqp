@@ -410,10 +410,10 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
  */
 class QuantumCorrectedPR{
 private:
-    std::vector<double> Tc_K, pc_Pa;
-    std::vector<AlphaFunctionOptions> alphas;
-    std::vector<double> As, Bs, cs_m3mol;
-    Eigen::ArrayXXd kmat, lmat;
+    const std::vector<double> Tc_K, pc_Pa;
+    const std::vector<AlphaFunctionOptions> alphas;
+    const std::vector<double> As, Bs, cs_m3mol;
+    const Eigen::ArrayXXd kmat, lmat;
     
     auto build_alphas(const nlohmann::json& j){
         std::vector<AlphaFunctionOptions> alphas_;
@@ -427,9 +427,11 @@ private:
         }
         return alphas_;
     }
+    /// A convenience function to save some typing
+    std::vector<double> get_(const nlohmann::json &j, const std::string& k) const { return j.at(k).get<std::vector<double>>(); }
 public:
     
-    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(std::move(j.at("Tcrit / K"))), pc_Pa(std::move(j.at("pcrit / Pa"))), alphas(build_alphas(j)), As(std::move(j.at("As"))), Bs(std::move(j.at("Bs"))), cs_m3mol(std::move(j.at("cs / m^3/mol"))), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))) {}
+    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(get_(j, "Tcrit / K")), pc_Pa(get_(j, "pcrit / Pa")), alphas(build_alphas(j)), As(get_(j, "As")), Bs(get_(j, "Bs")), cs_m3mol(get_(j, "cs / m^3/mol")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))) {}
     
     const double Ru = get_R_gas<double>(); /// Universal gas constant, exact number
     
