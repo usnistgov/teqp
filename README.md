@@ -55,19 +55,19 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
   * Issues closed:
 
-    * [#16](https://github.com/CoolProp/CoolProp/issues/16) : Add Twu and Mathias-Copeman alpha functions for cubics
-    * [#20](https://github.com/CoolProp/CoolProp/issues/20) : Validate JSON input/output
-    * [#26](https://github.com/CoolProp/CoolProp/issues/26) : What do to about the gas constant?
-    * [#46](https://github.com/CoolProp/CoolProp/issues/46) : Enable VLLE finding when tracing isobar
-    * [#47](https://github.com/CoolProp/CoolProp/issues/47) : Test alpha functions with cubic EOS
-    * [#49](https://github.com/CoolProp/CoolProp/issues/49) : Add source release
-    * [#51](https://github.com/CoolProp/CoolProp/issues/51) : Add get_names and get_bib methods for PC-SAFT
-    * [#54](https://github.com/CoolProp/CoolProp/issues/54) : Fix the snippets to build with C++ public interface
-    * [#55](https://github.com/CoolProp/CoolProp/issues/55) : Add ability to add your own models to teqp without re-compiling the core
-    * [#57](https://github.com/CoolProp/CoolProp/issues/57) : Fix C interface examples
-    * [#60](https://github.com/CoolProp/CoolProp/issues/60) : Add code for getting VLLE(T) starting at subcritical temp
-    * [#63](https://github.com/CoolProp/CoolProp/issues/63) : Show how to interpolate the critical curves to make them more smooth
-    * [#65](https://github.com/CoolProp/CoolProp/issues/65) : Add quantum-corrected Peng-Robinson
+    * [#16](https://github.com/usnistgov/teqp/issues/16) : Add Twu and Mathias-Copeman alpha functions for cubics
+    * [#20](https://github.com/usnistgov/teqp/issues/20) : Validate JSON input/output
+    * [#26](https://github.com/usnistgov/teqp/issues/26) : What do to about the gas constant?
+    * [#46](https://github.com/usnistgov/teqp/issues/46) : Enable VLLE finding when tracing isobar
+    * [#47](https://github.com/usnistgov/teqp/issues/47) : Test alpha functions with cubic EOS
+    * [#49](https://github.com/usnistgov/teqp/issues/49) : Add source release
+    * [#51](https://github.com/usnistgov/teqp/issues/51) : Add get_names and get_bib methods for PC-SAFT
+    * [#54](https://github.com/usnistgov/teqp/issues/54) : Fix the snippets to build with C++ public interface
+    * [#55](https://github.com/usnistgov/teqp/issues/55) : Add ability to add your own models to teqp without re-compiling the core
+    * [#57](https://github.com/usnistgov/teqp/issues/57) : Fix C interface examples
+    * [#60](https://github.com/usnistgov/teqp/issues/60) : Add code for getting VLLE(T) starting at subcritical temp
+    * [#63](https://github.com/usnistgov/teqp/issues/63) : Show how to interpolate the critical curves to make them more smooth
+    * [#65](https://github.com/usnistgov/teqp/issues/65) : Add quantum-corrected Peng-Robinson
 
 
 * 0.16 :
