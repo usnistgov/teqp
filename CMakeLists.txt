@@ -8,56 +8,6 @@ if (MSVC)
     add_compile_options(-bigobj)
 endif()
 
-####  SETUP
-set(CMAKE_CXX_STANDARD 17)
-
-set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/docker/boost_bcp_docker/boost_teqp.tar.xz")
-set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp/boost/version.hpp")
-if (EXISTS ${ZIPFN})
-    if(NOT EXISTS ${OUTFN})
-        execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xJf ${ZIPFN}
-                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-        message(STATUS "Untarred boost headers")
-    endif()
-else()
-    message(FATAL_ERROR "tar.xz of boost sources needed for teqp cannot be found")
-endif()
-
-set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/model_schemas.tar.xz")
-if (EXISTS ${ZIPFN})
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xJf ${ZIPFN} 
-                  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
-  message(STATUS "Untarred model schemas")
-else()
-  message(FATAL_ERROR "tar.xz of thermodynamic model schemas needed for teqp cannot be found")
-endif()
-
-add_library(teqpinterface INTERFACE)
-
-target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/mcx/multicomplex/include")
-target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
-target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
-target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
-
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/json-schema-validator")
-set_property(TARGET nlohmann_json_schema_validator PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
-set(EIGEN3_VERSION_OK TRUE CACHE BOOL "Yes eigen is fine")
-set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen, for autodiff")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen finder module, for autodiff")
-set(AUTODIFF_BUILD_TESTS FALSE CACHE BOOL "No autodiff tests")
-set(AUTODIFF_BUILD_PYTHON FALSE CACHE BOOL "No autodiff python")
-set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
-
-# Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
-set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
-
-
-
 option (TEQP_NO_PYTHON
         "Enable to NOT build the Python interface"
         OFF)
@@ -97,6 +47,62 @@ option (TEQP_MULTIPRECISION_ENABLED
 option (TEQP_MULTICOMPLEX_ENABLED
         "Enable the use of multi-complex arithmetic for taking derivatives"
         OFF)
+        
+
+####  SETUP
+set(CMAKE_CXX_STANDARD 17)
+
+set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/docker/boost_bcp_docker/boost_teqp.tar.xz")
+set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp/boost/version.hpp")
+if (EXISTS ${ZIPFN})
+    if(NOT EXISTS ${OUTFN})
+        execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xJf ${ZIPFN}
+                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+        message(STATUS "Untarred boost headers")
+    endif()
+else()
+    message(FATAL_ERROR "tar.xz of boost sources needed for teqp cannot be found")
+endif()
+
+set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/model_schemas.tar.xz")
+if (EXISTS ${ZIPFN})
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xJf ${ZIPFN} 
+                  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
+  message(STATUS "Untarred model schemas")
+else()
+  message(FATAL_ERROR "tar.xz of thermodynamic model schemas needed for teqp cannot be found")
+endif()
+
+add_library(teqpinterface INTERFACE)
+
+target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/mcx/multicomplex/include")
+target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
+target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
+target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
+
+if (NOT TEQP_NO_TESTS)
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
+endif()
+
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/json-schema-validator")
+set_property(TARGET nlohmann_json_schema_validator PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen" CACHE INTERNAL "Path to Eigen, for autodiff")
+set(EIGEN3_VERSION_OK TRUE CACHE BOOL "Yes eigen is fine")
+set(Eigen3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen, for autodiff")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/cmake" CACHE INTERNAL "Path to Eigen finder module, for autodiff")
+set(AUTODIFF_BUILD_TESTS FALSE CACHE BOOL "No autodiff tests")
+set(AUTODIFF_BUILD_PYTHON FALSE CACHE BOOL "No autodiff python")
+set(AUTODIFF_BUILD_EXAMPLES FALSE CACHE BOOL "No autodiff examples")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
+
+# Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
+set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
+
+
+
+
 
 if (NOT TEQP_NO_TEQPCPP)
   # Add a static library with the C++ interface that uses only STL
