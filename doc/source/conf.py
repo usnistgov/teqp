@@ -5,7 +5,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os, subprocess, shutil
-on_actions = os.getenv('GITHUB_ACTIONS') != None
+on_actions = os.getenv('GITHUB_ACTION') != None
 
 # -- Path setup --------------------------------------------------------------
 
