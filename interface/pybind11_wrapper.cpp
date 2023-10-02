@@ -14,6 +14,7 @@
 #include "teqp/algorithms/iteration.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 #include "teqp/models/fwd.hpp"
+#include "teqp/algorithms/ancillary_builder.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -450,6 +451,7 @@ void init_teqp(py::module& m) {
     
     m.def("_make_model", &teqp::cppinterface::make_model, "json_data"_a, py::arg_v("validate", true));
     m.def("attach_model_specific_methods", &attach_model_specific_methods);
+    m.def("build_ancillaries", &teqp::ancillaries::build_ancillaries);
     
     using namespace teqp::iteration;
     py::class_<NRIterator>(m, "NRIterator")
