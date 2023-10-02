@@ -47,6 +47,7 @@ extensions = [
 'nbsphinx',
 'sphinx.ext.autodoc',
 'sphinxcontrib.doxylink',
+'sphinx.ext.githubpages'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
