@@ -142,14 +142,28 @@ public:
     auto get_kmat() const { return kmat; }
     
     /// Return a tuple of saturated liquid and vapor densities for the EOS given the temperature
-    /// Uses the superancillary equations from Bell and Deiters:
-    auto superanc_rhoLV(double T) const {
-        if (ai.size() != 1) {
-            throw std::invalid_argument("function only available for pure species");
+    /// Uses the superancillary equations from Bell and Deiters: 
+    /// \param T Temperature
+    /// \param ifluid Must be provided in the case of mixtures
+    auto superanc_rhoLV(double T, std::optional<std::size_t> ifluid = std::nullopt) const {
+        
+        std::valarray<double> molefracs(ai.size()); molefracs = 1.0;
+        
+        // If more than one component, must provide the ifluid argument
+        if(ai.size() > 1){
+            if (!ifluid){
+                throw teqp::InvalidArgument("For mixtures, the argument ifluid must be provided");
+            }
+            if (ifluid.value() > ai.size()-1){
+                throw teqp::InvalidArgument("ifluid must be less than "+std::to_string(ai.size()));
+            }
+            molefracs = 0.0;
+            molefracs[ifluid.value()] = 1.0;
         }
-        const std::valarray<double> z = { 1.0 };
-        auto b = get_b(T, z);
-        auto Ttilde = R(z)*T*b/get_a(T,z);
+        
+        auto b = get_b(T, molefracs);
+        auto a = get_a(T, molefracs);
+        auto Ttilde = R(molefracs)*T*b/a;
         return std::make_tuple(
                                CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)/b,
                                CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)/b
