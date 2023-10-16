@@ -628,3 +628,66 @@ TEST_CASE("QCPR", "[QCPR]"){
     auto z = (Eigen::ArrayXd(2) << 0.3, 0.7).finished();
     CHECK(std::isfinite(model->get_B12vir(T, z)));
 }
+
+TEST_CASE("Advanced cubic EOS", "[AdvancedPR]"){
+
+    // Values for CO2 + N2 from Table 6.3 of Lasala dissertation which come from DIPPR
+    std::valarray<double> Tc_K = {304.21, 126.19},
+                pc_Pa = {7.383e6, 3395800.0},
+               acentric = {0.22394, 0.0372};
+    
+    // Classic Peng-Robinson alpha function and covolume
+    std::vector<AlphaFunctionOptions> alphas;
+    std::vector<double> b;
+    for (auto i = 0; i < acentric.size(); ++i){
+        auto mi = 0.37464 + 1.54226*acentric[i] - 0.26992*acentric[i]*acentric[i];
+        alphas.push_back(BasicAlphaFunction(Tc_K[i], mi));
+        b.push_back(teqp::AdvancedPRaEres<double>::get_bi(Tc_K[i], pc_Pa[i]));
+    }
+    
+    SECTION("Check pcrit"){
+        
+        // Matrices for putting the coefficients in directly
+//        Eigen::ArrayXXd mWilson = (Eigen::ArrayXXd(2,2) << 0.0, -3.4768, 3.5332, 0.0).finished().transpose();
+//        Eigen::ArrayXXd nWilson = (Eigen::ArrayXXd(2,2) << 0.0, 825, -585, 0.0).finished().transpose();
+        
+        Eigen::ArrayXXd mWilson = (Eigen::ArrayXXd(2,2) << 0.0, 0.0, 0.0, 0.0).finished();
+        
+        for (double T: {223.1, 253.05, 273.1}){
+            std::size_t ipure = 0;
+            
+            double A12 = -3.4768*T + 825;
+            double A21 = 3.5332*T - 585;
+            Eigen::ArrayXXd nWilson = (Eigen::ArrayXXd(2,2) << 0.0, A12, A21, 0.0).finished();
+            auto aresmodel = WilsonResidualHelmholtzOverRT<double>(b, mWilson, nWilson);
+            AdvancedPRaEOptions options; options.CEoS = -0.52398;
+            auto model = teqp::AdvancedPRaEres<double>(Tc_K, pc_Pa, alphas, aresmodel, Eigen::ArrayXXd::Zero(2, 2), options);
+            
+            // Solve for starting point with superancillary function
+            auto [rhoL, rhoV] = model.superanc_rhoLV(T, ipure);
+            
+            Eigen::ArrayXd rhovecL0 = Eigen::ArrayXd::Zero(2); rhovecL0(ipure) = rhoL;
+            Eigen::ArrayXd rhovecV0 = Eigen::ArrayXd::Zero(2); rhovecV0(ipure) = rhoV;
+            
+            TVLEOptions opt; opt.revision = 2;
+            auto J = trace_VLE_isotherm_binary(model, T, rhovecL0, rhovecV0, opt);
+            auto pcrit = J["data"].back()["pL / Pa"];
+            std::cout << T << ", " << pcrit << std::endl;
+            std::ofstream file("isoT_advcub"+std::to_string(T)+".json"); file << J;
+        }
+    }
+}
+
+TEST_CASE("Advanced cubic EOS w/ make_model", "[AdvancedPR]"){
+    auto j = R"({
+        "kind": "advancedPRaEres",
+        "model": {
+           "Tcrit / K": [304.21, 126.19],
+           "pcrit / Pa": [7.383e6, 3395800.0],
+           "alphas": [{"type": "PR78", "acentric": 0.22394}, {"type": "PR78", "acentric": 0.0372}],
+           "aresmodel": {"type": "Wilson", "m": [[0.0, -3.4768], [3.5332, 0.0]], "n": [[0.0, 825], [-585, 0.0]]},
+           "options": {"s": 2.0, "brule": "Quadratic", "CEoS": -0.52398}
+        }
+    })"_json;
+    auto model = make_model(j);
+}

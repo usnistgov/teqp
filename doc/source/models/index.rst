@@ -8,6 +8,7 @@ Models
    make_model
    cubics
    QuantumPR
+   AdvancedCubicMixing
    model_potentials
    CPA
    PCSAFT

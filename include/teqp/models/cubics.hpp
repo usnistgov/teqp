@@ -94,6 +94,44 @@ public:
 
 using AlphaFunctionOptions = std::variant<BasicAlphaFunction<double>, TwuAlphaFunction<double>, MathiasCopemanAlphaFunction<double>>;
 
+template<typename TC>
+auto build_alpha_functions(const TC& Tc_K, const nlohmann::json& jalphas){
+    std::vector<AlphaFunctionOptions> alphas;
+    std::size_t i = 0;
+    if (jalphas.size() != Tc_K.size()){
+        throw teqp::InvalidArgument("alpha must be the same length as components");
+    }
+    for (auto alpha : jalphas){
+        std::string type = alpha.at("type");
+        if (type == "Twu"){
+            std::valarray<double> c_ = alpha.at("c");
+            Eigen::Array3d c = Eigen::Map<Eigen::Array3d>(&(c_[0]), c_.size());
+            alphas.emplace_back(TwuAlphaFunction(Tc_K[i], c));
+        }
+        else if (type == "Mathias-Copeman"){
+            std::valarray<double> c_ = alpha.at("c");
+            Eigen::Array3d c = Eigen::Map<Eigen::Array3d>(&(c_[0]), c_.size());
+            alphas.emplace_back(MathiasCopemanAlphaFunction(Tc_K[i], c));
+        }
+        else if (type == "PR78"){
+            double acentric = alpha.at("acentric");
+            double mi = 0.0;
+            if (acentric < 0.491) {
+                mi = 0.37464 + 1.54226*acentric - 0.26992*pow2(acentric);
+            }
+            else {
+                mi = 0.379642 + 1.48503*acentric -0.164423*pow2(acentric) + 0.016666*pow3(acentric);
+            }
+            alphas.emplace_back( BasicAlphaFunction(Tc_K[i], mi));
+        }
+        else{
+            throw teqp::InvalidArgument("alpha type is not understood: "+type);
+        }
+        i++;
+    }
+    return alphas;
+};
+
 template <typename NumType, typename AlphaFunctions>
 class GenericCubic {
 protected:
@@ -142,14 +180,28 @@ public:
     auto get_kmat() const { return kmat; }
     
     /// Return a tuple of saturated liquid and vapor densities for the EOS given the temperature
-    /// Uses the superancillary equations from Bell and Deiters:
-    auto superanc_rhoLV(double T) const {
-        if (ai.size() != 1) {
-            throw std::invalid_argument("function only available for pure species");
+    /// Uses the superancillary equations from Bell and Deiters: 
+    /// \param T Temperature
+    /// \param ifluid Must be provided in the case of mixtures
+    auto superanc_rhoLV(double T, std::optional<std::size_t> ifluid = std::nullopt) const {
+        
+        std::valarray<double> molefracs(ai.size()); molefracs = 1.0;
+        
+        // If more than one component, must provide the ifluid argument
+        if(ai.size() > 1){
+            if (!ifluid){
+                throw teqp::InvalidArgument("For mixtures, the argument ifluid must be provided");
+            }
+            if (ifluid.value() > ai.size()-1){
+                throw teqp::InvalidArgument("ifluid must be less than "+std::to_string(ai.size()));
+            }
+            molefracs = 0.0;
+            molefracs[ifluid.value()] = 1.0;
         }
-        const std::valarray<double> z = { 1.0 };
-        auto b = get_b(T, z);
-        auto Ttilde = R(z)*T*b/get_a(T,z);
+        
+        auto b = get_b(T, molefracs);
+        auto a = get_a(T, molefracs);
+        auto Ttilde = R(molefracs)*T*b/a;
         return std::make_tuple(
                                CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)/b,
                                CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)/b
@@ -307,28 +359,6 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
     double Delta1, Delta2, OmegaA, OmegaB;
     std::string kind = "custom";
     
-    auto add_alphas = [&](const nlohmann::json& jalphas){
-        std::size_t i = 0;
-        if (jalphas.size() != Tc_K.size()){
-            throw teqp::InvalidArgument("alpha must be the same length as components");
-        }
-        for (auto alpha : jalphas){
-            std::string type = alpha.at("type");
-            std::valarray<double> c_ = alpha.at("c");
-            Eigen::Array3d c = Eigen::Map<Eigen::Array3d>(&(c_[0]), c_.size());
-            if (type == "Twu"){
-                alphas.emplace_back(TwuAlphaFunction(Tc_K[i], c));
-            }
-            else if (type == "Mathias-Copeman"){
-                alphas.emplace_back(MathiasCopemanAlphaFunction(Tc_K[i], c));
-            }
-            else{
-                throw teqp::InvalidArgument("alpha type is not understood: "+type);
-            }
-            i++;
-        }
-    };
-    
     if (spec.at("type") == "PR" ){
         Delta1 = 1+sqrt(2.0);
         Delta2 = 1-sqrt(2.0);
@@ -354,7 +384,7 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
             if (!spec["alpha"].is_array()){
                 throw teqp::InvalidArgument("alpha must be array of objects");
             }
-            add_alphas(spec.at("alpha"));
+            alphas = build_alpha_functions(Tc_K, spec.at("alpha"));
         }
     }
     else if (spec.at("type") == "SRK"){
@@ -370,7 +400,7 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
             if (!spec["alpha"].is_array()){
                 throw teqp::InvalidArgument("alpha must be array of objects");
             }
-            add_alphas(spec.at("alpha"));
+            alphas = build_alpha_functions(Tc_K, spec.at("alpha"));
         }
         // See https://doi.org/10.1021/acs.iecr.1c00847
         OmegaA = 1.0 / (9.0 * (cbrt(2) - 1));
@@ -399,6 +429,333 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
     cub.set_meta(meta);
     return cub;
 }
+
+enum class AdvancedPRaEMixingRules {knotspecified, kLinear, kQuadratic};
+
+NLOHMANN_JSON_SERIALIZE_ENUM( AdvancedPRaEMixingRules, {
+    {AdvancedPRaEMixingRules::knotspecified, nullptr},
+    {AdvancedPRaEMixingRules::kLinear, "Linear"},
+    {AdvancedPRaEMixingRules::kQuadratic, "Quadratic"},
+})
+
+struct AdvancedPRaEOptions{
+    AdvancedPRaEMixingRules brule = AdvancedPRaEMixingRules::kQuadratic;
+    double s = 2.0;
+    double CEoS = -sqrt(2.0)/2.0*log(1.0 + sqrt(2.0));
+};
+
+inline void from_json(const json& j, AdvancedPRaEOptions& o) {
+    j.at("brule").get_to(o.brule);
+    j.at("s").get_to(o.s);
+    j.at("CEoS").get_to(o.CEoS);
+}
+
+/**
+ A residual Helmholtz term that returns nothing (the empty term)
+ */
+template<typename NumType>
+class NullResidualHelmholtzOverRT {
+public:
+    template<typename TType, typename MoleFractions>
+    auto operator () (const TType& T, const MoleFractions& molefracs) const {
+        std::common_type_t<TType, decltype(molefracs[0])> val = 0.0;
+        return val;
+    }
+};
+
+/**
+ 
+ \f[
+ \frac{a^{E,\gamma}_{total}}{RT} = -sum_iz_i\ln\left(\sum_jz_jOmega_{ij}(T)\right)
+ \f]
+ 
+ \f[
+ \frac{a^{E,\gamma}_{comb}}{RT} = -sum_iz_i\ln\left(\frac{\Omega_i}{z_i}\right)
+  \f]
+ 
+ \f[
+ \frac{a^{E,\gamma}_{res}}{RT} = \frac{a^{E,\gamma}_{total}}{RT} - \frac{a^{E,\gamma}_{comb}}{RT}
+ \f]
+ 
+ Volume fraction of component \f$i\f$
+\f[
+ \phi_i = \frac{z_iv_i}{\sum_j z_j v_j}
+ \f]
+ with \f$v_i = b_i\f$
+ */
+template<typename NumType>
+class WilsonResidualHelmholtzOverRT {
+    
+public:
+    const double R = 8.31446261815324;
+    const std::vector<double> b;
+    const Eigen::ArrayXXd m, n;
+    WilsonResidualHelmholtzOverRT(const std::vector<double>& b, const Eigen::ArrayXXd& m, const Eigen::ArrayXXd& n) : b(b), m(m), n(n) {};
+    
+    template<typename TType, typename MoleFractions>
+    auto combinatorial(const TType& T, const MoleFractions& molefracs) const {
+        if (b.size() != molefracs.size()){
+            throw teqp::InvalidArgument("Bad size of molefracs");
+        }
+        
+        using TYPE = std::common_type_t<TType, decltype(molefracs[0])>;
+        // The denominator in Phi
+        TYPE Vtot = 0.0;
+        for (auto i = 0; i < molefracs.size(); ++i){
+            auto v_i = b[i];
+            Vtot += molefracs[i]*v_i;
+        }
+        
+        TYPE summer = 0.0;
+        for (auto i = 0; i < molefracs.size(); ++i){
+            auto v_i = b[i];
+            // The ratio phi_i/z_i is expressed like this to better handle
+            // the case of z_i = 0, which would otherwise be a divide by zero
+            // in the case that the composition of one component is zero
+            auto phi_i_over_z_i = v_i/Vtot;
+            summer += molefracs[i]*log(phi_i_over_z_i);
+        }
+        return summer;
+    };
+    
+    template<typename TType>
+    auto get_Aij(std::size_t i, std::size_t j, const TType& T) const{
+        return forceeval(m(i,j)*T + n(i,j));
+    }
+    
+    template<typename TType, typename MoleFractions>
+    auto total(const TType& T, const MoleFractions& molefracs) const {
+        
+        using TYPE = std::common_type_t<TType, decltype(molefracs[0])>;
+        TYPE summer = 0.0;
+        for (auto i = 0; i < molefracs.size(); ++i){
+            auto v_i = b[i];
+            TYPE summerj = 0.0;
+            for (auto j = 0; j < molefracs.size(); ++j){
+                auto v_j = b[j];
+                auto Aij = get_Aij(i,j,T);
+                auto Omega_ji = v_j/v_i*exp(-Aij/T);
+                summerj += molefracs[j]*Omega_ji;
+            }
+            summer += molefracs[i]*log(summerj);
+        }
+        return forceeval(-summer);
+    };
+    
+    // Returns ares/RT
+    template<typename TType, typename MoleFractions>
+    auto operator () (const TType& T, const MoleFractions& molefracs) const {
+        return forceeval(total(T, molefracs) - combinatorial(T, molefracs));
+    }
+};
+
+using ResidualHelmholtzOverRTVariant = std::variant<NullResidualHelmholtzOverRT<double>, WilsonResidualHelmholtzOverRT<double>>;
+
+/**
+ Cubic EOS with advanced mixing rules, the EoS/aE method of Jaubert and co-workers
+ 
+ */
+template <typename NumType, typename AlphaFunctions = std::vector<AlphaFunctionOptions>>
+class AdvancedPRaEres {
+public:
+    // Hard-coded values for Peng-Robinson
+    const NumType Delta1 = 1+sqrt(2.0);
+    const NumType Delta2 = 1-sqrt(2.0);
+    // See https://doi.org/10.1021/acs.iecr.1c00847
+    const NumType OmegaA = 0.45723552892138218938;
+    const NumType OmegaB = 0.077796073903888455972;
+    const int superanc_code = CubicSuperAncillary::PR_CODE;
+    
+    
+protected:
+    
+    std::valarray<NumType> Tc_K, pc_Pa;
+    
+    std::valarray<NumType> ai, bi;
+    
+    const AlphaFunctions alphas;
+    const ResidualHelmholtzOverRTVariant ares;
+    Eigen::ArrayXXd lmat;
+    
+    const AdvancedPRaEMixingRules brule;
+    const double s;
+    const double CEoS;
+    
+    nlohmann::json meta;
+    
+    template<typename TType, typename IndexType>
+    auto get_ai(TType& T, IndexType i) const {
+        auto alphai = std::visit([&](auto& t) { return t(T); }, alphas[i]);
+        return forceeval(ai[i]*alphai);
+    }
+    
+    template<typename TType, typename IndexType>
+    auto get_bi(TType& /*T*/, IndexType i) const { return bi[i]; }
+    
+    template<typename IndexType>
+    void check_lmat(IndexType N) {
+        if (lmat.cols() != lmat.rows()) {
+            throw teqp::InvalidArgument("lmat rows [" + std::to_string(lmat.rows()) + "] and columns [" + std::to_string(lmat.cols()) + "] are not identical");
+        }
+        if (lmat.cols() == 0) {
+            lmat.resize(N, N); lmat.setZero();
+        }
+        else if (lmat.cols() != N) {
+            throw teqp::InvalidArgument("lmat needs to be a square matrix the same size as the number of components [" + std::to_string(N) + "]");
+        }
+    };
+    
+public:
+    AdvancedPRaEres(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const ResidualHelmholtzOverRTVariant& ares, const Eigen::ArrayXXd& lmat, const AdvancedPRaEOptions& options = {})
+    : Tc_K(Tc_K), pc_Pa(pc_Pa), alphas(alphas), ares(ares), lmat(lmat), brule(options.brule), s(options.s), CEoS(options.CEoS)
+    {
+        ai.resize(Tc_K.size());
+        bi.resize(Tc_K.size());
+        for (auto i = 0; i < Tc_K.size(); ++i) {
+            ai[i] = OmegaA * pow2(Ru * Tc_K[i]) / pc_Pa[i];
+            bi[i] = OmegaB * Ru * Tc_K[i] / pc_Pa[i];
+        }
+        check_lmat(ai.size());
+    };
+    
+    void set_meta(const nlohmann::json& j) { meta = j; }
+    auto get_meta() const { return meta; }
+    auto get_lmat() const { return lmat; }
+    auto get_Tc_K() const { return Tc_K; }
+    auto get_pc_Pa() const { return pc_Pa; }
+    
+    static double get_bi(double Tc_K, double pc_Pa){
+        const NumType OmegaB = 0.077796073903888455972;
+        const NumType R = 8.31446261815324;
+        return OmegaB*R*Tc_K/pc_Pa;
+    }
+    
+    /// Return a tuple of saturated liquid and vapor densities for the EOS given the temperature
+    /// Uses the superancillary equations from Bell and Deiters:
+    /// \param T Temperature
+    /// \param ifluid Must be provided in the case of mixtures
+    auto superanc_rhoLV(double T, std::optional<std::size_t> ifluid = std::nullopt) const {
+        
+        std::valarray<double> molefracs(ai.size()); molefracs = 1.0;
+        
+        // If more than one component, must provide the ifluid argument
+        if(ai.size() > 1){
+            if (!ifluid){
+                throw teqp::InvalidArgument("For mixtures, the argument ifluid must be provided");
+            }
+            if (ifluid.value() > ai.size()-1){
+                throw teqp::InvalidArgument("ifluid must be less than "+std::to_string(ai.size()));
+            }
+            molefracs = 0.0;
+            molefracs[ifluid.value()] = 1.0;
+        }
+        
+        auto b = get_b(T, molefracs);
+        auto a = get_am_over_bm(T, molefracs)*b;
+        auto Ttilde = R(molefracs)*T*b/a;
+        return std::make_tuple(
+           CubicSuperAncillary::supercubic(superanc_code, CubicSuperAncillary::RHOL_CODE, Ttilde)/b,
+           CubicSuperAncillary::supercubic(superanc_code, CubicSuperAncillary::RHOV_CODE, Ttilde)/b
+        );
+    }
+    
+    const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
+    
+    template<class VecType>
+    auto R(const VecType& /*molefrac*/) const {
+        return Ru;
+    }
+    
+    template<typename TType, typename CompType>
+    auto get_a(TType T, const CompType& molefracs) const {
+        return forceeval(get_am_over_bm(T, molefracs)*get_b(T, molefracs));
+    }
+    
+    template<typename TType, typename CompType>
+    auto get_am_over_bm(TType T, const CompType& molefracs) const {
+        auto aEresRT = std::visit([&](auto& aresRTfunc) { return aresRTfunc(T, molefracs); }, ares); // aEres/RT, so a non-dimensional quantity
+        std::common_type_t<TType, decltype(molefracs[0])> summer = aEresRT*Ru*T/CEoS;
+        for (auto i = 0; i < molefracs.size(); ++i) {
+            summer += molefracs[i]*get_ai(T,i)/get_bi(T,i);
+        }
+        return forceeval(summer);
+    }
+    
+    template<typename TType, typename CompType>
+    auto get_b(TType T, const CompType& molefracs) const {
+        std::common_type_t<TType, decltype(molefracs[0])> b_ = 0.0;
+        
+        switch (brule){
+            case AdvancedPRaEMixingRules::kQuadratic:
+                for (auto i = 0; i < molefracs.size(); ++i) {
+                    auto bi_ = get_bi(T, i);
+                    for (auto j = 0; j < molefracs.size(); ++j) {
+                        auto bj_ = get_bi(T, j);
+                        
+                        auto bij = (1 - lmat(i,j)) * pow((pow(bi_, 1.0/s) + pow(bj_, 1.0/s))/2.0, s);
+                        b_ += molefracs[i] * molefracs[j] * bij;
+                    }
+                }
+                break;
+            case AdvancedPRaEMixingRules::kLinear:
+                for (auto i = 0; i < molefracs.size(); ++i) {
+                    b_ += molefracs[i] * get_bi(T, i);
+                }
+                break;
+            default:
+                throw teqp::InvalidArgument("Mixing rule for b is invalid");
+        }
+        return forceeval(b_);
+    }
+    
+    template<typename TType, typename RhoType, typename MoleFracType>
+    auto alphar(const TType& T,
+                const RhoType& rho,
+                const MoleFracType& molefrac) const
+    {
+        if (molefrac.size() != alphas.size()) {
+            throw std::invalid_argument("Sizes do not match");
+        }
+        auto b = get_b(T, molefrac);
+        auto a = get_am_over_bm(T, molefrac)*b;
+        auto Psiminus = -log(1.0 - b * rho);
+        auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
+        auto val = Psiminus - a / (Ru * T) * Psiplus;
+        return forceeval(val);
+    }
+};
+
+inline auto make_AdvancedPRaEres(const nlohmann::json& j){
+    
+    std::valarray<double> Tc_K = j.at("Tcrit / K");
+    std::valarray<double> pc_Pa = j.at("pcrit / Pa");
+    
+    std::vector<AlphaFunctionOptions> alphas = build_alpha_functions(Tc_K, j.at("alphas"));
+    
+    auto get_ares_model = [&](const nlohmann::json& armodel) -> ResidualHelmholtzOverRTVariant {
+        
+        std::string type = armodel.at("type");
+        if (type == "Wilson"){
+            std::vector<double> b;
+            for (auto i = 0; i < Tc_K.size(); ++i){
+                b.push_back(teqp::AdvancedPRaEres<double>::get_bi(Tc_K[i], pc_Pa[i]));
+            }
+            auto mWilson = build_square_matrix(armodel.at("m"));
+            auto nWilson = build_square_matrix(armodel.at("n"));
+            return WilsonResidualHelmholtzOverRT<double>(b, mWilson, nWilson);
+        }
+        else{
+            throw teqp::InvalidArgument("bad type of ares model: " + type);
+        }
+    };
+    auto aresmodel = get_ares_model(j.at("aresmodel"));
+    
+    AdvancedPRaEOptions options = j.at("options");
+    auto model = teqp::AdvancedPRaEres<double>(Tc_K, pc_Pa, alphas, aresmodel, Eigen::ArrayXXd::Zero(2, 2), options);
+    return model;
+}
+
+using advancedPRaEres_t = decltype(make_AdvancedPRaEres({}));
 
 /**
  The quantum corrected Peng-Robinson model as developed in
