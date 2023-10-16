@@ -94,6 +94,44 @@ public:
 
 using AlphaFunctionOptions = std::variant<BasicAlphaFunction<double>, TwuAlphaFunction<double>, MathiasCopemanAlphaFunction<double>>;
 
+template<typename TC>
+auto build_alpha_functions(const TC& Tc_K, const nlohmann::json& jalphas){
+    std::vector<AlphaFunctionOptions> alphas;
+    std::size_t i = 0;
+    if (jalphas.size() != Tc_K.size()){
+        throw teqp::InvalidArgument("alpha must be the same length as components");
+    }
+    for (auto alpha : jalphas){
+        std::string type = alpha.at("type");
+        if (type == "Twu"){
+            std::valarray<double> c_ = alpha.at("c");
+            Eigen::Array3d c = Eigen::Map<Eigen::Array3d>(&(c_[0]), c_.size());
+            alphas.emplace_back(TwuAlphaFunction(Tc_K[i], c));
+        }
+        else if (type == "Mathias-Copeman"){
+            std::valarray<double> c_ = alpha.at("c");
+            Eigen::Array3d c = Eigen::Map<Eigen::Array3d>(&(c_[0]), c_.size());
+            alphas.emplace_back(MathiasCopemanAlphaFunction(Tc_K[i], c));
+        }
+        else if (type == "PR78"){
+            double acentric = alpha.at("acentric");
+            double mi = 0.0;
+            if (acentric < 0.491) {
+                mi = 0.37464 + 1.54226*acentric - 0.26992*pow2(acentric);
+            }
+            else {
+                mi = 0.379642 + 1.48503*acentric -0.164423*pow2(acentric) + 0.016666*pow3(acentric);
+            }
+            alphas.emplace_back( BasicAlphaFunction(Tc_K[i], mi));
+        }
+        else{
+            throw teqp::InvalidArgument("alpha type is not understood: "+type);
+        }
+        i++;
+    }
+    return alphas;
+};
+
 template <typename NumType, typename AlphaFunctions>
 class GenericCubic {
 protected:
@@ -321,28 +359,6 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
     double Delta1, Delta2, OmegaA, OmegaB;
     std::string kind = "custom";
     
-    auto add_alphas = [&](const nlohmann::json& jalphas){
-        std::size_t i = 0;
-        if (jalphas.size() != Tc_K.size()){
-            throw teqp::InvalidArgument("alpha must be the same length as components");
-        }
-        for (auto alpha : jalphas){
-            std::string type = alpha.at("type");
-            std::valarray<double> c_ = alpha.at("c");
-            Eigen::Array3d c = Eigen::Map<Eigen::Array3d>(&(c_[0]), c_.size());
-            if (type == "Twu"){
-                alphas.emplace_back(TwuAlphaFunction(Tc_K[i], c));
-            }
-            else if (type == "Mathias-Copeman"){
-                alphas.emplace_back(MathiasCopemanAlphaFunction(Tc_K[i], c));
-            }
-            else{
-                throw teqp::InvalidArgument("alpha type is not understood: "+type);
-            }
-            i++;
-        }
-    };
-    
     if (spec.at("type") == "PR" ){
         Delta1 = 1+sqrt(2.0);
         Delta2 = 1-sqrt(2.0);
@@ -368,7 +384,7 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
             if (!spec["alpha"].is_array()){
                 throw teqp::InvalidArgument("alpha must be array of objects");
             }
-            add_alphas(spec.at("alpha"));
+            alphas = build_alpha_functions(Tc_K, spec.at("alpha"));
         }
     }
     else if (spec.at("type") == "SRK"){
@@ -384,7 +400,7 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
             if (!spec["alpha"].is_array()){
                 throw teqp::InvalidArgument("alpha must be array of objects");
             }
-            add_alphas(spec.at("alpha"));
+            alphas = build_alpha_functions(Tc_K, spec.at("alpha"));
         }
         // See https://doi.org/10.1021/acs.iecr.1c00847
         OmegaA = 1.0 / (9.0 * (cbrt(2) - 1));
@@ -416,12 +432,23 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
 
 enum class AdvancedPRaEMixingRules {knotspecified, kLinear, kQuadratic};
 
+NLOHMANN_JSON_SERIALIZE_ENUM( AdvancedPRaEMixingRules, {
+    {AdvancedPRaEMixingRules::knotspecified, nullptr},
+    {AdvancedPRaEMixingRules::kLinear, "Linear"},
+    {AdvancedPRaEMixingRules::kQuadratic, "Quadratic"},
+})
+
 struct AdvancedPRaEOptions{
     AdvancedPRaEMixingRules brule = AdvancedPRaEMixingRules::kQuadratic;
     double s = 2.0;
     double CEoS = -sqrt(2.0)/2.0*log(1.0 + sqrt(2.0));
 };
 
+inline void from_json(const json& j, AdvancedPRaEOptions& o) {
+    j.at("brule").get_to(o.brule);
+    j.at("s").get_to(o.s);
+    j.at("CEoS").get_to(o.CEoS);
+}
 
 /**
  A residual Helmholtz term that returns nothing (the empty term)
@@ -522,7 +549,7 @@ public:
     }
 };
 
-using ResidualHelmholtzOverRTOptions = std::variant<NullResidualHelmholtzOverRT<double>, WilsonResidualHelmholtzOverRT<double>>;
+using ResidualHelmholtzOverRTVariant = std::variant<NullResidualHelmholtzOverRT<double>, WilsonResidualHelmholtzOverRT<double>>;
 
 /**
  Cubic EOS with advanced mixing rules, the EoS/aE method of Jaubert and co-workers
@@ -538,17 +565,21 @@ public:
     const NumType OmegaA = 0.45723552892138218938;
     const NumType OmegaB = 0.077796073903888455972;
     const int superanc_code = CubicSuperAncillary::PR_CODE;
-    const double CEoS;
+    
     
 protected:
+    
+    std::valarray<NumType> Tc_K, pc_Pa;
     
     std::valarray<NumType> ai, bi;
     
     const AlphaFunctions alphas;
-    const ResidualHelmholtzOverRTOptions ares;
+    const ResidualHelmholtzOverRTVariant ares;
     Eigen::ArrayXXd lmat;
-    const double s;
+    
     const AdvancedPRaEMixingRules brule;
+    const double s;
+    const double CEoS;
     
     nlohmann::json meta;
     
@@ -575,8 +606,8 @@ protected:
     };
     
 public:
-    AdvancedPRaEres(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const ResidualHelmholtzOverRTOptions& ares, const Eigen::ArrayXXd& lmat, const AdvancedPRaEOptions& options = {})
-    : alphas(alphas), ares(ares), lmat(lmat), s(options.s), brule(options.brule), CEoS(options.CEoS)
+    AdvancedPRaEres(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const ResidualHelmholtzOverRTVariant& ares, const Eigen::ArrayXXd& lmat, const AdvancedPRaEOptions& options = {})
+    : Tc_K(Tc_K), pc_Pa(pc_Pa), alphas(alphas), ares(ares), lmat(lmat), brule(options.brule), s(options.s), CEoS(options.CEoS)
     {
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
@@ -590,6 +621,9 @@ public:
     void set_meta(const nlohmann::json& j) { meta = j; }
     auto get_meta() const { return meta; }
     auto get_lmat() const { return lmat; }
+    auto get_Tc_K() const { return Tc_K; }
+    auto get_pc_Pa() const { return pc_Pa; }
+    
     static double get_bi(double Tc_K, double pc_Pa){
         const NumType OmegaB = 0.077796073903888455972;
         const NumType R = 8.31446261815324;
@@ -690,6 +724,38 @@ public:
         return forceeval(val);
     }
 };
+
+inline auto make_AdvancedPRaEres(const nlohmann::json& j){
+    
+    std::valarray<double> Tc_K = j.at("Tcrit / K");
+    std::valarray<double> pc_Pa = j.at("pcrit / Pa");
+    
+    std::vector<AlphaFunctionOptions> alphas = build_alpha_functions(Tc_K, j.at("alphas"));
+    
+    auto get_ares_model = [&](const nlohmann::json& armodel) -> ResidualHelmholtzOverRTVariant {
+        
+        std::string type = armodel.at("type");
+        if (type == "Wilson"){
+            std::vector<double> b;
+            for (auto i = 0; i < Tc_K.size(); ++i){
+                b.push_back(teqp::AdvancedPRaEres<double>::get_bi(Tc_K[i], pc_Pa[i]));
+            }
+            auto mWilson = build_square_matrix(armodel.at("m"));
+            auto nWilson = build_square_matrix(armodel.at("n"));
+            return WilsonResidualHelmholtzOverRT<double>(b, mWilson, nWilson);
+        }
+        else{
+            throw teqp::InvalidArgument("bad type of ares model: " + type);
+        }
+    };
+    auto aresmodel = get_ares_model(j.at("aresmodel"));
+    
+    AdvancedPRaEOptions options = j.at("options");
+    auto model = teqp::AdvancedPRaEres<double>(Tc_K, pc_Pa, alphas, aresmodel, Eigen::ArrayXXd::Zero(2, 2), options);
+    return model;
+}
+
+using advancedPRaEres_t = decltype(make_AdvancedPRaEres({}));
 
 /**
  The quantum corrected Peng-Robinson model as developed in

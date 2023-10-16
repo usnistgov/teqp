@@ -677,3 +677,17 @@ TEST_CASE("Advanced cubic EOS", "[AdvancedPR]"){
         }
     }
 }
+
+TEST_CASE("Advanced cubic EOS w/ make_model", "[AdvancedPR]"){
+    auto j = R"({
+        "kind": "advancedPRaEres",
+        "model": {
+           "Tcrit / K": [304.21, 126.19],
+           "pcrit / Pa": [7.383e6, 3395800.0],
+           "alphas": [{"type": "PR78", "acentric": 0.22394}, {"type": "PR78", "acentric": 0.0372}],
+           "aresmodel": {"type": "Wilson", "m": [[0.0, -3.4768], [3.5332, 0.0]], "n": [[0.0, 825], [-585, 0.0]]},
+           "options": {"s": 2.0, "brule": "Quadratic", "CEoS": -0.52398}
+        }
+    })"_json;
+    auto model = make_model(j);
+}
