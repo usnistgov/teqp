@@ -786,16 +786,16 @@ private:
     
     // These values were adjusted in the model of Paricaud, JPCB, 2023
     /// The C3b is the C of Paricaud, and C3 is the tau of Paricaud. They were renamed to be not cause confusion with the multifluid modeling approach
-    const double C3;
+    const double C3, C3b;
     const double C3b;
     
-    double get_C3(const std::optional<nlohmann::json>& flags){
-        if (flags){ return flags.value().value("C3", 1.0); }
-        return 1.0;
+    double get_C3(const std::optional<nlohmann::json>& flags, double default_value=1.0){
+        if (flags){ return flags.value().value("C3", default_value); }
+        return default_value;
     }
-    double get_C3b(const std::optional<nlohmann::json>& flags){
-        if (flags){ return flags.value().value("C3b", 1.0); }
-        return 1.0;
+    double get_C3b(const std::optional<nlohmann::json>& flags, double default_value=1.0){
+        if (flags){ return flags.value().value("C3b", default_value); }
+        return default_value;
     }
     multipolar_rhostar_approach get_approach(const std::optional<nlohmann::json>& flags){
         if (flags){ return flags.value().value("approach", multipolar_rhostar_approach::use_packing_fraction); }
