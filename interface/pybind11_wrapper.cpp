@@ -281,6 +281,9 @@ void init_teqp(py::module& m) {
         .def_readwrite("max_steps", &TVLEOptions::max_steps)
         .def_readwrite("integration_order", &TVLEOptions::integration_order)
         .def_readwrite("polish", &TVLEOptions::polish)
+        .def_readwrite("polish_reltol_rho", &TVLEOptions::polish_reltol_rho)
+        .def_readwrite("polish_exception_on_fail", &TVLEOptions::polish_exception_on_fail)
+        .def_readwrite("verbosity", &TVLEOptions::verbosity)
         .def_readwrite("calc_criticality", &TVLEOptions::calc_criticality)
         .def_readwrite("terminate_unstable", &TVLEOptions::terminate_unstable)
         ;
@@ -293,9 +296,13 @@ void init_teqp(py::module& m) {
         .def_readwrite("init_dt", &PVLEOptions::init_dt)
         .def_readwrite("init_c", &PVLEOptions::init_c)
         .def_readwrite("max_dt", &PVLEOptions::max_dt)
+        .def_readwrite("crit_termination", &PVLEOptions::crit_termination)
         .def_readwrite("max_steps", &PVLEOptions::max_steps)
         .def_readwrite("integration_order", &PVLEOptions::integration_order)
         .def_readwrite("polish", &PVLEOptions::polish)
+        .def_readwrite("polish_reltol_rho", &PVLEOptions::polish_reltol_rho)
+        .def_readwrite("polish_exception_on_fail", &PVLEOptions::polish_exception_on_fail)
+        .def_readwrite("verbosity", &PVLEOptions::verbosity)
         .def_readwrite("calc_criticality", &PVLEOptions::calc_criticality)
         .def_readwrite("terminate_unstable", &PVLEOptions::terminate_unstable)
         ;

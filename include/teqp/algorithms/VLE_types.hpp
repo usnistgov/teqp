@@ -4,16 +4,18 @@ namespace teqp{
 
 struct TVLEOptions {
     double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0, p_termination = 1e15, crit_termination = 1e-12;
-    int max_steps = 1000, integration_order = 5, revision = 1;
-    bool polish = true;
+    int max_steps = 1000, integration_order = 5, revision = 1, verbosity = 0;
+    bool polish = true, polish_exception_on_fail = false;
+    double polish_reltol_rho = 0.05;
     bool calc_criticality = false;
     bool terminate_unstable = false;
 };
 
 struct PVLEOptions {
-    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0;
-    int max_steps = 1000, integration_order = 5;
-    bool polish = true;
+    double init_dt = 1e-5, abs_err = 1e-8, rel_err = 1e-8, max_dt = 100000, init_c = 1.0, crit_termination = 1e-12;
+    int max_steps = 1000, integration_order = 5, verbosity = 0;
+    bool polish = true, polish_exception_on_fail = false;
+    double polish_reltol_rho = 0.05;
     bool calc_criticality = false;
     bool terminate_unstable = false;
 };

@@ -997,13 +997,25 @@ inline auto trace_VLE_isotherm_binary(const AbstractModel &model, double T, cons
             auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0 + N]), N).eval();
             auto x = (Eigen::ArrayXd(2) << rhovecL(0) / rhovecL.sum(), rhovecL(1) / rhovecL.sum()).finished(); // Mole fractions in the liquid phase (to be kept constant)
             auto [return_code, rhovecLnew, rhovecVnew] = model.mix_VLE_Tx(T, rhovecL, rhovecV, x, 1e-10, 1e-8, 1e-10, 1e-8, 10);
-
-            // If the step is accepted, copy into x again ...
-            auto rhovecLview = Eigen::Map<Eigen::ArrayXd>(&(x0[0]), N);
-            auto rhovecVview = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + N, N);
-            rhovecLview = rhovecLnew;
-            rhovecVview = rhovecVnew;
-            //std::cout << "[polish]: " << static_cast<int>(return_code) << ": " << rhovecLnew.sum() / rhovecL.sum() << " " << rhovecVnew.sum() / rhovecV.sum() << std::endl;
+            
+            if (((rhovecL-rhovecLnew).cwiseAbs() > opt.polish_reltol_rho*rhovecL).any()){
+                std::string msg;
+                if (opt.polish_exception_on_fail){
+                    throw IterationFailure(msg);
+                }
+                else{
+                    if (opt.verbosity > 0){
+                        std::cout << msg << std::endl;
+                    }
+                }
+            }
+            else{
+                // If the step is accepted, copy into x again ...
+                auto rhovecLview = Eigen::Map<Eigen::ArrayXd>(&(x0[0]), N);
+                auto rhovecVview = Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + N, N);
+                rhovecLview = rhovecLnew;
+                rhovecVview = rhovecVnew;
+            }
         }
 
         std::swap(previous_drhodt, last_drhodt);
@@ -1220,7 +1232,7 @@ auto trace_VLE_isobar_binary(const Model& model, double p, double T0, const Eige
             if (opt.calc_criticality) {
                 auto condsL = model.get_criticality_conditions(T, rhovecL);
                 auto condsV = model.get_criticality_conditions(T, rhovecV);
-                if (condsL[0] < 1e-12 || condsV[0] < 1e-12) {
+                if (condsL[0] < opt.crit_termination || condsV[0] < opt.crit_termination) {
                     return true;
                 }
             }
@@ -1242,13 +1254,26 @@ auto trace_VLE_isobar_binary(const Model& model, double p, double T0, const Eige
             auto x = (Eigen::ArrayXd(2) << rhovecL(0) / rhovecL.sum(), rhovecL(1) / rhovecL.sum()).finished(); // Mole fractions in the liquid phase (to be kept constant)
             auto [return_code, Tnew, rhovecLnew, rhovecVnew] = model.mixture_VLE_px(p, x, T, rhovecL, rhovecV);
 
-            // If the step is accepted, copy into x again ...
-            x0[0] = Tnew;
-            auto rhovecLview = Eigen::Map<Eigen::ArrayXd>(&(x0[1]), N);
-            auto rhovecVview = Eigen::Map<Eigen::ArrayXd>(&(x0[1]) + N, N);
-            rhovecLview = rhovecLnew;
-            rhovecVview = rhovecVnew;
-            //std::cout << "[polish]: " << static_cast<int>(return_code) << ": " << rhovecLnew.sum() / rhovecL.sum() << " " << rhovecVnew.sum() / rhovecV.sum() << std::endl;
+            if (((rhovecL-rhovecLnew).cwiseAbs() > opt.polish_reltol_rho*rhovecL).any()){
+                std::string msg;
+                if (opt.polish_exception_on_fail){
+                    throw IterationFailure(msg);
+                }
+                else{
+                    if (opt.verbosity > 0){
+                        std::cout << msg << std::endl;
+                    }
+                }
+            }
+            else{
+                // If the step is accepted, copy into x again ...
+                x0[0] = Tnew;
+                auto rhovecLview = Eigen::Map<Eigen::ArrayXd>(&(x0[1]), N);
+                auto rhovecVview = Eigen::Map<Eigen::ArrayXd>(&(x0[1]) + N, N);
+                rhovecLview = rhovecLnew;
+                rhovecVview = rhovecVnew;
+                //std::cout << "[polish]: " << static_cast<int>(return_code) << ": " << rhovecLnew.sum() / rhovecL.sum() << " " << rhovecVnew.sum() / rhovecV.sum() << std::endl;
+            }
         }
 
         std::swap(previous_drhodt, last_drhodt);
