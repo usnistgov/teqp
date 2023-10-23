@@ -468,7 +468,7 @@ void init_teqp(py::module& m) {
     
     m.def("_make_model", &teqp::cppinterface::make_model, "json_data"_a, py::arg_v("validate", true));
     m.def("attach_model_specific_methods", &attach_model_specific_methods);
-    m.def("build_ancillaries", &teqp::ancillaries::build_ancillaries, "Tc"_a, "rhoc"_a, "Tmin"_a, py::arg_v("flags", std::nullopt, "None"));
+    m.def("build_ancillaries", &teqp::ancillaries::build_ancillaries, "model"_a, "Tc"_a, "rhoc"_a, "Tmin"_a, py::arg_v("flags", std::nullopt, "None"));
     
     using namespace teqp::iteration;
     py::class_<NRIterator>(m, "NRIterator")
