@@ -1143,6 +1143,11 @@ public:
                 alpha2 = get_alpha2(T, rhoN, rhostar, mole_fractions, mu);
                 alpha3 = get_alpha3(T, rhoN, rhostar, mole_fractions, mu);
                 alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
+                // Handle the case where the polar term is present but the contribution is zero
+                if (getbaseval(alpha2) == 0){
+                    alpha2 = 0;
+                    alpha = 0;
+                }
             }
             return MultipolarContributionGubbinsTwuTermsGT<type>{alpha2, alpha3, alpha};
         }

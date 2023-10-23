@@ -333,5 +333,26 @@ TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepol
 //            CHECK(rhostar_guess == Approx(0.221054));
         }
     }
+}
+
+TEST_CASE("Critical points with Stockmayer-LJ model of Mooji", "[polar]"){
+    auto j = R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [{"m": 1.0, "lambda_r": 12, "lambda_a": 6, "sigma_m": 3.405e-10, "epsilon_over_k": 119.8, "mu_Cm": 5.390822314007849e-30, "Q_Cm2": 0.0, "name": "Stockmayer", "BibTeXKey": "?", "nQ": 1.0, "nmu": 1.0}, {"m": 1.0, "lambda_r": 12, "lambda_a": 6, "sigma_m": 3.405e-10, "epsilon_over_k": 119.8, "mu_Cm": 0.0, "Q_Cm2": 0.0, "name": "LJ", "BibTeXKey": "?", "nQ": 1.0, "nmu": 1.0}], "polar_model": "GrayGubbins+GubbinsTwu"}} )"_json;
+    auto model = teqp::cppinterface::make_model(j);
+    SECTION("Lennard-Jones"){
+        double Tstar_guess = 1.3, rhostar_guess = 0.3;
+        double ek = 119.8, sigma_m = 3.405e-10;
+        nlohmann::json flags = {{"alternative_pure_index", 1}, {"alternative_length", 2}};
+        auto pure = model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)), flags);
+        double Tstar = std::get<0>(pure)/ek;
+        int t = 0;
+    }
+    SECTION("Stockmayer"){
+        double Tstar_guess = 2.3, rhostar_guess = 0.3;
+        double ek = 119.8, sigma_m = 3.405e-10;
+        nlohmann::json flags = {{"alternative_pure_index", 0}, {"alternative_length", 2}};
+        auto pure = model->solve_pure_critical(Tstar_guess*ek, rhostar_guess/(N_A*pow(sigma_m, 3)), flags);
+        double Tstar = std::get<0>(pure)/ek;
+        int t = 0;
+    }
     
 }
