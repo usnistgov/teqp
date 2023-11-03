@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v3
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.11.2 build wheel
+        run: python -m pip install cibuildwheel==2.16.2 build wheel
 
       # - name: Install LLVM (clang-cl) on windows
       #   run: choco install -y llvm
