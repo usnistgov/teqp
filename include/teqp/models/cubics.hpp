@@ -849,6 +849,9 @@ public:
     
     template<typename TType, typename RhoType, typename FractionsType>
     auto alphar(const TType& T, const RhoType& rhoinit, const FractionsType& molefrac) const {
+        if (molefrac.size() != alphas.size()) {
+            throw std::invalid_argument("Sizes do not match");
+        }
         // First shift the volume by the volume translation
         auto c = get_c(T, molefrac);
         auto rho = 1.0/(1.0/rhoinit + c);
