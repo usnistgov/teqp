@@ -24,6 +24,7 @@ namespace teqp {
             {"cubic", [](const nlohmann::json& spec){ return make_owned(make_generalizedcubic(spec));}},
             {"QCPRAasen", [](const nlohmann::json& spec){ return make_owned(QuantumCorrectedPR(spec));}},
             {"advancedPRaEres", [](const nlohmann::json& spec){ return make_owned(make_AdvancedPRaEres(spec));}},
+            {"RKPRCismondi2005", [](const nlohmann::json& spec){ return make_owned(RKPRCismondi2005(spec));}},
             
             {"CPA", [](const nlohmann::json& spec){ return make_owned(CPA::CPAfactory(spec));}},
             {"PCSAFT", [](const nlohmann::json& spec){ return make_owned(PCSAFT::PCSAFTfactory(spec));}},

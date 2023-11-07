@@ -110,6 +110,7 @@ const std::type_index EXP6_Kataoka1992_i{std::type_index(typeid(EXP6_Kataoka1992
 const std::type_index twocenterLJF_i{std::type_index(typeid(twocenterLJF_t))};
 const std::type_index QuantumPR_i{std::type_index(typeid(QuantumPR_t))};
 const std::type_index advancedPRaEres_i{std::type_index(typeid(advancedPRaEres_t))};
+const std::type_index RKPRCismondi2005_i{std::type_index(typeid(RKPRCismondi2005_t))};
 
 /**
  At runtime we can add additional model-specific methods that only apply for a particular model.  We take in a Python-wrapped
@@ -186,6 +187,18 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_pc_Pa", MethodType(py::cpp_function([](py::object& o){ return get_typed<advancedPRaEres_t>(o).get_pc_Pa(); }), obj));
 //        setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<advancedPRaEres_t>(o).get_meta(); }), obj));
 //        setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<advancedPRaEres_t>(o).set_meta(s); }, "self"_a, "s"_a), obj));
+    }
+    else if (index == RKPRCismondi2005_i){
+        setattr("get_ab", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<RKPRCismondi2005_t>(o).get_ab(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
+        setattr("get_delta_1", MethodType(py::cpp_function([](py::object& o){ return get_typed<RKPRCismondi2005_t>(o).get_delta_1(); }), obj));
+        setattr("get_Tc_K", MethodType(py::cpp_function([](py::object& o){ return get_typed<RKPRCismondi2005_t>(o).get_Tc_K(); }), obj));
+        setattr("get_pc_Pa", MethodType(py::cpp_function([](py::object& o){ return get_typed<RKPRCismondi2005_t>(o).get_pc_Pa(); }), obj));
+        setattr("get_k", MethodType(py::cpp_function([](py::object& o){ return get_typed<RKPRCismondi2005_t>(o).get_k(); }), obj));
+        
+        setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<RKPRCismondi2005_t>(o).get_kmat(); }), obj));
+        setattr("get_lmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<RKPRCismondi2005_t>(o).get_lmat(); }), obj));
+//        setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<RKPRCismondi2005_t>(o).get_meta(); }), obj));
+//        setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<RKPRCismondi2005_t>(o).set_meta(s); }, "self"_a, "s"_a), obj));
     }
     else if (index == AmmoniaWaterTillnerRoth_i){
         setattr("TcNH3", get_typed<AmmoniaWaterTillnerRoth>(obj).TcNH3);

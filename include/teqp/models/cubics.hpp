@@ -849,6 +849,9 @@ public:
     
     template<typename TType, typename RhoType, typename FractionsType>
     auto alphar(const TType& T, const RhoType& rhoinit, const FractionsType& molefrac) const {
+        if (molefrac.size() != alphas.size()) {
+            throw std::invalid_argument("Sizes do not match");
+        }
         // First shift the volume by the volume translation
         auto c = get_c(T, molefrac);
         auto rho = 1.0/(1.0/rhoinit + c);
@@ -877,5 +880,121 @@ public:
                                );
     }
 };
+
+
+/**
+ The RK-PR method as defined in:
+
+ Martín Cismondi, Jørgen Mollerup,
+ Development and application of a three-parameter RK–PR equation of state,
+ Fluid Phase Equilibria,
+ Volume 232, Issues 1–2,
+ 2005,
+ Pages 74-89,
+ https://doi.org/10.1016/j.fluid.2005.03.020.
+ */
+class RKPRCismondi2005{
+public:
+    const double Ru = get_R_gas<double>(); /// Universal gas constant, exact number
+
+private:
+    const std::vector<double> delta_1, Tc_K, pc_Pa, k;
+    const Eigen::ArrayXXd kmat, lmat;
+    const std::vector<double> a_c, b_c;
+    
+    /// A convenience function to save some typing
+    std::vector<double> get_(const nlohmann::json &j, const std::string& k) const { return j.at(k).get<std::vector<double>>(); }
+    
+    /// Calculate the parameters \f$y\f$ and \f$d_1\f$
+    auto get_yd1(double delta_1){
+        return std::make_tuple(1 + cbrt(2*(1+delta_1)) + cbrt(4/(1+delta_1)), (1+delta_1*delta_1)/(1+delta_1));
+    }
+    
+    auto build_ac(){
+        std::vector<double> a_c(delta_1.size());
+        for (auto i = 0; i < delta_1.size(); ++i){
+            auto [y, d_1] = get_yd1(delta_1[i]);
+            auto Omega_a = (3*y*y + 3*y*d_1 + d_1*d_1 + d_1 - 1.0)/pow(3.0*y + d_1 - 1.0, 2);
+            a_c[i] = Omega_a*pow(Ru*Tc_K[i], 2)/pc_Pa[i];
+        }
+        return a_c;
+    }
+    auto build_bc(){
+        std::vector<double> b_c(delta_1.size());
+        for (auto i = 0; i < delta_1.size(); ++i){
+            auto [y, d_1] = get_yd1(delta_1[i]);
+            auto Omega_b = 1.0/(3.0*y + d_1 - 1.0);
+            b_c[i] = Omega_b*Ru*Tc_K[i]/pc_Pa[i];
+        }
+        return b_c;
+    }
+public:
+    
+    RKPRCismondi2005(const nlohmann::json &j) : delta_1(get_(j, "delta_1")), Tc_K(get_(j, "Tcrit / K")), pc_Pa(get_(j, "pcrit / Pa")), k(get_(j, "k")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))), a_c(build_ac()), b_c(build_bc()) {}
+    
+    template<class VecType>
+    auto R(const VecType& /*molefrac*/) const {
+        return Ru;
+    }
+    auto get_delta_1() const { return delta_1; }
+    auto get_Tc_K() const { return Tc_K; }
+    auto get_pc_Pa() const { return pc_Pa; }
+    auto get_k() const { return k; }
+    auto get_kmat() const { return kmat; }
+    auto get_lmat() const { return lmat; }
+    
+    template<typename TType>
+    auto get_bi(std::size_t i, const TType& T) const {
+        return b_c[i];
+    }
+    
+    template<typename TType>
+    auto get_ai(std::size_t i, const TType& T) const {
+        return forceeval(a_c[i]*pow(3.0/(2.0+T/Tc_K[i]), k[i]));
+    }
+    
+    template<typename TType, typename FractionsType>
+    auto get_ab(const TType& T, const FractionsType& z) const{
+        using numtype = std::common_type_t<TType, decltype(z[0])>;
+        numtype b = 0.0;
+        numtype a = 0.0;
+        std::size_t N = delta_1.size();
+        for (auto i = 0; i < N; ++i){
+            auto bi = get_bi(i, T);
+            auto ai = get_ai(i, T);
+            for (auto j = 0; j < N; ++j){
+                auto aj = get_ai(j, T);
+                auto bj = get_bi(j, T);
+                
+                a += z[i]*z[j]*sqrt(ai*aj)*(1.0 - kmat(i,j));
+                b += z[i]*z[j]*(bi + bj)/2.0*(1.0 - lmat(i,j));
+                
+            }
+        }
+        return std::make_tuple(a, b);
+    }
+    
+    template<typename TType, typename RhoType, typename FractionsType>
+    auto alphar(const TType& T, const RhoType& rho, const FractionsType& molefrac) const {
+        if (molefrac.size() != delta_1.size()) {
+            throw std::invalid_argument("Sizes do not match");
+        }
+        
+        // The mixture Delta_1 is a mole-fraction-weighted average of the pure values of delta_1
+        const auto delta_1_view = Eigen::Map<const Eigen::ArrayXd>(&(delta_1[0]), delta_1.size());
+        const decltype(molefrac[0]) Delta1 = (molefrac*delta_1_view).eval().sum();
+        
+        auto Delta2 = (1.0-Delta1)/(1.0+Delta1);
+        auto [a, b] = get_ab(T, molefrac);
+        
+        auto Psiminus = -log(1.0 - b*rho);
+        auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
+        auto val = Psiminus - a/(Ru*T)*Psiplus;
+        return forceeval(val);
+    }
+};
+using RKPRCismondi2005_t = decltype(RKPRCismondi2005({}));
+
+
 
 }; // namespace teqp
