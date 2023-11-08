@@ -691,3 +691,20 @@ TEST_CASE("Advanced cubic EOS w/ make_model", "[AdvancedPR]"){
     })"_json;
     auto model = make_model(j);
 }
+
+TEST_CASE("RK-PR EOS w/ make_model", "[RKPR]"){
+    auto j = R"({
+        "kind": "RKPRCismondi2005",
+        "model": {
+           "delta_1": [1.6201],
+           "Tcrit / K": [369.89],
+           "pcrit / Pa": [4251200.0],
+           "k": [1.97064],
+           "kmat": [[0.0]],
+           "lmat": [[0.0]]
+        }
+    })"_json;
+    auto model = make_model(j);
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    CHECK(std::isfinite(model->get_B2vir(300, z)));
+}
