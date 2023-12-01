@@ -21,8 +21,8 @@ namespace teqp{
             return teqp::extrapolate_from_critical(*this, Tc, rhoc, Tnew);
         }
 
-        EArray2 AbstractModel::pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const {
-            return teqp::pure_VLE_T(*this, T, rhoL, rhoV, maxiter);
+        EArray2 AbstractModel::pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter, const std::optional<Eigen::ArrayXd>& molefracs) const {
+            return teqp::pure_VLE_T(*this, T, rhoL, rhoV, maxiter, molefracs);
         }
 
         double AbstractModel::dpsatdT_pure(const double T, const double rhoL, const double rhoV) const {
