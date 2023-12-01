@@ -135,7 +135,7 @@ namespace teqp {
             EArray2 extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const;
             std::tuple<EArrayd, EMatrixd> get_pure_critical_conditions_Jacobian(const double T, const double rho, const std::optional<std::size_t>& alternative_pure_index, const std::optional<std::size_t>& alternative_length) const;
             
-            EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter) const;
+            EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) const;
             double dpsatdT_pure(const double T, const double rhoL, const double rhoV) const;
             
             virtual std::tuple<EArrayd, EArrayd> get_drhovecdp_Tsat(const double T, const REArrayd& rhovecL, const REArrayd& rhovecV) const;
