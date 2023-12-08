@@ -14,6 +14,11 @@ using Catch::Approx;
 #include "teqp/cpp/deriv_adapter.hpp"
 #include "teqp/filesystem.hpp"
 #include "teqp/ideal_eosterms.hpp"
+#include "teqp/math/finite_derivs.hpp"
+
+// Imports from boost
+#include <boost/multiprecision/cpp_bin_float.hpp>
+using namespace boost::multiprecision;
 
 using namespace teqp;
 using multifluid_t = decltype(build_multifluid_model({""}, ""));
@@ -508,5 +513,25 @@ TEST_CASE("Check models for R", "[multifluidR]") {
         };
         auto model_ = cppinterface::make_model(j);
         CHECK(model_->get_R(z) == 8.31446261815324);
+    }
+}
+
+TEST_CASE("Ar20 for CO2", "[Ar20CO2]"){
+    double rho = 11000;
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    using my_float = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>; // Overkill: 200 digits of working precision!
+    auto model = build_multifluid_model({"CO2"}, "../mycp");
+    
+    auto f = [&rho, &z, &model](const auto Trecip){ return model.alphar(1.0/Trecip, rho, z); };
+    using tdx = TDXDerivatives<decltype(model), double>;
+    
+    std::cout << std::setprecision(20);
+    for (double T = 304.2; T < 340; T += 0.05){
+        my_float Trecip = 1.0/T;
+        my_float h = 1e-20;
+        auto mp = -teqp::centered_diff<2,6>(f, Trecip, h)*Trecip*Trecip; // cvr/R
+        auto ad = -tdx::get_Ar20(model, T, rho, z);
+        std::cout << T << "," << mp << "," << mp/ad-1 << std::endl;
     }
 }
