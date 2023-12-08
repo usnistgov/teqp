@@ -4,6 +4,7 @@
 #include "teqp/models/vdW.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/cubics.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 
 #include "teqp/derivs.hpp"
 
@@ -161,4 +162,57 @@ TEST_CASE("Canonical cubic EOS derivatives", "[cubic]")
     /*BENCHMARK("(1/T)*dalphar/d(1/T) w/ mcx") {
         return tdx::get_Ar10<ADBackends::multicomplex>(model, T, rho, z);
     };*/
+}
+
+TEST_CASE("Perturbing coefficients in simple model", "[fitting]")
+{
+    auto j = R"({
+        "kind": "vdW1",
+        "model": {
+            "a": 1,
+            "b": 2
+        }
+    })"_json;
+
+    BENCHMARK("normal make_model from JSON") {
+        return teqp::cppinterface::make_model(j, false);
+    };
+    BENCHMARK("set kij and build model") {
+        j["/a"_json_pointer] = 1.1;
+        return teqp::cppinterface::make_model(j, false);
+    };
+}
+
+TEST_CASE("Perturbing kij in PC-SAFT", "[fitting]")
+{
+    auto j = R"({
+        "kind": "PCSAFT",
+        "model": {
+            "names": ["Methane", "Ethane"],
+            "kmat": [[0.0, 0.0],[0.0,0.0]]
+        }
+    })"_json;
+
+    BENCHMARK("normal make_model from JSON") {
+        return teqp::cppinterface::make_model(j, false);
+    };
+    BENCHMARK("set kij and build model") {
+        j["/model/kmat/0/1"_json_pointer] = 0.1;
+        j["/model/kmat/1/0"_json_pointer] = 0.1;
+        return teqp::cppinterface::make_model(j, false);
+    };
+}
+
+TEST_CASE("SAFT-VR-Mie with polar","[fitting]"){
+    auto j = R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [{"name": "R1234YF", "BibTeXKey": "Paricaud", "m": 1.3656, "sigma_Angstrom": 4.5307, "epsilon_over_k": 299.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}, {"name": "?", "BibTeXKey": "Paricaud", "m": 1.4656, "sigma_Angstrom": 4.7307, "epsilon_over_k": 289.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}], "polar_model": "GubbinsTwu+GubbinsTwu"}})"_json;
+    
+    BENCHMARK("normal make_model from JSON") {
+        return teqp::cppinterface::make_model(j, false);
+    };
+//    BENCHMARK("set kij and build model") {
+//        j["/model/kmat/0/1"_json_pointer] = 0.1;
+////        j["/model/kmat/1/0"_json_pointer] = 0.1;
+//        
+//        return teqp::cppinterface::make_model(j, false);
+//    };
 }

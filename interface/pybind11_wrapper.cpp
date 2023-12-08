@@ -255,6 +255,26 @@ void attach_model_specific_methods(py::object& obj){
     }
 };
 
+class JSONFitter{
+public:
+    nlohmann::json base;
+    std::vector<std::vector<std::string>> pointers;
+    
+    JSONFitter(const nlohmann::json &base, const std::vector<std::vector<std::string>>& pointers): base(base), pointers(pointers) {};
+    
+    auto set(const Eigen::ArrayXd& params, bool validate){
+        if (params.size() != pointers.size()){
+            throw std::invalid_argument("params and destinations don't agree in size");
+        }
+        for (auto i = 0; i < params.size(); ++i){
+            for (auto json_pointer : pointers[i]){
+                base[json_pointer] = params[i];
+            }
+        }
+        return teqp::cppinterface::make_model(base, validate);
+    }
+};
+
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {
 
@@ -405,6 +425,11 @@ void init_teqp(py::module& m) {
     .def_readwrite("nmu", &SAFTCoeffs::nmu)
     .def_readwrite("Qstar2", &SAFTCoeffs::Qstar2)
     .def_readwrite("nQ", &SAFTCoeffs::nQ)
+    ;
+    
+    py::class_<JSONFitter>(m, "JSONFitter")
+    .def(py::init<const nlohmann::json &, const std::vector<std::vector<std::string>>&>())
+    .def("set", &JSONFitter::set, "params"_a.noconvert(), py::arg_v("validate", true))
     ;
 
     m.def("convert_CoolProp_idealgas", [](const std::string &path, int index){return convert_CoolProp_idealgas(path, index);});
