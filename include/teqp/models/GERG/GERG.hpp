@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "teqp/math/pow_templates.hpp"
+#include "teqp/types.hpp"
 #include "Eigen/Dense"
 
 namespace teqp{
@@ -113,11 +114,14 @@ private:
                 m.gammaT(i,j) = bg.gammaT; m.gammaT(j,i) = bg.gammaT;
                 m.betaV(i,j) = bg.betaV; m.betaV(j,i) = 1/bg.betaV;
                 m.gammaV(i,j) = bg.gammaV; m.gammaV(j,i) = bg.gammaV;
+                
                 m.YT(i,j) = m.betaT(i,j)*m.gammaT(i,j)*sqrt(Tc[i]*Tc[j]);
                 m.YT(j,i) = m.betaT(j,i)*m.gammaT(j,i)*sqrt(Tc[j]*Tc[i]);
                 m.Yv(i,j) = 1.0/8.0*m.betaV(i,j)*m.gammaV(i,j)*POW3(cbrt(vc[i]) + cbrt(vc[j]));
                 m.Yv(j,i) = 1.0/8.0*m.betaV(j,i)*m.gammaV(j,i)*POW3(cbrt(vc[j]) + cbrt(vc[i]));
             }
+            m.YT(i,i) = Tc[i];
+            m.Yv(i,i) = vc[i];
         }
         return m;
     }
@@ -127,25 +131,30 @@ public:
     GERG200XReducing(const std::vector<std::string>& names, const GetPureInfo &get_pure_info, const GetBetasGammas& get_betasgammas): _get_pure_info(get_pure_info), _get_betasgammas(get_betasgammas), m_Tcvc(get_Tcvc(names)), matrices(get_matrices(names)) {}
     
     template<typename MoleFractions>
-    auto Y(const MoleFractions& z, const std::vector<double>& Yc, const Eigen::ArrayXd& beta, const Eigen::ArrayXd& Yij){
-        decltype(z[0]) sum1 = 0.0, sum2 = 0.0;
-        std::size_t N = len(z);
-        for (auto i = 0; i < N-1; ++i){
+    auto Y(const MoleFractions& z, const std::vector<double>& Yc, const Eigen::ArrayXXd& beta, const Eigen::ArrayXXd& Yij) const {
+        using resulttype = std::common_type_t<decltype(z[0])>;
+        resulttype sum1 = 0.0, sum2 = 0.0;
+        std::size_t N = z.size();
+        
+        for (auto i = 0; i < N; ++i){
             sum1 += z[i]*z[i]*Yc[i];
             for (auto j = i+1; j < N; ++j){
-                sum2 += 2.0*z[i]*z[j]*(z[i]+z[j])/(POW2(beta(i,j))*z[i]+z[j])*Yij(i,j);
+                auto denom = POW2(beta(i,j))*z[i]+z[j];
+                if (getbaseval(z[i]) != 0 && getbaseval(z[j]) != 0){
+                    sum2 += 2.0*z[i]*z[j]*(z[i]+z[j])/denom*Yij(i,j);
+                }
             }
         }
-        return forcceeval(sum1 + sum2);
+        return forceeval(sum1 + sum2);
     }
     
     template<typename MoleFractions>
-    auto get_Tr(const MoleFractions& z){
+    auto get_Tr(const MoleFractions& z) const {
         return Y(z, m_Tcvc.Tc_K, matrices.betaT, matrices.YT);
     }
         
     template<typename MoleFractions>
-    auto get_rhor(const MoleFractions& z){
+    auto get_rhor(const MoleFractions& z) const{
         return 1.0/Y(z, m_Tcvc.vc_m3mol, matrices.betaV, matrices.Yv);
     }
 };
@@ -178,7 +187,7 @@ public:
             throw std::invalid_argument("wrong size");
         }
         for (auto i = 0; i < N; ++i) {
-            alphar = alphar + molefracs[i] * EOSs[i].alphar(tau, delta);
+            alphar += molefracs[i] * EOSs[i].alphar(tau, delta);
         }
         return forceeval(alphar);
     }
@@ -203,7 +212,7 @@ public:
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
         result r = 0.0, lntau = log(tau);
-        auto square = [](auto x) { return x * x; };
+        auto square = [](auto x) { return forceeval(x * x); };
         if (getbaseval(delta) == 0) {
             for (auto i = 0; i < dc.n.size(); ++i) {
                 r += dc.n[i] * exp(dc.t[i] * lntau - dc.eta[i] * square(delta - dc.epsilon[i]) - dc.beta[i] * (delta - dc.gamma[i]))*powi(delta, static_cast<int>(dc.d[i]));
@@ -233,8 +242,8 @@ private:
         std::size_t N = names.size();
         Eigen::ArrayXXd mat(N, N); mat.setZero();
         for (auto i = 0; i < N; ++i){
-            for (auto j = i; j < N; ++j){
-                auto Fij = _get_Fij(names[i], names[j], true);
+            for (auto j = i+1; j < N; ++j){
+                auto Fij = _get_Fij(names[i], names[j], true /* ok_missing */);
                 if (Fij){
                     mat(i,j) = Fij.value();
                     mat(j,i) = mat(i,j); // Fij are symmetric
@@ -245,7 +254,7 @@ private:
     }
     auto get_depmat(const std::vector<std::string>& names){
         std::size_t N = names.size();
-        std::vector<std::vector<GERG200XDepartureFunction>> mat(N);
+        std::vector<std::vector<GERG200XDepartureFunction>> mat;
         for (auto i = 0; i < N; ++i){
             std::vector<GERG200XDepartureFunction> row;
             for (auto j = 0; j < N; ++j){
@@ -266,7 +275,7 @@ public:
     
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>; // Type promotion, without the const-ness
+        using resulttype = std::common_type_t<decltype(tau), decltype(delta), decltype(molefracs[0])>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         if (N != Fmat.cols()){
@@ -274,14 +283,14 @@ public:
         }
         
         for (auto i = 0; i < N; ++i){
-            for (auto j = 0; j < N; ++j){
+            for (auto j = i+1; j < N; ++j){
                 auto Fij = Fmat(i,j);
                 if (Fij != 0){
-                    alphar += molefracs[i]*molefracs[j]*Fmat(i,j)*depmat[i][j].alphar(tau, delta);
+                    alphar += molefracs[i]*molefracs[j]*Fij*depmat[i][j].alphar(tau, delta);
                 }
             }
         }
-        return forceeval(alphar);
+        return alphar;
     }
 };
 
@@ -298,7 +307,7 @@ const std::vector<std::string> component_names = {"methane", "nitrogen","carbond
 PureInfo get_pure_info(const std::string& name){
     
     // From Table A3.5 from GERG 2004 monograph
-    // Data are in mol/dm3, K, kg/mol
+    // Data in table are in mol/dm3, K, kg/mol, so some conversion is needed
     static std::map<std::string, PureInfo> data_map = {
         {"methane", {10.139342719,190.564000000,16.042460}},
         {"nitrogen", {11.183900000,126.192000000,28.013400}},
@@ -317,7 +326,7 @@ PureInfo get_pure_info(const std::string& name){
         {"carbonmonoxide", {10.850000000,132.800000000,28.010100}},
         {"water", {17.873716090,647.096000000,18.015280}},
         {"helium", {17.399000000,5.195300000,4.002602}},
-        {"argon", {13.407429659,150.687000000,39.948000}}
+        {"argon", {13.407429659,150.687,39.948000}}
     };
     auto data = data_map.at(name);
     data.rhoc_molm3 *= 1000; // mol/dm^3 -> mol/m^3
@@ -352,7 +361,7 @@ PureCoeffs get_pure_coeffs(const std::string& fluid){
     
     if (n_dict_main.find(fluid) != n_dict_main.end()){
         PureCoeffs pc;
-        pc.n = n_dict_main[fluid],
+        pc.n = n_dict_main[fluid];
         pc.t = {0.250,1.125,1.500,1.375,0.250,0.875,0.625,1.750,3.625,3.625,14.500,12.000};
         pc.d = {1,1,1,2,3,7,2,5,1,4,3,4};
         pc.c = {0,0,0,0,0,0,1,1,1,1,1,1};
@@ -593,15 +602,15 @@ std::optional<double> get_Fij(const std::string& fluid1, const std::string& flui
     
     /// Table A3.6 from GERG 2004 monograph
     static std::map<std::pair<std::string, std::string>, double> Fij_dict = {
-        {{"methane","nitrogen"}, 0.100000000000e1},
-        {{"methane","carbondioxide"}, 0.100000000000e1},
-        {{"methane","ethane"}, 0.100000000000e1},
-        {{"methane","propane"}, 0.100000000000e1},
-        {{"methane","n-butane"}, 0.100000000000e1},
+        {{"methane","nitrogen"}, 1.0},
+        {{"methane","carbondioxide"}, 1.0},
+        {{"methane","ethane"}, 1.0},
+        {{"methane","propane"}, 1.0},
+        {{"methane","n-butane"}, 1.0},
         {{"methane","isobutane"}, 0.771035405688},
-        {{"methane","hydrogen"}, 0.100000000000e1},
-        {{"nitrogen","carbondioxide"}, 0.100000000000e1},
-        {{"nitrogen","ethane"}, 0.100000000000e1},
+        {{"methane","hydrogen"}, 1.0},
+        {{"nitrogen","carbondioxide"}, 1.0},
+        {{"nitrogen","ethane"}, 1.0},
         {{"ethane","propane"}, 0.130424765150},
         {{"ethane","n-butane"}, 0.281570073085},
         {{"ethane","isobutane"}, 0.260632376098},
@@ -642,8 +651,8 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         sortpair("propane","isobutane"), sortpair("n-butane","isobutane")
     };
     
+    DepartureCoeffs dc;
     if (sortedpair == sortpair("methane","nitrogen")){
-        DepartureCoeffs dc;
         dc.n = {-0.98038985517335e-2,0.42487270143005e-3,-0.34800214576142e-1 ,-0.13333813013896 ,-0.11993694974627e-1 ,0.69243379775168e-1 ,-0.31022508148249 ,0.24495491753226 ,0.22369816716981};
         dc.d = {1,4,1,2,2,2,2,2,3};
         dc.t = {0.000,1.850,7.850,5.400,0.000,0.750,2.800,4.450,4.250};
@@ -654,7 +663,6 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         return dc;
     }
     if (sortedpair == sortpair("methane","carbondioxide")){
-        DepartureCoeffs dc;
         dc.n = {-0.10859387354942,0.80228576727389e-1,-0.93303985115717e-2,0.40989274005848e-1,-0.24338019772494,0.23855347281124};
         dc.d = {1,2,3,1,2,3};
         dc.t = {2.600,1.950,0.000,3.950,7.950,8.000};
@@ -665,7 +673,6 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         return dc;
     }
     if (sortedpair == sortpair("ethane", "methane")){
-        DepartureCoeffs dc;
         dc.n = {-0.80926050298746e-3,-0.75381925080059e-3,-0.41618768891219e-1,-0.23452173681569,0.14003840584586,0.63281744807738e-1,-0.34660425848809e-1,-0.23918747334251,0.19855255066891e-2,0.61777746171555e1,-0.69575358271105e1,0.10630185306388e1};
         dc.t = {0.650,1.550,3.100,5.900,7.050,3.350,1.200,5.800,2.700,0.450,0.550,1.950};
         dc.d = {3,4,1,2,2,2,2,2,2,3,3,3};
@@ -676,7 +683,6 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         return dc;
     }
     if (sortedpair == sortpair("propane", "methane")){
-        DepartureCoeffs dc;
         dc.n = {0.13746429958576e-1,-0.74425012129552e-2,-0.45516600213685e-2,-0.54546603350237e-2, 0.23682016824471e-2, 0.18007763721438,-0.44773942932486, 0.19327374888200e-1,-0.30632197804624};
         dc.t = {1.850,3.950,0.000,1.850,3.850,5.250,3.850,0.200,6.500};
         dc.d = {3,3,4,4,4,1,1,1,2};
@@ -687,8 +693,7 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         return dc;
     }
     if (sortedpair == sortpair("nitrogen", "carbondioxide")){
-        DepartureCoeffs dc;
-        dc.n = {0.28661625028399,-0.10919833861247,-0.11374032082270e1,0.76580544237358,0.42638000926819e2,0.17673538204534};
+        dc.n = {0.28661625028399,-0.10919833861247,-0.11374032082270e1,0.76580544237358,0.42638000926819e-2,0.17673538204534};
         dc.t = {1.850,1.400,3.200,2.500,8.000,3.750};
         dc.d = {2,3,1,1,1,2};
         dc.eta = {0,0,0.250,0.250,0.000,0.000};
@@ -698,7 +703,6 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         return dc;
     }
     if (sortedpair == sortpair("nitrogen", "ethane")){
-        DepartureCoeffs dc;
         dc.n = {-0.47376518126608,0.48961193461001,-0.57011062090535e-2,-0.19966820041320,-0.69411103101723,0.69226192739021};
         dc.d = {2,2,3,1,2,2};
         dc.t = {0.000,0.050,0.000,3.650,4.900,4.450};
@@ -708,8 +712,7 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         dc.gamma = {0,0,0,0.500,0.500,0.500};
         return dc;
     }
-    else if (sortedpair == sortpair("methane", "hydrogen")){
-        DepartureCoeffs dc;
+    if (sortedpair == sortpair("methane", "hydrogen")){
         dc.n = {-0.25157134971934,-0.62203841111983e-2,0.88850315184396e-1,-0.35592212573239e-1};
         dc.t = {2.000,-1.000,1.750,1.400};
         dc.d = {1,3,3,4};
@@ -719,8 +722,7 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         dc.gamma = {0,0,0,0};
         return dc;
     }
-    else if (generalized.find(sortedpair) != generalized.end()){
-        DepartureCoeffs dc;
+    if (generalized.find(sortedpair) != generalized.end()){
         dc.n = {0.25574776844118e1,-0.79846357136353e1,0.47859131465806e1,-0.73265392369587,0.13805471345312e1,0.28349603476365,-0.49087385940425,-0.10291888921447,0.11836314681968,0.55527385721943e-4};
         dc.d = {1,1,1,2,2,3,3,4,4,4};
         dc.t = {1.000,1.550,1.700,0.250,1.350,0.000,1.250,0.000,0.700,5.400};
@@ -730,16 +732,15 @@ DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string 
         dc.gamma = {0,0,0,0,0,0,0,0,0,0};
         return dc;
     }
-    else{
-        throw std::invalid_argument("could not get departure coeffs for {" + fluid1 + "," + fluid2 + "}");
-    }
+
+    throw std::invalid_argument("could not get departure coeffs for {" + fluid1 + "," + fluid2 + "}");
 }
 
 class GERG2004ResidualModel{
 public:
-    GERG200XReducing red;
-    GERG200XCorrespondingStatesTerm corr;
-    GERG200XDepartureTerm dep;
+    const GERG200XReducing red;
+    const GERG200XCorrespondingStatesTerm corr;
+    const GERG200XDepartureTerm dep;
     GERG2004ResidualModel(const std::vector<std::string>& names) : red(names, get_pure_info, get_betasgammas), corr(names, get_pure_coeffs), dep(names, get_Fij, get_departurecoeffs){}
     
     template<typename TType, typename RhoType, typename MoleFracType>
@@ -750,7 +751,8 @@ public:
         auto rhored = forceeval(red.get_rhor(molefrac));
         auto delta = forceeval(rho / rhored);
         auto tau = forceeval(Tred / T);
-        auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
+        auto val = forceeval(corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac));
+        return val;
     }
 };
 
@@ -772,7 +774,7 @@ auto get_pure_info(const std::string& name){
     // Data are in mol/dm3, K, kg/mol
     // All others are unchanged
     static std::map<std::string, PureInfo> data_map = {
-        {"carbonmonoxide", {10.850000000,132.860000000,28.010100}}, // Changed from GERG-2004
+        {"carbonmonoxide", {10.85, 132.86, 28.010100}}, // Changed from GERG-2004
         {"isopentane", {3.271,460.35,72.148780}}, // Changed from GERG-2004
         
         {"n-nonane", {1.81,594.55,128.2551}}, // Added in GERG-2008
@@ -900,7 +902,6 @@ BetasGammas get_betasgammas(const std::string&fluid1, const std::string &fluid2)
 
 PureCoeffs get_pure_coeffs(const std::string& fluid){
     
-        
     static std::map<std::string, std::vector<double>> n_dict_main = {
         
         // Updated in GERG-2008
@@ -915,7 +916,7 @@ PureCoeffs get_pure_coeffs(const std::string& fluid){
     
     if (n_dict_main.find(fluid) != n_dict_main.end()){
         PureCoeffs pc;
-        pc.n = n_dict_main[fluid],
+        pc.n = n_dict_main[fluid];
         pc.t = {0.250,1.125,1.500,1.375,0.250,0.875,0.625,1.750,3.625,3.625,14.500,12.000};
         pc.d = {1,1,1,2,3,7,2,5,1,4,3,4};
         pc.c = {0,0,0,0,0,0,1,1,1,1,1,1};
@@ -939,11 +940,15 @@ public:
     auto alphar(const TType &T,
         const RhoType &rho,
         const MoleFracType& molefrac) const {
+        if (molefrac.size() != corr.size()){
+            throw std::invalid_argument("sizes don't match");
+        }
         auto Tred = forceeval(red.get_Tr(molefrac));
         auto rhored = forceeval(red.get_rhor(molefrac));
         auto delta = forceeval(rho / rhored);
         auto tau = forceeval(Tred / T);
-        auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
+        auto val = forceeval(corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac));
+        return val;
     }
 };
     
