@@ -174,18 +174,6 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_kmat(); }), obj));
         setattr("has_polar", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).has_polar(); }), obj));
         setattr("get_core_calcs", MethodType(py::cpp_function([](py::object& o, double T, double rhomolar, REArrayd& molefrac){ return get_typed<SAFTVRMie_t>(o).get_core_calcs(T, rhomolar, molefrac); }, "self"_a, "T"_a, "rhomolar"_a, "molefrac"_a), obj));
-        setattr("get_Eprime", MethodType(py::cpp_function([](py::object& o, double T, double rhoN, double rhostar, REArrayd& molefrac, REArrayd& muprime){
-            auto m = get_typed<SAFTVRMie_t>(o);
-            using namespace teqp::SAFTpolar;
-            auto multipol = std::get<MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>>(m.get_polar().value());
-            return multipol.get_Eprime(T, rhoN, rhostar, molefrac, muprime);
-        }, "self"_a, "T"_a, "rhoN"_a, "rhostar"_a, "molefrac"_a, "muprime"_a), obj));
-        setattr("iterate_muprime_SS", MethodType(py::cpp_function([](py::object& o, double T, double rhoN, double rhostar, REArrayd& molefrac, REArrayd& muprime, int Niter){
-            auto m = get_typed<SAFTVRMie_t>(o);
-            using namespace teqp::SAFTpolar;
-            auto multipol = std::get<MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>>(m.get_polar().value());
-            return multipol.iterate_muprime_SS(T, rhoN, rhostar, molefrac, muprime, Niter);
-        }, "self"_a, "T"_a, "rhoN"_a, "rhostar"_a, "molefrac"_a, "muprime"_a, "Niter"_a), obj));
         
     }
     else if (index == canonical_cubic_i){
