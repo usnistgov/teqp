@@ -11,6 +11,7 @@ Welcome to teqp's documentation!
    derivs/index
    algorithms/index
    examples/index
+   fitting/index
    api/modules
 
 Indices and tables
