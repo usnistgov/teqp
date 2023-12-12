@@ -95,6 +95,18 @@ void attach_multifluid_methods(py::object&obj){
     setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<TYPE>(o).set_meta(s); }, "self"_a, "s"_a), obj));
     setattr("get_alpharij", MethodType(py::cpp_function([](py::object& o, const int i, const int j, const double tau, const double delta){ return get_typed<TYPE>(o).dep.get_alpharij(i,j,tau,delta); }, "self"_a, "i"_a, "j"_a, "tau"_a, "delta"_a), obj));
 }
+template<typename TYPE>
+void attach_GERG_methods(py::object&obj){
+    auto setattr = py::getattr(obj, "__setattr__");
+    auto MethodType = py::module_::import("types").attr("MethodType");
+    setattr("get_Tcvec", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).red.get_Tcvec(); }), obj));
+    setattr("get_vcvec", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).red.get_vcvec(); }), obj));
+    setattr("get_Tr", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<TYPE>(o).red.get_Tr(molefrac); }, "self"_a, "molefrac"_a.noconvert()), obj));
+    setattr("get_rhor", MethodType(py::cpp_function([](py::object& o, REArrayd& molefrac){ return get_typed<TYPE>(o).red.get_rhor(molefrac); }, "self"_a, "molefrac"_a.noconvert()), obj));
+//    setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).get_meta(); }), obj));
+//    setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<TYPE>(o).set_meta(s); }, "self"_a, "s"_a), obj));
+//    setattr("get_alpharij", MethodType(py::cpp_function([](py::object& o, const int i, const int j, const double tau, const double delta){ return get_typed<TYPE>(o).dep.get_alpharij(i,j,tau,delta); }, "self"_a, "i"_a, "j"_a, "tau"_a, "delta"_a), obj));
+}
 
 // Type index variables matching the model types, used for runtime attachment of model-specific methods
 const std::type_index vdWEOS1_i{std::type_index(typeid(vdWEOS1))};
@@ -111,6 +123,8 @@ const std::type_index twocenterLJF_i{std::type_index(typeid(twocenterLJF_t))};
 const std::type_index QuantumPR_i{std::type_index(typeid(QuantumPR_t))};
 const std::type_index advancedPRaEres_i{std::type_index(typeid(advancedPRaEres_t))};
 const std::type_index RKPRCismondi2005_i{std::type_index(typeid(RKPRCismondi2005_t))};
+const std::type_index GERG2004ResidualModel_i{std::type_index(typeid(GERG2004::GERG2004ResidualModel))};
+const std::type_index GERG2008ResidualModel_i{std::type_index(typeid(GERG2008::GERG2008ResidualModel))};
 
 /**
  At runtime we can add additional model-specific methods that only apply for a particular model.  We take in a Python-wrapped
@@ -155,10 +169,24 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_epsilon_over_k_K", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_epsilon_over_k_K(); }), obj));
         setattr("get_lambda_r", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_lambda_r(); }), obj));
         setattr("get_lambda_a", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_lambda_a(); }), obj));
+        
 //        setattr("max_rhoN", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<SAFTVRMie_t>(o).max_rhoN(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
         setattr("get_kmat", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).get_kmat(); }), obj));
         setattr("has_polar", MethodType(py::cpp_function([](py::object& o){ return get_typed<SAFTVRMie_t>(o).has_polar(); }), obj));
         setattr("get_core_calcs", MethodType(py::cpp_function([](py::object& o, double T, double rhomolar, REArrayd& molefrac){ return get_typed<SAFTVRMie_t>(o).get_core_calcs(T, rhomolar, molefrac); }, "self"_a, "T"_a, "rhomolar"_a, "molefrac"_a), obj));
+        setattr("get_Eprime", MethodType(py::cpp_function([](py::object& o, double T, double rhoN, double rhostar, REArrayd& molefrac, REArrayd& muprime){
+            auto m = get_typed<SAFTVRMie_t>(o);
+            using namespace teqp::SAFTpolar;
+            auto multipol = std::get<MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>>(m.get_polar().value());
+            return multipol.get_Eprime(T, rhoN, rhostar, molefrac, muprime);
+        }, "self"_a, "T"_a, "rhoN"_a, "rhostar"_a, "molefrac"_a, "muprime"_a), obj));
+        setattr("iterate_muprime_SS", MethodType(py::cpp_function([](py::object& o, double T, double rhoN, double rhostar, REArrayd& molefrac, REArrayd& muprime, int Niter){
+            auto m = get_typed<SAFTVRMie_t>(o);
+            using namespace teqp::SAFTpolar;
+            auto multipol = std::get<MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>>(m.get_polar().value());
+            return multipol.iterate_muprime_SS(T, rhoN, rhostar, molefrac, muprime, Niter);
+        }, "self"_a, "T"_a, "rhoN"_a, "rhostar"_a, "molefrac"_a, "muprime"_a, "Niter"_a), obj));
+        
     }
     else if (index == canonical_cubic_i){
         setattr("get_a", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){ return get_typed<canonical_cubic_t>(o).get_a(T, molefrac); }, "self"_a, "T"_a, "molefrac"_a), obj));
@@ -229,6 +257,12 @@ void attach_model_specific_methods(py::object& obj){
             auto jancillaries = nlohmann::json::parse(c.get_meta()).at("pures")[k].at("ANCILLARIES");
             return teqp::MultiFluidVLEAncillaries(jancillaries);
         }, "self"_a, py::arg_v("i", std::nullopt, "None")), obj));
+    }
+    else if (index == GERG2004ResidualModel_i){
+        attach_GERG_methods<GERG2004::GERG2004ResidualModel>(obj);
+    }
+    else if (index == GERG2008ResidualModel_i){
+        attach_GERG_methods<GERG2008::GERG2008ResidualModel>(obj);
     }
     else if (index == idealgas_i){
         // Here X-Macros are used to create functions like get_Aig00, get_Aig01, ....

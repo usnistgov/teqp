@@ -26,6 +26,7 @@
 #include "teqp/models/model_potentials/2center_ljf.hpp"
 #include "teqp/models/mie/lennardjones.hpp"
 #include "teqp/models/mie/mie.hpp"
+#include "teqp/models/GERG/GERG.hpp"
 
 namespace teqp {
 

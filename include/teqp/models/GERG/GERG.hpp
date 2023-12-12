@@ -130,6 +130,9 @@ private:
 public:
     GERG200XReducing(const std::vector<std::string>& names, const GetPureInfo &get_pure_info, const GetBetasGammas& get_betasgammas): _get_pure_info(get_pure_info), _get_betasgammas(get_betasgammas), m_Tcvc(get_Tcvc(names)), matrices(get_matrices(names)) {}
     
+    auto get_Tcvec() const { return m_Tcvc.Tc_K; }
+    auto get_vcvec() const { return m_Tcvc.vc_m3mol; }
+    
     template<typename MoleFractions>
     auto Y(const MoleFractions& z, const std::vector<double>& Yc, const Eigen::ArrayXXd& beta, const Eigen::ArrayXXd& Yij) const {
         using resulttype = std::common_type_t<decltype(z[0])>;
@@ -304,7 +307,7 @@ using namespace GERGGeneral;
 const std::vector<std::string> component_names = {"methane", "nitrogen","carbondioxide","ethane","propane","n-butane","isobutane","n-pentane","isopentane","n-hexane","n-heptane","n-octane","hydrogen", "oxygen","carbonmonoxide","water","helium","argon"};
 
 /// Get the pure fluid information for a fluid from GERG-2004 monograph
-PureInfo get_pure_info(const std::string& name){
+inline PureInfo get_pure_info(const std::string& name){
     
     // From Table A3.5 from GERG 2004 monograph
     // Data in table are in mol/dm3, K, kg/mol, so some conversion is needed
@@ -336,7 +339,7 @@ PureInfo get_pure_info(const std::string& name){
 
 
 
-PureCoeffs get_pure_coeffs(const std::string& fluid){
+inline PureCoeffs get_pure_coeffs(const std::string& fluid){
     
     // From Table A3.2 from GERG 2004 monograph
     static std::map<std::string, std::vector<double>> n_dict_mne = {
@@ -420,7 +423,7 @@ PureCoeffs get_pure_coeffs(const std::string& fluid){
 
 
 
-BetasGammas get_betasgammas(const std::string&fluid1, const std::string &fluid2){
+inline BetasGammas get_betasgammas(const std::string&fluid1, const std::string &fluid2){
     
     // From Table A3.8 of GERG 2004 monograph
     std::map<std::pair<std::string, std::string>,BetasGammas> BIP_data = {
@@ -598,7 +601,7 @@ BetasGammas get_betasgammas(const std::string&fluid1, const std::string &fluid2)
     }
 }
 
-std::optional<double> get_Fij(const std::string& fluid1, const std::string& fluid2, bool ok_missing=true){
+inline std::optional<double> get_Fij(const std::string& fluid1, const std::string& fluid2, bool ok_missing=true){
     
     /// Table A3.6 from GERG 2004 monograph
     static std::map<std::pair<std::string, std::string>, double> Fij_dict = {
@@ -639,7 +642,7 @@ std::optional<double> get_Fij(const std::string& fluid1, const std::string& flui
 }
 
 
-DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string &fluid2){
+inline DepartureCoeffs get_departurecoeffs(const std::string&fluid1, const std::string &fluid2){
     
     std::pair<std::string, std::string> sortedpair = std::minmax(fluid1, fluid2);
     auto sortpair = [](const std::string &n1, const std::string& n2) ->std::pair<std::string, std::string> { return std::minmax(n1, n2); };
@@ -743,6 +746,11 @@ public:
     const GERG200XDepartureTerm dep;
     GERG2004ResidualModel(const std::vector<std::string>& names) : red(names, get_pure_info, get_betasgammas), corr(names, get_pure_coeffs), dep(names, get_Fij, get_departurecoeffs){}
     
+    template<class VecType>
+    auto R(const VecType& /*molefrac*/) const {
+        return 8.314472;
+    }
+    
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType &T,
         const RhoType &rho,
@@ -769,7 +777,7 @@ using namespace GERGGeneral;
 
 const std::vector<std::string> component_names = {"methane", "nitrogen","carbondioxide","ethane","propane","n-butane","isobutane","n-pentane","isopentane","n-hexane","n-heptane","n-octane","hydrogen", "oxygen","carbonmonoxide","water","helium","argon","hydrogensulfide","n-nonane","n-decane"};
 
-auto get_pure_info(const std::string& name){
+inline auto get_pure_info(const std::string& name){
     // From Table A3.5 from GERG 2004 monograph
     // Data are in mol/dm3, K, kg/mol
     // All others are unchanged
@@ -797,7 +805,7 @@ auto get_pure_info(const std::string& name){
 using GERG2004::get_Fij;
 using GERG2004::get_departurecoeffs;
 
-BetasGammas get_betasgammas(const std::string&fluid1, const std::string &fluid2){
+inline BetasGammas get_betasgammas(const std::string&fluid1, const std::string &fluid2){
     
     // From Table A8 of GERG-2008 manuscript. Pairs that are unchanged
     // from GERG-2004 are left out and are looked up from the GERG-2004
@@ -900,7 +908,7 @@ BetasGammas get_betasgammas(const std::string&fluid1, const std::string &fluid2)
     }
 }
 
-PureCoeffs get_pure_coeffs(const std::string& fluid){
+inline PureCoeffs get_pure_coeffs(const std::string& fluid){
     
     static std::map<std::string, std::vector<double>> n_dict_main = {
         
@@ -935,6 +943,11 @@ public:
     GERG200XCorrespondingStatesTerm corr;
     GERG200XDepartureTerm dep;
     GERG2008ResidualModel(const std::vector<std::string>& names) : red(names, get_pure_info, get_betasgammas), corr(names, get_pure_coeffs), dep(names, get_Fij, get_departurecoeffs){}
+    
+    template<class VecType>
+    auto R(const VecType& /*molefrac*/) const {
+        return 8.314472;
+    }
     
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType &T,
