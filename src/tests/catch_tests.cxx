@@ -424,7 +424,7 @@ TEST_CASE("Test pure VLE with non-unity R0/Rr", "") {
     auto rr = 0;
 }
 
-TEST_CASE("Test water", "") {
+TEST_CASE("Test water", "[CPA]") {
     std::valarray<double> a0 = {0.12277}, bi = {0.000014515}, c1 = {0.67359}, Tc = {647.096}, 
                           molefrac = {1.0};
     auto R = 8.3144598; 
@@ -437,6 +437,7 @@ TEST_CASE("Test water", "") {
     auto alphar = cub.alphar(T, rhomolar, molefrac);
     double p_noassoc = T*rhomolar*R*(1+tdx::get_Ar01(cub, T, rhomolar, z));
     CAPTURE(p_noassoc);
+    REQUIRE(p_noassoc == Approx(331457.43));
 
     std::vector<CPA::association_classes> schemes = { CPA::association_classes::a4C };
     std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
@@ -448,7 +449,7 @@ TEST_CASE("Test water", "") {
     double p_withassoc = T*rhomolar*R*(1 + Ar01);
     CAPTURE(p_withassoc);
 
-    //REQUIRE(p_withassoc == 3.14);
+    REQUIRE(p_withassoc == Approx(312682.0709));
 }
 
 TEST_CASE("Test water w/ factory", "") {
@@ -471,7 +472,7 @@ TEST_CASE("Test water w/ factory", "") {
    double p_withassoc = T * rhomolar * R * (1 + Ar01);
    CAPTURE(p_withassoc);
 
-   //REQUIRE(p_withassoc == 3.14);
+   REQUIRE(p_withassoc == Approx(312682.0709));
 }
 
 TEST_CASE("Check zero(ish)","") {
