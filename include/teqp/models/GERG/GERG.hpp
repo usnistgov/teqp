@@ -12,6 +12,7 @@
 #include "teqp/math/pow_templates.hpp"
 #include "teqp/types.hpp"
 #include "Eigen/Dense"
+#include <boost/functional/hash.hpp>
 
 namespace teqp{
 
@@ -331,6 +332,9 @@ inline PureInfo get_pure_info(const std::string& name){
         {"helium", {17.399000000,5.195300000,4.002602}},
         {"argon", {13.407429659,150.687,39.948000}}
     };
+    if (data_map.find(name) == data_map.end()){
+        throw std::invalid_argument("Unable to load pure info for"+name);
+    }
     auto data = data_map.at(name);
     data.rhoc_molm3 *= 1000; // mol/dm^3 -> mol/m^3
     data.M_kgmol /= 1000; // kg/kmol -> kg/mol
@@ -426,7 +430,7 @@ inline PureCoeffs get_pure_coeffs(const std::string& fluid){
 inline BetasGammas get_betasgammas(const std::string&fluid1, const std::string &fluid2){
     
     // From Table A3.8 of GERG 2004 monograph
-    std::map<std::pair<std::string, std::string>,BetasGammas> BIP_data = {
+    static std::unordered_map<std::pair<std::string, std::string>,BetasGammas, boost::hash<std::pair<std::string, std::string>>> BIP_data = {
         {{"methane","nitrogen"}, {0.998721377,1.013950311,0.998098830,0.979273013}},
         {{"methane","carbondioxide"}, {0.999518072,1.002806594,1.022624490,0.975665369}},
         {{"methane","ethane"}, {0.997547866,1.006617867,0.996336508,1.049707697}},
@@ -581,24 +585,19 @@ inline BetasGammas get_betasgammas(const std::string&fluid1, const std::string &
         {{"water","argon"}, {1.000000000,1.038993495,1.000000000,1.070941866}},
         {{"helium","argon"}, {1.00000000,1.00000000,1.00000000,1.00000000}}
     };
-    
-    try{
-        // Try in the given order
-        return BIP_data.at(std::make_pair(fluid1, fluid2));
+    auto pair_normal = std::make_pair(fluid1, fluid2);
+    if (BIP_data.find(pair_normal) != BIP_data.end()){
+        return BIP_data[pair_normal];
     }
-    catch(...){
-        // Try the other order
-        try{
-            auto bg = BIP_data.at(std::make_pair(fluid2, fluid1));
-            // Because the order is backwards, need to take the reciprocals of the beta values
-            bg.betaT = 1/bg.betaT;
-            bg.betaV = 1/bg.betaV;
-            return bg;
-        }
-        catch(...){
-            throw std::invalid_argument("Unable to obtain BIP for the pair {" + fluid1 + "," + fluid2 + "}");
-        }
+    auto pair_backwards = std::make_pair(fluid2, fluid1);
+    if (BIP_data.find(pair_backwards) != BIP_data.end()){
+        auto bg = BIP_data.at(pair_backwards);
+        // Because the order is backwards, need to take the reciprocals of the beta values
+        bg.betaT = 1/bg.betaT;
+        bg.betaV = 1/bg.betaV;
+        return bg;
     }
+    throw std::invalid_argument("Unable to obtain BIP for the pair {" + fluid1 + "," + fluid2 + "}");
 }
 
 inline std::optional<double> get_Fij(const std::string& fluid1, const std::string& fluid2, bool ok_missing=true){
@@ -621,23 +620,19 @@ inline std::optional<double> get_Fij(const std::string& fluid1, const std::strin
         {{"propane","isobutane"}, -0.551609771024e-1},
         {{"n-butane","isobutane"}, -0.551240293009e-1}
     };
-    try{
-        // Try in the given order
-        return Fij_dict.at(std::make_pair(fluid1, fluid2));
+    auto pair_normal = std::make_pair(fluid1, fluid2);
+    if (Fij_dict.find(pair_normal) != Fij_dict.end()){
+        return Fij_dict[pair_normal];
     }
-    catch(...){
-        // Try the other order
-        try{
-            return Fij_dict.at(std::make_pair(fluid2, fluid1));
-        }
-        catch(...){
-            if (ok_missing){
-                return std::nullopt;
-            }
-            else{
-                throw std::invalid_argument("Unable to obtain Fij for the pair {" + fluid1 + "," + fluid2 + "}");
-            }
-        }
+    auto pair_backwards = std::make_pair(fluid2, fluid1);
+    if (Fij_dict.find(pair_backwards) != Fij_dict.end()){
+        return Fij_dict[pair_backwards];
+    }
+    if (ok_missing){
+        return std::nullopt;
+    }
+    else{
+        throw std::invalid_argument("Unable to obtain Fij for the pair {" + fluid1 + "," + fluid2 + "}");
     }
 }
 
@@ -810,7 +805,7 @@ inline BetasGammas get_betasgammas(const std::string&fluid1, const std::string &
     // From Table A8 of GERG-2008 manuscript. Pairs that are unchanged
     // from GERG-2004 are left out and are looked up from the GERG-2004
     // coefficients.
-    std::map<std::pair<std::string, std::string>,BetasGammas> BIP_data = {
+    static std::unordered_map<std::pair<std::string, std::string>,BetasGammas, boost::hash<std::pair<std::string, std::string>>> BIP_data = {
         
         // This set has different values than in GERG-2004. The change
         // occurs because the EOS has changed for isopentane and CO and
@@ -887,25 +882,20 @@ inline BetasGammas get_betasgammas(const std::string&fluid1, const std::string &
         {{"hydrogensulfide","helium"}, {1.0, 1.0, 1.0, 1.0}},
         {{"hydrogensulfide","argon"}, {1.0, 1.0, 1.0, 1.0}},
     };
-    
-    try{
-        // Try in the given order
-        return BIP_data.at(std::make_pair(fluid1, fluid2));
+    auto pair_normal = std::make_pair(fluid1, fluid2);
+    if (BIP_data.find(pair_normal) != BIP_data.end()){
+        return BIP_data[pair_normal];
     }
-    catch(...){
-        // Try the other order
-        try{
-            auto bg = BIP_data.at(std::make_pair(fluid2, fluid1));
-            // Because the order is backwards, need to take the reciprocals of the beta values
-            bg.betaT = 1/bg.betaT;
-            bg.betaV = 1/bg.betaV;
-            return bg;
-        }
-        catch(...){
-            // Fall back to looking up from GERG-2004
-            return GERG2004::get_betasgammas(fluid1, fluid2);
-        }
+    auto pair_backwards = std::make_pair(fluid2, fluid1);
+    if (BIP_data.find(pair_backwards) != BIP_data.end()){
+        auto bg = BIP_data.at(pair_backwards);
+        // Because the order is backwards, need to take the reciprocals of the beta values
+        bg.betaT = 1/bg.betaT;
+        bg.betaV = 1/bg.betaV;
+        return bg;
     }
+    // Fall back to looking up from GERG-2004
+    return GERG2004::get_betasgammas(fluid1, fluid2);
 }
 
 inline PureCoeffs get_pure_coeffs(const std::string& fluid){

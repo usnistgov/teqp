@@ -42,6 +42,9 @@ namespace teqp {
             {"2CLJF-Quadrupole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_quadrupole(spec.at("author"), spec.at("L^*"), spec.at("(Q^*)^2")));}},
             {"IdealHelmholtz", [](const nlohmann::json& spec){ return make_owned(IdealHelmholtz(spec));}},
             
+            {"GERG2004resid", [](const nlohmann::json& spec){ return make_owned(GERG2004::GERG2004ResidualModel(spec.at("names")));}},
+            {"GERG2008resid", [](const nlohmann::json& spec){ return make_owned(GERG2008::GERG2008ResidualModel(spec.at("names")));}},
+            
             // Implemented in its own compilation unit to help with compilation time
             {"SAFT-VR-Mie", [](const nlohmann::json& spec){ return make_SAFTVRMie(spec); }}
         };

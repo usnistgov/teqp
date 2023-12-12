@@ -6,8 +6,22 @@
 #include "teqp/derivs.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 #include "teqp/models/multifluid.hpp"
+#include "teqp/models/GERG/GERG.hpp"
 
 using namespace teqp;
+
+TEST_CASE("GERG2008 parts", "[GERG2008]")
+{
+    BENCHMARK("bg"){
+        return GERG2008::get_betasgammas("methane","n-decane");
+    };
+    BENCHMARK("bg backwards"){
+        return GERG2008::get_betasgammas("n-decane", "methane");
+    };
+    BENCHMARK("bg fallback to 2004"){
+        return GERG2008::get_betasgammas("ethane", "methane");
+    };
+}
 
 TEST_CASE("multifluid derivatives", "[mf]")
 {
@@ -88,12 +102,13 @@ TEST_CASE("multifluid derivatives via DerivativeAdapter", "[mf]")
     };
 }
 
+
 TEST_CASE("GERG2008 derivatives", "[GERG2008]")
 {
     nlohmann::json j = {
         {"kind", "GERG2008resid"},
         {"model", {
-            {"names", {"methane"}},
+            {"names", {"methane","ethane","propane","n-butane"}},
         }
     }};
     //std::cout << j.dump(2);
