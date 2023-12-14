@@ -139,7 +139,7 @@ public:
         case cubic_flag::PR:
         { delta_1 = 1 + sqrt(2); delta_2 = 1 - sqrt(2); break; }
         case cubic_flag::SRK:
-        { delta_1 = 0; delta_2 = 1; break; }
+        { delta_1 = 1; delta_2 = 0; break; }
         default:
             throw std::invalid_argument("Bad cubic flag");
         }
