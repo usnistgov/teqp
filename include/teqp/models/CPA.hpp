@@ -26,6 +26,15 @@ inline auto get_association_classes(const std::string& s) {
 
 enum class radial_dist { CS, KG, OT };
 
+inline auto get_radial_dist(const std::string& s) {
+    if (s == "CS") { return radial_dist::CS; }
+    else if (s == "KG") { return radial_dist::KG; }
+    else if (s == "OT") { return radial_dist::OT; }
+    else {
+        throw std::invalid_argument("bad association flag:" + s);
+    }
+}
+
 /// Function that calculates the association binding strength between site A of molecule i and site B on molecule j
 template<typename BType, typename TType, typename RhoType, typename VecType>
 inline auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_cubic, TType RT, RhoType rhomolar, const VecType& molefrac) {
@@ -69,7 +78,7 @@ inline auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BT
 /// 
 
 template<typename BType, typename TType, typename RhoType, typename VecType>
-inline auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi, double betaABi, const BType b_cubic, const TType RT, const RhoType rhomolar, const VecType& molefrac) {
+inline auto XA_calc_pure(int N_sites, association_classes scheme, radial_dist dist, double epsABi, double betaABi, const BType b_cubic, const TType RT, const RhoType rhomolar, const VecType& molefrac) {
 
     // Matrix XA(A, j) that contains all of the fractions of sites A not bonded to other active sites for each molecule i
     // Start values for the iteration(set all sites to non - bonded, = 1)
@@ -79,7 +88,6 @@ inline auto XA_calc_pure(int N_sites, association_classes scheme, double epsABi,
     XA.setOnes();
 
     // Get the association strength between the associating sites
-    auto dist = radial_dist::KG; // TODO: pass this in
     auto DeltaAiBj = get_DeltaAB_pure(dist, epsABi, betaABi, b_cubic, RT, rhomolar, molefrac);
 
     if (scheme == association_classes::a1A) { // Acids
@@ -185,6 +193,7 @@ class CPAAssociation {
 private:
     const Cubic cubic;
     const std::vector<association_classes> classes;
+    const radial_dist dist;
     const std::valarray<double> epsABi, betaABi;
     const std::vector<int> N_sites; 
     const double R_gas;
@@ -207,8 +216,8 @@ private:
     }
 
 public:
-    CPAAssociation(const Cubic &&cubic, const std::vector<association_classes>& classes, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi, double R_gas) 
-        : cubic(cubic), classes(classes), epsABi(epsABi), betaABi(betaABi), N_sites(get_N_sites(classes)), R_gas(R_gas) {};
+    CPAAssociation(const Cubic &&cubic, const std::vector<association_classes>& classes, const radial_dist dist, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi, double R_gas)
+        : cubic(cubic), classes(classes), dist(dist), epsABi(epsABi), betaABi(betaABi), N_sites(get_N_sites(classes)), R_gas(R_gas) {};
 
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
@@ -217,7 +226,7 @@ public:
 
         // Calculate the fraction of sites not bonded with other active sites
         auto RT = forceeval(R_gas * T); // R times T
-        auto XA = XA_calc_pure(N_sites[0], classes[0], epsABi[0], betaABi[0], b_cubic, RT, rhomolar, molefrac);
+        auto XA = XA_calc_pure(N_sites[0], classes[0], dist, epsABi[0], betaABi[0], b_cubic, RT, rhomolar, molefrac);
 
         using return_type = std::common_type_t<decltype(T), decltype(rhomolar), decltype(molefrac[0])>;
         return_type alpha_r_asso = 0.0;
@@ -280,6 +289,7 @@ inline auto CPAfactory(const nlohmann::json &j){
 	auto build_assoc = [](const auto &&cubic, const auto& j) {
         auto N = j["pures"].size();
         std::vector<association_classes> classes;
+        radial_dist dist = get_radial_dist(j.at("radial_dist"));
         std::valarray<double> epsABi(N), betaABi(N);
         std::size_t i = 0;
         for (auto p : j["pures"]) {
@@ -288,7 +298,7 @@ inline auto CPAfactory(const nlohmann::json &j){
             classes.push_back(get_association_classes(p["class"]));
             i++;
         }
-        return CPAAssociation(std::move(cubic), classes, epsABi, betaABi, j["R_gas / J/mol/K"]);
+        return CPAAssociation(std::move(cubic), classes, dist, epsABi, betaABi, j["R_gas / J/mol/K"]);
     };
 	return CPAEOS(build_cubic(j), build_assoc(build_cubic(j), j));
 }

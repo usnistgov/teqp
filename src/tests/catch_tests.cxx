@@ -424,6 +424,35 @@ TEST_CASE("Test pure VLE with non-unity R0/Rr", "") {
     auto rr = 0;
 }
 
+TEST_CASE("Test water Clapeyron.jl", "[CPA]") {
+    std::valarray<double> a0 = {0.12277}, bi = {0.0000145}, c1 = {0.6736}, Tc = {647.13},
+                          molefrac = {1.0};
+    auto R = 8.31446261815324;
+    CPA::CPACubic cub(CPA::cubic_flag::SRK, a0, bi, c1, Tc, R);
+    double T = 303.15, rhomolar = 1/1.7915123921401366e-5;
+    
+    auto z = (Eigen::ArrayXd(1) << 1).finished();
+
+    using tdx = TDXDerivatives<decltype(cub)>;
+    auto alphar = cub.alphar(T, rhomolar, molefrac);
+    CHECK(alphar == Approx(-1.2713135319123854)); // Value from Clapeyron.jl
+    double p_noassoc = T*rhomolar*R*(1+tdx::get_Ar01(cub, T, rhomolar, z));
+    CAPTURE(p_noassoc);
+
+    std::vector<CPA::association_classes> schemes = { CPA::association_classes::a4C };
+    std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
+    CPA::radial_dist dist = CPA::radial_dist::CS;
+    CPA::CPAAssociation cpaa(std::move(cub), schemes, dist, epsAB, betaAB, R);
+
+    CPA::CPAEOS cpa(std::move(cub), std::move(cpaa));
+    using tdc = TDXDerivatives<decltype(cpa)>;
+    auto Ar01 = tdc::get_Ar01(cpa, T, rhomolar, z);
+    double p_withassoc = T*rhomolar*R*(1 + Ar01);
+    CAPTURE(p_withassoc);
+
+    REQUIRE(p_withassoc == Approx(100000.000));
+}
+
 TEST_CASE("Test water", "[CPA]") {
     std::valarray<double> a0 = {0.12277}, bi = {0.000014515}, c1 = {0.67359}, Tc = {647.096}, 
                           molefrac = {1.0};
@@ -441,7 +470,7 @@ TEST_CASE("Test water", "[CPA]") {
 
     std::vector<CPA::association_classes> schemes = { CPA::association_classes::a4C };
     std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
-    CPA::CPAAssociation cpaa(std::move(cub), schemes, epsAB, betaAB, R);
+    CPA::CPAAssociation cpaa(std::move(cub), schemes, CPA::radial_dist::KG, epsAB, betaAB, R);
 
     CPA::CPAEOS cpa(std::move(cub), std::move(cpaa));
     using tdc = TDXDerivatives<decltype(cpa)>;
