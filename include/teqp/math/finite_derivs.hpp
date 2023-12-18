@@ -1,20 +1,20 @@
 #pragma once
 
-/**
-* Routines for finite differentiation, useful for testing derivatives obtained by other methods
-* 
-* From:
-* Bengt Fornberg, 1988, "Coefficients from Generation of Finite Difference Formulas on Arbitrarily Spaced Grids", MATHEMATICS OF COMPUTATION, v. 51, n. 184, pp. 699-706
-* 
-* Higher derivatives should always be done in extended precision mathematics!
-* 
-* Warning: these routines may give entirely erroneous results for double precision arithmetic,
-* especially the higher derivatives
-* 
-* Warning: these routines are optimized for accuracy, not for speed or memory use
-*/
 namespace teqp{
 
+/**
+* Routines for finite differentiation, useful for testing derivatives obtained by other methods
+*
+* From:
+* Bengt Fornberg, 1988, "Coefficients from Generation of Finite Difference Formulas on Arbitrarily Spaced Grids", MATHEMATICS OF COMPUTATION, v. 51, n. 184, pp. 699-706
+*
+* Higher derivatives should always be done in extended precision mathematics!
+*
+* Warning: these routines may give entirely erroneous results for double precision arithmetic,
+* especially the higher derivatives
+*
+* Warning: these routines are optimized for accuracy, not for speed or memory use
+*/
 template<int Nderiv, int Norder, typename Function, typename Scalar>
 auto centered_diff(const Function &f, const Scalar x, const Scalar h) {
 
@@ -63,4 +63,10 @@ auto centered_diff(const Function &f, const Scalar x, const Scalar h) {
 	auto val = num / pow(h, Nderiv);
 	return val;
 }
+
+template<typename Function, typename Scalarx, typename Scalary>
+auto centered_diff_xy(const Function &f, const Scalarx x, const Scalary y, const Scalarx dx, const Scalary dy) {
+    return (f(x+dx, y+dy) - f(x+dx, y-dy) - f(x-dx, y+dy) + f(x-dx, y-dy))/(4*dx*dy);
+}
+    
 }; // namespace teqp

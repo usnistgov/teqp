@@ -159,7 +159,7 @@ public:
 
     template<typename TType>
     auto get_ai(TType T, int i) const {
-        return a0[i] * POW2(1.0 + c1[i]*(1.0 - sqrt(T / Tc[i])));
+        return forceeval(a0[i] * POW2(1.0 + c1[i]*(1.0 - sqrt(T / Tc[i]))));
     }
 
     template<typename TType, typename VecType>

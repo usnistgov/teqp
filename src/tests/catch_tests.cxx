@@ -430,11 +430,19 @@ TEST_CASE("Test water Clapeyron.jl", "[CPA]") {
     auto R = 8.31446261815324;
     CPA::CPACubic cub(CPA::cubic_flag::SRK, a0, bi, c1, Tc, R);
     double T = 303.15, rhomolar = 1/1.7915123921401366e-5;
+    using my_float_type = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100U>>;
+    my_float_type Trecip = 1/T, rhof = rhomolar;
     
     auto z = (Eigen::ArrayXd(1) << 1).finished();
 
     using tdx = TDXDerivatives<decltype(cub)>;
     auto alphar = cub.alphar(T, rhomolar, molefrac);
+    auto Ar11_cub = tdx::get_Ar11(cub, T, rhomolar, z);
+    auto fcub = [&cub, &z](const auto& Trecip, const auto& rho) -> my_float_type{
+        return cub.alphar(forceeval(1/Trecip), rho, z);
+    };
+    auto Ar11_cd_cubic = static_cast<double>(centered_diff_xy(fcub, Trecip, rhof, my_float_type(1e-30), my_float_type(1e-30)) * Trecip * rhof);
+    CHECK(Ar11_cub == Approx(Ar11_cd_cubic));
     CHECK(alphar == Approx(-1.2713135319123854)); // Value from Clapeyron.jl
     double p_noassoc = T*rhomolar*R*(1+tdx::get_Ar01(cub, T, rhomolar, z));
     CAPTURE(p_noassoc);
@@ -451,6 +459,15 @@ TEST_CASE("Test water Clapeyron.jl", "[CPA]") {
     CAPTURE(p_withassoc);
 
     REQUIRE(p_withassoc == Approx(100000.000));
+    
+    auto f = [&cpa, &z](const auto& Trecip, const auto& rho) -> my_float_type{
+        return cpa.alphar(forceeval(1/Trecip), rho, z);
+    };
+    auto Ar11_cd = static_cast<double>(centered_diff_xy(f, Trecip, rhof, my_float_type(1e-30), my_float_type(1e-30)) * Trecip * rhof);
+    
+    auto Ar11 = tdc::get_Ar11(cpa, T, rhomolar, z);
+    REQUIRE(std::isfinite(Ar11));
+    CHECK(Ar11 == Approx(Ar11_cd));
 }
 
 TEST_CASE("Test water", "[CPA]") {
@@ -479,6 +496,31 @@ TEST_CASE("Test water", "[CPA]") {
     CAPTURE(p_withassoc);
 
     REQUIRE(p_withassoc == Approx(312682.0709));
+}
+
+TEST_CASE("Test [C2mim][NTF2]", "[CPA]") {
+    std::valarray<double> a0 = {25.8}, bi = {251.70e-6}, c1 = {0.273}, Tc = {1244.9},
+                          molefrac = {1.0};
+    auto R = 8.3144598;
+    CPA::CPACubic cub(CPA::cubic_flag::SRK, a0, bi, c1, Tc, R);
+    double T = 313, rhomolar = 1503/0.39132; // From https://pubs.acs.org/doi/epdf/10.1021/je700205n
+    
+    auto z = (Eigen::ArrayXd(1) << 1).finished();
+
+    using tdx = TDXDerivatives<decltype(cub)>;
+    auto alphar = cub.alphar(T, rhomolar, molefrac);
+
+    std::vector<CPA::association_classes> schemes = { CPA::association_classes::a2B };
+    std::valarray<double> epsAB = { 177388/10.0 }, betaAB = { 0.00266 };
+    CPA::CPAAssociation cpaa(std::move(cub), schemes, CPA::radial_dist::KG, epsAB, betaAB, R);
+
+    CPA::CPAEOS cpa(std::move(cub), std::move(cpaa));
+    using tdc = TDXDerivatives<decltype(cpa)>;
+    auto Ar01 = tdc::get_Ar01(cpa, T, rhomolar, z);
+    double p_withassoc = T*rhomolar*R*(1 + Ar01);
+    CAPTURE(p_withassoc);
+
+//    REQUIRE(p_withassoc == Approx(312682.0709));
 }
 
 TEST_CASE("Test water w/ factory", "") {
