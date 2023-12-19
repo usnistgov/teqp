@@ -217,7 +217,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
         Eigen::ArrayXd c(N), l(N); c.setZero();
 
         int Nlzero = 0, Nlnonzero = 0;
-        bool contiguous_lzero;
+        bool contiguous_lzero = false;
 
         if (term["l"].empty()) {
             // exponential part not included
@@ -248,7 +248,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
         }
         Nlnonzero = static_cast<int>(l.size()) - Nlzero;
 
-        if ((l[0] != 0) && (l[l.size() - 1] == 0)) {
+        if (contiguous_lzero && (l.tail(Nlnonzero) == 0).any()) {
             throw std::invalid_argument("If l_i has zero and non-zero values, the zero values need to come first");
         }
 

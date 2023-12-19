@@ -203,3 +203,39 @@ TEST_CASE("Mutant with Chebyshev departure function", "[mutant]") {
     using tdx = TDXDerivatives<decltype(mutant0)>;
     CHECK(tdx::get_Ar00(mutant0, T, rho, z) != tdx::get_Ar00(mutant1, T, rho, z));
 }
+
+TEST_CASE("Exponential terms in the wrong order","[mutant]"){
+    std::vector<std::string> fluids = { "Methane", "Water" };
+    std::string root = "../mycp";
+    const auto model = build_multifluid_model(fluids, root);
+
+    nlohmann::json jnormal = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {
+        "Name": "Methane-WaterHerrig",
+        "BibTeX": "Herrig (2018) / see Herrig (2018) PhD thesis",
+        "aliases": [],
+        "n": [3.3,-2.88,9.6,-11.7,2.13,-0.53],
+        "t": [1.1,0.8,0.8,1,4,3.4],
+        "d": [1,1,1,1,2,4],
+        "l": [0,0,1,1,1,1],
+        "type": "Exponential"
+    }}}})"_json;
+    CHECK_NOTHROW(build_multifluid_mutant(model, jnormal));
+    
+    nlohmann::json jbackwards = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {
+        "Name": "Methane-WaterHerrig",
+        "BibTeX": "Herrig (2018) / see Herrig (2018) PhD thesis",
+        "aliases": [],
+        "n": [3.3,9.6,-11.7,2.13,-0.53,-2.88],
+        "t": [1.1,0.8,1,4,3.4,0.8],
+        "d": [1,1,1,2,4,1],
+        "l": [0,1,1,1,1,0],
+        "type": "Exponential"
+        }}}})"_json;
+    CHECK_THROWS(build_multifluid_mutant(model, jbackwards));
+    
+//    double T = 300, rho = 1000;
+//    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+//    double alphar1 = mutant1.alphar(T, rho, z);
+//    double alphar2 = mutant2.alphar(T, rho, z);
+//    CHECK(alphar1 == alphar2);
+}
