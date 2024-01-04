@@ -523,7 +523,7 @@ TEST_CASE("Test [C2mim][NTF2]", "[CPA]") {
 //    REQUIRE(p_withassoc == Approx(312682.0709));
 }
 
-TEST_CASE("Test water w/ factory", "") {
+TEST_CASE("Test water w/ factory", "[CPA]") {
    using namespace CPA;
    nlohmann::json water = {
         {"a0i / Pa m^6/mol^2",0.12277 }, {"bi / m^3/mol", 0.000014515}, {"c1", 0.67359}, {"Tc / K", 647.096},
@@ -532,6 +532,7 @@ TEST_CASE("Test water w/ factory", "") {
    nlohmann::json j = {
        {"cubic","SRK"},
        {"pures", {water}},
+       {"radial_dist", "KG"},
        {"R_gas / J/mol/K", 8.3144598}
    };
    auto cpa = CPAfactory(j);

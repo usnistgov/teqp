@@ -254,6 +254,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         };
         nlohmann::json jCPA = {
             {"cubic","SRK"},
+            {"radial_dist", "KG"}, 
             {"pures", {water}},
             {"R_gas / J/mol/K", 8.3144598}
         };
@@ -263,6 +264,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         };
         std::string jstring = j.dump();
         int e1 = build_model(jstring.c_str(), &uuid, errmsg, errmsg_length);
+        CAPTURE(errmsg);
         int e2 = get_Arxy(uuid, 0, 1, 300.0, 3.0e-6, &(molefrac[0]), static_cast<int>(molefrac.size()), &val, errmsg, errmsg_length);
         int e3 = free_model(uuid, errmsg, errmsg_length);
         CAPTURE(jstring);
