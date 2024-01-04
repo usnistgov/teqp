@@ -14,6 +14,7 @@ Models
    PCSAFT
    multifluid
    multifluid_mutant
+   GERG   
    SAFT-VR-Mie
    SAFT-VR-Mie-Polar   
    ECS
