@@ -43,11 +43,41 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.18 :
+
+  * Features:
+
+    * Added advanced cubic mixing rules
+    * Added RK-PR model
+    * Added residual parts of GERG-2004 and GERG-2008
+    * More work on polarizable SAFT models
+
+  * Issues closed:
+
+    * [#50](https://github.com/usnistgov/teqp/issues/50) : Provide option to get GERG-2008 pures and mixture model
+    * [#56](https://github.com/usnistgov/teqp/issues/56) : Add advanced cubic mixing rules
+    * [#68](https://github.com/usnistgov/teqp/issues/68) : Add a general build_ancillary method for other EOS that don't already have them
+    * [#69](https://github.com/usnistgov/teqp/issues/69) : Add polarizability of Gubbins and co-workers
+    * [#71](https://github.com/usnistgov/teqp/issues/71) : Add example of parameter fitting with MF to teqp docs
+    * [#73](https://github.com/usnistgov/teqp/issues/73) : Big jumps in isotherm VLE tracing
+    * [#75](https://github.com/usnistgov/teqp/issues/75) : Add the RK-PR model of Cismondi and Mollerup
+    * [#78](https://github.com/usnistgov/teqp/issues/78) : Exponential term order of l parameters
+    * [#80](https://github.com/usnistgov/teqp/issues/80) : delta_1 and delta_2 are backwards for CPA for SRK
+    * [#81](https://github.com/usnistgov/teqp/issues/81) : Fix CPA radial distribution function
+    * [#82](https://github.com/usnistgov/teqp/issues/82) : CPA Ar11 is NaN
+
+  * Pull requests merged:
+
+    * [#70](https://github.com/usnistgov/teqp/pull/70) : Advanced cubic mixing rules
+    * [#74](https://github.com/usnistgov/teqp/pull/74) : Polarizable
+    * [#76](https://github.com/usnistgov/teqp/pull/76) : RK-PR
+    * [#79](https://github.com/usnistgov/teqp/pull/79) : Add residual parts of GERG-2004 and GERG-2008
+
 * 0.17 : 
 
   * Features:
 
-    * schema validation is added for most (but not all) models. Disable with ``verify=False`` to ``teqp.make_model()`` as it adds some speed penalty
+    * schema validation is added for most (but not all) models. Disable with ``validate=False`` to ``teqp.make_model()`` as it adds some speed penalty
     * added Mathias-Copeman alpha functions
     * added quantum-corrected Peng-Robinson of Aasen et al.
     * fixes to VLLE solving for isobar traces
