@@ -311,7 +311,7 @@ const std::vector<std::string> component_names = {"methane", "nitrogen","carbond
 inline PureInfo get_pure_info(const std::string& name){
     
     // From Table A3.5 from GERG 2004 monograph
-    // Data in table are in mol/dm3, K, kg/mol, so some conversion is needed
+    // Data in table are in mol/dm3, K, kg/kmol, so some conversion is needed
     static std::map<std::string, PureInfo> data_map = {
         {"methane", {10.139342719,190.564000000,16.042460}},
         {"nitrogen", {11.183900000,126.192000000,28.013400}},
@@ -333,7 +333,7 @@ inline PureInfo get_pure_info(const std::string& name){
         {"argon", {13.407429659,150.687,39.948000}}
     };
     if (data_map.find(name) == data_map.end()){
-        throw std::invalid_argument("Unable to load pure info for"+name);
+        throw std::invalid_argument("Unable to load pure info for "+name);
     }
     auto data = data_map.at(name);
     data.rhoc_molm3 *= 1000; // mol/dm^3 -> mol/m^3
@@ -774,7 +774,7 @@ const std::vector<std::string> component_names = {"methane", "nitrogen","carbond
 
 inline auto get_pure_info(const std::string& name){
     // From Table A3.5 from GERG 2004 monograph
-    // Data are in mol/dm3, K, kg/mol
+    // Data are in mol/dm3, K, kg/kmol
     // All others are unchanged
     static std::map<std::string, PureInfo> data_map = {
         {"carbonmonoxide", {10.85, 132.86, 28.010100}}, // Changed from GERG-2004
