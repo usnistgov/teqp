@@ -6,15 +6,20 @@ Models
    :caption: Contents:
 
    make_model
+
    cubics
    QuantumPR
    AdvancedCubicMixing
-   model_potentials
+   RK-PR
    CPA
+
+   model_potentials
+   
    PCSAFT
+   SAFT-VR-Mie
+   SAFT-VR-Mie-Polar
+   
    multifluid
    multifluid_mutant
    GERG   
-   SAFT-VR-Mie
-   SAFT-VR-Mie-Polar   
    ECS
