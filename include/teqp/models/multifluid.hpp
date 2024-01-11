@@ -14,6 +14,8 @@
 #include "teqp/json_tools.hpp"
 #include "teqp/exceptions.hpp"
 
+#include "RPinterop/interop.hpp"
+
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
 #include "MultiComplex/MultiComplex.hpp"
 #endif 
