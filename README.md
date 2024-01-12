@@ -28,6 +28,7 @@ So far the following EOS are implemented:
     * Two-center Lennard-Jones models (+dipoles, +quadrupoles)
 * multiparameter
     * multi-fluid model in the form of GERG
+    * GERG-2004 and GERG-2008
     * ammonia+water model of Tillner-Roth and Friend
 
 What is teqp *not*?:
