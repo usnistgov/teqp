@@ -14,6 +14,8 @@
 #include "teqp/json_tools.hpp"
 #include "teqp/exceptions.hpp"
 
+#include "RPinterop/interop.hpp"
+
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
 #include "MultiComplex/MultiComplex.hpp"
 #endif 
@@ -747,17 +749,25 @@ inline auto collect_component_json(const std::vector<std::string>& components, c
 
 inline auto collect_identifiers(const std::vector<nlohmann::json>& pureJSON)
 {
-    std::vector<std::string> CAS, Name, REFPROP;
+    std::vector<std::string> CAS, Name, REFPROP, hash;
     for (auto j : pureJSON) {
-        Name.push_back(j.at("INFO").at("NAME"));
-        CAS.push_back(j.at("INFO").at("CAS"));
-        REFPROP.push_back(j.at("INFO").at("REFPROP_NAME"));
+        auto INFO = j.at("INFO");
+        Name.push_back(INFO.at("NAME"));
+        CAS.push_back(INFO.at("CAS"));
+        REFPROP.push_back(INFO.at("REFPROP_NAME"));
+        if (INFO.contains("HASH")){
+            hash.push_back(INFO.at("HASH"));
+        }
     }
-    return std::map<std::string, std::vector<std::string>>{
+    std::map<std::string, std::vector<std::string>> result{
         {"CAS", CAS},
         {"Name", Name},
         {"REFPROP", REFPROP}
     };
+    if (hash.size() > 0){
+        result["hash"] = hash;
+    }
+    return result;
 }
 
 /// Iterate over the possible options for identifiers to determine which one will satisfy all the binary pairs
@@ -983,19 +993,32 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
 */
 inline auto multifluidfactory(const nlohmann::json& spec) {
     
-    std::string root = (spec.contains("root")) ? spec.at("root") : "";
-    
-    auto components = spec.at("components");
-    
-    nlohmann::json BIPcollection = nlohmann::json::array();
-    nlohmann::json depcollection = nlohmann::json::array();
-    if (components.size() > 1){
-        BIPcollection = multilevel_JSON_load(spec.at("BIP"), root + "/dev/mixtures/mixture_binary_pairs.json");
-        depcollection = multilevel_JSON_load(spec.at("departure"), root + "/dev/mixtures/mixture_departure_functions.json");
-    }
     nlohmann::json flags = (spec.contains("flags")) ? spec.at("flags") : nlohmann::json();
-
-    return _build_multifluid_model(make_pure_components_JSON(components, root), BIPcollection, depcollection, flags);
+    
+    // We are in the interop logical branch in which we will be invoking the REFPROP-interop code
+    if (spec.contains("HMX.BNC")){
+        std::vector<nlohmann::json> componentJSON;
+        for (auto comp : spec.at("components")){
+            componentJSON.push_back(RPinterop::FLDfile(comp).make_json(""));
+        }
+        auto [BIPcollection, depcollection] = RPinterop::HMXBNCfile(spec.at("HMX.BNC")).make_jsons();
+        return _build_multifluid_model(componentJSON, BIPcollection, depcollection, flags);
+    }
+    else{
+        
+        std::string root = (spec.contains("root")) ? spec.at("root") : "";
+        
+        auto components = spec.at("components");
+        
+        nlohmann::json BIPcollection = nlohmann::json::array();
+        nlohmann::json depcollection = nlohmann::json::array();
+        if (components.size() > 1){
+            BIPcollection = multilevel_JSON_load(spec.at("BIP"), root + "/dev/mixtures/mixture_binary_pairs.json");
+            depcollection = multilevel_JSON_load(spec.at("departure"), root + "/dev/mixtures/mixture_departure_functions.json");
+        }
+           
+        return _build_multifluid_model(make_pure_components_JSON(components, root), BIPcollection, depcollection, flags);
+    }
 }
 /// An overload of multifluidfactory that takes in a string
 inline auto multifluidfactory(const std::string& specstring) {

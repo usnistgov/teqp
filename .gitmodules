@@ -16,3 +16,6 @@
 [submodule "externals/json-schema-validator"]
 	path = externals/json-schema-validator
 	url = https://github.com/pboettch/json-schema-validator
+[submodule "externals/REFPROP-interop"]
+	path = externals/REFPROP-interop
+	url = https://github.com/ianhbell/REFPROP-interop

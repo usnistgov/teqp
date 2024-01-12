@@ -30,9 +30,21 @@ namespace teqp {
             // convert string to upper case
             auto toupper = [](const std::string s) { auto data = s; std::for_each(data.begin(), data.end(), [](char& c) { c = ::toupper(c); }); return data; };
 
-            // First pass, check names
             std::string comp0 = toupper(identifiers[0]);
             std::string comp1 = toupper(identifiers[1]);
+            // O-th pass, check the hashes
+            for (auto& el : collection) {
+                if (!el.contains("hash1")){ continue; }
+                std::string name1 = toupper(el.at("hash1"));
+                std::string name2 = toupper(el.at("hash2"));
+                if (comp0 == name1 && comp1 == name2) {
+                    return std::make_tuple(el, false);
+                }
+                if (comp0 == name2 && comp1 == name1) {
+                    return std::make_tuple(el, true);
+                }
+            }
+            // First pass, check names
             for (auto& el : collection) {
                 std::string name1 = toupper(el.at("Name1"));
                 std::string name2 = toupper(el.at("Name2"));

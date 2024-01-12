@@ -504,6 +504,9 @@ void init_teqp(py::module& m) {
     m.def("_make_model", &teqp::cppinterface::make_model, "json_data"_a, py::arg_v("validate", true));
     m.def("attach_model_specific_methods", &attach_model_specific_methods);
     m.def("build_ancillaries", &teqp::ancillaries::build_ancillaries, "model"_a, "Tc"_a, "rhoc"_a, "Tmin"_a, py::arg_v("flags", std::nullopt, "None"));
+    m.def("convert_FLD", [](const std::string& component, const std::string& name){ return RPinterop::FLDfile(component).make_json(name); },
+          "component"_a, "name"_a);
+    m.def("convert_HMXBNC", [](const std::string& path){ return RPinterop::HMXBNCfile(path).make_jsons(); }, "path"_a);
     
     using namespace teqp::iteration;
     py::class_<NRIterator>(m, "NRIterator")
