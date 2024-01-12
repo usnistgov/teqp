@@ -176,6 +176,11 @@ if (NOT TEQP_NO_TESTS)
   if (MSVC)
       target_sources(catch_tests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen/debug/msvc/eigen.natvis")
   endif()
+
+  # Add all the headers to the project for XCode use
+  file(GLOB_RECURSE headers "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
+  target_sources(catch_tests PUBLIC ${headers})
+
   target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
   target_compile_definitions(catch_tests PRIVATE -DTEQP_MULTICOMPLEX_ENABLED)
   target_compile_definitions(catch_tests PRIVATE -DTEQP_MULTIPRECISION_ENABLED)
