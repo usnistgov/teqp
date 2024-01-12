@@ -34,6 +34,7 @@ namespace teqp {
             std::string comp1 = toupper(identifiers[1]);
             // O-th pass, check the hashes
             for (auto& el : collection) {
+                if (!el.contains("hash1")){ continue; }
                 std::string name1 = toupper(el.at("hash1"));
                 std::string name2 = toupper(el.at("hash2"));
                 if (comp0 == name1 && comp1 == name2) {
