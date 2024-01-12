@@ -221,6 +221,24 @@ namespace teqp {
 
         template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return Y(molefracs, Tc, betaT, YT); }
         template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, vc, betaV, Yv); }
+        
+        const auto& get_mat(const std::string& key) const {
+            if (key == "betaT"){ return betaT; }
+            if (key == "gammaT"){ return gammaT; }
+            if (key == "betaV"){ return betaV; }
+            if (key == "gammaV"){ return gammaV; }
+            throw std::invalid_argument("variable is not understood: " + key);
+        }
+        auto get_BIP(const std::size_t& i, const std::size_t& j, const std::string& key) const {
+            const auto& mat = get_mat(key);
+            if (i < mat.rows() && j < mat.cols()){
+                return mat(i,j);
+            }
+            else{
+                throw std::invalid_argument("Indices are out of bounds");
+            }
+        }
+        
     };
 
     class MultiFluidInvariantReducingFunction {
@@ -265,6 +283,23 @@ namespace teqp {
         }
         template<typename MoleFractions> auto get_Tr(const MoleFractions& molefracs) const { return Y(molefracs, phiT, lambdaT, YT); }
         template<typename MoleFractions> auto get_rhor(const MoleFractions& molefracs) const { return 1.0 / Y(molefracs, phiV, lambdaV, Yv); }
+        
+        const auto& get_mat(const std::string& key) const {
+            if (key == "phiT"){ return phiT; }
+            if (key == "lambdaT"){ return lambdaT; }
+            if (key == "phiV"){ return phiV; }
+            if (key == "lambdaV"){ return lambdaV; }
+            throw std::invalid_argument("variable is not understood: " + key);
+        }
+        auto get_BIP(const std::size_t& i, const std::size_t& j, const std::string& key) const {
+            const auto& mat = get_mat(key);
+            if (i < mat.rows() && j < mat.cols()){
+                return mat(i,j);
+            }
+            else{
+                throw std::invalid_argument("Indices are out of bounds");
+            }
+        }
     };
 
 
@@ -288,6 +323,10 @@ namespace teqp {
         template <typename MoleFractions>
         auto get_rhor(const MoleFractions& molefracs) const {
             return std::visit([&](auto& t) { return t.get_rhor(molefracs); }, term);
+        }
+        
+        auto get_BIP(const std::size_t& i, const std::size_t& j, const std::string& key) const {
+            return std::visit([&](auto& t) { return t.get_BIP(i, j, key); }, term);
         }
     };
 

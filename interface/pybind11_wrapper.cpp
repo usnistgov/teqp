@@ -94,6 +94,7 @@ void attach_multifluid_methods(py::object&obj){
     setattr("get_meta", MethodType(py::cpp_function([](py::object& o){ return get_typed<TYPE>(o).get_meta(); }), obj));
     setattr("set_meta", MethodType(py::cpp_function([](py::object& o, const std::string& s){ return get_mutable_typed<TYPE>(o).set_meta(s); }, "self"_a, "s"_a), obj));
     setattr("get_alpharij", MethodType(py::cpp_function([](py::object& o, const int i, const int j, const double tau, const double delta){ return get_typed<TYPE>(o).dep.get_alpharij(i,j,tau,delta); }, "self"_a, "i"_a, "j"_a, "tau"_a, "delta"_a), obj));
+    setattr("get_BIP", MethodType(py::cpp_function([](py::object& o, const std::size_t& i, const std::size_t& j, const std::string& key){ return get_typed<TYPE>(o).get_BIP(i,j,key); }, "self"_a, "i"_a, "j"_a, "key"_a), obj));
 }
 template<typename TYPE>
 void attach_GERG_methods(py::object&obj){

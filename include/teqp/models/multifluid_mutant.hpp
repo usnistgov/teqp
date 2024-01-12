@@ -28,6 +28,16 @@ namespace teqp {
         void set_meta(const std::string& m) { meta = m; }
         /// Get the metadata stored in string form
         auto get_meta() const { return meta; }
+        /// Return a binary interaction parameter
+        const std::variant<double, std::string> get_BIP(const std::size_t &i, const std::size_t &j, const std::string& key) const{
+            if (key == "F" || key == "Fij"){
+                auto F = dep.get_F();
+                if (0 <= i && i < F.rows() && 0 <= j && j < F.cols()){
+                    return F(i,j);
+                }
+            }
+            return redfunc.get_BIP(i, j, key);
+        }
 
         template<typename TType, typename RhoType, typename MoleFracType>
         auto alphar(const TType& T,

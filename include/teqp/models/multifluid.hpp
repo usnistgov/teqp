@@ -85,6 +85,8 @@ private:
     const DepartureFunctionCollection funcs;
 public:
     DepartureContribution(FCollection&& F, DepartureFunctionCollection&& funcs) : F(F), funcs(funcs) {};
+    
+    const auto& get_F() const { return F; }
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
@@ -134,6 +136,16 @@ public:
     void set_meta(const std::string& m) { meta = m; }
     /// Get the metadata stored in string form
     auto get_meta() const { return meta; }
+    /// Return a binary interaction parameter
+    const std::variant<double, std::string> get_BIP(const std::size_t &i, const std::size_t &j, const std::string& key) const{
+        if (key == "F" || key == "Fij"){
+            auto F = dep.get_F();
+            if (0 <= i && i < F.rows() && 0 <= j && j < F.cols()){
+                return F(i,j);
+            }
+        }
+        return redfunc.get_BIP(i, j, key);
+    }
 
     MultiFluid(ReducingFunctions&& redfunc, CorrespondingTerm&& corr, DepartureTerm&& dep, GasConstantCalculator&& Rcalc) : redfunc(redfunc), corr(corr), dep(dep), Rcalc(Rcalc) {};
 
