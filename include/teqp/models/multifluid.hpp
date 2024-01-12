@@ -1001,7 +1001,7 @@ inline auto multifluidfactory(const nlohmann::json& spec) {
         for (auto comp : spec.at("components")){
             componentJSON.push_back(RPinterop::FLDfile(comp).make_json(""));
         }
-        auto [BIPcollection, depcollection] = RPinterop::HMXBNCfile(spec.at("HMX.BNC")).make_jsons("");
+        auto [BIPcollection, depcollection] = RPinterop::HMXBNCfile(spec.at("HMX.BNC")).make_jsons();
         return _build_multifluid_model(componentJSON, BIPcollection, depcollection, flags);
     }
     else{
