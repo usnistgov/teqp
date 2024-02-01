@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 using Catch::Approx;
+#include <catch2/benchmark/catch_benchmark_all.hpp>
 
 #include "nlohmann/json.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
@@ -243,6 +244,41 @@ TEST_CASE("Test Paricaud model w/ Gray and Gubbins code", "[Paricaud]"){
     std::cout << std::setprecision(20) << std::get<0>(Tcrhoc) << std::endl;
 
 }
+
+TEST_CASE("Benchmark CO2 with polar PC-SAFT model", "[CO2bench]"){
+    auto contents = R"(
+    { 
+      "kind": "PCSAFT",
+      "model": {
+        "coeffs": [{
+            "name": "CO2",
+             "BibTeXKey": "Gross-AICHEJ",
+             "m": 1.5131,
+             "sigma_Angstrom": 3.1869,
+             "epsilon_over_k": 169.33,
+             "(Q^*)^2": 1.26,
+             "nQ": 1
+        }]
+      }
+    }
+    )"_json;
+    auto model = teqp::cppinterface::make_model(contents);
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    BENCHMARK("alphar"){
+        return model->get_Ar00(300, 10000, z);
+    };
+    BENCHMARK("Ar11"){
+        return model->get_Ar11(300, 10000, z);
+    };
+    BENCHMARK("Ar02"){
+        return model->get_Ar02(300, 10000, z);
+    };
+    BENCHMARK("Ar20"){
+        return model->get_Ar20(300, 10000, z);
+    };
+}
+    
 
 TEST_CASE("Test Paricaud model", "[Paricaud]"){
     std::string contents = R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [{"name": "R1234YF", "BibTeXKey": "Paricaud", "m": 1.3656, "sigma_Angstrom": 4.5307, "epsilon_over_k": 299.424, "lambda_r": 21.7779, "lambda_a": 6.0, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0}], "polar_model": "GubbinsTwu+GubbinsTwu"}})";
