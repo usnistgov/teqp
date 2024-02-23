@@ -5,8 +5,10 @@ enable_testing()
 
 # Enable /bigobj for MSVC builds
 if (MSVC)
-    add_compile_options(-bigobj)
+    add_compile_options(/bigobj)
+    add_compile_options(/permissive-)
 endif()
+
 
 option (TEQP_NO_PYTHON
         "Enable to NOT build the Python interface"
