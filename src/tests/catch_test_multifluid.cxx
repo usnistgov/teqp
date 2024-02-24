@@ -538,21 +538,23 @@ TEST_CASE("Check models for R", "[multifluidR]") {
 }
 
 TEST_CASE("Ar20 for CO2", "[Ar20CO2]"){
-    double rho = 11000;
+    double rho = 10624.9063; // mol/m^3
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     
     using my_float = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>; // Overkill: 200 digits of working precision!
     auto model = build_multifluid_model({"CO2"}, "../mycp");
     
     auto f = [&rho, &z, &model](const auto Trecip){ return model.alphar(1.0/Trecip, rho, z); };
-    using tdx = TDXDerivatives<decltype(model), double>;
     
     std::cout << std::setprecision(20);
+    std::cout << "T / K,rho / mol/m^3,multiprecision,autodiff,err2MP" << std::endl;
     for (double T = 304.2; T < 340; T += 0.05){
         my_float Trecip = 1.0/T;
         my_float h = 1e-20;
         auto mp = -teqp::centered_diff<2,6>(f, Trecip, h)*Trecip*Trecip; // cvr/R
+        
+        using tdx = TDXDerivatives<decltype(model), double>;
         auto ad = -tdx::get_Ar20(model, T, rho, z);
-        //std::cout << T << "," << mp << "," << mp/ad-1 << std::endl;
+        std::cout << T << "," << rho << "," << mp << "," << ad << "," << mp/ad-1 << std::endl;
     }
 }
