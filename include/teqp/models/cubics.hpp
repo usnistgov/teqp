@@ -849,7 +849,7 @@ public:
     
     template<typename TType, typename RhoType, typename FractionsType>
     auto alphar(const TType& T, const RhoType& rhoinit, const FractionsType& molefrac) const {
-        if (molefrac.size() != alphas.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != alphas.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
         // First shift the volume by the volume translation
@@ -903,30 +903,30 @@ private:
     const std::vector<double> a_c, b_c;
     
     /// A convenience function to save some typing
-    std::vector<double> get_(const nlohmann::json &j, const std::string& k) const { return j.at(k).get<std::vector<double>>(); }
+    std::vector<double> get_(const nlohmann::json &j, const std::string& key) const { return j.at(key).get<std::vector<double>>(); }
     
     /// Calculate the parameters \f$y\f$ and \f$d_1\f$
-    auto get_yd1(double delta_1){
-        return std::make_tuple(1 + cbrt(2*(1+delta_1)) + cbrt(4/(1+delta_1)), (1+delta_1*delta_1)/(1+delta_1));
+    auto get_yd1(double delta_1_){
+        return std::make_tuple(1 + cbrt(2*(1+delta_1_)) + cbrt(4/(1+delta_1_)), (1+delta_1_*delta_1_)/(1+delta_1_));
     }
     
     auto build_ac(){
-        std::vector<double> a_c(delta_1.size());
+        std::vector<double> a_c_(delta_1.size());
         for (auto i = 0U; i < delta_1.size(); ++i){
             auto [y, d_1] = get_yd1(delta_1[i]);
             auto Omega_a = (3*y*y + 3*y*d_1 + d_1*d_1 + d_1 - 1.0)/pow(3.0*y + d_1 - 1.0, 2);
-            a_c[i] = Omega_a*pow(Ru*Tc_K[i], 2)/pc_Pa[i];
+            a_c_[i] = Omega_a*pow(Ru*Tc_K[i], 2)/pc_Pa[i];
         }
-        return a_c;
+        return a_c_;
     }
     auto build_bc(){
-        std::vector<double> b_c(delta_1.size());
+        std::vector<double> b_c_(delta_1.size());
         for (auto i = 0U; i < delta_1.size(); ++i){
             auto [y, d_1] = get_yd1(delta_1[i]);
             auto Omega_b = 1.0/(3.0*y + d_1 - 1.0);
-            b_c[i] = Omega_b*Ru*Tc_K[i]/pc_Pa[i];
+            b_c_[i] = Omega_b*Ru*Tc_K[i]/pc_Pa[i];
         }
-        return b_c;
+        return b_c_;
     }
 public:
     
@@ -976,7 +976,7 @@ public:
     
     template<typename TType, typename RhoType, typename FractionsType>
     auto alphar(const TType& T, const RhoType& rho, const FractionsType& molefrac) const {
-        if (molefrac.size() != delta_1.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != delta_1.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
         
