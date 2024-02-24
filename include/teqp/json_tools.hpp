@@ -78,8 +78,7 @@ namespace teqp{
         
         auto is_valid_path = [](const std::string & s){
             try{
-                std::filesystem::is_regular_file(s);
-                return true;
+                return std::filesystem::is_regular_file(s) || true; // this will return true if the function CAN BE CALLED without exception, indicating it could be a path
             }
             catch(...){
                 return false;
