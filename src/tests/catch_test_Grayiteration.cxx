@@ -141,7 +141,7 @@ TEST_CASE("Test calculation of polarized dipole moment with polarizable Lennard-
         {1.15, 0.822, 1.732, 0.05/3, 2.14, "Kriebel-MP-1996,Table3"},
     };
     
-    for (const auto [Tstar, rhostar, mustar, alphastar_iso, mustareff, ref] : db){
+    for (const auto& [Tstar, rhostar, mustar, alphastar_iso, mustareff, ref] : db){
         auto alphastar_symm = alphastar_iso*3;
         auto alphastar_asymm = 0.0;
         
