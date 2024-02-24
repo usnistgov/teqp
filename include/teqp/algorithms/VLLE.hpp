@@ -598,8 +598,8 @@ namespace VLLE {
             }
             
             if (options.terminate_composition){
-                auto x0 = (Eigen::ArrayXd(3) << rhovecL1[0]/rhovecL1.sum(), rhovecL2[0]/rhovecL2.sum(), rhovecV[0]/rhovecV.sum()).finished();
-                auto diffs = (Eigen::ArrayXd(3) << x0[0]-x0[1], x0[0]-x0[2], x0[1]-x0[2]).finished();
+                auto c0 = (Eigen::ArrayXd(3) << rhovecL1[0]/rhovecL1.sum(), rhovecL2[0]/rhovecL2.sum(), rhovecV[0]/rhovecV.sum()).finished();
+                auto diffs = (Eigen::ArrayXd(3) << c0[0]-c0[1], c0[0]-c0[2], c0[1]-c0[2]).finished();
                 if ((diffs.cwiseAbs() < options.terminate_composition_tol).any()){
                     break;
                 }
@@ -609,7 +609,7 @@ namespace VLLE {
                     std::cout << "Max retries of step exceeded." << std::endl;
                 }
                 break;
-                }
+            }
             
             nlohmann::json entry{
                 {"T / K", T},
