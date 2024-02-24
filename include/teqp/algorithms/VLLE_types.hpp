@@ -32,6 +32,7 @@ struct VLLETracerOptions{
     bool terminate_composition = true;
     double terminate_composition_tol = 1e-4;
     double T_limit = 100000;
+    int max_step_retries = 10;
 };
 
 }

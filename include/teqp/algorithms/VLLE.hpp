@@ -604,6 +604,12 @@ namespace VLLE {
                     break;
                 }
             }
+            if (retry_count > options.max_step_retries){
+                if (options.verbosity > 0) {
+                    std::cout << "Max retries of step exceeded." << std::endl;
+                }
+                break;
+                }
             
             nlohmann::json entry{
                 {"T / K", T},
