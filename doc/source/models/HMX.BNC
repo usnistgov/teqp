@@ -1,0 +1,110 @@
+HMX               !Mnemonic for mixture model, must match hfmix on call to SETUP.
+4                 !Version number
+
+! Changelog:
+! ---------
+
+#BNC              !Binary mixing coefficients
+BNC
+? Binary mixing coefficients for the various mixing rules used with the HMX model:
+?
+? KWi:  (i = 1,2,3,...,A,B,...)  --->  Kunz-Wagner mixing rules
+?   model     BetaT     GammaT    BetaV     GammaV    Fij      not used
+?
+!
+?R32/R1234ZEE                        [R32/R1234ZEE]
+?FITTED time/date
+  7b05bb60/9905ef70
+    B02      1.00514800000  0.94610500000  0.99903200000  1.02982100000  1.00000000000  0.             0. 0. 0. 0. 0. 0.
+    TC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+    VC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+!
+?R32/NEWR1234YF                        [R32/NEWR1234YF]
+?FITTED time/date
+  7b05bb60/40377b40
+    B01      1.01101100000  0.96696500000  1.00785200000  1.03766300000  1.00000000000  0.             0. 0. 0. 0. 0. 0.
+    TC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+    VC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+!
+?NEWR1234YF/R152A                        [NEWR1234YF/R152A]
+?FITTED time/date
+  40377b40/63f364b0
+    B04      0.99598700000  0.97805800000  0.99971000000  1.00860800000  1.00000000000  0.             0. 0. 0. 0. 0. 0.
+    TC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+    VC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+!
+?R1234ZEE/R227EA                        [R1234ZEE/R227EA]
+?FITTED time/date
+  9905ef70/40091ee0
+    B03      1.00124700000  0.98918000000  0.99929000000  1.00158100000  1.00000000000  0.             0. 0. 0. 0. 0. 0.
+    TC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+    VC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+!
+?R125/NEWR1234YF                        [R125/NEWR1234YF]
+?FITTED time/date
+  25c5a3a0/40377b40
+    B00      0.99996900000  0.99802800000  0.99822600000  1.00606800000  1.00000000000  0.             0. 0. 0. 0. 0. 0.
+    TC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+    VC5    0.0      0.0     0.0       0.             0.             0.             0. 0. 0. 0. 0. 0.
+!
+
+#MXM              !Mixture model specification
+B02 6507d471-0d20-11ed-8d04-509a4c56f794 
+?
+!```````````````````````````````````````````````````````````````````````````````
+ BetaT    GammaT   BetaV    GammaV    Fij    not used      !Descriptors for binary-specific parameters
+  1.0      1.0      1.0      1.0      0.0      0.0         !Default values (i.e. ideal-solution)
+  4 4      0        0 0      0 0      0 0      0 0         !# terms and # coefs/term for normal terms, Kunz-Wagner terms, and Gaussian terms.  3rd column is not used.
+  0.295192 0.500457 1.0000000000000000 1.0000000000000000 ! n(i),t(i),d(i),l(i) in term n_i*tau^t_i*delta^d_i*exp(-sgn(l_i)*delta^l_i)
+-0.737904 3.104735 2.0000000000000000 1.0000000000000000 
+0.542962 3.20172 3.0000000000000000 1.0000000000000000 
+-0.201951 2.567118 4.0000000000000000 1.0000000000000000 
+
+#MXM              !Mixture model specification
+B01 fad45f32-0d19-11ed-979d-509a4c56f794 
+?
+!```````````````````````````````````````````````````````````````````````````````
+ BetaT    GammaT   BetaV    GammaV    Fij    not used      !Descriptors for binary-specific parameters
+  1.0      1.0      1.0      1.0      0.0      0.0         !Default values (i.e. ideal-solution)
+  3 4      0        0 0      0 0      0 0      0 0         !# terms and # coefs/term for normal terms, Kunz-Wagner terms, and Gaussian terms.  3rd column is not used.
+  0.449487 2.538296 1.0000000000000000 1.0000000000000000 ! n(i),t(i),d(i),l(i) in term n_i*tau^t_i*delta^d_i*exp(-sgn(l_i)*delta^l_i)
+-0.099708 3.208604 2.0000000000000000 1.0000000000000000 
+0.098897 0.456509 3.0000000000000000 1.0000000000000000 
+
+#MXM              !Mixture model specification
+B04 58baf0da-0d1c-11ed-9bcd-509a4c56f794 
+?
+!```````````````````````````````````````````````````````````````````````````````
+ BetaT    GammaT   BetaV    GammaV    Fij    not used      !Descriptors for binary-specific parameters
+  1.0      1.0      1.0      1.0      0.0      0.0         !Default values (i.e. ideal-solution)
+  3 4      0        0 0      0 0      0 0      0 0         !# terms and # coefs/term for normal terms, Kunz-Wagner terms, and Gaussian terms.  3rd column is not used.
+  0.009165 3.221227 1.0000000000000000 1.0000000000000000 ! n(i),t(i),d(i),l(i) in term n_i*tau^t_i*delta^d_i*exp(-sgn(l_i)*delta^l_i)
+0.014392 1.007082 2.0000000000000000 1.0000000000000000 
+-0.014246 3.790953 3.0000000000000000 1.0000000000000000 
+
+#MXM              !Mixture model specification
+B03 db089542-0d1a-11ed-980c-509a4c56f794 
+?
+!```````````````````````````````````````````````````````````````````````````````
+ BetaT    GammaT   BetaV    GammaV    Fij    not used      !Descriptors for binary-specific parameters
+  1.0      1.0      1.0      1.0      0.0      0.0         !Default values (i.e. ideal-solution)
+  3 4      0        0 0      0 0      0 0      0 0         !# terms and # coefs/term for normal terms, Kunz-Wagner terms, and Gaussian terms.  3rd column is not used.
+  -0.057178 1.290298 1.0000000000000000 1.0000000000000000 ! n(i),t(i),d(i),l(i) in term n_i*tau^t_i*delta^d_i*exp(-sgn(l_i)*delta^l_i)
+0.031318 0.038796 2.0000000000000000 1.0000000000000000 
+-0.027496 2.640532 3.0000000000000000 1.0000000000000000 
+
+#MXM              !Mixture model specification
+B00 8d33bb33-0d1d-11ed-8df7-509a4c56f794 
+?
+!```````````````````````````````````````````````````````````````````````````````
+ BetaT    GammaT   BetaV    GammaV    Fij    not used      !Descriptors for binary-specific parameters
+  1.0      1.0      1.0      1.0      0.0      0.0         !Default values (i.e. ideal-solution)
+  1 4      0        0 0      0 0      0 0      0 0         !# terms and # coefs/term for normal terms, Kunz-Wagner terms, and Gaussian terms.  3rd column is not used.
+  -0.032013 0.00803 1.0000000000000000 1.0000000000000000 ! n(i),t(i),d(i),l(i) in term n_i*tau^t_i*delta^d_i*exp(-sgn(l_i)*delta^l_i)
+
+
+
+
+@END
+c        1         2         3         4         5         6         7         8
+c2345678901234567890123456789012345678901234567890123456789012345678901234567890
