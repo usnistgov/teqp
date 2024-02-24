@@ -49,7 +49,7 @@ public:
     const auto& get_ModelPack_cref() const { return mp; }
     
     template<typename T>
-    DerivativeAdapter(internal::tag<T> tag_, const T&& mp): mp(mp) {} ;
+    DerivativeAdapter(internal::tag<T> /*tag_*/, const T&& mp): mp(mp) {} ;
     
     const std::type_index& get_type_index() const override {
         return mp.index;

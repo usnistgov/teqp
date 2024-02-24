@@ -128,6 +128,12 @@ if (NOT TEQP_NO_TEQPCPP)
      $<$<CXX_COMPILER_ID:MSVC>:
           /W4 /wd4127 /wd4389 /wd4100>)
 
+  if(MSVC)
+    target_compile_options(teqpcpp PRIVATE /W4 /WX)
+  else()
+    target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic)
+  endif()
+
   if (TEQP_TESTTEQPCPP)
     add_executable(test_teqpcpp "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/test/test_teqpcpp.cpp")
     target_link_libraries(test_teqpcpp PUBLIC teqpcpp)

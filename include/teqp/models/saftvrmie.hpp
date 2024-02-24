@@ -117,7 +117,7 @@ struct SAFTVRMieChainContributionTerms{
     /// Eq. A3
     auto get_C_ij() const{
         Eigen::ArrayXXd C(N,N);
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i; j < N; ++j){
                 C(i,j) = lambda_r_ij(i,j)/(lambda_r_ij(i,j)-lambda_a_ij(i,j))*pow(lambda_r_ij(i,j)/lambda_a_ij(i,j), lambda_a_ij(i,j)/(lambda_r_ij(i,j)-lambda_a_ij(i,j)));
                 C(j,i) = C(i,j); // symmetric
@@ -149,7 +149,7 @@ struct SAFTVRMieChainContributionTerms{
     /// Eq. A45
     auto get_sigma_ij() const{
         Eigen::ArrayXXd sigma(N,N);
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i; j < N; ++j){
                 sigma(i,j) = (sigma_A(i) + sigma_A(j))/2.0;
                 sigma(j,i) = sigma(i,j); // symmetric
@@ -165,7 +165,7 @@ struct SAFTVRMieChainContributionTerms{
         if (epsilon_ij_flag == EpsilonijFlags::kLafitte){
             /// Eq. A55 from Lafitte
             Eigen::ArrayXXd eps_(N,N);
-            for (auto i = 0; i < N; ++i){
+            for (auto i = 0U; i < N; ++i){
                 for (auto j = i; j < N; ++j){
                     eps_(i,j) = (1.0-kmat(i,j))*sqrt(pow(sigma_ij(i,i),3)*pow(sigma_ij(j,j),3)*epsilon_over_k(i)*epsilon_over_k(j))/pow(sigma_ij(i,j), 3);
                     eps_(j,i) = eps_(i,j); // symmetric
@@ -175,7 +175,7 @@ struct SAFTVRMieChainContributionTerms{
         }
         else if (epsilon_ij_flag == EpsilonijFlags::kLorentzBerthelot){
             Eigen::ArrayXXd eps_(N,N);
-            for (auto i = 0; i < N; ++i){
+            for (auto i = 0U; i < N; ++i){
                 for (auto j = i; j < N; ++j){
                     eps_(i,j) = (1.0-kmat(i,j))*sqrt(epsilon_over_k(i)*epsilon_over_k(j));
                     eps_(j,i) = eps_(i,j); // symmetric
@@ -201,7 +201,7 @@ struct SAFTVRMieChainContributionTerms{
         for (auto n = 0; n < 4; ++n){
             cij[n].resize(N,N);
         };
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i; j < N; ++j){
                 using CV = Eigen::Vector<double, 4>;
                 const CV b{(CV() << 1, 1.0/lambdaij(i,j), 1.0/pow(lambdaij(i,j),2), 1.0/pow(lambdaij(i,j),3)).finished()};
@@ -379,11 +379,11 @@ struct SAFTVRMieChainContributionTerms{
     auto get_dmat(const TType &T) const{
         Eigen::Array<TType, Eigen::Dynamic, Eigen::Dynamic> d(N,N);
         // For the pure components, by integration
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             d(i,i) = get_dii(i, T);
         }
         // The cross terms, using the linear mixing rule
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i+1; j < N; ++j){
                 d(i,j) = (d(i,i) + d(j,j))/2.0;
                 d(j,i) = d(i,j);
@@ -418,7 +418,7 @@ struct SAFTVRMieChainContributionTerms{
         Eigen::Array<TRHOType, 4, 1> zeta;
         for (auto l = 0; l < 4; ++l){
             TRHOType summer = 0.0;
-            for (auto i = 0; i < N; ++i){
+            for (auto i = 0U; i < N; ++i){
                 summer += xs(i)*powi(dmat(i,i), l);
             }
             zeta(l) = forceeval(pi6*rhos*summer);
@@ -426,8 +426,8 @@ struct SAFTVRMieChainContributionTerms{
         
         NumType summer_zeta_x = 0.0;
         TRHOType summer_zeta_x_bar = 0.0;
-        for (auto i = 0; i < N; ++i){
-            for (auto j = 0; j < N; ++j){
+        for (auto i = 0U; i < N; ++i){
+            for (auto j = 0U; j < N; ++j){
                 summer_zeta_x += xs(i)*xs(j)*powi(dmat(i,j), 3)*rhos;
                 summer_zeta_x_bar += xs(i)*xs(j)*powi(sigma_ij(i,j), 3);
             }
@@ -458,7 +458,7 @@ struct SAFTVRMieChainContributionTerms{
         NumType K_HS = get_KHS(zeta_x);
         NumType rho_dK_HS_drho = get_rhos_dK_HS_drhos(zeta_x);
         
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i; j < N; ++j){
                 NumType x_0_ij = sigma_ij(i,j)/dmat(i, j);
                 
@@ -694,7 +694,7 @@ struct SAFTVRMieChainContributionTerms{
      \f]
     */
     template<typename ZetaType, typename IJ>
-    auto get_rhodBijdrho(const ZetaType& zeta_x, const ZetaType& one_minus_zeta_x3, const IJ& I, const IJ& J, const ZetaType& Bhatij) const{
+    auto get_rhodBijdrho(const ZetaType& zeta_x, const ZetaType& /*one_minus_zeta_x3*/, const IJ& I, const IJ& J, const ZetaType& Bhatij) const{
         auto dBhatdzetax = (-3.0*I*(zeta_x - 2.0) - 27.0*J*zeta_x*(zeta_x + 1.0) + (zeta_x - 1.0)*(I + 9.0*J*zeta_x + 9.0*J*(zeta_x + 1.0)))/(2.0*POW4(1.0-zeta_x));
         return forceeval(Bhatij + dBhatdzetax*zeta_x);
     }
@@ -841,13 +841,13 @@ public:
     auto get_core_calcs(double T, double rhomolar, const Eigen::ArrayXd& mole_fractions) const {
         auto val = terms.get_core_calcs(T, rhomolar, mole_fractions);
         
-        auto fromArrayX = [](const Eigen::ArrayXd &x){std::valarray<double>n(x.size()); for (auto i =0; i < n.size(); ++i){ n[i] = x[i];} return n;};
+        auto fromArrayX = [](const Eigen::ArrayXd &x){std::valarray<double>n(x.size()); for (auto i = 0U; i < n.size(); ++i){ n[i] = x[i];} return n;};
         auto fromArrayXX = [](const Eigen::ArrayXXd &x){
             std::size_t N = x.rows();
             std::vector<std::vector<double>> n; n.resize(N);
-            for (auto i = 0; i < N; ++i){
+            for (auto i = 0U; i < N; ++i){
                 n[i].resize(N);
-                for (auto j = 0; j < N; ++j){
+                for (auto j = 0U; j < N; ++j){
                     n[i][j] = x(i,j);
                 }
             }

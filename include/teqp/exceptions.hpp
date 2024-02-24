@@ -50,7 +50,7 @@ namespace teqp {
             std::string o = "";
             if (errors.empty()){ return o; }
             o = errors[0];
-            for (auto j = 1; j < errors.size(); ++j){
+            for (auto j = 1U; j < errors.size(); ++j){
                 o += delim + errors[j];
             }
             return o;

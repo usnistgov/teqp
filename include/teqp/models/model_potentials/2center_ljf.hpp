@@ -257,7 +257,7 @@ namespace teqp {
                 using result = std::common_type_t<TauType, DeltaType>;
 
                 result r = 0.0;
-                for (auto i = 0; i < c.size(); ++i) {
+                for (auto i = 0U; i < c.size(); ++i) {
                     r = r + c[i] * pow(tau, m[i]) * pow(delta, n[i]) * pow(alpha, o[i]) * exp(p[i] * pow(delta, q[i]));
                 }
                 return forceeval(r);
@@ -289,7 +289,7 @@ namespace teqp {
                 using result = std::common_type_t<TauType, DeltaType>;
 
                 result r = 0.0;
-                for (auto i = 0; i < c.size(); ++i) {
+                for (auto i = 0U; i < c.size(); ++i) {
                     r = r + c[i] * pow(tau, n[i] / 2.0) * pow(delta, m[i] / 2.0) * pow(mu_sq, k[i] / 4.0) * exp(-o[i] * pow(delta, 2.0));
                 }
                 return forceeval(r);
@@ -304,7 +304,7 @@ namespace teqp {
                 using result = std::common_type_t<TauType, DeltaType>;
 
                 result r = 0.0;
-                for (auto i = 0; i < c.size(); ++i) {
+                for (auto i = 0U; i < c.size(); ++i) {
                     r = r + c[i] * pow(tau, n[i] / 2.0) * pow(delta, m[i] / 2.0) * pow(mu_sq, k[i] / 4.0) * exp(-o[i] * pow(delta, 2.0));
                 }
                 return forceeval(r);
@@ -326,7 +326,7 @@ namespace teqp {
             template<typename TType, typename RhoType, typename MoleFracType>
             auto alphar(const TType& T_star,
                 const RhoType& rho_dimer_star,
-                const MoleFracType& molefrac) const
+                const MoleFracType& /*molefrac*/) const
             {
                 auto Tred = forceeval(redT.get_T_red(L));
                 auto Rred = forceeval(redD.get_rho_red(L));
@@ -343,7 +343,7 @@ namespace teqp {
             }
 
             template<class VecType>
-            auto R(const VecType& molefrac) const {
+            auto R(const VecType& /*molefrac*/) const {
                 return 1.0;
             }
         };

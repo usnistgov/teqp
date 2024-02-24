@@ -119,7 +119,7 @@ namespace teqp {
             gammaT.resize(N, N); gammaT.setZero();
             betaV.resize(N, N); betaV.setZero();
             gammaV.resize(N, N); gammaV.setZero();
-            for (auto i = 0; i < N; ++i) {
+            for (auto i = 0U; i < N; ++i) {
                 for (auto j = i + 1; j < N; ++j) {
                     auto [betaT_, gammaT_, betaV_, gammaV_] = get_binary_interaction_double(collection, { components[i], components[j] }, flags, { Tc[i], Tc[j] }, { vc[i], vc[j] });
                     betaT(i, j) = betaT_;         betaT(j, i) = 1.0 / betaT(i, j);
@@ -153,7 +153,7 @@ namespace teqp {
         inline auto get_F_matrix(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags) {
             auto N = identifiers.size();
             Eigen::MatrixXd F(N, N);
-            for (auto i = 0; i < N; ++i) {
+            for (auto i = 0U; i < N; ++i) {
                 F(i, i) = 0.0;
                 for (auto j = i + 1; j < N; ++j) {
                     auto [el, swap_needed] = get_BIPdep(collection, { identifiers[i], identifiers[j] }, flags);

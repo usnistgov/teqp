@@ -52,10 +52,10 @@ protected:
     std::valarray<std::valarray<NumType>> k;
 
     template<typename TType, typename IndexType>
-    auto get_ai(TType T, IndexType i) const { return ai[i]; }
+    auto get_ai(TType /*T*/, IndexType i) const { return ai[i]; }
 
     template<typename TType, typename IndexType>
-    auto get_bi(TType T, IndexType i) const { return bi[i]; }
+    auto get_bi(TType /*T*/, IndexType i) const { return bi[i]; }
 
 public:
     /// \brief Initializer, taking the arrays of critical temperatures and pressures
@@ -70,7 +70,7 @@ public:
         }
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
-        for (auto i = 0; i < Tc_K.size(); ++i) {
+        for (auto i = 0U; i < Tc_K.size(); ++i) {
             ai[i] = 27.0 / 64.0 * pow(Ru * Tc_K[i], 2) / pc_Pa[i];
             bi[i] = 1.0 / 8.0 * Ru * Tc_K[i] / pc_Pa[i];
         }

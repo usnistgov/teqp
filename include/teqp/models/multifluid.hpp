@@ -92,8 +92,8 @@ public:
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
         using resulttype = std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
-        auto N = molefracs.size();
-        for (auto i = 0; i < N; ++i) {
+        std::size_t N = molefracs.size();
+        for (auto i = 0U; i < N; ++i) {
             for (auto j = i+1; j < N; ++j) {
                 alphar = alphar + molefracs[i] * molefracs[j] * F(i, j) * funcs[i][j].alphar(tau, delta);
             }
@@ -103,7 +103,7 @@ public:
 
     /// Call a single departure term at i,j 
     template<typename TauType, typename DeltaType>
-    auto get_alpharij(const int i, const int j,     const TauType& tau, const DeltaType& delta) const {
+    auto get_alpharij(const std::size_t i, const std::size_t j,     const TauType& tau, const DeltaType& delta) const {
         std::size_t N = funcs.size();
         if (i < 0 || j < 0){
             throw teqp::InvalidArgument("i or j is negative");
@@ -452,7 +452,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
 inline auto get_departure_function_matrix(const nlohmann::json& depcollection, const nlohmann::json& BIPcollection, const std::vector<std::string>& components, const nlohmann::json& flags) {
 
     // Allocate the matrix with default models
-    std::vector<std::vector<DepartureTerms>> funcs(components.size()); for (auto i = 0; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
+    std::vector<std::vector<DepartureTerms>> funcs(components.size()); for (auto i = 0U; i < funcs.size(); ++i) { funcs[i].resize(funcs.size()); }
 
     // Load the collection of data on departure functions
 
@@ -465,7 +465,7 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
 
     auto funcsmeta = nlohmann::json::object();
 
-    for (auto i = 0; i < funcs.size(); ++i) {
+    for (auto i = 0U; i < funcs.size(); ++i) {
         std::string istr = std::to_string(i);
         if (funcsmeta.contains(istr)) { funcsmeta[istr] = {}; }
         for (auto j = i + 1; j < funcs.size(); ++j) {
@@ -503,7 +503,7 @@ inline auto get_EOS_terms(const nlohmann::json& j)
     for (auto& term : alphar) {
         std::string type = term["type"];
         if (!isallowed(allowed_types, type)) {
-            std::string a = allowed_types[0]; for (auto i = 1; i < allowed_types.size(); ++i) { a += "," + allowed_types[i]; }
+            std::string a = allowed_types[0]; for (auto i = 1U; i < allowed_types.size(); ++i) { a += "," + allowed_types[i]; }
             throw std::invalid_argument("Bad type:" + type + "; allowed types are: {" + a + "}");
         }
     }
@@ -789,7 +789,7 @@ inline auto select_identifier(const nlohmann::json& BIPcollection, const mapvecs
         std::string key; std::vector<std::string> identifiers;
         std::tie(key, identifiers) = ident;
         try{
-            for (auto i = 0; i < identifiers.size(); ++i){
+            for (auto i = 0U; i < identifiers.size(); ++i){
                 for (auto j = i+1; j < identifiers.size(); ++j){
                     const std::vector<std::string> pair = {identifiers[i], identifiers[j]};
                     reducing::get_BIPdep(BIPcollection, pair, flags);

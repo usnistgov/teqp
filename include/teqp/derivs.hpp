@@ -757,7 +757,7 @@ struct IsochoricDerivatives{
     static auto get_Ar10(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot = rhovec.sum();
         auto molefrac = (rhovec / rhotot).eval();
-        return -T * derivT([&model, &rhotot, &molefrac](const auto& T, const auto& rhovec) { return model.alphar(T, rhotot, molefrac); }, T, rhovec);
+        return -T * derivT([&model, &rhotot, &molefrac](const auto& T, const auto& /*rhovec*/) { return model.alphar(T, rhotot, molefrac); }, T, rhovec);
     }
 
     static auto get_Ar01(const Model& model, const Scalar &T, const VectorType& rhovec) {

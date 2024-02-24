@@ -49,7 +49,7 @@ namespace teqp{
                 return mat;
             }
             // Then copy elements over
-            for (auto i = 0; i < m.size(); ++i){
+            for (auto i = 0U; i < m.size(); ++i){
                 auto row = m[i];
                 if (row.size() != mat.rows()){
                     throw std::invalid_argument("provided matrix is not square");
