@@ -246,7 +246,6 @@ TEST_CASE("Test critical points against Kiyohara results", "[polarizability]"){
             double Tstar = Tc/epsilon_over_kB;
             double rhostar = rhoc*N_A*pow(sigma_m,3);
             std::cout << mustar << "," << alphastar << "," << Tstar << "," << rhostar << std::endl;
-            int tt =0;
         }
     }
 }

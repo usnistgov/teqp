@@ -168,7 +168,6 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid muta
         auto infdil = ct::get_drhovec_dT_crit(mutant, T0, rhovec0);
         auto der = ct::get_derivs(mutant, T0, rhovec0);
         auto epinfdil = ct::eigen_problem(mutant, T0, rhovec0);
-        using tdx = TDXDerivatives<decltype(mutant), double, Eigen::ArrayXd>;
         auto z = (rhovec0 / rhovec0.sum()).eval();
         auto alphar = mutant.alphar(T0, rhoc0, z);
         return std::make_tuple(T0, rhoc0, alphar, infdil, der);

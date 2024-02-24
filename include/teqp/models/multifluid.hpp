@@ -61,7 +61,7 @@ public:
         using resulttype = std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
-        for (auto i = 0; i < N; ++i) {
+        for (auto i = 0U; i < N; ++i) {
             alphar = alphar + molefracs[i] * EOSs[i].alphar(tau, delta);
         }
         return forceeval(alphar);
@@ -164,7 +164,7 @@ public:
         const RhoType &rho,
         const MoleFracType& molefrac) const
     {
-        if (molefrac.size() != corr.size()){
+        if (static_cast<std::size_t>(molefrac.size()) != corr.size()){
             throw teqp::InvalidArgument("Wrong size of mole fractions; "+std::to_string(corr.size()) + " are loaded but "+std::to_string(molefrac.size()) + " were provided");
         }
         auto Tred = forceeval(redfunc.get_Tr(molefrac));

@@ -149,6 +149,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         };
         std::string js = j.dump(2);
         int e1 = build_model(js.c_str(), &uuidMF, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
     }
     {
         nlohmann::json jmodel = nlohmann::json::object();

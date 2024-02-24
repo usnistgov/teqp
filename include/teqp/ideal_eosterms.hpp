@@ -416,7 +416,7 @@ namespace teqp {
 //            std::cout << term.dump() << std::endl;
             std::valarray<double> t = term.at("t"), c = term.at("c");
             double T_0 = term.at("T0");
-            for (auto i = 0; i < t.size(); ++i){
+            for (auto i = 0U; i < t.size(); ++i){
                 if (t[i] == 0){
                     newterms.push_back({{"type", "Cp0Constant"}, {"c", c[i]}, {"T_0", T_0}, {"R", R}});
                 }

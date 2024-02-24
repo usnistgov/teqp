@@ -26,6 +26,7 @@ TEST_CASE("Evaluation of J^{(n)}", "[LuckasJn]")
 {
     LuckasJIntegral J12{12};
     auto Jval = J12.get_J(3.0, 1.0);
+    CHECK(Jval != 0);
 }
 
 TEST_CASE("Evaluation of K(xxx, yyy)", "[LuckasKnn]")
@@ -218,7 +219,7 @@ TEST_CASE("Check Stockmayer critical points with polarity terms", "[SAFTVRMiepol
             if (print) std::cout << "0, " << Tstar_guess << ", " << rhostar_guess << std::endl;
             
             double mustar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
-            double Qstar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
+//            double Qstar2factor = 1.0/(4*static_cast<double>(EIGEN_PI)*8.8541878128e-12*1.380649e-23);
             j["model"]["polar_model"] = polar_model;
             
             for (double mustar2 = 0.1; mustar2 < 5; mustar2 += 0.1){

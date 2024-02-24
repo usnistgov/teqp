@@ -218,10 +218,10 @@ public:
     template<typename TType, typename CompType>
     auto get_a(TType T, const CompType& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> a_ = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i) {
+        for (auto i = 0U; i < molefracs.size(); ++i) {
             auto alphai = forceeval(std::visit([&](auto& t) { return t(T); }, alphas[i]));
             auto ai_ = forceeval(this->ai[i] * alphai);
-            for (auto j = 0; j < molefracs.size(); ++j) {
+            for (auto j = 0U; j < molefracs.size(); ++j) {
                 auto alphaj = forceeval(std::visit([&](auto& t) { return t(T); }, alphas[j]));
                 auto aj_ = this->ai[j] * alphaj;
                 auto aij = forceeval((1 - kmat(i,j)) * sqrt(ai_ * aj_));
@@ -234,7 +234,7 @@ public:
     template<typename TType, typename CompType>
     auto get_b(TType /*T*/, const CompType& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> b_ = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i) {
+        for (auto i = 0U; i < molefracs.size(); ++i) {
             b_ = b_ + molefracs[i] * bi[i];
         }
         return forceeval(b_);
@@ -501,13 +501,13 @@ public:
         using TYPE = std::common_type_t<TType, decltype(molefracs[0])>;
         // The denominator in Phi
         TYPE Vtot = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i){
+        for (auto i = 0U; i < molefracs.size(); ++i){
             auto v_i = b[i];
             Vtot += molefracs[i]*v_i;
         }
         
         TYPE summer = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i){
+        for (auto i = 0U; i < molefracs.size(); ++i){
             auto v_i = b[i];
             // The ratio phi_i/z_i is expressed like this to better handle
             // the case of z_i = 0, which would otherwise be a divide by zero
@@ -528,10 +528,10 @@ public:
         
         using TYPE = std::common_type_t<TType, decltype(molefracs[0])>;
         TYPE summer = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i){
+        for (auto i = 0U; i < molefracs.size(); ++i){
             auto v_i = b[i];
             TYPE summerj = 0.0;
-            for (auto j = 0; j < molefracs.size(); ++j){
+            for (auto j = 0U; j < molefracs.size(); ++j){
                 auto v_j = b[j];
                 auto Aij = get_Aij(i,j,T);
                 auto Omega_ji = v_j/v_i*exp(-Aij/T);
@@ -675,7 +675,7 @@ public:
     auto get_am_over_bm(TType T, const CompType& molefracs) const {
         auto aEresRT = std::visit([&](auto& aresRTfunc) { return aresRTfunc(T, molefracs); }, ares); // aEres/RT, so a non-dimensional quantity
         std::common_type_t<TType, decltype(molefracs[0])> summer = aEresRT*Ru*T/CEoS;
-        for (auto i = 0; i < molefracs.size(); ++i) {
+        for (auto i = 0U; i < molefracs.size(); ++i) {
             summer += molefracs[i]*get_ai(T,i)/get_bi(T,i);
         }
         return forceeval(summer);
@@ -687,9 +687,9 @@ public:
         
         switch (brule){
             case AdvancedPRaEMixingRules::kQuadratic:
-                for (auto i = 0; i < molefracs.size(); ++i) {
+                for (auto i = 0U; i < molefracs.size(); ++i) {
                     auto bi_ = get_bi(T, i);
-                    for (auto j = 0; j < molefracs.size(); ++j) {
+                    for (auto j = 0U; j < molefracs.size(); ++j) {
                         auto bj_ = get_bi(T, j);
                         
                         auto bij = (1 - lmat(i,j)) * pow((pow(bi_, 1.0/s) + pow(bj_, 1.0/s))/2.0, s);
@@ -698,7 +698,7 @@ public:
                 }
                 break;
             case AdvancedPRaEMixingRules::kLinear:
-                for (auto i = 0; i < molefracs.size(); ++i) {
+                for (auto i = 0U; i < molefracs.size(); ++i) {
                     b_ += molefracs[i] * get_bi(T, i);
                 }
                 break;

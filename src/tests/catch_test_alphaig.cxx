@@ -8,7 +8,7 @@ using Catch::Approx;
 
 using namespace teqp;
 
-nlohmann::json demo_pure_term(double a_1, double a_2){
+nlohmann::json demo_pure_term(double /*a_1*/, double /*a_2*/){
     nlohmann::json j0 = nlohmann::json::array();
     j0.push_back({ {"type", "Lead"}, { "a_1", 1 }, { "a_2", 2 } });
     return {{"R", 8.31446261815324}, {"terms", j0}};

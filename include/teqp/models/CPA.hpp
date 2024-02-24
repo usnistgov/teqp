@@ -166,10 +166,10 @@ public:
     auto get_ab(const TType T, const VecType& molefrac) const {
         using return_type = std::common_type_t<decltype(T), decltype(molefrac[0])>;
         return_type asummer = 0.0, bsummer = 0.0;
-        for (auto i = 0; i < molefrac.size(); ++i) {
+        for (auto i = 0U; i < molefrac.size(); ++i) {
             bsummer += molefrac[i] * bi[i];
             auto ai = get_ai(T, i);
-            for (auto j = 0; j < molefrac.size(); ++j) {
+            for (auto j = 0U; j < molefrac.size(); ++j) {
                 auto aj = get_ai(T, j);
                 auto a_ij = (1.0 - k_ij[i][j]) * sqrt(ai * aj);
                 asummer += molefrac[i] * molefrac[j] * a_ij;

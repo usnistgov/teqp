@@ -190,7 +190,7 @@ public:
         if (N != size()){
             throw std::invalid_argument("wrong size");
         }
-        for (auto i = 0; i < N; ++i) {
+        for (auto i = 0U; i < N; ++i) {
             alphar += molefracs[i] * EOSs[i].alphar(tau, delta);
         }
         return forceeval(alphar);
@@ -286,7 +286,7 @@ public:
             throw std::invalid_argument("wrong size");
         }
         
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i+1; j < N; ++j){
                 auto Fij = Fmat(i,j);
                 if (Fij != 0){

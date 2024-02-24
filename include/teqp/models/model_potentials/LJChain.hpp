@@ -55,7 +55,7 @@ namespace teqp {
         }
 
         template<class VecType>
-        auto R(const VecType& molefrac) const {
+        auto R(const VecType& /*molefrac*/) const {
             return 1.0;
         }
     };

@@ -51,10 +51,10 @@ namespace teqp{
             // Then copy elements over
             for (auto i = 0U; i < m.size(); ++i){
                 auto row = m[i];
-                if (row.size() != mat.rows()){
+                if (row.size() != static_cast<std::size_t>(mat.rows())){
                     throw std::invalid_argument("provided matrix is not square");
                 }
-                for (auto k = 0; k < row.size(); ++k){
+                for (auto k = 0U; k < row.size(); ++k){
                     mat(i, k) = row[k];
                 }
             }
