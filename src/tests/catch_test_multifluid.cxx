@@ -44,10 +44,9 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid", "[
         Eigen::ArrayXd rhovec0almost = rhovec0; rhovec0almost[1 - i] = 1e-6;
         auto dil = ct::get_drhovec_dT_crit(model, T0, rhovec0almost);
         auto epdil = ct::eigen_problem(model, T0, rhovec0almost);
-        int rr = 0;
 
     }
-    }
+}
 
 TEST_CASE("Benchmark CO2 with Span and Wagner model", "[CO2bench]"){
     auto contents = R"(
@@ -90,7 +89,6 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with
         auto infdil = ct::get_drhovec_dT_crit(model, T0, rhovec0);
         auto epinfdil = ct::eigen_problem(model, T0, rhovec0);
         auto der = ct::get_derivs(model, T0, rhovec0);
-        using tdx = TDXDerivatives<decltype(model), double, Eigen::ArrayXd>;
         auto z = (rhovec0 / rhovec0.sum()).eval();
         auto alphar = model.alphar(T0, rhoc0, z);
         return std::make_tuple(T0, rhoc0, alphar, infdil, epinfdil, der);
@@ -111,8 +109,6 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with
     CHECK(alphara == alpharb);
     CHECK(infdila(1) == Approx(infdilb(0)));
     CHECK(infdila(0) == Approx(infdilb(1)));
-
-    int rr = 0;
 }
 
 
@@ -314,7 +310,7 @@ TEST_CASE("Check that virial coefficients can be calculated with multiple deriva
     CHECK(BnAD[3] == Approx(Bnmcx[3]));
     CHECK(BnAD[4] == Approx(Bnmcx[4]));
     
-    auto derBnAD100 = vd::get_dmBnvirdTm<2, 1, ADBackends::autodiff>(model, 100.0, z);
+//    auto derBnAD100 = vd::get_dmBnvirdTm<2, 1, ADBackends::autodiff>(model, 100.0, z);
     auto derBnAD = vd::get_dmBnvirdTm<2, 1, ADBackends::autodiff>(model, 298.15, z);
     auto derBnMCX = vd::get_dmBnvirdTm<2, 1, ADBackends::multicomplex>(model, 298.15, z);
     CHECK(derBnAD == Approx(derBnMCX));
@@ -338,7 +334,6 @@ TEST_CASE("dpsat/dTsat", "[dpdTsat]") {
 TEST_CASE("Trace a VLE isotherm for CO2 + water", "[isothermCO2water]") {
     std::string root = "../mycp";
     const auto model = build_multifluid_model({ "CarbonDioxide", "Water" }, root);
-    using id = IsochoricDerivatives<decltype(model)>;
     double T = 308.15;
     auto rhovecL = (Eigen::ArrayXd(2) << 0.0, 55174.92375117).finished();
     auto rhovecV = (Eigen::ArrayXd(2) << 0.0, 2.20225704).finished();
@@ -346,14 +341,12 @@ TEST_CASE("Trace a VLE isotherm for CO2 + water", "[isothermCO2water]") {
     auto o = trace_VLE_isotherm_binary(model, T, rhovecL, rhovecV);
 }
 
-TEST_CASE("Trace a VLE isotherm for acetone + water", "[isothermacetonebenzene]") {
+TEST_CASE("Trace a VLE isotherm for acetone + benzene", "[isothermacetonebenzene]") {
     std::string root = "../mycp";
     const auto model = build_multifluid_model({ "Acetone", "Benzene" }, root);
-    using id = IsochoricDerivatives<decltype(model)>;
     double T = 348.05;
     auto rhovecL = (Eigen::ArrayXd(2) << 12502.86504072, 0.0).finished();
     auto rhovecV = (Eigen::ArrayXd(2) << 69.20719534,  0.0).finished();
-
     auto o = trace_VLE_isotherm_binary(model, T, rhovecL, rhovecV);
 }
 
@@ -389,7 +382,7 @@ TEST_CASE("Calculate partial molar volume for a CO2 containing mixture", "[parti
 
     std::valarray<double> expected = { 0.000149479684800994, -0.000575458122621522 };
     auto der = id::get_partial_molar_volumes(model, T, rhovec);
-    for (auto i = 0; i < expected.size(); ++i){
+    for (auto i = 0U; i < expected.size(); ++i){
         CHECK(expected[i] == Approx(der[i]));
     }
 }
@@ -504,7 +497,7 @@ TEST_CASE("Test ECS for pure fluids", "[ECS]"){
     auto model = teqp::cppinterface::make_model(nlohmann::json::parse(contents));
     double T = 400, rho = 2700;
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
-    double alphar = model->get_Ar00(T, rho, z);
+    model->get_Ar00(T, rho, z);
 }
 
 TEST_CASE("Check models for R", "[multifluidR]") {
