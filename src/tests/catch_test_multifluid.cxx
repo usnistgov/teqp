@@ -46,6 +46,33 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid", "[
         int rr = 0;
 
     }
+    }
+
+TEST_CASE("Benchmark CO2 with Span and Wagner model", "[CO2bench]"){
+    auto contents = R"(
+    {
+      "kind": "multifluid",
+      "model": {
+        "components": ["CarbonDioxide"],
+        "root": "../mycp"
+      }
+    }
+    )"_json;
+    auto model = teqp::cppinterface::make_model(contents);
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    BENCHMARK("alphar"){
+        return model->get_Ar00(300, 10000, z);
+    };
+    BENCHMARK("Ar11"){
+        return model->get_Ar11(300, 10000, z);
+    };
+    BENCHMARK("Ar02"){
+        return model->get_Ar02(300, 10000, z);
+    };
+    BENCHMARK("Ar20"){
+        return model->get_Ar20(300, 10000, z);
+    };
 }
 
 TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with both orders", "[crit]")

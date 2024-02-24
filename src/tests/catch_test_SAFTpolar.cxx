@@ -279,6 +279,82 @@ TEST_CASE("Benchmark CO2 with polar PC-SAFT model", "[CO2bench]"){
         return model->get_Ar20(300, 10000, z);
     };
 }
+
+TEST_CASE("Benchmark methane with PC-SAFT model", "[CO2bench]"){
+    auto contents = R"(
+    {
+      "kind": "PCSAFT",
+      "model": {
+        "coeffs": [{
+                "name": "METHANE",
+                 "BibTeXKey": "Gross-AICHEJ",
+                 "m": 1.0,
+                 "sigma_Angstrom": 3.7039,
+                 "epsilon_over_k": 150.03
+            }]
+      }
+    }
+    )"_json;
+    auto model = teqp::cppinterface::make_model(contents);
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    BENCHMARK("alphar"){
+        return model->get_Ar00(300, 10000, z);
+    };
+    BENCHMARK("Ar11"){
+        return model->get_Ar11(300, 10000, z);
+    };
+    BENCHMARK("Ar02"){
+        return model->get_Ar02(300, 10000, z);
+    };
+    BENCHMARK("Ar20"){
+        return model->get_Ar20(300, 10000, z);
+    };
+}
+
+
+TEST_CASE("Benchmark CO2+methane with polar PC-SAFT model", "[CO2bench]"){
+    auto contents = R"(
+    {
+      "kind": "PCSAFT",
+      "model": {
+        "coeffs": [{
+            "name": "CO2",
+             "BibTeXKey": "Gross-AICHEJ",
+             "m": 1.5131,
+             "sigma_Angstrom": 3.1869,
+             "epsilon_over_k": 169.33,
+             "(Q^*)^2": 1.26,
+             "nQ": 1
+            },
+            {
+                "name": "METHANE",
+                 "BibTeXKey": "Gross-AICHEJ",
+                 "m": 1.0,
+                 "sigma_Angstrom": 3.7039,
+                 "epsilon_over_k": 150.03,
+                 "(Q^*)^2": 0.0,
+                 "nQ": 1
+            }]
+      }
+    }
+    )"_json;
+    auto model = teqp::cppinterface::make_model(contents);
+    auto z = (Eigen::ArrayXd(2) << 0.15,0.85).finished();
+    
+    BENCHMARK("alphar"){
+        return model->get_Ar00(300, 10000, z);
+    };
+    BENCHMARK("Ar11"){
+        return model->get_Ar11(300, 10000, z);
+    };
+    BENCHMARK("Ar02"){
+        return model->get_Ar02(300, 10000, z);
+    };
+    BENCHMARK("Ar20"){
+        return model->get_Ar20(300, 10000, z);
+    };
+}
     
 
 TEST_CASE("Test Paricaud model", "[Paricaud]"){
