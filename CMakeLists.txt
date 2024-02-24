@@ -129,9 +129,9 @@ if (NOT TEQP_NO_TEQPCPP)
           /W4 /wd4127 /wd4389 /wd4100>)
 
   if(MSVC)
-    target_compile_options(teqpcpp PRIVATE /W4 /WX)
+    target_compile_options(teqpcpp PRIVATE /W4 ) # or add /WX to turn warnings into errors
   else()
-    target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic) # or add -Werror to turn warnings into errors
   endif()
 
   if (TEQP_TESTTEQPCPP)
