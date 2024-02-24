@@ -218,7 +218,7 @@ struct TDXDerivatives {
                 throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iD > 0 and iT > 0");
             }
         }
-        return static_cast<Scalar>(-999999999*T); // This will never hit, only to make compiler happy because it doesn't know the return type
+//        return static_cast<Scalar>(-999999999*T); // This will never hit, only to make compiler happy because it doesn't know the return type
     }
 
     /**
@@ -334,7 +334,7 @@ struct TDXDerivatives {
             return o;
         }
 #endif
-        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar0n");
+//        throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Ar0n");
     }
     
     template<int Nderiv, ADBackends be = ADBackends::autodiff, class AlphaWrapper>
