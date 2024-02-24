@@ -325,7 +325,7 @@ namespace teqp {
         template<typename TType, typename RhoType, typename MoleFrac>
         auto alphaig(const TType& T, const RhoType &rho, const MoleFrac &molefrac) const {
             std::common_type_t <TType, RhoType, decltype(molefrac[0])> ig = 0.0;
-            if (molefrac.size() != pures.size()){
+            if (static_cast<std::size_t>(molefrac.size()) != pures.size()){
                 throw teqp::InvalidArgument("molefrac and pures are not the same length");
             }
             std::size_t i = 0;

@@ -187,7 +187,7 @@ struct SAFTVRMieChainContributionTerms{
             throw std::invalid_argument("epsilon_ij_flag is invalid");
         }
     }
-    std::size_t get_N(){
+    auto get_N(){
         auto sizes = (Eigen::ArrayX<Eigen::Index>(5) << m.size(), epsilon_over_k.size(), sigma_A.size(), lambda_a.size(), lambda_r.size()).finished();
         if (sizes.maxCoeff() != sizes.minCoeff()){
             throw teqp::InvalidArgument("sizes of pure component arrays are not all the same");
@@ -252,7 +252,7 @@ struct SAFTVRMieChainContributionTerms{
     const Eigen::ArrayXd m, epsilon_over_k, sigma_A, lambda_a, lambda_r;
     const Eigen::ArrayXXd kmat;
 
-    const std::size_t N;
+    const Eigen::Index N;
     const EpsilonijFlags epsilon_ij_flag = EpsilonijFlags::kLafitte;
 
     // Calculated matrices for the ij pair

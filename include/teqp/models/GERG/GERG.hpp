@@ -180,7 +180,7 @@ private:
 public:
     GERG200XCorrespondingStatesTerm(const std::vector<std::string>& names, const GetPureCoeffs &get_pure_coeffs) : _get_pure_coeffs(get_pure_coeffs), EOSs(get_EOS(names)) {};
     
-    auto size() const { return EOSs.size(); }
+    std::size_t size() const { return EOSs.size(); }
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
@@ -261,7 +261,7 @@ private:
         std::vector<std::vector<GERG200XDepartureFunction>> mat;
         for (auto i = 0U; i < N; ++i){
             std::vector<GERG200XDepartureFunction> row;
-            for (auto j = 0; j < N; ++j){
+            for (auto j = 0U; j < N; ++j){
                 if (i != j && Fmat(i,j) != 0){
                     row.emplace_back(names[i], names[j], _get_departurecoeffs);
                 }
@@ -282,7 +282,7 @@ public:
         using resulttype = std::common_type_t<decltype(tau), decltype(delta), decltype(molefracs[0])>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
-        if (N != Fmat.cols()){
+        if (N != static_cast<std::size_t>(Fmat.cols())){
             throw std::invalid_argument("wrong size");
         }
         
@@ -943,7 +943,7 @@ public:
     auto alphar(const TType &T,
         const RhoType &rho,
         const MoleFracType& molefrac) const {
-        if (molefrac.size() != corr.size()){
+        if (static_cast<std::size_t>(molefrac.size()) != corr.size()){
             throw std::invalid_argument("sizes don't match");
         }
         auto Tred = forceeval(red.get_Tr(molefrac));

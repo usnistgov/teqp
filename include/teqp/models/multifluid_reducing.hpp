@@ -231,7 +231,7 @@ namespace teqp {
         }
         auto get_BIP(const std::size_t& i, const std::size_t& j, const std::string& key) const {
             const auto& mat = get_mat(key);
-            if (i < mat.rows() && j < mat.cols()){
+            if (i < static_cast<std::size_t>(mat.rows()) && j < static_cast<std::size_t>(mat.cols())){
                 return mat(i,j);
             }
             else{
@@ -293,7 +293,7 @@ namespace teqp {
         }
         auto get_BIP(const std::size_t& i, const std::size_t& j, const std::string& key) const {
             const auto& mat = get_mat(key);
-            if (i < mat.rows() && j < mat.cols()){
+            if (i < static_cast<std::size_t>(mat.rows()) && j < static_cast<std::size_t>(mat.cols())){
                 return mat(i,j);
             }
             else{

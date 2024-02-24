@@ -611,7 +611,7 @@ void AlpharGERG(const int iprop, const double T, const double D, const std::vect
     }
 }
 
-void tTermsGERG(const double tau, const double lntau, const std::vector<double> &x)
+void tTermsGERG(const double /*tau*/, const double lntau, const std::vector<double> &x)
 {
     // Private Sub tTermsGERG(tau, lntau, x)
 

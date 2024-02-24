@@ -157,7 +157,7 @@ protected:
         if (kmat.cols() == 0) {
             kmat.resize(N, N); kmat.setZero();
         }
-        else if (kmat.cols() != N) {
+        else if (static_cast<std::size_t>(kmat.cols()) != N) {
             throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components [" + std::to_string(N) + "]");
         }
     };
@@ -245,7 +245,7 @@ public:
                 const RhoType& rho,
                 const MoleFracType& molefrac) const
     {
-        if (molefrac.size() != alphas.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != alphas.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
         auto b = get_b(T, molefrac);
@@ -494,7 +494,7 @@ public:
     
     template<typename TType, typename MoleFractions>
     auto combinatorial(const TType& /*T*/, const MoleFractions& molefracs) const {
-        if (b.size() != molefracs.size()){
+        if (b.size() != static_cast<std::size_t>(molefracs.size())){
             throw teqp::InvalidArgument("Bad size of molefracs");
         }
         
@@ -713,7 +713,7 @@ public:
                 const RhoType& rho,
                 const MoleFracType& molefrac) const
     {
-        if (molefrac.size() != alphas.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != alphas.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
         auto b = get_b(T, molefrac);

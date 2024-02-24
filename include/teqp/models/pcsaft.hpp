@@ -202,7 +202,7 @@ public:
     template<typename TTYPE, typename RhoType, typename VecType>
     auto eval(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
         
-        std::size_t N = m.size();
+        Eigen::Index N = m.size();
         
         if (mole_fractions.size() != N) {
             throw std::invalid_argument("Length of mole_fractions (" + std::to_string(mole_fractions.size()) + ") is not the length of components (" + std::to_string(N) + ")");
