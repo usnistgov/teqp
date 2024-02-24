@@ -187,7 +187,7 @@ public:
         using resulttype = std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
-        if (N != size()){
+        if (static_cast<std::size_t>(N) != size()){
             throw std::invalid_argument("wrong size");
         }
         for (auto i = 0U; i < N; ++i) {
@@ -282,7 +282,7 @@ public:
         using resulttype = std::common_type_t<decltype(tau), decltype(delta), decltype(molefracs[0])>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
-        if (N != static_cast<std::size_t>(Fmat.cols())){
+        if (static_cast<std::size_t>(N) != static_cast<std::size_t>(Fmat.cols())){
             throw std::invalid_argument("wrong size");
         }
         

@@ -39,12 +39,12 @@ std::unordered_map<unsigned long long int, std::shared_ptr<teqp::cppinterface::A
 void exception_handler(int& errcode, char* message_buffer, const int buffer_length)
 {
     auto write_error = [&](const std::string& msg){
-        if (msg.size() < buffer_length){
+        if (msg.size() < static_cast<std::size_t>(buffer_length)){
             strcpy(message_buffer, msg.c_str());
         }
         else{
             std::string toolong_message = "Error message too long for buffer";
-            if (toolong_message.size() < buffer_length){
+            if (toolong_message.size() < static_cast<std::size_t>(buffer_length)){
                 strcpy(message_buffer, toolong_message.c_str());
             }
             else if (buffer_length > 1){

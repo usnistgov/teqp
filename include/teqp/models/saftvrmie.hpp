@@ -745,7 +745,7 @@ private:
     const SAFTVRMieChainContributionTerms terms;
     const std::optional<SAFTpolar::multipolar_contributions_variant> polar; // Can be present or not
 
-    static void check_kmat(const Eigen::ArrayXXd& kmat, std::size_t N) {
+    static void check_kmat(const Eigen::ArrayXXd& kmat, Eigen::Index N) {
         if (kmat.size() == 0){
             return;
         }
@@ -940,7 +940,7 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
     
     if (spec.contains("names")){
         std::vector<std::string> names = spec["names"];
-        if (kmat && kmat.value().rows() != names.size()){
+        if (kmat && static_cast<std::size_t>(kmat.value().rows()) != names.size()){
             throw teqp::InvalidArgument("Provided length of names of " + std::to_string(names.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
         }
         return SAFTVRMieMixture(names, kmat);
@@ -974,7 +974,7 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
             }
             coeffs.push_back(c);
         }
-        if (kmat && kmat.value().rows() != coeffs.size()){
+        if (kmat && static_cast<std::size_t>(kmat.value().rows()) != coeffs.size()){
             throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " +  std::to_string(kmat.value().rows()));
         }
         
