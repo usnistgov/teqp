@@ -93,6 +93,9 @@ namespace teqp{
             // Assume we are already providing the thing
             return j;
         }
+        else if (j.is_array() && j.size() > 0){
+            return j;
+        }
         else if (j.is_string()){
             // If a string, either data in JSON format, or a path-like thing
             std::string s = j.get<std::string>();
