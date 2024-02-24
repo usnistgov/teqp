@@ -9,10 +9,12 @@ using Catch::Approx;
 
 using namespace teqp;
 
+#include "test_common.in"
+
 TEST_CASE("Test construction of mutant", "[mutant]")
 {
 
-    std::string coolprop_root = "../mycp";
+    std::string coolprop_root = FLUIDDATAPATH;
     auto BIPcollection = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
 
     auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, coolprop_root, BIPcollection);
@@ -47,20 +49,20 @@ TEST_CASE("Test construction of mutant", "[mutant]")
 }
 
 TEST_CASE("Crashing mutant construction", "[mutant]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
     auto BIPcollection =  root + "/dev/mixtures/mixture_binary_pairs.json";
-    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, FLUIDDATAPATH, BIPcollection, flags);
     std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {"type": "Exponential", "n": [], "t": [], "d": [], "l": []}}}})";
     nlohmann::json j = nlohmann::json::parse(s0);
     auto mutant = build_multifluid_mutant(model, j);
 }
 
 TEST_CASE("Mutant with predefined departure function", "[mutant]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
     auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
-    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, FLUIDDATAPATH, BIPcollection, flags);
     std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {"type": "lookup", "name": "KWR"}}}})";
     nlohmann::json j = nlohmann::json::parse(s0);
     j["0"]["1"]["departure"] = get_departure_json("KWT", root);
@@ -68,20 +70,20 @@ TEST_CASE("Mutant with predefined departure function", "[mutant]") {
 }
 
 TEST_CASE("Mutant with NULL departure function (error)", "[mutant]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
     auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
-    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, FLUIDDATAPATH, BIPcollection, flags);
     std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {"type": "NULL"}}}})";
     nlohmann::json j = nlohmann::json::parse(s0);
     CHECK_THROWS(build_multifluid_mutant(model, j));
 }
 
 TEST_CASE("Mutant with none departure function (ok)", "[mutant]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
     auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
-    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, FLUIDDATAPATH, BIPcollection, flags);
     std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 1.0, "gammaT": 1.0, "betaV": 1.0, "gammaV": 1.0, "Fij": 1.0}, "departure": {"type": "none"}}}})";
     nlohmann::json j = nlohmann::json::parse(s0);
     CHECK_NOTHROW(build_multifluid_mutant(model, j));
@@ -90,7 +92,7 @@ TEST_CASE("Mutant with none departure function (ok)", "[mutant]") {
 TEST_CASE("Test construction of mutant with invariant departure function", "[mutant][invariant]")
 {
 
-    std::string coolprop_root = "../mycp";
+    std::string coolprop_root = FLUIDDATAPATH;
     auto BIPcollection = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
 
     auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, coolprop_root, BIPcollection);
@@ -146,7 +148,7 @@ TEST_CASE("Test construction of mutant with invariant departure function", "[mut
 
 TEST_CASE("Test infinite dilution critical locus derivatives for multifluid mutant with both orders", "[crit],[multifluid],[xxx]")
 {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
 
     auto pure_endpoint = [&](const std::vector < std::string>& fluids, int i) {
         const auto model = build_multifluid_model(fluids, root);
@@ -182,10 +184,10 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid muta
 }
 
 TEST_CASE("Mutant with Chebyshev departure function", "[mutant]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
     auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
-    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, "../mycp", BIPcollection, flags);
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, FLUIDDATAPATH, BIPcollection, flags);
     
     std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 1.0, "gammaT": 1.0, "betaV": 1.0, "gammaV": 1.0, "Fij": 1.0}, 
     "departure": {"type": "Chebyshev2D", "a":[1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4], "taumin": 1e-10, "taumax": 5, "deltamin": 1e-6, "deltamax": 4, "Ntau":3, "Ndelta":3
@@ -205,7 +207,7 @@ TEST_CASE("Mutant with Chebyshev departure function", "[mutant]") {
 
 TEST_CASE("Exponential terms in the wrong order","[mutant]"){
     std::vector<std::string> fluids = { "Methane", "Water" };
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     const auto model = build_multifluid_model(fluids, root);
 
     nlohmann::json jnormal = R"({"0": {"1": {"BIP": {"betaT": 0.850879634551532, "gammaT": 1.2416653630048216, "betaV": 0.7616480056314916, "gammaV": 0.9947751468478655, "Fij": 1.0}, "departure": {

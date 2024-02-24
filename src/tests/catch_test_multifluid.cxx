@@ -21,12 +21,14 @@ using Catch::Approx;
 #include <boost/multiprecision/cpp_bin_float.hpp>
 using namespace boost::multiprecision;
 
+#include "test_common.in"
+
 using namespace teqp;
 using multifluid_t = decltype(build_multifluid_model({""}, ""));
 
 TEST_CASE("Test infinite dilution critical locus derivatives for multifluid", "[crit]")
 {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
 
     const auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, root);
     using ct = CriticalTracing<decltype(model), double, Eigen::ArrayXd>;
@@ -54,10 +56,11 @@ TEST_CASE("Benchmark CO2 with Span and Wagner model", "[CO2bench]"){
       "kind": "multifluid",
       "model": {
         "components": ["CarbonDioxide"],
-        "root": "../mycp"
+        "root": "???"
       }
     }
     )"_json;
+    contents["model"]["root"] = FLUIDDATAPATH;
     auto model = teqp::cppinterface::make_model(contents);
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     
@@ -77,7 +80,7 @@ TEST_CASE("Benchmark CO2 with Span and Wagner model", "[CO2bench]"){
 
 TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with both orders", "[crit]")
 {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
 
     auto pure_endpoint = [&](const std::vector < std::string> &fluids, int i) {
         const auto model = build_multifluid_model(fluids, root);
@@ -114,13 +117,13 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with
 
 TEST_CASE("Confirm failure for missing files","[multifluid]") {
     CHECK_THROWS(build_multifluid_model({ "BADFLUID" }, "IMPOSSIBLE PATH", "IMPOSSIBLE PATH.json"));
-    CHECK_THROWS(build_multifluid_model({ "BADFLUID" }, "IMPOSSIBLE PATH", "../mycp/dev/mixtures/mixture_binary_pairs.json"));
+    CHECK_THROWS(build_multifluid_model({ "BADFLUID" }, "IMPOSSIBLE PATH", FLUIDDATAPATH+"/dev/mixtures/mixture_binary_pairs.json"));
     CHECK_THROWS(build_multifluid_model({ "Ethane" }, "IMPOSSIBLE PATH"));
 }
 
 TEST_CASE("Trace critical locus for nitrogen + ethane", "[crit],[multifluid]")
 {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     const auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, root);
 
     for (auto ifluid = 0; ifluid < 2; ++ifluid) {
@@ -151,7 +154,7 @@ TEST_CASE("Trace critical locus for nitrogen + ethane", "[crit],[multifluid]")
 }
 
 TEST_CASE("Check that all pure fluid models can be instantiated", "[multifluid],[all]"){
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     SECTION("With absolute paths to json file") {
         int counter = 0;
         for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
@@ -177,7 +180,7 @@ TEST_CASE("Check that all pure fluid models can be instantiated", "[multifluid],
 }
 
 TEST_CASE("Check that all ancillaries can be instantiated and work properly", "[multifluid],[all]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     SECTION("With absolute paths to json file") {
         int counter = 0;
         for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
@@ -214,7 +217,7 @@ TEST_CASE("Check that all ancillaries can be instantiated and work properly", "[
 }
 
 TEST_CASE("Check that mixtures can also do absolute paths", "[multifluid],[abspath]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     SECTION("With absolute paths to json file") {
         std::vector<std::filesystem::path> paths = { root + "/dev/fluids/Methane.json", root + "/dev/fluids/Ethane.json" };
         std::vector<std::string> abspaths;
@@ -227,7 +230,7 @@ TEST_CASE("Check that mixtures can also do absolute paths", "[multifluid],[abspa
 }
 
 TEST_CASE("Check mixing absolute and relative paths and fluid names", "[multifluid],[abspath]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     SECTION("With correct name of fluid") {
         std::vector<std::string> paths = { std::filesystem::absolute(root + "/dev/fluids/Methane.json").string(), "Ethane" };
         auto model = build_multifluid_model(paths, root, root + "/dev/mixtures/mixture_binary_pairs.json");
@@ -239,7 +242,7 @@ TEST_CASE("Check mixing absolute and relative paths and fluid names", "[multiflu
 }
 
 TEST_CASE("Check specifying some different kinds of sources of BIP", "[multifluidBIP]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     SECTION("Not JSON, should throw") {
         std::vector<std::string> paths = { std::filesystem::absolute(root + "/dev/fluids/Nitrogen.json").string(), "Ethane" };
         CHECK_THROWS(build_multifluid_model(paths, root, "I am not a JSON formatted string"));
@@ -256,7 +259,7 @@ TEST_CASE("Check specifying some different kinds of sources of BIP", "[multiflui
 }
 
 TEST_CASE("Check that all binary pairs specified in the binary pair file can be instantiated", "[multifluid],[binaries]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     REQUIRE_NOTHROW(build_alias_map(root));
     auto amap = build_alias_map(root);
     for (auto el : load_a_JSON_file(root + "/dev/mixtures/mixture_binary_pairs.json")) {
@@ -273,7 +276,7 @@ TEST_CASE("Check that all binary pairs specified in the binary pair file can be 
 }
 
 TEST_CASE("Check that all pure fluid models can be evaluated at zero density", "[multifluid],[all],[virial]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     SECTION("With filename stems") {
         for (auto path : get_files_in_folder(root + "/dev/fluids", ".json")) {
             auto stem = path.filename().stem().string(); // filename without the .json
@@ -295,7 +298,7 @@ TEST_CASE("Check that all pure fluid models can be evaluated at zero density", "
 }
 
 TEST_CASE("Check that virial coefficients can be calculated with multiple derivative methods", "[multifluid],[virial]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     std::string stem = "Argon";
     CAPTURE(stem); 
     
@@ -317,7 +320,7 @@ TEST_CASE("Check that virial coefficients can be calculated with multiple deriva
 }
 
 TEST_CASE("dpsat/dTsat", "[dpdTsat]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     const auto model = build_multifluid_model({ "Methane", "Ethane" }, root);
     using id = IsochoricDerivatives<decltype(model)>;
     double T = 200;
@@ -332,7 +335,7 @@ TEST_CASE("dpsat/dTsat", "[dpdTsat]") {
 }
 
 TEST_CASE("Trace a VLE isotherm for CO2 + water", "[isothermCO2water]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     const auto model = build_multifluid_model({ "CarbonDioxide", "Water" }, root);
     double T = 308.15;
     auto rhovecL = (Eigen::ArrayXd(2) << 0.0, 55174.92375117).finished();
@@ -342,7 +345,7 @@ TEST_CASE("Trace a VLE isotherm for CO2 + water", "[isothermCO2water]") {
 }
 
 TEST_CASE("Trace a VLE isotherm for acetone + benzene", "[isothermacetonebenzene]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     const auto model = build_multifluid_model({ "Acetone", "Benzene" }, root);
     double T = 348.05;
     auto rhovecL = (Eigen::ArrayXd(2) << 12502.86504072, 0.0).finished();
@@ -351,7 +354,7 @@ TEST_CASE("Trace a VLE isotherm for acetone + benzene", "[isothermacetonebenzene
 }
 
 TEST_CASE("Calculate water at critical point", "[WATERcrit]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     const auto model = build_multifluid_model({ "Water" }, root);
     
     using tdx = TDXDerivatives<decltype(model)>;
@@ -372,7 +375,7 @@ TEST_CASE("Calculate water at critical point", "[WATERcrit]") {
 }
 
 TEST_CASE("Calculate partial molar volume for a CO2 containing mixture", "[partial_molar_volume]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     const auto model = build_multifluid_model({ "CarbonDioxide", "Heptane" }, root);
     using id = IsochoricDerivatives<decltype(model), double, Eigen::ArrayXd>;
     
@@ -388,7 +391,7 @@ TEST_CASE("Calculate partial molar volume for a CO2 containing mixture", "[parti
 }
 
 TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multifluid],[all],[alphaig]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     auto paths = get_files_in_folder(root + "/dev/fluids", ".json");
     auto p = GENERATE_REF(from_range(paths));
     CHECK(std::filesystem::is_regular_file(p));
@@ -407,7 +410,7 @@ TEST_CASE("Check that all pure fluid ideal-gas terms can be converted", "[multif
 }
 
 TEST_CASE("Check that BIP can be set in a string", "[multifluida]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     double T = 300, rhomolar = 300;
     auto z = (Eigen::ArrayXd(2) << 0.4, 0.6).finished();
     auto def = build_multifluid_model({"Nitrogen","Ethane"}, root); // default parameters
@@ -428,7 +431,7 @@ TEST_CASE("Check that BIP can be set in a string", "[multifluida]") {
 }
 
 TEST_CASE("Check ammonia+argon", "[multifluidArNH3]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     
     // Check that default model (no departure function) prints the right
     auto def = build_multifluid_model({"AMMONIA","ARGON"}, root); // default parameters
@@ -464,7 +467,7 @@ TEST_CASE("Check ammonia+argon", "[multifluidArNH3]") {
 
 
 TEST_CASE("Check pure fluid throws with composition array of wrong length", "[virial]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     const auto model = build_multifluid_model({ "CarbonDioxide" }, root);
     double T = 300;
     auto z = (Eigen::ArrayXd(2) << 0.3, 0.9).finished();
@@ -477,7 +480,7 @@ TEST_CASE("Test ECS for pure fluids", "[ECS]"){
         "kind": "multifluid-ECS-HuberEly1994",
         "model": {
           "reference_fluid": {
-                "name": "../mycp/dev/fluids/R113.json",
+                "name": "../teqp/fluiddata/dev/fluids/R113.json",
                 "acentric": 0.25253,
                 "Z_crit": 0.280191,
                 "T_crit / K": 487.21,
@@ -501,7 +504,7 @@ TEST_CASE("Test ECS for pure fluids", "[ECS]"){
 }
 
 TEST_CASE("Check models for R", "[multifluidR]") {
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     
@@ -542,7 +545,7 @@ TEST_CASE("Ar20 for CO2", "[Ar20CO2]"){
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     
     using my_float = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>; // Overkill: 200 digits of working precision!
-    auto model = build_multifluid_model({"CO2"}, "../mycp");
+    auto model = build_multifluid_model({"CO2"}, FLUIDDATAPATH);
     
     auto f = [&rho, &z, &model](const auto Trecip){ return model.alphar(1.0/Trecip, rho, z); };
     

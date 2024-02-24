@@ -18,6 +18,8 @@ using namespace autodiff;
 
 using namespace teqp;
 
+#include "test_common.in"
+
 TEST_CASE("Trace critical curve w/ Tillner-Roth", "[NH3H2O]") {
     auto model = AmmoniaWaterTillnerRoth();
     auto z = (Eigen::ArrayXd(2) <<  0.7, 0.3).finished();
@@ -40,7 +42,7 @@ TEST_CASE("Trace critical curve w/ Tillner-Roth", "[NH3H2O]") {
 }
 
 TEST_CASE("Bell et al. REFPROP 10", "[NH3H2O]") {
-    auto model = build_multifluid_model({ "AMMONIA", "WATER" }, "../mycp", "", {{ "estimate","Lorentz-Berthelot" }});
+    auto model = build_multifluid_model({ "AMMONIA", "WATER" }, FLUIDDATAPATH, "", {{ "estimate","Lorentz-Berthelot" }});
 
     std::string s = R"({
         "0": {
@@ -82,7 +84,7 @@ TEST_CASE("Bell et al. REFPROP 10", "[NH3H2O]") {
 }
 
 TEST_CASE("pure water VLE should not crash for Tillner-Roth model","[NH3H2O]") {
-    auto pure = build_multifluid_model({ "Water" }, "../mycp");
+    auto pure = build_multifluid_model({ "Water" }, FLUIDDATAPATH);
     auto jancillaries = nlohmann::json::parse(pure.get_meta()).at("pures")[0].at("ANCILLARIES");
     auto anc = teqp::MultiFluidVLEAncillaries(jancillaries);
     double T = 500;

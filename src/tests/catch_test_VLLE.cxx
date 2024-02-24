@@ -10,6 +10,8 @@ using Catch::Approx;
 
 using namespace teqp;
 
+#include "test_common.in"
+
 TEST_CASE("Test intersection for trisectrix", "[VLLE]"){
     // As in the examples in https://doi.org/10.1021/acs.iecr.1c04703
     Eigen::ArrayXd t = Eigen::ArrayXd::LinSpaced(300, -3, 3);
@@ -29,17 +31,17 @@ TEST_CASE("Test VLLE for nitrogen + ethane for isotherm", "[VLLE]")
     // As in the examples in https://doi.org/10.1021/acs.iecr.1c04703
     std::vector<std::string> names = {"Nitrogen", "Ethane"};
     using namespace teqp::cppinterface;
-    auto model = make_multifluid_model(names, "../mycp");
+    auto model = make_multifluid_model(names, FLUIDDATAPATH);
     std::vector<decltype(model)> pures;
-    pures.emplace_back(make_multifluid_model({names[0]}, "../mycp"));
-    pures.emplace_back(make_multifluid_model({names[1]}, "../mycp"));
+    pures.emplace_back(make_multifluid_model({names[0]}, FLUIDDATAPATH));
+    pures.emplace_back(make_multifluid_model({names[1]}, FLUIDDATAPATH));
 
     double T = 120.3420;
     std::vector<nlohmann::json> traces;
     for (int ipure : {0, 1}){
 
         // Init at the pure fluid endpoint
-        auto m0 = build_multifluid_model({names[ipure]}, "../mycp");
+        auto m0 = build_multifluid_model({names[ipure]}, FLUIDDATAPATH);
         auto pure0 = nlohmann::json::parse(m0.get_meta()).at("pures")[0];
         auto jancillaries = pure0.at("ANCILLARIES");
         auto anc = teqp::MultiFluidVLEAncillaries(jancillaries);
@@ -72,17 +74,17 @@ TEST_CASE("Test VLLE for nitrogen + ethane for isobar", "[VLLE]")
     // As in the examples in https://doi.org/10.1021/acs.iecr.1c04703
     std::vector<std::string> names = {"Nitrogen", "Ethane"};
     using namespace teqp::cppinterface;
-    auto model = make_multifluid_model(names, "../mycp");
+    auto model = make_multifluid_model(names, FLUIDDATAPATH);
     std::vector<decltype(model)> pures;
-    pures.emplace_back(make_multifluid_model({names[0]}, "../mycp"));
-    pures.emplace_back(make_multifluid_model({names[1]}, "../mycp"));
+    pures.emplace_back(make_multifluid_model({names[0]}, FLUIDDATAPATH));
+    pures.emplace_back(make_multifluid_model({names[1]}, FLUIDDATAPATH));
 
     double p = 29.0e5; // [Pa] # From Antolovic
     std::vector<nlohmann::json> traces;
     for (int ipure : {1, 0}){
 
         // Init at the pure fluid endpoint for ethane
-        auto m0 = build_multifluid_model({names[ipure]}, "../mycp");
+        auto m0 = build_multifluid_model({names[ipure]}, FLUIDDATAPATH);
         auto pure0 = nlohmann::json::parse(m0.get_meta()).at("pures")[0];
         auto jancillaries = pure0.at("ANCILLARIES");
         auto anc = teqp::MultiFluidVLEAncillaries(jancillaries);
@@ -114,7 +116,7 @@ TEST_CASE("Test VLLE tracing", "[VLLE]")
     // As in the examples in https://doi.org/10.1021/acs.iecr.1c04703
     std::vector<std::string> names = {"Nitrogen", "Ethane"};
     using namespace teqp::cppinterface;
-    std::string root = "../mycp";
+    std::string root = FLUIDDATAPATH;
     auto model = make_multifluid_model(names, root);
     std::vector<decltype(model)> pures;
     pures.emplace_back(make_multifluid_model({names[0]}, root));
