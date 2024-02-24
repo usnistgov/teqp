@@ -205,12 +205,12 @@ namespace teqp {
 
             auto N = z.size();
             typename MoleFractions::value_type sum1 = 0.0;
-            for (auto i = 0; i < N; ++i) {
+            for (auto i = 0U; i < N; ++i) {
                 sum1 = sum1 + pow2(z[i]) * Yc[i];
             }
 
             typename MoleFractions::value_type sum2 = 0.0;
-            for (auto i = 0; i < N - 1; ++i) {
+            for (auto i = 0U; i < N - 1; ++i) {
                 for (auto j = i + 1; j < N; ++j) {
                     sum2 = sum2 + 2.0 * z[i] * z[j] * (z[i] + z[j]) / (pow2(beta(i, j)) * z[i] + z[j]) * Yij(i, j);
                 }
@@ -273,8 +273,8 @@ namespace teqp {
         auto Y(const MoleFractions& z, const Eigen::MatrixXd& phi, const Eigen::MatrixXd& lambda, const Eigen::MatrixXd& Yij) const {
             auto N = z.size();
             typename MoleFractions::value_type sum = 0.0;
-            for (auto i = 0; i < N; ++i) {
-                for (auto j = 0; j < N; ++j) {
+            for (auto i = 0U; i < N; ++i) {
+                for (auto j = 0U; j < N; ++j) {
                     auto contrib = z[i] * z[j] * (phi(i, j) + z[j] * lambda(i, j)) * Yij(i, j);
                     sum = sum + contrib;
                 }
