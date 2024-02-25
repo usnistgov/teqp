@@ -330,11 +330,11 @@ protected:
         return PCSAFTHardChainContribution(m, mminus1, sigma_Angstrom, epsilon_over_k, kmat);
     }
     auto extract_names(const std::vector<SAFTCoeffs> &coeffs){
-        std::vector<std::string> names;
+        std::vector<std::string> names_;
         for (const auto& c: coeffs){
-            names.push_back(c.name);
+            names_.push_back(c.name);
         }
-        return names;
+        return names_;
     }
     auto build_dipolar(const std::vector<SAFTCoeffs> &coeffs) -> std::optional<PCSAFTDipolarContribution>{
         Eigen::ArrayXd mustar2(coeffs.size()), nmu(coeffs.size());
