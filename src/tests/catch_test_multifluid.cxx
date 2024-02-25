@@ -498,7 +498,7 @@ TEST_CASE("Test ECS for pure fluids", "[ECS]"){
         }
     })"_json;
     contents["model"]["reference_fluid"]["name"] = FLUIDDATAPATH + "/dev/fluids/R113.json";
-    auto model = teqp::cppinterface::make_model(nlohmann::json::parse(contents));
+    auto model = teqp::cppinterface::make_model(contents);
     double T = 400, rho = 2700;
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     model->get_Ar00(T, rho, z);
