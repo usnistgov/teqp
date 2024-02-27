@@ -37,22 +37,22 @@ public:
     }
         
     template<class VecType>
-    auto R(const VecType& molefrac) const { return m_R; }
+    auto R(const VecType& /*molefrac*/) const { return m_R; }
     
     /// Calculate the contribution for one of the fluids, depending on the parameter set passed in
     template<typename TTYPE, typename RhoType, typename ZcType>
     auto alphar_func(const TTYPE& tau, const RhoType& delta, const ZcType& Zc, const LKPFluidParameters& params) const {
-        auto theta = 1/tau;
         auto B = params.b[1] - params.b[2]*tau - params.b[3]*powi(tau, 2) - params.b[4]*powi(tau, 3);
         auto C = params.c[1] - params.c[2]*tau + params.c[3]*powi(tau, 3);
         auto D = params.d[1] + params.d[2]*tau;
-        return forceeval(B/Zc*delta + 1.0/2.0*C*powi(delta/Zc, 2) + 1.0/5.0*D*powi(delta/Zc, 5) - params.c[4]*powi(tau, 3)/(2*params.gamma_)*(params.gamma_*powi(delta/Zc, 2)+params.beta+1.0)*exp(-params.gamma_*powi(delta/Zc, 2)) + params.c[4]*powi(tau,3)/(2*params.gamma_)*(params.beta+1.0));
+        auto deltaZc = forceeval(delta/Zc);
+        return forceeval(B/Zc*delta + 1.0/2.0*C*powi(deltaZc, 2) + 1.0/5.0*D*powi(deltaZc, 5) - params.c[4]*powi(tau, 3)/(2*params.gamma_)*(params.gamma_*powi(deltaZc, 2)+params.beta+1.0)*exp(-params.gamma_*powi(deltaZc, 2)) + params.c[4]*powi(tau,3)/(2*params.gamma_)*(params.beta+1.0));
     }
     
     template<typename TTYPE, typename RhoType, typename VecType>
     auto alphar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
         
-        if (mole_fractions.size() != acentric.size()){
+        if (static_cast<std::size_t>(mole_fractions.size()) != acentric.size()){
             throw teqp::InvalidArgument("The mole fractions should be of of size "+ std::to_string(acentric.size()));
         }
         
@@ -74,10 +74,10 @@ public:
         auto omega_mix = summer_omega;
         auto vc_mix = summer_vcmix;
         auto Tc_mix = 1.0/pow(summer_vcmix, 0.25)*summer_Tcmix;
-        auto pc_mix = (0.2905-0.085*omega_mix)*Ru*Tc_mix/vc_mix;
-        auto Zc = pc_mix*vc_mix/(Ru*Tc_mix);
-        auto tau = Tc_mix/T;
-        auto delta = vc_mix*rhomolar;
+//        auto pc_mix = (0.2905-0.085*omega_mix)*Ru*Tc_mix/vc_mix;
+        auto Zc = forceeval(0.2905-0.085*omega_mix);
+        auto tau = forceeval(Tc_mix/T);
+        auto delta = forceeval(vc_mix*rhomolar);
         
         auto retval = (1.0-omega_mix/ref.omega)*alphar_func(tau, delta, Zc, simple) + (omega_mix/ref.omega)*alphar_func(tau, delta, Zc, ref);
         return forceeval(retval);
@@ -85,7 +85,7 @@ public:
 };
 
 // Factory function takes in JSON data and returns an instance of the LKPMix class
-auto make_LKPMix(const nlohmann::json& j){
+inline auto make_LKPMix(const nlohmann::json& j){
     return LKPMix(j.at("Tcrit / K"), j.at("pcrit / Pa"), j.at("acentric"), j.at("R / J/mol/K"), j.at("kmat"));
 }
 

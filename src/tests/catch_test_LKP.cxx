@@ -5,6 +5,7 @@ using Catch::Approx;
 #include "teqp/derivs.hpp"
 #include "teqp/constants.hpp"
 #include "teqp/models/LKP.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 
 TEST_CASE("Check LKP", "[LKP]"){
     using namespace teqp::LKP;
@@ -19,7 +20,28 @@ TEST_CASE("Check LKP", "[LKP]"){
         auto model = LKPMix(Tc_K, pc_Pa, acentric, R, kmat);
         auto z = (Eigen::ArrayXd(1) << 1.0).finished();
         
-        teqp::TDXDerivatives<decltype(model)>::get_Ar00(model, 300.0, 8000.0, z);
+//        teqp::TDXDerivatives<decltype(model)>::get_Ar00(model, 300.0, 8000.0, z);
+        
+        nlohmann::json modelspec{
+            {"Tcrit / K", Tc_K},
+            {"pcrit / Pa", pc_Pa},
+            {"acentric", acentric},
+            {"R / J/mol/K", R},
+            {"kmat", kmat}
+        };
+//        std::cout << spec.dump(2) << std::endl;
+        
+        CHECK_NOTHROW(make_LKPMix(modelspec));
+        nlohmann::json badspec = modelspec;
+        badspec["kmat"] = 4.7;
+        CHECK_THROWS(make_LKPMix(badspec));
+        
+        nlohmann::json spec{
+            {"kind", "LKP"},
+            {"model", modelspec}
+        };
+        CHECK_NOTHROW(teqp::cppinterface::make_model(spec));
+        auto ptr = teqp::cppinterface::make_model(spec);
         
         struct Point{ double T, rhomolar, alphar_expected; };
         for (auto& pt : std::vector<Point>{
@@ -54,22 +76,10 @@ TEST_CASE("Check LKP", "[LKP]"){
         }){
             auto alphar_actual = teqp::TDXDerivatives<decltype(model)>::get_Ar00(model, pt.T, pt.rhomolar, z);
             CHECK(alphar_actual == Approx(pt.alphar_expected).margin(1e-12));
+            
+            auto alphar_actual_ptr = ptr->get_Ar00(pt.T, pt.rhomolar, z);
+            CHECK(alphar_actual_ptr == Approx(pt.alphar_expected).margin(1e-12));
         }
-        
-        nlohmann::json spec{
-            {"Tcrit / K", Tc_K},
-            {"pcrit / Pa", pc_Pa},
-            {"acentric", acentric},
-            {"R / J/mol/K", R},
-            {"kmat", kmat}
-        };
-//        std::cout << spec.dump(2) << std::endl;
-        
-        CHECK_NOTHROW(make_LKPMix(spec));
-        nlohmann::json badspec = spec;
-        badspec["kmat"] = 4.7;
-        CHECK_THROWS(make_LKPMix(badspec));
-        
     }
     
     SECTION("methane + nitrogen mix"){

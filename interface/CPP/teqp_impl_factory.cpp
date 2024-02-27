@@ -29,6 +29,8 @@ namespace teqp {
             {"CPA", [](const nlohmann::json& spec){ return make_owned(CPA::CPAfactory(spec));}},
             {"PCSAFT", [](const nlohmann::json& spec){ return make_owned(PCSAFT::PCSAFTfactory(spec));}},
             
+            {"LKP", [](const nlohmann::json& spec){ return make_owned(LKP::make_LKPMix(spec));}},
+            
             {"multifluid", [](const nlohmann::json& spec){ return make_owned(multifluidfactory(spec));}},
             {"multifluid-ECS-HuberEly1994", [](const nlohmann::json& spec){ return make_owned(ECSHuberEly::ECSHuberEly1994(spec));}},
             {"SW_EspindolaHeredia2009",  [](const nlohmann::json& spec){ return make_owned(squarewell::EspindolaHeredia2009(spec.at("lambda")));}},
