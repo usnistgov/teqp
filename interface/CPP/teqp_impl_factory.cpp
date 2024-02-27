@@ -16,6 +16,8 @@ namespace teqp {
     
         nlohmann::json get_model_schema(const std::string& kind) { return model_schema_library.at(kind); }
 
+        // A list of factory functions that maps from EOS kind to factory function
+        // The factory function returns a pointer to an AbstractModel (but which is an instance of a derived class)
         static std::unordered_map<std::string, makefunc> pointer_factory = {
             {"vdW1", [](const nlohmann::json& spec){ return make_owned(vdWEOS1(spec.at("a"), spec.at("b"))); }},
             {"vdW", [](const nlohmann::json& spec){ return make_owned(vdWEOS<double>(spec.at("Tcrit / K"), spec.at("pcrit / Pa"))); }},
