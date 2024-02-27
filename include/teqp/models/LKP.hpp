@@ -1,7 +1,10 @@
 #pragma once // Only include header once in a compilation unit if it is included multiple times
 
+#include <set>
+
 #include "teqp/constants.hpp" // used for R
 #include "teqp/types.hpp" // needed for forceeval
+#include "teqp/exceptions.hpp" // to return teqp error messages
 
 namespace teqp{
 namespace LKP{
@@ -22,12 +25,18 @@ public:
         {0, 0.487360e-4, 0.740336e-5},  // d, with pad to match indices
         1.226, 0.03754, 0.3978}; // beta, gamma, omega
     const std::vector<double> Tcrit, pcrit, acentric;
+    const double m_R; ///< molar gas constant to be used in this model, in J/mol/K
     const std::vector<std::vector<double>> kmat;
     
-    LKPMix(const std::vector<double>& Tcrit, const std::vector<double>& pcrit, const std::vector<double>& acentric, const std::vector<std::vector<double>>& kmat) : Tcrit(Tcrit), pcrit(pcrit), acentric(acentric), kmat(kmat){}
+    LKPMix(const std::vector<double>& Tcrit, const std::vector<double>& pcrit, const std::vector<double>& acentric, double R, const std::vector<std::vector<double>>& kmat) : Tcrit(Tcrit), pcrit(pcrit), acentric(acentric), m_R(R), kmat(kmat){
+        if (std::set<std::size_t>{Tcrit.size(), pcrit.size(), acentric.size()}.size() > 1){
+            throw teqp::InvalidArgument("The arrays should all be the same size.");
+        }
+        
+        }
         
     template<class VecType>
-    auto R(const VecType& molefrac) const { return teqp::constants::R_CODATA2017; }
+    auto R(const VecType& molefrac) const { return m_R; }
     
     /// Calculate the contribution for one of the fluids, depending on the parameter set passed in
     template<typename TTYPE, typename RhoType, typename ZcType>
@@ -42,9 +51,13 @@ public:
     template<typename TTYPE, typename RhoType, typename VecType>
     auto alphar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
         
+        if (mole_fractions.size() != acentric.size()){
+            throw teqp::InvalidArgument("The mole fractions should be of of size "+ std::to_string(acentric.size()));
+        }
+        
         const VecType& x = mole_fractions; // just an alias to save typing, no copy is invoked
         std::decay_t<decltype(mole_fractions[0])> summer_omega = 0.0, summer_vcmix = 0.0, summer_Tcmix = 0.0;
-        double Ru = teqp::constants::R_CODATA2017;
+        double Ru = m_R;
         
         for (auto i = 0; i < mole_fractions.size(); ++i){
             summer_omega += mole_fractions[i]*acentric[i];
