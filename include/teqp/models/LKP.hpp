@@ -6,6 +6,8 @@
 #include "teqp/types.hpp" // needed for forceeval
 #include "teqp/exceptions.hpp" // to return teqp error messages
 
+#include "nlohmann/json.hpp"
+
 namespace teqp{
 namespace LKP{
 
@@ -32,7 +34,6 @@ public:
         if (std::set<std::size_t>{Tcrit.size(), pcrit.size(), acentric.size()}.size() > 1){
             throw teqp::InvalidArgument("The arrays should all be the same size.");
         }
-        
     }
         
     template<class VecType>
@@ -82,6 +83,11 @@ public:
         return forceeval(retval);
     }
 };
+
+// Factory function takes in JSON data and returns an instance of the LKPMix class
+auto make_LKPMix(const nlohmann::json& j){
+    return LKPMix(j.at("Tcrit / K"), j.at("pcrit / Pa"), j.at("acentric"), j.at("R / J/mol/K"), j.at("kmat"));
+}
 
 }
 }

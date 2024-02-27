@@ -55,6 +55,21 @@ TEST_CASE("Check LKP", "[LKP]"){
             auto alphar_actual = teqp::TDXDerivatives<decltype(model)>::get_Ar00(model, pt.T, pt.rhomolar, z);
             CHECK(alphar_actual == Approx(pt.alphar_expected).margin(1e-12));
         }
+        
+        nlohmann::json spec{
+            {"Tcrit / K", Tc_K},
+            {"pcrit / Pa", pc_Pa},
+            {"acentric", acentric},
+            {"R / J/mol/K", R},
+            {"kmat", kmat}
+        };
+//        std::cout << spec.dump(2) << std::endl;
+        
+        CHECK_NOTHROW(make_LKPMix(spec));
+        nlohmann::json badspec = spec;
+        badspec["kmat"] = 4.7;
+        CHECK_THROWS(make_LKPMix(badspec));
+        
     }
     
     SECTION("methane + nitrogen mix"){
