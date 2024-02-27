@@ -5,10 +5,6 @@
 #include "teqp/exceptions.hpp"
 
 namespace teqp {
-/*
-To add:
-1. LKP (Stefan Herrig's thesis)
-*/
 
 /// A (very) simple implementation of the van der Waals EOS
 class vdWEOS1 {
