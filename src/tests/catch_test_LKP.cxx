@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 using Catch::Approx;
+#include <catch2/benchmark/catch_benchmark_all.hpp>
 
 #include "teqp/derivs.hpp"
 #include "teqp/constants.hpp"
@@ -132,4 +133,29 @@ TEST_CASE("Check LKP", "[LKP]"){
             CHECK(alphar_actual == Approx(pt.alphar_expected).margin(1e-12));
         }
     }
+    
+    // methane + nitrogen, check values from TREND
+    std::vector<double> Tc_K = {190.564, 126.192};
+    std::vector<double> pc_Pa = {4.5992e6, 3.3958e6};
+    std::vector<double> acentric = {0.011, 0.037};
+    std::vector<std::vector<double>> kmat{{1.0, 0.977},{0.977, 1.0}};
+    double R = 8.3144598;
+    auto model = LKPMix(Tc_K, pc_Pa, acentric, R, kmat);
+    auto z = (Eigen::ArrayXd(2) << 0.8, 0.2).finished();
+    
+    nlohmann::json modelspec{
+        {"Tcrit / K", Tc_K},
+        {"pcrit / Pa", pc_Pa},
+        {"acentric", acentric},
+        {"R / J/mol/K", R},
+        {"kmat", kmat}
+    };
+    nlohmann::json spec{
+        {"kind", "LKP"},
+        {"model", modelspec}
+    };
+    auto ptr = teqp::cppinterface::make_model(spec);
+    BENCHMARK("evaluation"){
+        return ptr->get_Ar00(300.0, 8000.0, z);
+    };
 }
