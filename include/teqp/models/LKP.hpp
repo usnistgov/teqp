@@ -14,7 +14,7 @@ struct LKPFluidParameters {
 class LKPMix{
 public:
     const LKPFluidParameters simple{{0.0, 0.1181193, 0.265728, 0.154790, 0.303230e-1}, // b, with pad to match indices
-        {0.0, 0.236744e-1, 0.186984e-1, 0, 0.4217240e-1},  // c, with pad to match indices
+        {0.0, 0.236744e-1, 0.186984e-1, 0, 0.427240e-1},  // c, with pad to match indices
         {0, 0.155428e-4, 0.623689e-4}, // d, with pad to match indices
         0.653920, 0.601670e-1, 0.0}, // beta, gamma, omega
     ref{{0, 0.2026579, 0.331511, 0.276550e-1, 0.203488},  // b, with pad to match indices
@@ -36,7 +36,7 @@ public:
         auto B = params.b[1] - params.b[2]*tau - params.b[3]*powi(tau, 2) - params.b[4]*powi(tau, 3);
         auto C = params.c[1] - params.c[2]*tau + params.c[3]*powi(tau, 2);
         auto D = params.d[1] + params.d[2]*tau;
-        return forceeval(B/Zc*delta + 1.0/2.0*C/powi(delta/Zc, 2) + 1.0/5.0*D*powi(delta/Zc, 5) - params.c[4]*powi(tau, 3)/(2*params.gamma_)*(params.gamma_*powi(delta/Zc, 2)+params.beta+1.0)*exp(-params.gamma_*powi(delta/Zc, 2)) + params.c[4]*powi(tau,3)/(2*params.gamma_)*(params.beta+1.0));
+        return forceeval(B/Zc*delta + 1.0/2.0*C*powi(delta/Zc, 2) + 1.0/5.0*D*powi(delta/Zc, 5) - params.c[4]*powi(tau, 3)/(2*params.gamma_)*(params.gamma_*powi(delta/Zc, 2)+params.beta+1.0)*exp(-params.gamma_*powi(delta/Zc, 2)) + params.c[4]*powi(tau,3)/(2*params.gamma_)*(params.beta+1.0));
     }
     
     template<typename TTYPE, typename RhoType, typename VecType>
@@ -51,7 +51,7 @@ public:
             auto v_ci = (0.2905-0.085*acentric[i])*Ru*Tcrit[i]/pcrit[i];
             for (auto j = 0; j < mole_fractions.size(); ++j){
                 auto v_cj = (0.2905-0.085*acentric[j])*Ru*Tcrit[j]/pcrit[j];
-                auto v_c_ij = 1.0/8.0*(cbrt(v_ci) + cbrt(v_cj));
+                auto v_c_ij = 1.0/8.0*powi(cbrt(v_ci) + cbrt(v_cj), 3);
                 auto T_c_ij = kmat[i][j]*sqrt(Tcrit[i]*Tcrit[j]);
                 summer_vcmix += x[i]*x[j]*v_c_ij;
                 summer_Tcmix += x[i]*x[j]*pow(v_c_ij, 0.25)*T_c_ij;
