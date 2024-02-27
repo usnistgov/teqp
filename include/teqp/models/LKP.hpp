@@ -33,7 +33,7 @@ public:
             throw teqp::InvalidArgument("The arrays should all be the same size.");
         }
         
-        }
+    }
         
     template<class VecType>
     auto R(const VecType& molefrac) const { return m_R; }
@@ -43,7 +43,7 @@ public:
     auto alphar_func(const TTYPE& tau, const RhoType& delta, const ZcType& Zc, const LKPFluidParameters& params) const {
         auto theta = 1/tau;
         auto B = params.b[1] - params.b[2]*tau - params.b[3]*powi(tau, 2) - params.b[4]*powi(tau, 3);
-        auto C = params.c[1] - params.c[2]*tau + params.c[3]*powi(tau, 2);
+        auto C = params.c[1] - params.c[2]*tau + params.c[3]*powi(tau, 3);
         auto D = params.d[1] + params.d[2]*tau;
         return forceeval(B/Zc*delta + 1.0/2.0*C*powi(delta/Zc, 2) + 1.0/5.0*D*powi(delta/Zc, 5) - params.c[4]*powi(tau, 3)/(2*params.gamma_)*(params.gamma_*powi(delta/Zc, 2)+params.beta+1.0)*exp(-params.gamma_*powi(delta/Zc, 2)) + params.c[4]*powi(tau,3)/(2*params.gamma_)*(params.beta+1.0));
     }
