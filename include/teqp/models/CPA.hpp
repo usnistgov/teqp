@@ -3,6 +3,7 @@
 #include "nlohmann/json.hpp"
 #include <Eigen/Dense>
 #include "teqp/types.hpp"
+#include "teqp/exceptions.hpp"
 #include "teqp/models/association/association.hpp"
 #include "teqp/models/association/association_types.hpp"
 
@@ -136,6 +137,8 @@ public:
         }
         k_ij.resize(Tc.size()); for (auto i = 0U; i < k_ij.size(); ++i) { k_ij[i].resize(Tc.size()); }
     };
+    
+    std::size_t size() const {return a0.size(); }
 
     template<typename VecType>
     auto R(const VecType& /*molefrac*/) const { return R_gas; }
@@ -242,6 +245,9 @@ public:
     /// alphar = a/(R*T) where a and R are both molar quantities
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
+        if (static_cast<std::size_t>(molefrac.size()) != cubic.size()){
+            throw teqp::InvalidArgument("Mole fraction size is not correct; should be " + std::to_string(cubic.size()));
+        }
 
         // Calculate the contribution to alphar from the conventional cubic EOS
         auto alpha_r_cubic = cubic.alphar(T, rhomolar, molefrac);
