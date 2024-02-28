@@ -290,40 +290,70 @@ inline auto CPAfactory(const nlohmann::json &j){
     
 	auto build_assoc_pure = [](const auto& j) -> AssociationVariantWrapper{
         auto N = j["pures"].size();
-        if (N == 1){
+        if (N == 1 && j.at("pures").contains("class") ){
+            // This is the backwards compatible approach
+            // with the old style of defining the association class {1,2B...}
             std::vector<association_classes> classes;
             radial_dist dist = get_radial_dist(j.at("radial_dist"));
             std::valarray<double> epsABi(N), betaABi(N), bi(N);
             std::size_t i = 0;
-            for (auto p : j["pures"]) {
-                epsABi[i] = p["epsABi / J/mol"];
-                betaABi[i] = p["betaABi"];
-                bi[i] = p["bi / m^3/mol"];
-                classes.push_back(get_association_classes(p["class"]));
+            for (auto p : j.at("pures")) {
+                epsABi[i] = p.at("epsABi / J/mol");
+                betaABi[i] = p.at("betaABi");
+                bi[i] = p.at("bi / m^3/mol");
+                classes.push_back(get_association_classes(p.at("class")));
                 i++;
             }
             return AssociationVariantWrapper{CPAAssociation(classes, dist, epsABi, betaABi, bi, j["R_gas / J/mol/K"])};
         }
         else{
+            // This branch uses the new code
             Eigen::ArrayXd b_m3mol(N), beta(N), epsilon_Jmol(N);
             association::AssociationOptions opt;
             opt.radial_dist = get_radial_dist(j.at("radial_dist"));
-            opt.interaction_partners = {{"e", {"H",}}, {"H", {"e",}}};
+            if (j.contains("options")){
+                opt = j.at("options"); // Pulls in the options that are POD types
+            }
+            
             std::vector<std::vector<std::string>> molecule_sites;
             std::size_t i = 0;
+            std::set<std::string> unique_site_types;
             for (auto p : j["pures"]) {
                 epsilon_Jmol[i] = p.at("epsABi / J/mol");
                 beta[i] = p.at("betaABi");
                 b_m3mol[i] = p.at("bi / m^3/mol");
-                std::string klass = p.at("class");
-                if (klass == "4C"){
-                    molecule_sites.push_back({"e","e","H","H"});
-                }
-                else if (klass == "2B"){
-                    molecule_sites.push_back({"e","H"});
+                molecule_sites.push_back(p.at("sites"));
+                for (auto & s : molecule_sites.back()){
+                    unique_site_types.insert(s);
                 }
                 i++;
             }
+            if (j.contains("options") && j.at("options").contains("interaction_partners")){
+                opt.interaction_partners = j.at("options").at("interaction_partners");
+                for (auto [k,partners] : opt.interaction_partners){
+                    if (unique_site_types.count(k) == 0){
+                        throw teqp::InvalidArgument("Site is invalid in interaction_partners: " + k);
+                    }
+                    for (auto& partner : partners){
+                        if (unique_site_types.count(partner) == 0){
+                            throw teqp::InvalidArgument("Partner " + partner + " is invalid for site " + k);
+                        }
+                    }
+                }
+            }
+            else{
+                // Every site type is assumed to interact with every other site type, except for itself
+                for (auto& site1 : unique_site_types){
+                    std::vector<std::string> partners;
+                    for (auto& site2: unique_site_types){
+                        if (site1 != site2){
+                            partners.push_back(site2);
+                        }
+                    }
+                    opt.interaction_partners[site1] = partners;
+                }
+            }
+            
             return AssociationVariantWrapper{association::Association(b_m3mol, beta, epsilon_Jmol, molecule_sites, opt)};
         }
     };
