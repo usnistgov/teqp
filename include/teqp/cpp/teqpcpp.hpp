@@ -132,7 +132,7 @@ namespace teqp {
             virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const = 0;
             
             std::tuple<double, double> solve_pure_critical(const double T, const double rho, const std::optional<nlohmann::json>& = std::nullopt) const ;
-            EArray2 extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven) const;
+            EArray2 extrapolate_from_critical(const double Tc, const double rhoc, const double Tgiven, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) const;
             std::tuple<EArrayd, EMatrixd> get_pure_critical_conditions_Jacobian(const double T, const double rho, const std::optional<std::size_t>& alternative_pure_index, const std::optional<std::size_t>& alternative_length) const;
             
             EArray2 pure_VLE_T(const double T, const double rhoL, const double rhoV, int maxiter, const std::optional<Eigen::ArrayXd>& molefracs = std::nullopt) const;
