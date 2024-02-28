@@ -308,7 +308,7 @@ inline auto CPAfactory(const nlohmann::json &j){
     
 	auto build_assoc_pure = [](const auto& j) -> AssociationVariantWrapper{
         auto N = j["pures"].size();
-        if (N == 1 && j.at("pures").contains("class") ){
+        if (N == 1 && j.at("pures")[0].contains("class") ){
             // This is the backwards compatible approach
             // with the old style of defining the association class {1,2B...}
             std::vector<association_classes> classes;
