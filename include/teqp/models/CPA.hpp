@@ -120,13 +120,12 @@ inline auto get_cubic_flag(const std::string& s) {
 
 class CPACubic {
 private:
-    std::valarray<double> a0, bi, c1, Tc;
+    const std::valarray<double> a0, bi, c1, Tc;
     double delta_1, delta_2;
-    std::valarray<std::valarray<double>> k_ij;
-    double R_gas;
-
+    const double R_gas;
+    const std::optional<std::vector<std::vector<double>>> kmat;
 public:
-    CPACubic(cubic_flag flag, const std::valarray<double> &a0, const std::valarray<double> &bi, const std::valarray<double> &c1, const std::valarray<double> &Tc, double R_gas) : a0(a0), bi(bi), c1(c1), Tc(Tc), R_gas(R_gas) {
+    CPACubic(cubic_flag flag, const std::valarray<double> &a0, const std::valarray<double> &bi, const std::valarray<double> &c1, const std::valarray<double> &Tc, const double R_gas, const std::optional<std::vector<std::vector<double>>> & kmat = std::nullopt) : a0(a0), bi(bi), c1(c1), Tc(Tc), R_gas(R_gas), kmat(kmat) {
         switch (flag) {
         case cubic_flag::PR:
         { delta_1 = 1 + sqrt(2); delta_2 = 1 - sqrt(2); break; }
@@ -135,7 +134,6 @@ public:
         default:
             throw std::invalid_argument("Bad cubic flag");
         }
-        k_ij.resize(Tc.size()); for (auto i = 0U; i < k_ij.size(); ++i) { k_ij[i].resize(Tc.size()); }
     };
     
     std::size_t size() const {return a0.size(); }
@@ -157,7 +155,8 @@ public:
             auto ai = get_ai(T, i);
             for (auto j = 0U; j < molefrac.size(); ++j) {
                 auto aj = get_ai(T, j);
-                auto a_ij = (1.0 - k_ij[i][j]) * sqrt(ai * aj);
+                double kij = (kmat) ? kmat.value()[i][j] : 0.0;
+                auto a_ij = (1.0 - kij) * sqrt(ai * aj);
                 asummer += molefrac[i] * molefrac[j] * a_ij;
             }
         }
@@ -277,6 +276,25 @@ inline auto CPAfactory(const nlohmann::json &j){
     auto build_cubic = [](const auto& j) {
         auto N = j["pures"].size();
         std::valarray<double> a0i(N), bi(N), c1(N), Tc(N);
+        std::vector<std::vector<double>> kmat;
+        if (j.contains("kmat")){
+            kmat = j.at("kmat");
+            std::string kmaterr = "The kmat is the wrong size. It should be square with dimension " + std::to_string(N);
+            if (kmat.size() != N){
+                throw teqp::InvalidArgument(kmaterr);
+            }
+            else{
+                for (auto& krow: kmat){
+                    if(krow.size() != N){
+                        throw teqp::InvalidArgument(kmaterr);
+                    }
+                }
+            }
+        }
+        else{
+            kmat.resize(N); for (auto i = 0U; i < N; ++i){ kmat[i].resize(N); for (auto j = 0U; j < N; ++j){kmat[i][j] = 0.0;} }
+        }
+        
         std::size_t i = 0;
         for (auto p : j["pures"]) {
             a0i[i] = p["a0i / Pa m^6/mol^2"];
@@ -285,7 +303,7 @@ inline auto CPAfactory(const nlohmann::json &j){
             Tc[i] = p["Tc / K"];
             i++;
         }
-        return CPACubic(get_cubic_flag(j["cubic"]), a0i, bi, c1, Tc, j["R_gas / J/mol/K"]);
+        return CPACubic(get_cubic_flag(j["cubic"]), a0i, bi, c1, Tc, j["R_gas / J/mol/K"], kmat);
     };
     
 	auto build_assoc_pure = [](const auto& j) -> AssociationVariantWrapper{
