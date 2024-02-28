@@ -61,7 +61,7 @@ namespace teqp{
             return mat;
         }
         catch(const nlohmann::json::exception&){
-            throw teqp::InvalidArgument("Unable to convert this kmat to a 2x2 matrix of doubles:" + j.dump(2));
+            throw teqp::InvalidArgument("Unable to convert this kmat to a NxN matrix of doubles:" + j.dump(2));
         }
     };
 

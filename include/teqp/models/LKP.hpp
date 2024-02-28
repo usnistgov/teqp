@@ -6,7 +6,7 @@
 #include "teqp/types.hpp" // needed for forceeval
 #include "teqp/exceptions.hpp" // to return teqp error messages
 
-#include "nlohmann/json.hpp"
+#include "nlohmann/json.hpp" 
 
 namespace teqp{
 namespace LKP{
@@ -31,8 +31,20 @@ public:
     const std::vector<std::vector<double>> kmat;
     
     LKPMix(const std::vector<double>& Tcrit, const std::vector<double>& pcrit, const std::vector<double>& acentric, double R, const std::vector<std::vector<double>>& kmat) : Tcrit(Tcrit), pcrit(pcrit), acentric(acentric), m_R(R), kmat(kmat){
+        std::size_t N = Tcrit.size();
         if (std::set<std::size_t>{Tcrit.size(), pcrit.size(), acentric.size()}.size() > 1){
             throw teqp::InvalidArgument("The arrays should all be the same size.");
+        }
+        std::string kmaterr = "The kmat is the wrong size. It should be square with dimension " + std::to_string(N);
+        if (kmat.size() != N){
+            throw teqp::InvalidArgument(kmaterr);
+        }
+        else{
+            for (auto& krow: kmat){
+                if(kmat.size() != N){
+                    throw teqp::InvalidArgument(kmaterr);
+                }
+            }
         }
     }
         
