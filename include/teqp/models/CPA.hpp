@@ -3,6 +3,9 @@
 #include "nlohmann/json.hpp"
 #include <Eigen/Dense>
 #include "teqp/types.hpp"
+#include "teqp/exceptions.hpp"
+#include "teqp/models/association/association.hpp"
+#include "teqp/models/association/association_types.hpp"
 
 namespace teqp {
 
@@ -11,29 +14,10 @@ namespace CPA {
 template<typename X> auto POW2(X x) { return x * x; };
 template<typename X> auto POW3(X x) { return x * POW2(x); };
 
-enum class association_classes {not_set, a1A, a2B, a3B, a4C, not_associating};
-
-inline auto get_association_classes(const std::string& s) {
-    if (s == "1A") { return association_classes::a1A; }
-    else if (s == "2B") { return association_classes::a2B; }
-    else if (s == "2B") { return association_classes::a2B; }
-    else if (s == "3B") { return association_classes::a3B; }
-    else if (s == "4C") { return association_classes::a4C; }
-    else {
-        throw std::invalid_argument("bad association flag:" + s);
-    }
-}
-
-enum class radial_dist { CS, KG, OT };
-
-inline auto get_radial_dist(const std::string& s) {
-    if (s == "CS") { return radial_dist::CS; }
-    else if (s == "KG") { return radial_dist::KG; }
-    else if (s == "OT") { return radial_dist::OT; }
-    else {
-        throw std::invalid_argument("bad association flag:" + s);
-    }
-}
+using association::radial_dist;
+using association::association_classes;
+using association::get_radial_dist;
+using association::get_association_classes;
 
 /// Function that calculates the association binding strength between site A of molecule i and site B on molecule j
 template<typename BType, typename TType, typename RhoType, typename VecType>
@@ -57,10 +41,10 @@ inline auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BT
             g_vm_ref = 1.0 / (1.0 - 1.9 * eta);
             break;
         }
-        case radial_dist::OT: {
-            g_vm_ref = 1.0 / (1.0 - 0.475 * rhomolar * b_cubic);
-            break;
-        }
+//        case radial_dist::OT: { // This is identical to KG
+//            g_vm_ref = 1.0 / (1.0 - 0.475 * rhomolar * b_cubic);
+//            break;
+//        }
         default: {
             throw std::invalid_argument("Bad radial_dist");
         }
@@ -136,13 +120,12 @@ inline auto get_cubic_flag(const std::string& s) {
 
 class CPACubic {
 private:
-    std::valarray<double> a0, bi, c1, Tc;
+    const std::valarray<double> a0, bi, c1, Tc;
     double delta_1, delta_2;
-    std::valarray<std::valarray<double>> k_ij;
-    double R_gas;
-
+    const double R_gas;
+    const std::optional<std::vector<std::vector<double>>> kmat;
 public:
-    CPACubic(cubic_flag flag, const std::valarray<double> &a0, const std::valarray<double> &bi, const std::valarray<double> &c1, const std::valarray<double> &Tc, double R_gas) : a0(a0), bi(bi), c1(c1), Tc(Tc), R_gas(R_gas) {
+    CPACubic(cubic_flag flag, const std::valarray<double> &a0, const std::valarray<double> &bi, const std::valarray<double> &c1, const std::valarray<double> &Tc, const double R_gas, const std::optional<std::vector<std::vector<double>>> & kmat = std::nullopt) : a0(a0), bi(bi), c1(c1), Tc(Tc), R_gas(R_gas), kmat(kmat) {
         switch (flag) {
         case cubic_flag::PR:
         { delta_1 = 1 + sqrt(2); delta_2 = 1 - sqrt(2); break; }
@@ -151,8 +134,9 @@ public:
         default:
             throw std::invalid_argument("Bad cubic flag");
         }
-        k_ij.resize(Tc.size()); for (auto i = 0U; i < k_ij.size(); ++i) { k_ij[i].resize(Tc.size()); }
     };
+    
+    std::size_t size() const {return a0.size(); }
 
     template<typename VecType>
     auto R(const VecType& /*molefrac*/) const { return R_gas; }
@@ -171,7 +155,8 @@ public:
             auto ai = get_ai(T, i);
             for (auto j = 0U; j < molefrac.size(); ++j) {
                 auto aj = get_ai(T, j);
-                auto a_ij = (1.0 - k_ij[i][j]) * sqrt(ai * aj);
+                double kij = (kmat) ? kmat.value()[i][j] : 0.0;
+                auto a_ij = (1.0 - kij) * sqrt(ai * aj);
                 asummer += molefrac[i] * molefrac[j] * a_ij;
             }
         }
@@ -188,14 +173,14 @@ public:
     }
 };
 
-template<typename Cubic>
+/** Implement the association approach of Huang & Radosz for pure fluids
+ */
 class CPAAssociation {
 private:
-    const Cubic cubic;
     const std::vector<association_classes> classes;
     const radial_dist dist;
-    const std::valarray<double> epsABi, betaABi;
-    const std::vector<int> N_sites; 
+    const std::valarray<double> epsABi, betaABi, bi;
+    const std::vector<int> N_sites;
     const double R_gas;
 
     auto get_N_sites(const std::vector<association_classes> &the_classes) {
@@ -216,13 +201,13 @@ private:
     }
 
 public:
-    CPAAssociation(const Cubic &&cubic, const std::vector<association_classes>& classes, const radial_dist dist, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi, double R_gas)
-        : cubic(cubic), classes(classes), dist(dist), epsABi(epsABi), betaABi(betaABi), N_sites(get_N_sites(classes)), R_gas(R_gas) {};
+    CPAAssociation(const std::vector<association_classes>& classes, const radial_dist dist, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi, const std::valarray<double> &bi, double R_gas)
+        : classes(classes), dist(dist), epsABi(epsABi), betaABi(betaABi), bi(bi), N_sites(get_N_sites(classes)), R_gas(R_gas) {};
 
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
-        // Calculate a and b of the mixture
-        auto [a_cubic, b_cubic] = cubic.get_ab(T, molefrac);
+        // Calculate b of the mixture
+        auto b_cubic = (Eigen::Map<const Eigen::ArrayXd>(&bi[0], bi.size())*molefrac).sum();
 
         // Calculate the fraction of sites not bonded with other active sites
         auto RT = forceeval(R_gas * T); // R times T
@@ -259,6 +244,9 @@ public:
     /// alphar = a/(R*T) where a and R are both molar quantities
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
+        if (static_cast<std::size_t>(molefrac.size()) != cubic.size()){
+            throw teqp::InvalidArgument("Mole fraction size is not correct; should be " + std::to_string(cubic.size()));
+        }
 
         // Calculate the contribution to alphar from the conventional cubic EOS
         auto alpha_r_cubic = cubic.alphar(T, rhomolar, molefrac);
@@ -270,12 +258,43 @@ public:
     }
 };
 
+struct AssociationVariantWrapper{
+    using vartype = std::variant<CPAAssociation, association::Association>;
+    const vartype holder;
+    
+    AssociationVariantWrapper(const vartype& holder) : holder(holder) {};
+    
+    template<typename TType, typename RhoType, typename MoleFracsType>
+    auto alphar(const TType& T, const RhoType& rhomolar, const MoleFracsType& molefracs) const{
+        return std::visit([&](auto& h){ return h.alphar(T, rhomolar, molefracs); }, holder);
+    }
+};
+
 /// A factory function to return an instantiated CPA instance given
 /// the JSON representation of the model
 inline auto CPAfactory(const nlohmann::json &j){
     auto build_cubic = [](const auto& j) {
         auto N = j["pures"].size();
         std::valarray<double> a0i(N), bi(N), c1(N), Tc(N);
+        std::vector<std::vector<double>> kmat;
+        if (j.contains("kmat")){
+            kmat = j.at("kmat");
+            std::string kmaterr = "The kmat is the wrong size. It should be square with dimension " + std::to_string(N);
+            if (kmat.size() != N){
+                throw teqp::InvalidArgument(kmaterr);
+            }
+            else{
+                for (auto& krow: kmat){
+                    if(krow.size() != N){
+                        throw teqp::InvalidArgument(kmaterr);
+                    }
+                }
+            }
+        }
+        else{
+            kmat.resize(N); for (auto i = 0U; i < N; ++i){ kmat[i].resize(N); for (auto j = 0U; j < N; ++j){kmat[i][j] = 0.0;} }
+        }
+        
         std::size_t i = 0;
         for (auto p : j["pures"]) {
             a0i[i] = p["a0i / Pa m^6/mol^2"];
@@ -284,23 +303,79 @@ inline auto CPAfactory(const nlohmann::json &j){
             Tc[i] = p["Tc / K"];
             i++;
         }
-        return CPACubic(get_cubic_flag(j["cubic"]), a0i, bi, c1, Tc, j["R_gas / J/mol/K"]);
+        return CPACubic(get_cubic_flag(j["cubic"]), a0i, bi, c1, Tc, j["R_gas / J/mol/K"], kmat);
     };
-	auto build_assoc = [](const auto &&cubic, const auto& j) {
+    
+	auto build_assoc_pure = [](const auto& j) -> AssociationVariantWrapper{
         auto N = j["pures"].size();
-        std::vector<association_classes> classes;
-        radial_dist dist = get_radial_dist(j.at("radial_dist"));
-        std::valarray<double> epsABi(N), betaABi(N);
-        std::size_t i = 0;
-        for (auto p : j["pures"]) {
-            epsABi[i] = p["epsABi / J/mol"];
-            betaABi[i] = p["betaABi"];
-            classes.push_back(get_association_classes(p["class"]));
-            i++;
+        if (N == 1 && j.at("pures").contains("class") ){
+            // This is the backwards compatible approach
+            // with the old style of defining the association class {1,2B...}
+            std::vector<association_classes> classes;
+            radial_dist dist = get_radial_dist(j.at("radial_dist"));
+            std::valarray<double> epsABi(N), betaABi(N), bi(N);
+            std::size_t i = 0;
+            for (auto p : j.at("pures")) {
+                epsABi[i] = p.at("epsABi / J/mol");
+                betaABi[i] = p.at("betaABi");
+                bi[i] = p.at("bi / m^3/mol");
+                classes.push_back(get_association_classes(p.at("class")));
+                i++;
+            }
+            return AssociationVariantWrapper{CPAAssociation(classes, dist, epsABi, betaABi, bi, j["R_gas / J/mol/K"])};
         }
-        return CPAAssociation(std::move(cubic), classes, dist, epsABi, betaABi, j["R_gas / J/mol/K"]);
+        else{
+            // This branch uses the new code
+            Eigen::ArrayXd b_m3mol(N), beta(N), epsilon_Jmol(N);
+            association::AssociationOptions opt;
+            opt.radial_dist = get_radial_dist(j.at("radial_dist"));
+            if (j.contains("options")){
+                opt = j.at("options"); // Pulls in the options that are POD types
+            }
+            
+            std::vector<std::vector<std::string>> molecule_sites;
+            std::size_t i = 0;
+            std::set<std::string> unique_site_types;
+            for (auto p : j["pures"]) {
+                epsilon_Jmol[i] = p.at("epsABi / J/mol");
+                beta[i] = p.at("betaABi");
+                b_m3mol[i] = p.at("bi / m^3/mol");
+                molecule_sites.push_back(p.at("sites"));
+                for (auto & s : molecule_sites.back()){
+                    unique_site_types.insert(s);
+                }
+                i++;
+            }
+            if (j.contains("options") && j.at("options").contains("interaction_partners")){
+                opt.interaction_partners = j.at("options").at("interaction_partners");
+                for (auto [k,partners] : opt.interaction_partners){
+                    if (unique_site_types.count(k) == 0){
+                        throw teqp::InvalidArgument("Site is invalid in interaction_partners: " + k);
+                    }
+                    for (auto& partner : partners){
+                        if (unique_site_types.count(partner) == 0){
+                            throw teqp::InvalidArgument("Partner " + partner + " is invalid for site " + k);
+                        }
+                    }
+                }
+            }
+            else{
+                // Every site type is assumed to interact with every other site type, except for itself
+                for (auto& site1 : unique_site_types){
+                    std::vector<std::string> partners;
+                    for (auto& site2: unique_site_types){
+                        if (site1 != site2){
+                            partners.push_back(site2);
+                        }
+                    }
+                    opt.interaction_partners[site1] = partners;
+                }
+            }
+            
+            return AssociationVariantWrapper{association::Association(b_m3mol, beta, epsilon_Jmol, molecule_sites, opt)};
+        }
     };
-	return CPAEOS(build_cubic(j), build_assoc(build_cubic(j), j));
+	return CPAEOS(build_cubic(j), build_assoc_pure( j));
 }
 
 }; /* namespace CPA */

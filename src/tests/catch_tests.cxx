@@ -450,7 +450,7 @@ TEST_CASE("Test water Clapeyron.jl", "[CPA]") {
     std::vector<CPA::association_classes> schemes = { CPA::association_classes::a4C };
     std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
     CPA::radial_dist dist = CPA::radial_dist::CS;
-    CPA::CPAAssociation cpaa(std::move(cub), schemes, dist, epsAB, betaAB, R);
+    CPA::CPAAssociation cpaa(schemes, dist, epsAB, betaAB, bi, R);
 
     CPA::CPAEOS cpa(std::move(cub), std::move(cpaa));
     using tdc = TDXDerivatives<decltype(cpa)>;
@@ -487,7 +487,7 @@ TEST_CASE("Test water", "[CPA]") {
 
     std::vector<CPA::association_classes> schemes = { CPA::association_classes::a4C };
     std::valarray<double> epsAB = { 16655 }, betaAB = { 0.0692 };
-    CPA::CPAAssociation cpaa(std::move(cub), schemes, CPA::radial_dist::KG, epsAB, betaAB, R);
+    CPA::CPAAssociation cpaa(schemes, CPA::radial_dist::KG, epsAB, betaAB, bi, R);
 
     CPA::CPAEOS cpa(std::move(cub), std::move(cpaa));
     using tdc = TDXDerivatives<decltype(cpa)>;
@@ -512,7 +512,7 @@ TEST_CASE("Test [C2mim][NTF2]", "[CPA]") {
 
     std::vector<CPA::association_classes> schemes = { CPA::association_classes::a2B };
     std::valarray<double> epsAB = { 177388/10.0 }, betaAB = { 0.00266 };
-    CPA::CPAAssociation cpaa(std::move(cub), schemes, CPA::radial_dist::KG, epsAB, betaAB, R);
+    CPA::CPAAssociation cpaa(schemes, CPA::radial_dist::KG, epsAB, betaAB, bi, R);
 
     CPA::CPAEOS cpa(std::move(cub), std::move(cpaa));
     using tdc = TDXDerivatives<decltype(cpa)>;
