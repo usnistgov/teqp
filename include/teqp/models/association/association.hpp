@@ -26,6 +26,9 @@ struct AssociationOptions{
     std::map<std::string, std::vector<std::string>> interaction_partners;
     std::vector<std::string> site_order;
     association::radial_dist radial_dist;
+    double alpha = 0.5;
+    double rtol = 1e-12, atol = 1e-12;
+    int max_iters = 100;
 };
 
 /***
@@ -130,12 +133,12 @@ public:
     const Eigen::ArrayXd b_m3mol, ///< The covolume b, in m^3/mol
             beta, ///< The volume factor, dimensionless
             epsilon_Jmol; ///< The association energy of each molecule, in J/mol
-    
+    const AssociationOptions options;
     const IndexMapper mapper;
     const Eigen::ArrayXXi D;
     const radial_dist m_radial_dist;
     
-    Association(const Eigen::ArrayXd& b_m3mol, const Eigen::ArrayXd& beta, const Eigen::ArrayXd& epsilon_Jmol, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : b_m3mol(b_m3mol), beta(beta), epsilon_Jmol(epsilon_Jmol), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_radial_dist(options.radial_dist){
+    Association(const Eigen::ArrayXd& b_m3mol, const Eigen::ArrayXd& beta, const Eigen::ArrayXd& epsilon_Jmol, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : b_m3mol(b_m3mol), beta(beta), epsilon_Jmol(epsilon_Jmol), options(options), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_radial_dist(options.radial_dist){
     }
     
     /**
@@ -204,12 +207,19 @@ public:
         }
 //        rDDX.rowwise() *= xj;
         
-        Eigen::ArrayX<std::decay_t<rDDXtype>> X = X_init;
-        int max_steps = 30;
-        double alpha = 0.5;
+        Eigen::ArrayX<std::decay_t<rDDXtype>> X = X_init, Xnew;
         
-        for (auto counter = 0; counter < max_steps; ++counter){
-            X = alpha*X + (1.0-alpha)/(1.0+(rDDX*X.matrix()).array());
+        for (auto counter = 0; counter < options.max_iters; ++counter){
+            // calculate the new array of non-bonded site fractions X
+            Xnew = options.alpha*X + (1.0-options.alpha)/(1.0+(rDDX*X.matrix()).array());
+            // These unaryExpr extract the numerical value from an Eigen array of generic type, allowing for comparison.
+            // Otherwise for instance it is imposible to compare two complex numbers (if you are using complex step derivatives)
+            auto diff = (Xnew-X).eval().cwiseAbs().unaryExpr([](const auto&x){return getbaseval(x); }).eval();
+            auto tol = (options.rtol*Xnew + options.atol).unaryExpr([](const auto&x){return getbaseval(x); }).eval();
+            if ((diff < tol).all()){
+                break;
+            }
+            X = Xnew;
         }
         return X;
     }
