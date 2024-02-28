@@ -5,10 +5,6 @@
 #include "teqp/exceptions.hpp"
 
 namespace teqp {
-/*
-To add:
-1. LKP (Stefan Herrig's thesis)
-*/
 
 /// A (very) simple implementation of the van der Waals EOS
 class vdWEOS1 {
@@ -52,10 +48,10 @@ protected:
     std::valarray<std::valarray<NumType>> k;
 
     template<typename TType, typename IndexType>
-    auto get_ai(TType T, IndexType i) const { return ai[i]; }
+    auto get_ai(TType /*T*/, IndexType i) const { return ai[i]; }
 
     template<typename TType, typename IndexType>
-    auto get_bi(TType T, IndexType i) const { return bi[i]; }
+    auto get_bi(TType /*T*/, IndexType i) const { return bi[i]; }
 
 public:
     /// \brief Initializer, taking the arrays of critical temperatures and pressures
@@ -70,7 +66,7 @@ public:
         }
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
-        for (auto i = 0; i < Tc_K.size(); ++i) {
+        for (auto i = 0U; i < Tc_K.size(); ++i) {
             ai[i] = 27.0 / 64.0 * pow(Ru * Tc_K[i], 2) / pc_Pa[i];
             bi[i] = 1.0 / 8.0 * Ru * Tc_K[i] / pc_Pa[i];
         }
@@ -121,7 +117,7 @@ public:
         const RhoType& rho,
         const MoleFracType &molefrac) const
     {
-        if (molefrac.size() != ai.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != ai.size()) {
             throw teqp::InvalidArgument("mole fractions must be of size " + std::to_string(ai.size()) + " but are of size " + std::to_string(molefrac.size()));
         }
         auto Psiminus = -log(1.0 - b(molefrac) * rho);

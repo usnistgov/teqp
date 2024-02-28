@@ -64,7 +64,7 @@
 // Kunz, O., Klimeck, R., Wagner, W., and Jaeschke, M.
 // The GERG-2004 Wide-Range Equation of State for Natural Gases and Other Mixtures
 // GERG Technical Monograph 15
-// Fortschr.-Ber. VDI, Reihe 6, Nr. 557, VDI Verlag, Düsseldorf, 2007.
+// Fortschr.-Ber. VDI, Reihe 6, Nr. 557, VDI Verlag, Dusseldorf, 2007.
 // http://www.gerg.eu/public/uploads/files/publications/technical_monographs/tm15_04.pdf
 
 // Subroutines contained here for property calculations:
@@ -611,7 +611,7 @@ void AlpharGERG(const int iprop, const double T, const double D, const std::vect
     }
 }
 
-void tTermsGERG(const double tau, const double lntau, const std::vector<double> &x)
+void tTermsGERG(const double /*tau*/, const double lntau, const std::vector<double> &x)
 {
     // Private Sub tTermsGERG(tau, lntau, x)
 

@@ -1,0 +1,673 @@
+R1234yf              !Short name
+754-12-1             !CAS number
+2,3,3,3-Tetrafluoroprop-1-ene !Full name
+CF3CF=CH2            !Chemical formula {C3F4H2}
+R-1234yf             !Synonym
+114.0416             !Molar mass [g/mol]
+121.6                !Triple point temperature [K]; {{"reference": "Tomassetti et al., 2021"}}
+243.692              !Normal boiling point [K]
+367.85               !Critical temperature [K]
+3384.4               !Critical pressure [kPa]
+4.18                 !Critical density [mol/L]
+0.276                !Acentric factor
+2.48                 !Dipole moment [Debye]; {{"reference": "Cousins and Laesecke, J. Research NIST, 117:231-256, 2012"}}
+IIR                  !Default reference state
+10.0                 !Version number
+3161                 !UN Number                                                 :UN:
+halocb               !Family                                                    :Family:
+????                 !Heating value (upper) [kJ/mol]                            :Heat:
+????                 !GWP (IPCC 2007)                                           :GWP:
+16000.               !RCL (ppm v/v, ASHRAE Standard 34, 2010)                   :RCL:
+A2L                  !Safety Group (ASHRAE Standard 34, 2010)                   :Safety:
+1S/C3H2F4/c1-2(4)3(5,6)7/h1H2             !Standard InChI String                :InChi:
+FXRLMCRCYDHQFW-UHFFFAOYSA-N               !Standard InChI Key                   :InChiKey:
+9905ef70  (R1234ze(E))                    !Alternative fluid for mixing rules   :AltID:
+40377b40                                  !Hash number from InChI Key           :Hash:
+
+
+
+
+!The fluid files contain general information about the fluid in the first 15 to 20 lines, followed by sections for the
+! equations of state, transport equations, and auxiliary equations.  Equations of state are listed first.  The NIST recommended
+! equations begin with a hash mark (#).  The secondary equations begin with the @ symbol.  These symbols can be swapped to
+! select a secondary equation as primary and the primary as secondary.  The equation of state section also contains auxiliary
+! equations for the ideal gas heat capacity or ideal gas Helmholtz energy.  Below the equations of state (both primary and
+! secondary) are the transport equations, first viscosity and then thermal conductivity.  These are then followed by the
+! secondary equations if available.  The transport section also contains auxiliary equations required to calculate either the
+! dilute gas state or the critical enhancement.  At the end of the file are additional but not necessary auxiliary equations,
+! including simple equations for the vapor pressure, saturated liquid and vapor densities, melting line (for some fluids), and
+! sublimation line (for even fewer fluids).  This section also contains the equations for dielectric constant and surface
+! tension if available.  The sections are divided by different symbols (these being _-+=^*~) to aid the eye in locating a
+! particular section.  Secondary equations are indented 10 spaces to avoid confusion with the NIST recommended equations.  The
+! end of the fluid file is marked with @END.  Anything below that is ignored.
+
+
+! compiled by E.W. Lemmon, NIST Physical and Chemical Properties Division, Boulder, Colorado
+! 03-23-09 EWL, Original version.
+! 10-06-09 EWL, Add second preliminary fit with data of Di Nicola.
+! 11-02-09 MLH, Add very preliminary transport equations.
+! 01-05-10 EWL, Update fit with data of McLinden and Richter.
+! 04-19-10 EWL, Add surface tension equation.
+! 08-12-10 EWL, Update fit with speed of sound data of Lago.
+! 09-01-10 EWL, Add ancillary equations.
+! 09-01-10 MLH, Add new thermal conductivity correlation based on R. Perkin's new data.
+! 12-02-11 EWL, Change reference state from NBP to IIR.
+! 09-29-11 EWL, Add dipole moment.
+! 05-17-12 MLH, Update thermal conductivity to match 2011 publication.
+! 06-20-12 EWL, Add dipole moment.
+! 12-06-12 EWL, Add surface tension coefficients of Mulero et al. (2012).
+! 03-01-16 MLH, Add new viscosity fit.
+! 07-26-17 EWL, Add real triple point temperature.
+! 02-05-18  RA, Update ancillary equations.
+! 11-18-19 EWL, Add final equation of state of Lemmon and Akasaka (2022).
+! 06-02-20 EWL, Update triple point temperature to match that recommended by TDE.
+! 06-18-21 EWL, Refit liquid and vapor saturated density ancillaries.
+! 06-24-21 EWL, Update triple point temperature to the measured value of Tomassetti.
+
+
+
+
+________________________________________________________________________________
+
+#EOS   !---Equation of state---
+FEQ    !Helmholtz equation of state for R-1234yf of Lemmon and Akasaka (2022).
+:DOI:
+?```````````````````````````````````````````````````````````````````````````````
+?Lemmon, E.W. and Akasaka, R., in press, Int. J. Thermophys., 2022.
+?
+?The uncertainties (k=2) in calculated properties from the equation are 0.1% for
+?vapor pressures at temperatures above 270 K and 0.3 % at lower temperatures, 
+?0.1 % for liquid densities at pressures below 40 MPa and 0.25 % at higher pressures,
+?0.2 % for vapor densities, 0.02 % for vapor-phase sound speeds, 0.05 % for
+?liquid-phase sound speeds, 1 % for vapor-phase isobaric heat capacities, 2 % for
+?liquid-phase isobaric heat capacities, and 2 % for liquid-phase isochoric heat
+?capacities. At very low temperatures around 200 K, uncertainties in vapor pressures
+?may be larger than 0.5 %. 
+?
+!```````````````````````````````````````````````````````````````````````````````
+121.6              !Lower temperature limit [K]
+410.               !Upper temperature limit [K]
+100000.            !Upper pressure limit [kPa]
+13.836             !Maximum density [mol/L]
+CPP                                    !Pointer to Cp0 model
+114.0416                               !Molar mass [g/mol]
+121.6                                  !Triple point temperature [K]
+0.00041268                             !Pressure at triple point [kPa]
+13.836                                 !Density at triple point [mol/L]
+243.692                                !Normal boiling point temperature [K]
+0.276                                  !Acentric factor
+367.85        3384.4       4.18        !Tc [K], pc [kPa], rhoc [mol/L]
+367.85                     4.18        !Reducing parameters [K, mol/L]
+8.314462618                            !Gas constant [J/mol-K]
+  10  4   7 12   0  0   0  0     0 0  0 0   !# terms and # coefs/term for normal terms, Gaussian terms, and Gao terms
+   0.0340387        1.      4.  0.                   !a(i),t(i),d(i),l(i)
+   1.912859         0.222   1.  0.
+  -2.1984719881617  0.61    1.  0.
+  -0.8147645305033  1.122   2.  0.
+   0.2288282        0.5     3.  0.
+  -1.65436          2.14    1.  2.
+  -1.446628         2.284   3.  2.
+   0.5961722        1.05    2.  1.
+  -0.6148209        2.33    2.  2.
+  -0.0180069        0.778   7.  1.
+   0.2845275        1.      1.  2. 2.   -28.1     -1016.    1.061    0.96      0. 0. 0.
+  -0.3050809        2.      1.  2. 2.   -28.      -1000.    1.062    0.96      0. 0. 0.
+   2.198935         1.236   1.  2. 2.   -1.307    -1.16     1.3      0.853     0. 0. 0.
+  -0.4270329        1.6     1.  2. 2.   -1.96     -1.2      1.04     1.15      0. 0. 0.
+  -0.4015581        1.85    1.  2. 2.   -1.25     -1.26     1.       1.3       0. 0. 0.
+   0.1179587        0.7     1.  2. 2.   -1.       -1.6      1.14     1.5       0. 0. 0.
+  -0.3141002        1.75    1.  2. 2.   -2.2      -0.87     1.1      0.762     0. 0. 0.
+                                      eta      beta    gamma   epsilon
+                                   EXP[eta*(delta-epsilon)^2+beta*(tau-gamma)^2]
+
+
+#AUX   !---Auxiliary function for Cp0
+CPP    !Ideal gas heat capacity function for R-1234yf of Lemmon and Akasaka (2022).
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Lemmon, E.W. and Akasaka, R., 2022.
+?
+!```````````````````````````````````````````````````````````````````````````````
+0.                 !
+10000.             !
+0.                 !
+0.                 !
+1.0   8.314462618  !Reducing parameters for T, Cp0
+1 3   0 0   0 0 0  !Nterms:  polynomial, exponential, cosh, sinh
+ 4.0        0.0
+ 8.65     512.0
+ 9.75    1570.0
+ 2.11    4500.0
+
+
+#AUX   !---Auxiliary function for PX0
+PX0    !Helmholtz energy ideal-gas function for R-1234yf of Lemmon and Akasaka (2022).
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Lemmon, E.W. and Akasaka, R., 2022.
+?
+!```````````````````````````````````````````````````````````````````````````````
+1 2  3  0 0  0 0 0 !Nterms:  ai*log(tau**ti); ai*tau**ti; ai*log(1-exp(bi*tau))
+  3.0                 1.0      !ai, ti for [ai*log(tau**ti)] terms
+-12.081525543189      0.0      !aj, ti for [ai*tau**ti] terms
+  8.52896238365       1.0      !aj, ti for [ai*tau**ti] terms
+  8.65     512.0               !aj, ti for [ai*log(1-exp(-ti/T)] terms
+  9.75    1570.0
+  2.11    4500.0
+
+
+
+
+@EOS    !---Equation of state---
+FE1     !Helmholtz equation of state for R-1234yf of Richter et al. (2011).
+:TRUECRITICALPOINT:  367.85     4.17          !True EOS critical point [K, mol/L] (where dP/dD=0 and d^2P/dD^2=0 at constant T)
+:DOI: 10.1021/je200369m
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?Richter, M., McLinden, M.O., and Lemmon, E.W.,
+          ? "Thermodynamic Properties of 2,3,3,3-Tetrafluoroprop-1-ene (R1234yf):
+          ? Vapor Pressure and p-rho-T Measurements and an Equation of State,"
+          ? J. Chem. Eng. Data, 56(7):3254-3264, 2011. doi: 10.1021/je200369m
+          ?
+          ?The uncertainty in density in the liquid phase of the equation of state is
+          ? 0.1% from 240 K to 320 K and pressures up to 10 MPa. The uncertainty
+          ? increases outside of this region and in the vapor phase to 0.5%, and even
+          ? higher in the critical region.  In the gaseous region, the speed of sound can
+          ? be calculated with an uncertainty of 0.1%.  In the liquid phase, the
+          ? uncertainty increases to 0.5%.  The estimated uncertainty for heat capacities
+          ? is 5%.  The estimated uncertainty in vapor pressure is 0.1%.
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          122.77             !Lower temperature limit [K]
+          410.0              !Upper temperature limit [K]
+          30000.0            !Upper pressure limit [kPa]
+          13.835             !Maximum density [mol/L]
+          CP1                                    !Pointer to Cp0 model
+          114.0415928                            !Molar mass [g/mol]
+          122.77                                 !Triple point temperature [K]
+          0.000738                               !Pressure at triple point [kPa]
+          13.685                                 !Density at triple point [mol/L]
+          243.665                                !Normal boiling point temperature [K]
+          0.276                                  !Acentric factor
+          367.85        3382.2       4.17        !Tc [K], pc [kPa], rhoc [mol/L]
+          367.85                     4.17        !Reducing parameters [K, mol/L]
+          8.314472                               !Gas constant [J/mol-K]
+            10  4   5 12   0 0    0 0  0 0  0 0  !# terms and # coefs/term for normal terms, Gaussian terms, and Gao terms
+            0.04592563   1.0     4.  0.          !a(i),t(i),d(i),l(i)
+            1.546958     0.32    1.  0.
+           -2.355237     0.929   1.  0.
+           -0.4827835    0.94    2.  0.
+            0.1758022    0.38    3.  0.
+           -1.210006     2.28    1.  2.
+           -0.6177084    1.76    3.  2.
+            0.6805262    0.97    2.  1.
+           -0.6968555    2.44    2.  2.
+           -0.02695779   1.05    7.  1.
+            1.389966     1.4     1.  2. 2.    -1.02     -1.42    1.13    0.712    0. 0. 0.
+           -0.4777136    3.0     1.  2. 2.    -1.336    -2.31    0.67    0.910    0. 0. 0.
+           -0.1975184    3.5     3.  2. 2.    -1.055    -0.89    0.46    0.677    0. 0. 0.
+           -1.147646     1.0     3.  2. 2.    -5.84    -80.0     1.28    0.718    0. 0. 0.
+            0.0003428541 3.5     2.  2. 2.   -16.2    -108.0     1.2     1.64     0. 0. 0.
+                                                eta      beta    gamma   epsilon
+                                             EXP[eta*(delta-epsilon)^2+beta*(tau-gamma)^2]
+
+
+          #AUX   !---Auxiliary function for Cp0
+          CP1    !Ideal gas heat capacity function for R-1234yf of Richter et al. (2011).
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?Richter, M., McLinden, M.O., and Lemmon, E.W., 2011.
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          0.                 !
+          10000.             !
+          0.                 !
+          0.                 !
+          1.0     8.314472   !Reducing parameters for T, Cp0
+          1 4   0 0   0 0 0  !Nterms:  polynomial, exponential, cosh, sinh
+           5.944      0.0
+           7.549      718.0
+           1.537      877.0
+           2.03       4465.0
+           7.455      1755.0
+
+
+          #AUX   !---Auxiliary function for PX0
+          PX1    !Helmholtz energy ideal-gas function for R-1234yf of Richter et al. (2011).
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?Richter, M., McLinden, M.O., and Lemmon, E.W., 2011.
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          1 2  4  0 0  0 0 0               !Nterms:  ai*log(tau**ti); ai*tau**ti; ai*log(1-exp(bi*tau))
+            4.944                 1.0      !ai, ti for [ai*log(tau**ti)] terms
+          -12.8379485300797782    0.0      !aj, ti for [ai*tau**ti] terms
+            8.0426156173728476    1.0      !aj, ti for [ai*tau**ti] terms
+            7.549      718.0               !aj, ti for [ai*log(1-exp(-ti/T)] terms
+            1.537      877.0
+            2.03       4465.0
+            7.455      1755.0
+
+
+          #AUX   !---Auxiliary function for PH0
+          PH1    !Ideal gas Helmholtz form for R-1234yf of Richter et al. (2011)
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          0.                 !
+          10000.             !
+          0.                 !
+          0.                 !
+          1 2  4  0 0  0 0 0 !Nterms:  ai*log(tau**ti); ai*tau**ti; ai*log(1-exp(bi*tau)); cosh; sinh
+           4.944             1.0                 !ai, ti for [ai*log(tau**ti)] terms
+          -12.8379284042     0.0                 !aj, ti for [ai*tau**ti] terms
+           8.0426046749      1.0
+           7.549            -1.9518825608        !aj, ti for [ai*log(1-exp(ti*tau)] terms
+           1.537            -2.3841239636
+           2.03             -12.1380997689
+           7.455            -4.7709664265
+
+
+
+
+--------------------------------------------------------------------------------
+
+@EOS    !---Equation of state---
+FE2     !Helmholtz equation of state for R-1234yf of Akasaka (2011).
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?Akasaka, R.,
+          ? "New Fundamental Equations of State with a Common Functional Form for
+          ? 2,3,3,3-Tetrafluoropropene (R-1234yf) and Trans-1,3,3,3-Tetrafluoropropene
+          ? (R-1234ze(E)),"
+          ? Int. J. Thermophys.,32(6):1125-1147 (2011) doi: 10.1007/s10765-011-0992-0
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          240.               !Lower temperature limit [K]
+          400.0              !Upper temperature limit [K]
+          40000.0            !Upper pressure limit [kPa]
+          11.64              !Maximum density [mol/L]
+          CP2                                    !Pointer to Cp0 model
+          114.042                                !Molar mass [g/mol]
+          220.                                   !Triple point temperature [K]
+          31.5                                   !Pressure at triple point [kPa]
+          11.63                                  !Density at triple point [mol/L]
+          243.7                                  !Normal boiling point temperature [K]
+          0.276                                  !Acentric factor
+          367.85        3382.0       4.191438242 !Tc [K], pc [kPa], rhoc [mol/L]
+          367.85                     4.191438242 !Reducing parameters [K, mol/L]
+          8.314472                               !Gas constant [J/mol-K]
+            17  4    0  0    0 0    0 0 0 0 0 0  !# terms and # coefs/term for normal terms, Gaussian terms, and Gao terms
+           8.3266757       0.66886   1.  0.      !a(i),t(i),d(i),l(i)
+          -9.2588001       0.83392   1.  0.
+          -0.24906043      1.6982    1.  0.
+           0.14422208      1.8030    2.  0.
+           0.011679917     0.36657   5.  0.
+          -0.16465103      3.8666    1.  1.
+           0.10580795      1.0194    3.  1.
+           0.017135586     0.0       5.  1.
+          -0.016764798     1.1655    7.  1.
+          -0.012781115     8.3101    1.  2.
+           0.36440802      6.1459    2.  2.
+          -0.28535370      8.3495    2.  2.
+          -0.096835199     6.0422    3.  2.
+           0.088063705     7.444     4.  2.
+           0.018736343    15.433     2.  3.
+          -0.016872191    21.543     3.  3.
+           0.0070032274   15.499     5.  3.
+
+
+@AUX    !---Auxiliary function for Cp0
+CP2     !Ideal gas heat capacity function for R-1234yf.
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?Akasaka, R.,
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          0.                 !
+          10000.             !
+          0.                 !
+          0.                 !
+          1.0     8.314472   !Reducing parameters for T, Cp0
+          1 3   0 0   0 0 0  !Nterms:  polynomial, exponential, cosh, sinh
+           4.0        0.0
+           5.2829     354.0
+           6.96022    965.0
+           7.04266    1981.0
+
+
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+#ETA   !---Viscosity---
+VS7    !Pure fluid viscosity model for R-1234yf of Huber and Assael (2016).
+:DOI: 10.1016/j.ijrefrig.2016.08.007
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Huber, M.L. and Assael, M.J.,
+? "Correlations for the Viscosity of 2,3,3,3-Tetrafluoroprop-1-ene (R1234yf)
+? and trans-1,2,2,2-Tetrafluoropropene (R1234ze(E)),"
+? Int. J. Refrig., 71:39-45, 2016.
+? doi: 10.1016/j.ijrefrig.2016.08.007
+?
+?The estimated uncertainty for the dilute gas region is 3%, for the liquid phase at pressures to 30 MPa is 3.5%.
+? The equation of state was updated in 2019, but the change was not significant
+? enough to require refitting the transport equations.
+?
+!```````````````````````````````````````````````````````````````````````````````
+220.0              !Lower temperature limit [K]
+410.0              !Upper temperature limit [K]
+30000.0            !Upper pressure limit [kPa]
+12.0               !Maximum density [mol/L]
+NUL                !Omega model
+!
+!Dilute gas function
+$DG SUM:4 SUM:3 /
+!
+!Second viscosity virial function
+$VV RED SUM:9
+!
+!Residual function
+$RF RED SUMDTHRD:4 SUM:2 /
+!
+!Coefficients
+$CF
+-836950.0        0.    0.  0.  0       !Dilute gas terms
+ 6336.28         1.    0.  0.  0       !Coefficient, power in T
+-2.3547          2.    0.  0.  0
+ 0.0395563       3.    0.  0.  0
+ 39509.1         0.    0.  0.  0
+ 121.018         1.    0.  0.  0
+ 1.0             2.    0.  0.  0
+!Virial terms
+ 0.090164213     275.  1.  0.  0       !Reducing parameters for eta, T (= eps/k), rho, etaB2 (= 0.6022137*sigma**3)
+-19.572881       0.    0.  0.  0       !Coefficient, power in T* = T/(eps/k)
+ 219.73999      -0.25  0.  0.  0
+-1015.3226      -0.5   0.  0.  0
+ 2471.01251     -0.75  0.  0.  0
+-3375.1717      -1.    0.  0.  0
+ 2491.6597      -1.25  0.  0.  0
+-787.26086      -1.5   0.  0.  0
+ 14.085455      -2.5   0.  0.  0
+-0.34664158     -5.5   0.  0.  0
+!Background gas function
+ 1.0  367.85        4.17   0.  0       !Reducing parameters for eta, T, rho
+ 0.68706100665   1.5   2.  0.  0
+ 7.1608477411    1.5   5.  0.  0
+-2.079577245     1.5   8.  0.  0
+-43.47027288     0.5   5.  0.  0
+-3.53682791      1.0   0.  0.  0
+ 1.0             1.0   1.  0.  0
+NUL                !Pointer to the viscosity critical enhancement auxiliary function (none used)
+
+
+
+
+================================================================================
+
+#TCX   !---Thermal conductivity---
+TC1    !Pure fluid thermal conductivity model for R-1234yf of Perkins and Huber (2011).
+:DOI: 10.1021/je200811n
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Perkins, R.A. and Huber, M.L.,
+? "Measurement and Correlation of the Thermal Conductivity of
+? 2,3,3,3-Tetrafluoroprop-1-ene (R1234yf) and trans-1,3,3,3-Tetrafluoropeopene (R1234ze),"
+? J. Chem. Eng. Data, 56(12):4868-4874, 2011. doi: 10.1021/je200811n
+?
+?The estimated uncertainty of the correlation is 1 % for the liquid phase,
+? and 3 % for the vapor at pressures less than 1 MPa, larger in the critical region.
+? The equation of state was updated in 2019, but the change was not significant
+? enough to require refitting the transport equations.
+?
+!```````````````````````````````````````````````````````````````````````````````
+220.               !Lower temperature limit [K]
+410.0              !Upper temperature limit [K]
+30000.0            !Upper pressure limit [kPa]
+12.                !Maximum density [mol/L]
+4   0              !# terms for dilute gas function:  numerator, denominator
+367.85     1.0     !Reducing parameters for T, tcx
+-0.0102778   0.    !Coefficient, power in T
+ 0.0291098   1.
+ 0.000860643 2.
+ 0.0         3.
+ 10  0             !# terms for background gas function:  numerator, denominator
+ 367.85  4.17  1.  !Reducing parameters for T, rho, tcx
+-0.0368219   0.  1.  0.  !Coefficient, powers of T, rho, spare for future use
+ 0.0883226   0.  2.  0.
+-0.0705909   0.  3.  0.
+ 0.0259026   0.  4.  0.
+-0.0032295   0.  5.  0.
+ 0.0397166   1.  1.  0.
+-0.077239    1.  2.  0.
+ 0.0664707   1.  3.  0.
+-0.0249071   1.  4.  0.
+ 0.00336228  1.  5.  0.
+TK3                !Pointer to critical enhancement auxiliary function
+
+
+#AUX   !---Auxiliary function for the thermal conductivity critical enhancement
+TK3    !Simplified thermal conductivity critical enhancement for R-1234yf of Perkins and Huber (2011).
+:DOI: 10.1021/je200811n
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Perkins, R.A. and Huber, M.L.,
+? "Measurement and Correlation of the Thermal Conductivity of
+? 2,3,3,3-Tetrafluoroprop-1-ene (R1234yf) and trans-1,3,3,3-Tetrafluoropeopene (R1234ze),"
+? J. Chem. Eng. Data, 56(12):4868-4874, 2011. doi: 10.1021/je200811n
+?
+!```````````````````````````````````````````````````````````````````````````````
+0.                 !
+10000.             !
+0.                 !
+0.                 !
+9 0 0 0            !# terms:  CO2-terms, spare, spare, spare
+1.0  1.0  1.0      !Reducing parameters for T, rho, tcx [mW/(m-K)]
+0.63               !Nu (universal exponent)
+1.239              !Gamma (universal exponent)
+1.03               !R0 (universal amplitude)
+0.063              !Z (universal exponent--not used for t.c., only viscosity)
+1.0                !C (constant in viscosity eqn = 1/[2 - (alpha + gamma)/(2*nu)], but often set to 1)
+0.194e-9           !Xi0 (amplitude) [m]
+0.0496             !Gam0 (amplitude) [-]
+5.835e-10          !Qd_inverse (modified effective cutoff parameter) [m]; R125 value
+551.775            !Tref (reference temperature)=1.5*Tc [K]
+
+
+
+
+********************************************************************************
+
+@TCX    !---Thermal conductivity---
+TC5     !Pure fluid thermal conductivity model for R-1234yf of Chung et al. (1988).
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?Chung, T-H., Ajlan, M., Lee, L.L. and Starling, K.E.
+          ? "Generalized Multiparameter Correlation for Nonpolar and Polar Fluid Transport Properties"
+          ? Ind. Eng. Chem. Res. 1988, 27, 671-679.
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          220.               !Lower temperature limit [K]
+          420.               !Upper temperature limit [K]
+          20000.             !Upper pressure limit [kPa]
+          11.64              !Maximum density [mol/L]
+          0.50               !Lennard-Jones coefficient sigma [nm] =0.809vc*(1/3)A
+          292.1              !Lennard-Jones coefficient epsilon/kappa [K] =Tc/1.2593
+           0.276   0.  0.    !w, mur, kappa for Chung
+          0                  !Additional parameters for Chung
+          TK3                !Pointer to critical enhancement auxiliary function
+
+
+@ETA    !---Viscosity---
+VS5     !Pure fluid viscosity model for R-1234yf of Chung et al. (1988).
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?Uses functional form in
+          ? Chung, T-H., Ajlan, M., Lee, L.L. and Starling, K.E.
+          ? "Generalized Multiparameter Correlation for Nonpolar and Polar Fluid Transport Properties"
+          ? Ind. Eng. Chem. Res. 1998, 27, 671-679.
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          168.62             !Lower temperature limit [K]
+          420.0              !Upper temperature limit [K]
+          20000.0            !Upper pressure limit [kPa]
+          13.835             !Maximum density [mol/L]
+          1                  !Number of terms associated with dilute-gas function
+          NUL                !Pointer to reduced effective collision cross-section model; not used
+          0.5025             !Lennard-Jones coefficient sigma [nm] =0.809vc*(1/3)A
+          292.107            !Lennard-Jones coefficient epsilon/kappa [K] =Tc/1.2593
+          1.0      1.0       !Reducing parameters for T, eta
+          0.22807  0.5       !=0.021357*SQRT(MW)  [Chapman-Enskog term]
+          0                  !Number of terms for initial density dependence
+           0.276     1.1361   0.0      0.  0     !w, mur, kappa for Chung, fit
+          0                  !Additional parameters for Chung
+          NUL                !Pointer to the viscosity critical enhancement auxiliary function (none used)
+
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@TRN    !---ECS Transport---
+ECS     !Extended Corresponding States model (R134a reference) for R-1234yf.
+:DOI: 10.1021/ie0300880
+          ?
+          ?```````````````````````````````````````````````````````````````````````````````
+          ?*** ESTIMATION METHOD *** NOT STANDARD REFERENCE QUALITY ***
+          ?Unpublished; uses method described in the following reference:
+          ?Huber, M.L., Laesecke, A., and Perkins, R.A.
+          ? "Model for the Viscosity and Thermal Conductivity of Refrigerants, Including
+          ? a New Correlation for the Viscosity of R134a,"
+          ? Ind. Eng. Chem. Res., 42(13):3163-3178, 2003. doi: 10.1021/ie0300880
+          ?
+          ?*** Limited or no experimental data were available for analysis ***
+          ?
+          ?Estimated uncertainty for viscosity is 10% based on comparisons with
+          ? Hulse, R., Singh, R., Pham, H., "Physical Properties of HFO-1234yf", paper presented at 17th Symp. Thermophysical Properties, Boulder CO June 2009
+          ?
+          ?No data for thermal conductivity was found. Based on family comparisons,
+          ? the estimated uncertainty for ECS estimation model is 20%
+          ?
+          ?The Lennard-Jones parameters were taken from Arakawa
+          ?
+          !```````````````````````````````````````````````````````````````````````````````
+          220.0              !Lower temperature limit [K]
+          410.0              !Upper temperature limit [K]
+          30000.0            !Upper pressure limit [kPa]
+          11.64              !Maximum density [mol/L]
+          FEQ R134A.FLD
+          VS1                !Model for reference fluid viscosity
+          TC1                !Model for reference fluid thermal conductivity
+          NUL                !Large molecule identifier
+          1                  !Lennard-Jones flag (0 or 1) (0 => use estimates)
+          0.5328             !Lennard-Jones coefficient sigma [nm]
+          281.14             !Lennard-Jones coefficient epsilon/kappa [K]
+          1  0  0            !Number of terms in f_int term in Eucken correlation, spare1, spare2
+           0.00132  0. 0. 0. !Coefficient, power of T, spare1, spare2
+          3  0  0            !Number of terms in psi (visc shape factor): poly,spare1,spare2
+           1.1998   0. 0. 0. !Coefficient, power of Tr, power of Dr, spare
+          -0.18137  0. 1. 0. !Coefficient, power of Tr, power of Dr, spare
+           0.03851  0. 2. 0. !Coefficient, power of Tr, power of Dr, spare
+          1  0  0            !Number of terms in chi (t.c. shape factor): poly,spare1,spare2
+           1.0      0. 0. 0. !Coefficient, power of Tr, power of Dr, spare
+          TK3                !Pointer to critical enhancement auxiliary function
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#STN   !---Surface tension---
+ST1    !Surface tension model for R-1234yf of Mulero et al. (2012).
+:DOI: 10.1063/1.4768782
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Mulero, A., Cachadiña, I., and Parra, M.I.,
+? "Recommended Correlations for the Surface Tension of Common Fluids,"
+? J. Phys. Chem. Ref. Data, 41(4), 043105, 2012. doi: 10.1063/1.4768782
+?
+!```````````````````````````````````````````````````````````````````````````````
+0.                 !
+10000.             !
+0.                 !
+0.                 !
+1                  !Number of terms in surface tension model
+367.85             !Critical temperature used in fit (dummy)
+0.06274   1.394    !Sigma0 and n
+
+
+#PS    !---Vapor pressure---
+PS5    !Vapor pressure equation for R-1234yf of Lemmon and Akasaka (2022).
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Lemmon, E.W. and Akasaka, R., 2022.
+?
+?Functional Form:  P=Pc*EXP[SUM(Ni*Theta^ti)*Tc/T] where Theta=1-T/Tc, Tc and Pc
+? are the reducing parameters below, which are followed by rows containing Ni and ti.
+?
+!```````````````````````````````````````````````````````````````````````````````
+0.                 !
+10000.             !
+0.                 !
+0.                 !
+367.85  3384.4     !Reducing parameters
+5 0 0 0 0 0        !Number of terms in equation
+-7.4507  1.0
+ 2.164   1.5
+-1.674   2.0
+-3.318   4.0
+-1.617   9.0
+
+
+#DL    !---Saturated liquid density---
+DL1    !Saturated liquid density equation for R-1234yf of Lemmon and Akasaka (2022).
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Lemmon, E.W. and Akasaka, R., 2022.
+?
+?Functional Form:  D=Dc*[1+SUM(Ni*Theta^ti)] where Theta=1-T/Tc, Tc and Dc are
+? the reducing parameters below, which are followed by rows containing Ni and ti.
+?
+!```````````````````````````````````````````````````````````````````````````````
+0.                 !
+10000.             !
+0.                 !
+0.                 !
+367.85  4.18       !Reducing parameters
+5 0 0 0 0 0        !Number of terms in equation
+ 3.392     0.4
+-4.119     0.7
+ 8.932     1.1
+-8.525     1.5
+ 3.384     2.1
+
+
+#DV    !---Saturated vapor density---
+DV3    !Saturated vapor density equation for R-1234yf of Lemmon and Akasaka (2022).
+?
+?```````````````````````````````````````````````````````````````````````````````
+?Lemmon, E.W. and Akasaka, R., 2022.
+?
+?Functional Form:  D=Dc*EXP[SUM(Ni*Theta^ti)] where Theta=1-T/Tc, Tc and Dc are
+? the reducing parameters below, which are followed by rows containing Ni and ti.
+?
+!```````````````````````````````````````````````````````````````````````````````
+0.                 !
+10000.             !
+0.                 !
+0.                 !
+367.85  4.18       !Reducing parameters
+6 0 0 0 0 0        !Number of terms in equation
+-3.6160     0.426
+-74.910     2.0
+ 197.70     2.4
+-152.76     2.7
+-61.062     7.5
+-115.53    15.0
+
+
+@END
+c        1         2         3         4         5         6         7         8
+c2345678901234567890123456789012345678901234567890123456789012345678901234567890

@@ -89,7 +89,7 @@ public:
         icall++;
         return y;
     }
-    auto Jacobian(const EigenArray& rhovec){
+    auto Jacobian(const EigenArray& /*rhovec*/){
         return J;
     }
     //auto numJacobian(const EigenArray& rhovec) {

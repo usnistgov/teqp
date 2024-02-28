@@ -30,7 +30,7 @@ namespace teqp {
         else {
             z = Eigen::ArrayXd(alternative_length.value()); z.setZero();
             auto index = alternative_pure_index.value();
-            if (index >= 0 && index < z.size()){
+            if (index >= 0 && index < static_cast<std::size_t>(z.size())){
                 z(index) = 1.0;
             }
             else{

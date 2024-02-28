@@ -364,6 +364,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("terminate_composition", &VLLE::VLLETracerOptions::terminate_composition)
         .def_readwrite("terminate_composition_tol", &VLLE::VLLETracerOptions::terminate_composition_tol)
         .def_readwrite("T_limit", &VLLE::VLLETracerOptions::T_limit)
+        .def_readwrite("max_step_retries", &VLLE::VLLETracerOptions::max_step_retries)
         ;
 
     py::class_<MixVLETpFlags>(m, "MixVLETpFlags")

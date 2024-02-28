@@ -27,6 +27,7 @@
 #include "teqp/models/mie/lennardjones.hpp"
 #include "teqp/models/mie/mie.hpp"
 #include "teqp/models/GERG/GERG.hpp"
+#include "teqp/models/LKP.hpp"
 
 namespace teqp {
 

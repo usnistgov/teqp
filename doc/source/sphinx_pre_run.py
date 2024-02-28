@@ -1,13 +1,25 @@
-import subprocess, os, shutil
+import subprocess, os, shutil, re
 
 here = os.path.dirname(__file__)
+import teqp
 
 def run():
     # Run doxygen (always)
     if os.path.exists(here+'/_static/'):
         shutil.rmtree(here+'/_static/')
     os.makedirs(here+'/_static')
-    subprocess.check_call('doxygen Doxyfile', cwd=here+'/../..', shell=True)
+
+    oldDoxyfile = here+'/../../Doxyfile'
+    newDoxyfile = here+'/../../Doxyfile.injected'
+    def repl(matchobj):
+        return matchobj.group(1) + teqp.__version__
+    newcontents = re.sub(r'(PROJECT_NUMBER\s+=\s+)(.+)', repl, open(oldDoxyfile).read())
+    with open(newDoxyfile,'w') as fp:
+        fp.write(newcontents)
+
+    subprocess.check_call('doxygen Doxyfile.injected', cwd=here+'/../..', shell=True)
+    os.remove(newDoxyfile)
+
 
     # Execute all the notebooks
     for path, dirs, files in os.walk('.'):

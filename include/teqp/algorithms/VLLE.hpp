@@ -255,7 +255,7 @@ namespace VLLE {
     inline auto get_self_intersections(Iterable& x, Iterable& y) {
         Eigen::Array22d A;
         std::vector<SelfIntersectionSolution> solns;
-        for (auto j = 0; j < x.size() - 1; ++j) {
+        for (auto j = 0U; j < x.size() - 1; ++j) {
             auto p0 = (Eigen::Array2d() << x[j], y[j]).finished();
             auto p1 = (Eigen::Array2d() << x[j + 1], y[j + 1]).finished();
             A.col(0) = p1 - p0;
@@ -277,11 +277,11 @@ namespace VLLE {
     inline auto get_cross_intersections(Iterable& x1, Iterable& y1, Iterable& x2, Iterable& y2) {
         Eigen::Array22d A;
         std::vector<SelfIntersectionSolution> solns;
-        for (auto j = 0; j < x1.size() - 1; ++j) {
+        for (auto j = 0U; j < x1.size() - 1; ++j) {
             auto p0 = (Eigen::Array2d() << x1[j], y1[j]).finished();
             auto p1 = (Eigen::Array2d() << x1[j + 1], y1[j + 1]).finished();
             A.col(0) = p1 - p0;
-            for (auto k = 0; k < x2.size() - 1; ++k) {
+            for (auto k = 0U; k < x2.size() - 1; ++k) {
                 auto q0 = (Eigen::Array2d() << x2[k], y2[k]).finished();
                 auto q1 = (Eigen::Array2d() << x2[k + 1], y2[k + 1]).finished();
                 A.col(1) = q0 - q1;
@@ -328,12 +328,12 @@ namespace VLLE {
             //auto& trace = traces[0];
 
             auto process_intersection = [&](auto& trace, auto& i) {
-                rhoL1 = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoL / mol/m^3", i.s);
-                rhoL2 = avg_values(traces[0][i.k], traces[0][i.k + 1], "rhoL / mol/m^3", i.t);
-                rhoV = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoV / mol/m^3", i.s);
+                rhoL1 = avg_values(trace[i.j], trace[i.j + 1], "rhoL / mol/m^3", i.s);
+                rhoL2 = avg_values(trace[i.k], trace[i.k + 1], "rhoL / mol/m^3", i.t);
+                rhoV = avg_values(trace[i.j], trace[i.j + 1], "rhoV / mol/m^3", i.s);
 
                 if (key == "T"){
-                    double T = traces[0][0].at("T / K"); // All at same temperature
+                    double T = trace[0].at("T / K"); // All at same temperature
                     
                     // Polish the solution
                     auto [code, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_T(model, T, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
@@ -346,7 +346,7 @@ namespace VLLE {
                     };
                 }
                 else if (key == "P"){
-                    double p = traces[0][0].at("pL / Pa"); // all at same pressure
+                    double p = trace[0].at("pL / Pa"); // all at same pressure
                     
                     // Polish the solution
                     auto [code, Tfinal, rhoVfinal, rhoL1final, rhoL2final] = mix_VLLE_p(model, p, i.y, rhoV, rhoL1, rhoL2, 1e-10, 1e-10, 1e-10, 1e-10, opt.max_steps);
@@ -400,7 +400,7 @@ namespace VLLE {
             }
             auto intersections = get_cross_intersections(x1, y1, x2, y2);
 
-            auto process_intersection = [&](auto& trace, auto& i) {
+            auto process_intersection = [&](auto& i) {
                 rhoL1 = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoL / mol/m^3", i.s);
                 rhoL2 = avg_values(traces[1][i.k], traces[1][i.k + 1], "rhoL / mol/m^3", i.t);
                 rhoV = avg_values(traces[0][i.j], traces[0][i.j + 1], "rhoV / mol/m^3", i.s);
@@ -439,7 +439,7 @@ namespace VLLE {
             
             for (auto& intersection : intersections) {
                 try {
-                    auto soln = process_intersection(traces[0], intersection);
+                    auto soln = process_intersection(intersection);
                     auto rhovecL1 = soln.at("polished")[1].template get<std::valarray<double>>();
                     auto rhovecL2 = soln.at("polished")[2].template get<std::valarray<double>>();
                     auto rhodiff = 100*(rhovecL1.sum() / rhovecL2.sum() - 1);
@@ -598,11 +598,17 @@ namespace VLLE {
             }
             
             if (options.terminate_composition){
-                auto x0 = (Eigen::ArrayXd(3) << rhovecL1[0]/rhovecL1.sum(), rhovecL2[0]/rhovecL2.sum(), rhovecV[0]/rhovecV.sum()).finished();
-                auto diffs = (Eigen::ArrayXd(3) << x0[0]-x0[1], x0[0]-x0[2], x0[1]-x0[2]).finished();
+                auto c0 = (Eigen::ArrayXd(3) << rhovecL1[0]/rhovecL1.sum(), rhovecL2[0]/rhovecL2.sum(), rhovecV[0]/rhovecV.sum()).finished();
+                auto diffs = (Eigen::ArrayXd(3) << c0[0]-c0[1], c0[0]-c0[2], c0[1]-c0[2]).finished();
                 if ((diffs.cwiseAbs() < options.terminate_composition_tol).any()){
                     break;
                 }
+            }
+            if (retry_count > options.max_step_retries){
+                if (options.verbosity > 0) {
+                    std::cout << "Max retries of step exceeded." << std::endl;
+                }
+                break;
             }
             
             nlohmann::json entry{

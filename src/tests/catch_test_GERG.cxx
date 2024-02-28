@@ -23,7 +23,7 @@ TEST_CASE("Load all GERG2004 models", "[GERG2004]"){
     }
     CHECK_THROWS(GERG2004::get_pure_info("NOT A FLUID"));
     
-    for (auto i = 0; i < names.size(); ++i){
+    for (auto i = 0U; i < names.size(); ++i){
         for (auto j = i+1; j < names.size(); ++j){
             CHECK_NOTHROW(GERG2004::get_betasgammas(names[i], names[j]));
             CHECK_NOTHROW(GERG2004::get_betasgammas(names[j], names[i]));
@@ -61,7 +61,7 @@ TEST_CASE("Load all GERG2008 models", "[GERG2008]"){
     }
     CHECK_THROWS(GERG2008::get_pure_info("NOT A FLUID"));
     
-    for (auto i = 0; i < names.size(); ++i){
+    for (auto i = 0U; i < names.size(); ++i){
         for (auto j = i+1; j < names.size(); ++j){
             CHECK_NOTHROW(GERG2008::get_betasgammas(names[i], names[j]));
             CHECK_NOTHROW(GERG2008::get_betasgammas(names[j], names[i]));
@@ -498,7 +498,7 @@ TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
     
     double R = 8.314472;
     
-    for (auto i = 0; i < components.size(); ++i){
+    for (auto i = 0U; i < components.size(); ++i){
         for(auto j = i+1; j < components.size(); ++j){
             
             double T_K = 300;
@@ -546,7 +546,7 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
     auto model = GERG2008::GERG2008ResidualModel(components);
     
     SetupGERG();
-    for (auto i = 0; i < validation_data.size(); ++i){
+    for (auto i = 0U; i < validation_data.size(); ++i){
         double p_given_MPa = validation_data[i].P_MPa;
         
         double rho = validation_data[i].D_molL*1e3;

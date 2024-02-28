@@ -202,7 +202,7 @@ public:
     template<typename TTYPE, typename RhoType, typename VecType>
     auto eval(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
         
-        std::size_t N = m.size();
+        Eigen::Index N = m.size();
         
         if (mole_fractions.size() != N) {
             throw std::invalid_argument("Length of mole_fractions (" + std::to_string(mole_fractions.size()) + ") is not the length of components (" + std::to_string(N) + ")");
@@ -214,9 +214,9 @@ public:
         c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
         c.m2_epsilon2_sigma3_bar = static_cast<TRHOType>(0.0);
         c.d.resize(N);
-        for (std::size_t i = 0; i < N; ++i) {
+        for (auto i = 0L; i < N; ++i) {
             c.d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
-            for (std::size_t j = 0; j < N; ++j) {
+            for (auto j = 0; j < N; ++j) {
                 // Eq. A.5
                 auto sigma_ij = 0.5 * sigma_Angstrom[i] + 0.5 * sigma_Angstrom[j];
                 auto eij_over_k = sqrt(epsilon_over_k[i] * epsilon_over_k[j]) * (1.0 - kmat(i,j));
@@ -293,7 +293,7 @@ protected:
     std::optional<PCSAFTDipolarContribution> dipolar; // Can be present or not
     std::optional<PCSAFTQuadrupolarContribution> quadrupolar; // Can be present or not
 
-    void check_kmat(std::size_t N) {
+    void check_kmat(Eigen::Index N) {
         if (kmat.cols() != kmat.rows()) {
             throw teqp::InvalidArgument("kmat rows and columns are not identical");
         }
@@ -330,11 +330,11 @@ protected:
         return PCSAFTHardChainContribution(m, mminus1, sigma_Angstrom, epsilon_over_k, kmat);
     }
     auto extract_names(const std::vector<SAFTCoeffs> &coeffs){
-        std::vector<std::string> names;
+        std::vector<std::string> names_;
         for (const auto& c: coeffs){
-            names.push_back(c.name);
+            names_.push_back(c.name);
         }
-        return names;
+        return names_;
     }
     auto build_dipolar(const std::vector<SAFTCoeffs> &coeffs) -> std::optional<PCSAFTDipolarContribution>{
         Eigen::ArrayXd mustar2(coeffs.size()), nmu(coeffs.size());
@@ -431,7 +431,7 @@ inline auto PCSAFTfactory(const nlohmann::json& spec) {
     
     if (spec.contains("names")){
         std::vector<std::string> names = spec["names"];
-        if (kmat && kmat.value().rows() != names.size()){
+        if (kmat && static_cast<std::size_t>(kmat.value().rows()) != names.size()){
             throw teqp::InvalidArgument("Provided length of names of " + std::to_string(names.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
         }
         return PCSAFTMixture(names, kmat.value_or(Eigen::ArrayXXd{}));
@@ -455,7 +455,7 @@ inline auto PCSAFTfactory(const nlohmann::json& spec) {
             }
             coeffs.push_back(c);
         }
-        if (kmat && kmat.value().rows() != coeffs.size()){
+        if (kmat && static_cast<std::size_t>(kmat.value().rows()) != coeffs.size()){
             throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
         }
         return PCSAFTMixture(coeffs, kmat.value_or(Eigen::ArrayXXd{}));

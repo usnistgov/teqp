@@ -39,12 +39,12 @@ std::unordered_map<unsigned long long int, std::shared_ptr<teqp::cppinterface::A
 void exception_handler(int& errcode, char* message_buffer, const int buffer_length)
 {
     auto write_error = [&](const std::string& msg){
-        if (msg.size() < buffer_length){
+        if (msg.size() < static_cast<std::size_t>(buffer_length)){
             strcpy(message_buffer, msg.c_str());
         }
         else{
             std::string toolong_message = "Error message too long for buffer";
-            if (toolong_message.size() < buffer_length){
+            if (toolong_message.size() < static_cast<std::size_t>(buffer_length)){
                 strcpy(message_buffer, toolong_message.c_str());
             }
             else if (buffer_length > 1){
@@ -117,6 +117,8 @@ EXPORT_CODE int CONVENTION get_Arxy(const long long int uuid, const int NT, cons
 
 #include "teqp/json_tools.hpp"
 
+const std::string FLUIDDATAPATH = "../teqp/fluiddata"; // normally defined in src/test/test_common.in
+
 TEST_CASE("Use of C interface","[teqpc]") {
 
     constexpr int errmsg_length = 3000;
@@ -141,7 +143,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         jmodel["departure"] = "";
         jmodel["BIP"] = "";
         jmodel["components"] = nlohmann::json::array();
-        jmodel["components"].push_back("../mycp/dev/fluids/Argon.json");
+        jmodel["components"].push_back(FLUIDDATAPATH+"/dev/fluids/Argon.json");
 
         nlohmann::json j = {
             {"kind", "multifluid"},
@@ -149,13 +151,15 @@ TEST_CASE("Use of C interface","[teqpc]") {
         };
         std::string js = j.dump(2);
         int e1 = build_model(js.c_str(), &uuidMF, errmsg, errmsg_length);
+        REQUIRE(e1 == 0);
+        CAPTURE(errmsg);
     }
     {
         nlohmann::json jmodel = nlohmann::json::object();
         jmodel["departure"] = "";
         jmodel["BIP"] = "";
         jmodel["components"] = nlohmann::json::array();
-        jmodel["components"].push_back(load_a_JSON_file("../mycp/dev/fluids/Argon.json"));
+        jmodel["components"].push_back(load_a_JSON_file(FLUIDDATAPATH+"/dev/fluids/Argon.json"));
         
         nlohmann::json j = {
             {"kind", "multifluid"},
@@ -173,7 +177,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         jmodel["components"] = nlohmann::json::array();
         jmodel["components"].push_back("Ethane");
         jmodel["components"].push_back("Nitrogen");
-        jmodel["root"] = "../mycp";
+        jmodel["root"] = FLUIDDATAPATH;
         
         nlohmann::json j = {
             {"kind", "multifluid"},
@@ -303,7 +307,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
         jmodel["departure"] = nlohmann::json::array();
         jmodel["BIP"] = nlohmann::json::array();
         jmodel["components"] = nlohmann::json::array();
-        jmodel["components"].push_back("../mycp/dev/fluids/Argon.json");
+        jmodel["components"].push_back(FLUIDDATAPATH+"/dev/fluids/Argon.json");
         
         nlohmann::json j = {
             {"kind", "multifluid"},
@@ -322,7 +326,7 @@ TEST_CASE("Use of C interface","[teqpc]") {
     BENCHMARK("multifluid pure with fluid contents") {
         nlohmann::json jmodel = nlohmann::json::object();
         jmodel["components"] = nlohmann::json::array();
-        jmodel["components"].push_back(load_a_JSON_file("../mycp/dev/fluids/Argon.json")); 
+        jmodel["components"].push_back(load_a_JSON_file(FLUIDDATAPATH+"/dev/fluids/Argon.json"));
         jmodel["departure"] = nlohmann::json::array();
         jmodel["BIP"] = nlohmann::json::array();
         jmodel["flags"] = nlohmann::json::object();

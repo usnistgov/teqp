@@ -132,12 +132,12 @@ auto build_ancillaries(const AbstractModel& model, double Tcritguess, double rho
     
     if (verify){
         // Verify
-        for (auto i = 0; i < Thetas_.size(); ++i){
+        for (auto i = 0U; i < Thetas_.size(); ++i){
             double T = (1-Thetas_[i])*Tcrittrue;
             
             double rhoLanc = anc.rhoL(T);
             double rhoVanc = anc.rhoV(T);
-            double panc = anc.pL(T);
+//            double panc = anc.pL(T);
             if (std::abs(rhoLanc/rhoLs_[i]-1) > 1e-2){
                 std::cout << T << " " << rhoLs_[i] << " " << rhoLanc << std::endl;
             }

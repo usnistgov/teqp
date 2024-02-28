@@ -30,6 +30,7 @@ So far the following EOS are implemented:
     * multi-fluid model in the form of GERG
     * GERG-2004 and GERG-2008
     * ammonia+water model of Tillner-Roth and Friend
+* Lee-Kesler-Plöcker
 
 What is teqp *not*?:
 

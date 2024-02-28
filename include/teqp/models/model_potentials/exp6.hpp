@@ -120,7 +120,7 @@ public:
     template<typename TType, typename RhoType, typename MoleFracType>
     auto alphar(const TType& Tstar,
         const RhoType& rhostar,
-        const MoleFracType& molefrac) const
+        const MoleFracType& /*molefrac*/) const
     {
         std::common_type_t<TType, RhoType> o = 0.0;
         for (auto el : c){

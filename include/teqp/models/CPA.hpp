@@ -20,7 +20,7 @@ using association::get_association_classes;
 
 /// Function that calculates the association binding strength between site A of molecule i and site B on molecule j
 template<typename BType, typename TType, typename RhoType, typename VecType>
-inline auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_cubic, TType RT, RhoType rhomolar, const VecType& molefrac) {
+inline auto get_DeltaAB_pure(radial_dist dist, double epsABi, double betaABi, BType b_cubic, TType RT, RhoType rhomolar, const VecType& /*molefrac*/) {
 
     using eta_type = std::common_type_t<decltype(rhomolar), decltype(b_cubic)>;
     eta_type eta;
@@ -134,11 +134,11 @@ public:
         default:
             throw std::invalid_argument("Bad cubic flag");
         }
-        k_ij.resize(Tc.size()); for (auto i = 0; i < k_ij.size(); ++i) { k_ij[i].resize(Tc.size()); }
+        k_ij.resize(Tc.size()); for (auto i = 0U; i < k_ij.size(); ++i) { k_ij[i].resize(Tc.size()); }
     };
 
     template<typename VecType>
-    auto R(const VecType& molefrac) const { return R_gas; }
+    auto R(const VecType& /*molefrac*/) const { return R_gas; }
 
     template<typename TType>
     auto get_ai(TType T, int i) const {
@@ -149,10 +149,10 @@ public:
     auto get_ab(const TType T, const VecType& molefrac) const {
         using return_type = std::common_type_t<decltype(T), decltype(molefrac[0])>;
         return_type asummer = 0.0, bsummer = 0.0;
-        for (auto i = 0; i < molefrac.size(); ++i) {
+        for (auto i = 0U; i < molefrac.size(); ++i) {
             bsummer += molefrac[i] * bi[i];
             auto ai = get_ai(T, i);
-            for (auto j = 0; j < molefrac.size(); ++j) {
+            for (auto j = 0U; j < molefrac.size(); ++j) {
                 auto aj = get_ai(T, j);
                 auto a_ij = (1.0 - k_ij[i][j]) * sqrt(ai * aj);
                 asummer += molefrac[i] * molefrac[j] * a_ij;

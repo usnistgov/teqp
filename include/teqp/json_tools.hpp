@@ -49,12 +49,12 @@ namespace teqp{
                 return mat;
             }
             // Then copy elements over
-            for (auto i = 0; i < m.size(); ++i){
+            for (auto i = 0U; i < m.size(); ++i){
                 auto row = m[i];
-                if (row.size() != mat.rows()){
+                if (row.size() != static_cast<std::size_t>(mat.rows())){
                     throw std::invalid_argument("provided matrix is not square");
                 }
-                for (auto k = 0; k < row.size(); ++k){
+                for (auto k = 0U; k < row.size(); ++k){
                     mat(i, k) = row[k];
                 }
             }
@@ -78,8 +78,7 @@ namespace teqp{
         
         auto is_valid_path = [](const std::string & s){
             try{
-                std::filesystem::is_regular_file(s);
-                return true;
+                return std::filesystem::is_regular_file(s) || true; // this will return true if the function CAN BE CALLED without exception, indicating it could be a path
             }
             catch(...){
                 return false;
@@ -92,6 +91,9 @@ namespace teqp{
         }
         else if (j.is_object()){
             // Assume we are already providing the thing
+            return j;
+        }
+        else if (j.is_array() && j.size() > 0){
             return j;
         }
         else if (j.is_string()){

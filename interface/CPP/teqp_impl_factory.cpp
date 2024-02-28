@@ -16,6 +16,8 @@ namespace teqp {
     
         nlohmann::json get_model_schema(const std::string& kind) { return model_schema_library.at(kind); }
 
+        // A list of factory functions that maps from EOS kind to factory function
+        // The factory function returns a pointer to an AbstractModel (but which is an instance of a derived class)
         static std::unordered_map<std::string, makefunc> pointer_factory = {
             {"vdW1", [](const nlohmann::json& spec){ return make_owned(vdWEOS1(spec.at("a"), spec.at("b"))); }},
             {"vdW", [](const nlohmann::json& spec){ return make_owned(vdWEOS<double>(spec.at("Tcrit / K"), spec.at("pcrit / Pa"))); }},
@@ -29,14 +31,16 @@ namespace teqp {
             {"CPA", [](const nlohmann::json& spec){ return make_owned(CPA::CPAfactory(spec));}},
             {"PCSAFT", [](const nlohmann::json& spec){ return make_owned(PCSAFT::PCSAFTfactory(spec));}},
             
+            {"LKP", [](const nlohmann::json& spec){ return make_owned(LKP::make_LKPMix(spec));}},
+            
             {"multifluid", [](const nlohmann::json& spec){ return make_owned(multifluidfactory(spec));}},
             {"multifluid-ECS-HuberEly1994", [](const nlohmann::json& spec){ return make_owned(ECSHuberEly::ECSHuberEly1994(spec));}},
             {"SW_EspindolaHeredia2009",  [](const nlohmann::json& spec){ return make_owned(squarewell::EspindolaHeredia2009(spec.at("lambda")));}},
             {"EXP6_Kataoka1992", [](const nlohmann::json& spec){ return make_owned(exp6::Kataoka1992(spec.at("alpha")));}},
-            {"AmmoniaWaterTillnerRoth", [](const nlohmann::json& spec){ return make_owned(AmmoniaWaterTillnerRoth());}},
-            {"LJ126_TholJPCRD2016", [](const nlohmann::json& spec){ return make_owned(build_LJ126_TholJPCRD2016());}},
-            {"LJ126_KolafaNezbeda1994", [](const nlohmann::json& spec){ return make_owned(LJ126KolafaNezbeda1994());}},
-            {"LJ126_Johnson1993", [](const nlohmann::json& spec){ return make_owned(LJ126Johnson1993());}},
+            {"AmmoniaWaterTillnerRoth", [](const nlohmann::json& /*spec*/){ return make_owned(AmmoniaWaterTillnerRoth());}},
+            {"LJ126_TholJPCRD2016", [](const nlohmann::json& /*spec*/){ return make_owned(build_LJ126_TholJPCRD2016());}},
+            {"LJ126_KolafaNezbeda1994", [](const nlohmann::json& /*spec*/){ return make_owned(LJ126KolafaNezbeda1994());}},
+            {"LJ126_Johnson1993", [](const nlohmann::json& /*spec*/){ return make_owned(LJ126Johnson1993());}},
             {"Mie_Pohl2023", [](const nlohmann::json& spec){ return make_owned(Mie::Mie6Pohl2023(spec.at("lambda_a")));}},
             {"2CLJF-Dipole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_dipole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2")));}},
             {"2CLJF-Quadrupole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_quadrupole(spec.at("author"), spec.at("L^*"), spec.at("(Q^*)^2")));}},

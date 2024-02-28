@@ -17,7 +17,7 @@ namespace teqp {
         IdealHelmholtzConstant(double a, double R) : a(a), R(R) {};
 
         template<typename TType, typename RhoType>
-        auto alphaig(const TType& T, const RhoType& rho) const {
+        auto alphaig(const TType& /*T*/, const RhoType& /*rho*/) const {
             using otype = std::common_type_t <TType, RhoType>;
             return forceeval(static_cast<otype>(a));
         }
@@ -79,7 +79,7 @@ namespace teqp {
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
-            for (auto i = 0; i < n.size(); ++i) {
+            for (auto i = 0U; i < n.size(); ++i) {
                 summer += n[i] * pow(T, t[i]);
             }
             return forceeval(summer);
@@ -98,7 +98,7 @@ namespace teqp {
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
-            for (auto i = 0; i < n.size(); ++i) {
+            for (auto i = 0U; i < n.size(); ++i) {
                 summer += n[i] * log(1.0 - exp(-theta[i] / T));
             }
             return forceeval(summer);
@@ -123,7 +123,7 @@ namespace teqp {
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
-            for (auto i = 0; i < n.size(); ++i) {
+            for (auto i = 0U; i < n.size(); ++i) {
                 summer += n[i] * log(c[i] + d[i]*exp(theta[i] / T));
             }
             return forceeval(summer);
@@ -144,7 +144,7 @@ namespace teqp {
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
-            for (auto i = 0; i < n.size(); ++i) {
+            for (auto i = 0U; i < n.size(); ++i) {
                 using std::abs;
                 TType cosh_theta_over_T = cosh(theta[i] / T);
                 summer += n[i] * log(abs(cosh_theta_over_T));
@@ -167,7 +167,7 @@ namespace teqp {
         template<typename TType, typename RhoType>
         auto alphaig(const TType& T, const RhoType& /*rho*/) const {
             std::common_type_t <TType, RhoType> summer = 0.0;
-            for (auto i = 0; i < n.size(); ++i) {
+            for (auto i = 0U; i < n.size(); ++i) {
                 using std::abs;
                 TType sinh_theta_over_T = sinh(theta[i] / T);
                 summer += n[i] * log(abs(sinh_theta_over_T));
@@ -325,7 +325,7 @@ namespace teqp {
         template<typename TType, typename RhoType, typename MoleFrac>
         auto alphaig(const TType& T, const RhoType &rho, const MoleFrac &molefrac) const {
             std::common_type_t <TType, RhoType, decltype(molefrac[0])> ig = 0.0;
-            if (molefrac.size() != pures.size()){
+            if (static_cast<std::size_t>(molefrac.size()) != pures.size()){
                 throw teqp::InvalidArgument("molefrac and pures are not the same length");
             }
             std::size_t i = 0;
@@ -350,7 +350,7 @@ namespace teqp {
         
         /** For now this is a placeholder, but it should be the "correct" R, however that is ultimately decided upon */
         template<typename MoleFrac>
-        auto R(const MoleFrac &molefrac) const{
+        auto R(const MoleFrac &/*molefrac*/) const{
             return 8.31446261815324; // J/mol/K
         }
         
@@ -404,7 +404,7 @@ namespace teqp {
             // Was
             std::valarray<double> n = term.at("n").get<std::valarray<double>>();
             std::valarray<double> t = term.at("t").get<std::valarray<double>>();
-            for (auto i = 0; i < n.size(); ++i){
+            for (auto i = 0U; i < n.size(); ++i){
                 n[i] *= pow(Tri, t[i]);
                 t[i] *= -1; // T is in the denominator in CoolProp terms, in the numerator in teqp
             }
@@ -416,7 +416,7 @@ namespace teqp {
 //            std::cout << term.dump() << std::endl;
             std::valarray<double> t = term.at("t"), c = term.at("c");
             double T_0 = term.at("T0");
-            for (auto i = 0; i < t.size(); ++i){
+            for (auto i = 0U; i < t.size(); ++i){
                 if (t[i] == 0){
                     newterms.push_back({{"type", "Cp0Constant"}, {"c", c[i]}, {"T_0", T_0}, {"R", R}});
                 }

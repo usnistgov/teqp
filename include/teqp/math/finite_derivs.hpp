@@ -57,7 +57,7 @@ auto centered_diff(const Function &f, const Scalar x, const Scalar h) {
 		throw std::invalid_argument("Finite differentiation coefficient arrays not the same size");
 	}
 	Scalar num = 0.0;
-	for (auto i = 0; i < k.size(); ++i) {
+	for (auto i = 0U; i < k.size(); ++i) {
 		num = num + c[i]*f(x + h*k[i]);
 	}
 	auto val = num / pow(h, Nderiv);

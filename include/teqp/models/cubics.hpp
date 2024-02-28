@@ -144,10 +144,10 @@ protected:
     nlohmann::json meta;
     
     template<typename TType, typename IndexType>
-    auto get_ai(TType T, IndexType i) const { return ai[i]; }
+    auto get_ai(TType /*T*/, IndexType i) const { return ai[i]; }
     
     template<typename TType, typename IndexType>
-    auto get_bi(TType T, IndexType i) const { return bi[i]; }
+    auto get_bi(TType /*T*/, IndexType i) const { return bi[i]; }
     
     template<typename IndexType>
     void check_kmat(IndexType N) {
@@ -157,7 +157,7 @@ protected:
         if (kmat.cols() == 0) {
             kmat.resize(N, N); kmat.setZero();
         }
-        else if (kmat.cols() != N) {
+        else if (static_cast<std::size_t>(kmat.cols()) != N) {
             throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components [" + std::to_string(N) + "]");
         }
     };
@@ -168,7 +168,7 @@ public:
     {
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
-        for (auto i = 0; i < Tc_K.size(); ++i) {
+        for (auto i = 0U; i < Tc_K.size(); ++i) {
             ai[i] = OmegaA * pow2(Ru * Tc_K[i]) / pc_Pa[i];
             bi[i] = OmegaB * Ru * Tc_K[i] / pc_Pa[i];
         }
@@ -218,10 +218,10 @@ public:
     template<typename TType, typename CompType>
     auto get_a(TType T, const CompType& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> a_ = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i) {
+        for (auto i = 0U; i < molefracs.size(); ++i) {
             auto alphai = forceeval(std::visit([&](auto& t) { return t(T); }, alphas[i]));
             auto ai_ = forceeval(this->ai[i] * alphai);
-            for (auto j = 0; j < molefracs.size(); ++j) {
+            for (auto j = 0U; j < molefracs.size(); ++j) {
                 auto alphaj = forceeval(std::visit([&](auto& t) { return t(T); }, alphas[j]));
                 auto aj_ = this->ai[j] * alphaj;
                 auto aij = forceeval((1 - kmat(i,j)) * sqrt(ai_ * aj_));
@@ -234,7 +234,7 @@ public:
     template<typename TType, typename CompType>
     auto get_b(TType /*T*/, const CompType& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> b_ = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i) {
+        for (auto i = 0U; i < molefracs.size(); ++i) {
             b_ = b_ + molefracs[i] * bi[i];
         }
         return forceeval(b_);
@@ -245,7 +245,7 @@ public:
                 const RhoType& rho,
                 const MoleFracType& molefrac) const
     {
-        if (molefrac.size() != alphas.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != alphas.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
         auto b = get_b(T, molefrac);
@@ -263,7 +263,7 @@ auto canonical_SRK(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::
     AcentricType m = 0.48 + 1.574 * acentric - 0.176 * acentric * acentric;
     
     std::vector<AlphaFunctionOptions> alphas;
-    for (auto i = 0; i < Tc_K.size(); ++i) {
+    for (auto i = 0U; i < Tc_K.size(); ++i) {
         alphas.emplace_back(BasicAlphaFunction(Tc_K[i], m[i]));
     }
     
@@ -300,7 +300,7 @@ auto canonical_PR(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::o
     double Delta2 = 1-sqrt(2.0);
     AcentricType m = acentric*0.0;
     std::vector<AlphaFunctionOptions> alphas; 
-    for (auto i = 0; i < Tc_K.size(); ++i) {
+    for (auto i = 0U; i < Tc_K.size(); ++i) {
         if (acentric[i] < 0.491) {
             m[i] = 0.37464 + 1.54226*acentric[i] - 0.26992*pow2(acentric[i]);
         }
@@ -369,7 +369,7 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
         kind = "Peng-Robinson";
         
         if (!spec.contains("alpha")){
-            for (auto i = 0; i < Tc_K.size(); ++i) {
+            for (auto i = 0U; i < Tc_K.size(); ++i) {
                 double mi;
                 if (acentric[i] < 0.491) {
                     mi = 0.37464 + 1.54226*acentric[i] - 0.26992*pow2(acentric[i]);
@@ -391,7 +391,7 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
         Delta1 = 1;
         Delta2 = 0;
         if (!spec.contains("alpha")){
-            for (auto i = 0; i < Tc_K.size(); ++i) {
+            for (auto i = 0U; i < Tc_K.size(); ++i) {
                 double mi = 0.48 + 1.574 * acentric[i] - 0.176 * acentric[i] * acentric[i];
                 alphas.emplace_back(BasicAlphaFunction(Tc_K[i], mi));
             }
@@ -457,7 +457,7 @@ template<typename NumType>
 class NullResidualHelmholtzOverRT {
 public:
     template<typename TType, typename MoleFractions>
-    auto operator () (const TType& T, const MoleFractions& molefracs) const {
+    auto operator () (const TType& /*T*/, const MoleFractions& molefracs) const {
         std::common_type_t<TType, decltype(molefracs[0])> val = 0.0;
         return val;
     }
@@ -493,21 +493,21 @@ public:
     WilsonResidualHelmholtzOverRT(const std::vector<double>& b, const Eigen::ArrayXXd& m, const Eigen::ArrayXXd& n) : b(b), m(m), n(n) {};
     
     template<typename TType, typename MoleFractions>
-    auto combinatorial(const TType& T, const MoleFractions& molefracs) const {
-        if (b.size() != molefracs.size()){
+    auto combinatorial(const TType& /*T*/, const MoleFractions& molefracs) const {
+        if (b.size() != static_cast<std::size_t>(molefracs.size())){
             throw teqp::InvalidArgument("Bad size of molefracs");
         }
         
         using TYPE = std::common_type_t<TType, decltype(molefracs[0])>;
         // The denominator in Phi
         TYPE Vtot = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i){
+        for (auto i = 0U; i < molefracs.size(); ++i){
             auto v_i = b[i];
             Vtot += molefracs[i]*v_i;
         }
         
         TYPE summer = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i){
+        for (auto i = 0U; i < molefracs.size(); ++i){
             auto v_i = b[i];
             // The ratio phi_i/z_i is expressed like this to better handle
             // the case of z_i = 0, which would otherwise be a divide by zero
@@ -528,10 +528,10 @@ public:
         
         using TYPE = std::common_type_t<TType, decltype(molefracs[0])>;
         TYPE summer = 0.0;
-        for (auto i = 0; i < molefracs.size(); ++i){
+        for (auto i = 0U; i < molefracs.size(); ++i){
             auto v_i = b[i];
             TYPE summerj = 0.0;
-            for (auto j = 0; j < molefracs.size(); ++j){
+            for (auto j = 0U; j < molefracs.size(); ++j){
                 auto v_j = b[j];
                 auto Aij = get_Aij(i,j,T);
                 auto Omega_ji = v_j/v_i*exp(-Aij/T);
@@ -600,7 +600,7 @@ protected:
         if (lmat.cols() == 0) {
             lmat.resize(N, N); lmat.setZero();
         }
-        else if (lmat.cols() != N) {
+        else if (lmat.cols() != static_cast<Eigen::Index>(N)) {
             throw teqp::InvalidArgument("lmat needs to be a square matrix the same size as the number of components [" + std::to_string(N) + "]");
         }
     };
@@ -611,7 +611,7 @@ public:
     {
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
-        for (auto i = 0; i < Tc_K.size(); ++i) {
+        for (auto i = 0U; i < Tc_K.size(); ++i) {
             ai[i] = OmegaA * pow2(Ru * Tc_K[i]) / pc_Pa[i];
             bi[i] = OmegaB * Ru * Tc_K[i] / pc_Pa[i];
         }
@@ -675,7 +675,7 @@ public:
     auto get_am_over_bm(TType T, const CompType& molefracs) const {
         auto aEresRT = std::visit([&](auto& aresRTfunc) { return aresRTfunc(T, molefracs); }, ares); // aEres/RT, so a non-dimensional quantity
         std::common_type_t<TType, decltype(molefracs[0])> summer = aEresRT*Ru*T/CEoS;
-        for (auto i = 0; i < molefracs.size(); ++i) {
+        for (auto i = 0U; i < molefracs.size(); ++i) {
             summer += molefracs[i]*get_ai(T,i)/get_bi(T,i);
         }
         return forceeval(summer);
@@ -687,9 +687,9 @@ public:
         
         switch (brule){
             case AdvancedPRaEMixingRules::kQuadratic:
-                for (auto i = 0; i < molefracs.size(); ++i) {
+                for (auto i = 0U; i < molefracs.size(); ++i) {
                     auto bi_ = get_bi(T, i);
-                    for (auto j = 0; j < molefracs.size(); ++j) {
+                    for (auto j = 0U; j < molefracs.size(); ++j) {
                         auto bj_ = get_bi(T, j);
                         
                         auto bij = (1 - lmat(i,j)) * pow((pow(bi_, 1.0/s) + pow(bj_, 1.0/s))/2.0, s);
@@ -698,7 +698,7 @@ public:
                 }
                 break;
             case AdvancedPRaEMixingRules::kLinear:
-                for (auto i = 0; i < molefracs.size(); ++i) {
+                for (auto i = 0U; i < molefracs.size(); ++i) {
                     b_ += molefracs[i] * get_bi(T, i);
                 }
                 break;
@@ -713,7 +713,7 @@ public:
                 const RhoType& rho,
                 const MoleFracType& molefrac) const
     {
-        if (molefrac.size() != alphas.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != alphas.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
         auto b = get_b(T, molefrac);
@@ -737,7 +737,7 @@ inline auto make_AdvancedPRaEres(const nlohmann::json& j){
         std::string type = armodel.at("type");
         if (type == "Wilson"){
             std::vector<double> b;
-            for (auto i = 0; i < Tc_K.size(); ++i){
+            for (auto i = 0U; i < Tc_K.size(); ++i){
                 b.push_back(teqp::AdvancedPRaEres<double>::get_bi(Tc_K[i], pc_Pa[i]));
             }
             auto mWilson = build_square_matrix(armodel.at("m"));
@@ -778,7 +778,7 @@ private:
         if (L.size() != M.size() || M.size() != N.size()){
             throw teqp::InvalidArgument("L,M,N must all be the same length");
         }
-        for (auto i = 0; i < L.size(); ++i){
+        for (auto i = 0U; i < L.size(); ++i){
             auto coeffs = (Eigen::Array3d() << L[i], M[i], N[i]).finished();
             alphas_.emplace_back(TwuAlphaFunction(Tc_K[i], coeffs));
         }
@@ -824,10 +824,10 @@ public:
         numtype b = 0.0;
         numtype a = 0.0;
         std::size_t N = alphas.size();
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             auto bi = get_bi(i, T);
             auto ai = get_ai(i, T);
-            for (auto j = 0; j < N; ++j){
+            for (auto j = 0U; j < N; ++j){
                 auto bj = get_bi(j, T);
                 auto aj = get_ai(j, T);
                 b += z[i]*z[j]*(bi + bj)/2.0*(1.0 - lmat(i,j));
@@ -837,11 +837,11 @@ public:
         return std::make_tuple(a, b);
     }
     template<typename TType, typename FractionsType>
-    auto get_c(const TType& T, const FractionsType& z) const{
+    auto get_c(const TType& /*T*/, const FractionsType& z) const{
         using numtype = std::common_type_t<TType, decltype(z[0])>;
         numtype c = 0.0;
         std::size_t N = alphas.size();
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             c += z[i]*cs_m3mol[i];
         }
         return c;
@@ -849,7 +849,7 @@ public:
     
     template<typename TType, typename RhoType, typename FractionsType>
     auto alphar(const TType& T, const RhoType& rhoinit, const FractionsType& molefrac) const {
-        if (molefrac.size() != alphas.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != alphas.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
         // First shift the volume by the volume translation
@@ -903,30 +903,30 @@ private:
     const std::vector<double> a_c, b_c;
     
     /// A convenience function to save some typing
-    std::vector<double> get_(const nlohmann::json &j, const std::string& k) const { return j.at(k).get<std::vector<double>>(); }
+    std::vector<double> get_(const nlohmann::json &j, const std::string& key) const { return j.at(key).get<std::vector<double>>(); }
     
     /// Calculate the parameters \f$y\f$ and \f$d_1\f$
-    auto get_yd1(double delta_1){
-        return std::make_tuple(1 + cbrt(2*(1+delta_1)) + cbrt(4/(1+delta_1)), (1+delta_1*delta_1)/(1+delta_1));
+    auto get_yd1(double delta_1_){
+        return std::make_tuple(1 + cbrt(2*(1+delta_1_)) + cbrt(4/(1+delta_1_)), (1+delta_1_*delta_1_)/(1+delta_1_));
     }
     
     auto build_ac(){
-        std::vector<double> a_c(delta_1.size());
-        for (auto i = 0; i < delta_1.size(); ++i){
+        std::vector<double> a_c_(delta_1.size());
+        for (auto i = 0U; i < delta_1.size(); ++i){
             auto [y, d_1] = get_yd1(delta_1[i]);
             auto Omega_a = (3*y*y + 3*y*d_1 + d_1*d_1 + d_1 - 1.0)/pow(3.0*y + d_1 - 1.0, 2);
-            a_c[i] = Omega_a*pow(Ru*Tc_K[i], 2)/pc_Pa[i];
+            a_c_[i] = Omega_a*pow(Ru*Tc_K[i], 2)/pc_Pa[i];
         }
-        return a_c;
+        return a_c_;
     }
     auto build_bc(){
-        std::vector<double> b_c(delta_1.size());
-        for (auto i = 0; i < delta_1.size(); ++i){
+        std::vector<double> b_c_(delta_1.size());
+        for (auto i = 0U; i < delta_1.size(); ++i){
             auto [y, d_1] = get_yd1(delta_1[i]);
             auto Omega_b = 1.0/(3.0*y + d_1 - 1.0);
-            b_c[i] = Omega_b*Ru*Tc_K[i]/pc_Pa[i];
+            b_c_[i] = Omega_b*Ru*Tc_K[i]/pc_Pa[i];
         }
-        return b_c;
+        return b_c_;
     }
 public:
     
@@ -944,7 +944,7 @@ public:
     auto get_lmat() const { return lmat; }
     
     template<typename TType>
-    auto get_bi(std::size_t i, const TType& T) const {
+    auto get_bi(std::size_t i, const TType& /*T*/) const {
         return b_c[i];
     }
     
@@ -959,10 +959,10 @@ public:
         numtype b = 0.0;
         numtype a = 0.0;
         std::size_t N = delta_1.size();
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             auto bi = get_bi(i, T);
             auto ai = get_ai(i, T);
-            for (auto j = 0; j < N; ++j){
+            for (auto j = 0U; j < N; ++j){
                 auto aj = get_ai(j, T);
                 auto bj = get_bi(j, T);
                 
@@ -976,7 +976,7 @@ public:
     
     template<typename TType, typename RhoType, typename FractionsType>
     auto alphar(const TType& T, const RhoType& rho, const FractionsType& molefrac) const {
-        if (molefrac.size() != delta_1.size()) {
+        if (static_cast<std::size_t>(molefrac.size()) != delta_1.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
         

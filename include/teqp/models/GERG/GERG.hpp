@@ -48,7 +48,7 @@ private:
     std::vector<int> l_i;
     auto get_li(std::vector<double>&el){
         std::vector<int> li(el.size());
-        for (auto i = 0; i < el.size(); ++i){
+        for (auto i = 0U; i < el.size(); ++i){
             li[i] = static_cast<int>(el[i]);
         }
         return li;
@@ -66,13 +66,13 @@ public:
             throw std::invalid_argument("l_i cannot be zero length if some terms are provided");
         }
         if (getbaseval(delta) == 0) {
-            for (auto i = 0; i < pc.n.size(); ++i) {
+            for (auto i = 0U; i < pc.n.size(); ++i) {
                 r = r + pc.n[i] * exp(pc.t[i] * lntau - pc.c[i] * powi(delta, l_i[i])) * powi(delta, static_cast<int>(pc.d[i]));
             }
         }
         else {
             result lndelta = log(delta);
-            for (auto i = 0; i < pc.n.size(); ++i) {
+            for (auto i = 0U; i < pc.n.size(); ++i) {
                 r = r + pc.n[i] * exp(pc.t[i] * lntau + pc.d[i] * lndelta - pc.c[i] * powi(delta, l_i[i]));
             }
         }
@@ -108,7 +108,7 @@ private:
         m.betaT.resize(N,N); m.gammaT.resize(N,N); m.betaV.resize(N,N); m.gammaV.resize(N,N); m.YT.resize(N,N);  m.Yv.resize(N,N);
         const auto& Tc = m_Tcvc.Tc_K;
         const auto& vc = m_Tcvc.vc_m3mol;
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i+1; j < N; ++j){
                 auto bg = _get_betasgammas(names[i], names[j]);
                 m.betaT(i,j) = bg.betaT; m.betaT(j,i) = 1/bg.betaT;
@@ -140,7 +140,7 @@ public:
         resulttype sum1 = 0.0, sum2 = 0.0;
         std::size_t N = z.size();
         
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             sum1 += z[i]*z[i]*Yc[i];
             for (auto j = i+1; j < N; ++j){
                 auto denom = POW2(beta(i,j))*z[i]+z[j];
@@ -180,17 +180,17 @@ private:
 public:
     GERG200XCorrespondingStatesTerm(const std::vector<std::string>& names, const GetPureCoeffs &get_pure_coeffs) : _get_pure_coeffs(get_pure_coeffs), EOSs(get_EOS(names)) {};
     
-    auto size() const { return EOSs.size(); }
+    std::size_t size() const { return EOSs.size(); }
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
         using resulttype = std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
-        if (N != size()){
+        if (static_cast<std::size_t>(N) != size()){
             throw std::invalid_argument("wrong size");
         }
-        for (auto i = 0; i < N; ++i) {
+        for (auto i = 0U; i < N; ++i) {
             alphar += molefracs[i] * EOSs[i].alphar(tau, delta);
         }
         return forceeval(alphar);
@@ -218,13 +218,13 @@ public:
         result r = 0.0, lntau = log(tau);
         auto square = [](auto x) { return forceeval(x * x); };
         if (getbaseval(delta) == 0) {
-            for (auto i = 0; i < dc.n.size(); ++i) {
+            for (auto i = 0U; i < dc.n.size(); ++i) {
                 r += dc.n[i] * exp(dc.t[i] * lntau - dc.eta[i] * square(delta - dc.epsilon[i]) - dc.beta[i] * (delta - dc.gamma[i]))*powi(delta, static_cast<int>(dc.d[i]));
             }
         }
         else {
             result lndelta = log(delta);
-            for (auto i = 0; i < dc.n.size(); ++i) {
+            for (auto i = 0U; i < dc.n.size(); ++i) {
                 r += dc.n[i] * exp(dc.t[i] * lntau + dc.d[i] * lndelta - dc.eta[i] * square(delta - dc.epsilon[i]) - dc.beta[i] * (delta - dc.gamma[i]));
             }
         }
@@ -245,7 +245,7 @@ private:
     auto get_Fmat(const std::vector<std::string>& names){
         std::size_t N = names.size();
         Eigen::ArrayXXd mat(N, N); mat.setZero();
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i+1; j < N; ++j){
                 auto Fij = _get_Fij(names[i], names[j], true /* ok_missing */);
                 if (Fij){
@@ -259,9 +259,9 @@ private:
     auto get_depmat(const std::vector<std::string>& names){
         std::size_t N = names.size();
         std::vector<std::vector<GERG200XDepartureFunction>> mat;
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             std::vector<GERG200XDepartureFunction> row;
-            for (auto j = 0; j < N; ++j){
+            for (auto j = 0U; j < N; ++j){
                 if (i != j && Fmat(i,j) != 0){
                     row.emplace_back(names[i], names[j], _get_departurecoeffs);
                 }
@@ -282,11 +282,11 @@ public:
         using resulttype = std::common_type_t<decltype(tau), decltype(delta), decltype(molefracs[0])>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         auto N = molefracs.size();
-        if (N != Fmat.cols()){
+        if (static_cast<std::size_t>(N) != static_cast<std::size_t>(Fmat.cols())){
             throw std::invalid_argument("wrong size");
         }
         
-        for (auto i = 0; i < N; ++i){
+        for (auto i = 0U; i < N; ++i){
             for (auto j = i+1; j < N; ++j){
                 auto Fij = Fmat(i,j);
                 if (Fij != 0){
@@ -943,7 +943,7 @@ public:
     auto alphar(const TType &T,
         const RhoType &rho,
         const MoleFracType& molefrac) const {
-        if (molefrac.size() != corr.size()){
+        if (static_cast<std::size_t>(molefrac.size()) != corr.size()){
             throw std::invalid_argument("sizes don't match");
         }
         auto Tred = forceeval(red.get_Tr(molefrac));

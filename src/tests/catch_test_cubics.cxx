@@ -414,7 +414,7 @@ TEST_CASE("Check manual integration of subcritical VLE isobar for binary mixture
             double pfinal = get_p(X0, T);
 
             double diffs = 0;
-            for (auto i = 0; i < X0.size(); ++i) {
+            for (auto i = 0U; i < X0.size(); ++i) {
                 diffs += std::abs(pinit-pfinal);
             }
             CHECK(diffs < 0.1);

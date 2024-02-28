@@ -60,7 +60,7 @@ namespace teqp {
     /// A constexpr function for ensuring that an argument to a function is NOT an expr,
     /// which can have surprising behavior
     template<typename T>
-    void error_if_expr(T&& expr)
+    void error_if_expr(T&& /*expr*/)
     {
         using namespace autodiff::detail;
         if constexpr (isExpr<T>) {

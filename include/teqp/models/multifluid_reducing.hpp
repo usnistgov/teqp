@@ -119,7 +119,7 @@ namespace teqp {
             gammaT.resize(N, N); gammaT.setZero();
             betaV.resize(N, N); betaV.setZero();
             gammaV.resize(N, N); gammaV.setZero();
-            for (auto i = 0; i < N; ++i) {
+            for (auto i = 0U; i < N; ++i) {
                 for (auto j = i + 1; j < N; ++j) {
                     auto [betaT_, gammaT_, betaV_, gammaV_] = get_binary_interaction_double(collection, { components[i], components[j] }, flags, { Tc[i], Tc[j] }, { vc[i], vc[j] });
                     betaT(i, j) = betaT_;         betaT(j, i) = 1.0 / betaT(i, j);
@@ -153,7 +153,7 @@ namespace teqp {
         inline auto get_F_matrix(const nlohmann::json& collection, const std::vector<std::string>& identifiers, const nlohmann::json& flags) {
             auto N = identifiers.size();
             Eigen::MatrixXd F(N, N);
-            for (auto i = 0; i < N; ++i) {
+            for (auto i = 0U; i < N; ++i) {
                 F(i, i) = 0.0;
                 for (auto j = i + 1; j < N; ++j) {
                     auto [el, swap_needed] = get_BIPdep(collection, { identifiers[i], identifiers[j] }, flags);
@@ -205,12 +205,12 @@ namespace teqp {
 
             auto N = z.size();
             typename MoleFractions::value_type sum1 = 0.0;
-            for (auto i = 0; i < N; ++i) {
+            for (auto i = 0U; i < N; ++i) {
                 sum1 = sum1 + pow2(z[i]) * Yc[i];
             }
 
             typename MoleFractions::value_type sum2 = 0.0;
-            for (auto i = 0; i < N - 1; ++i) {
+            for (auto i = 0U; i < N - 1; ++i) {
                 for (auto j = i + 1; j < N; ++j) {
                     sum2 = sum2 + 2.0 * z[i] * z[j] * (z[i] + z[j]) / (pow2(beta(i, j)) * z[i] + z[j]) * Yij(i, j);
                 }
@@ -231,7 +231,7 @@ namespace teqp {
         }
         auto get_BIP(const std::size_t& i, const std::size_t& j, const std::string& key) const {
             const auto& mat = get_mat(key);
-            if (i < mat.rows() && j < mat.cols()){
+            if (i < static_cast<std::size_t>(mat.rows()) && j < static_cast<std::size_t>(mat.cols())){
                 return mat(i,j);
             }
             else{
@@ -273,8 +273,8 @@ namespace teqp {
         auto Y(const MoleFractions& z, const Eigen::MatrixXd& phi, const Eigen::MatrixXd& lambda, const Eigen::MatrixXd& Yij) const {
             auto N = z.size();
             typename MoleFractions::value_type sum = 0.0;
-            for (auto i = 0; i < N; ++i) {
-                for (auto j = 0; j < N; ++j) {
+            for (auto i = 0U; i < N; ++i) {
+                for (auto j = 0U; j < N; ++j) {
                     auto contrib = z[i] * z[j] * (phi(i, j) + z[j] * lambda(i, j)) * Yij(i, j);
                     sum = sum + contrib;
                 }
@@ -293,7 +293,7 @@ namespace teqp {
         }
         auto get_BIP(const std::size_t& i, const std::size_t& j, const std::string& key) const {
             const auto& mat = get_mat(key);
-            if (i < mat.rows() && j < mat.cols()){
+            if (i < static_cast<std::size_t>(mat.rows()) && j < static_cast<std::size_t>(mat.cols())){
                 return mat(i,j);
             }
             else{

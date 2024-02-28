@@ -8,7 +8,8 @@ namespace teqp{
 namespace cppinterface{
 namespace adapter{
 
-// The ownership
+/// The ownership wrapper of a model
+/// \note Takes ownership, so the argument passed to the constructor is invalidated
 template<typename ModelType>
 struct Owner{
 private:
@@ -20,6 +21,8 @@ public:
     Owner(ModelType&& m) : model(m), index(std::type_index(typeid(ModelType))) {};
 };
 
+/// The ownership wrapper of a model
+/// \note Takes ownership, so the argument passed to the constructor is invalidated
 template<typename ModelType>
 struct ConstViewer{
 private:
@@ -38,7 +41,9 @@ namespace internal{
 /**
  This class holds a const reference to a class, and exposes an interface that matches that used in AbstractModel
  
- The exposed methods cover all the derivative methods that are obtained by derivatives of the model
+ The exposed methods cover all the derivative methods that are obtained by derivatives of the model, other methods in the AbstractModel implementation can then call methods implemented in this class
+ 
+ \note This technique is known as type-erasure in C++
  */
 template<typename ModelPack>
 class DerivativeAdapter : public teqp::cppinterface::AbstractModel{
@@ -49,7 +54,7 @@ public:
     const auto& get_ModelPack_cref() const { return mp; }
     
     template<typename T>
-    DerivativeAdapter(internal::tag<T> tag_, const T&& mp): mp(mp) {} ;
+    DerivativeAdapter(internal::tag<T> /*tag_*/, const T&& mp): mp(mp) {} ;
     
     const std::type_index& get_type_index() const override {
         return mp.index;
@@ -132,9 +137,9 @@ template<typename TemplatedModel> auto make_cview(const TemplatedModel& tmodel){
 };
 
 /**
- Get a const reference to the model
+ \brief Get a const reference to the model that is being held in a DerivativeAdapter instance
  
- Available for both ownership and const viewer holder types
+ \note Available for both ownership and const viewer holder types.
  */
 template<typename ModelType>
 const ModelType& get_model_cref(const AbstractModel *am)
@@ -156,9 +161,9 @@ const ModelType& get_model_cref(const AbstractModel *am)
 }
 
 /**
- Get a mutable reference to the model
+ \brief Get a mutable reference to the model
  
- Only available when the holder type is ownership (not available for const viewer holder type)
+ \note Only available when the holder type is ownership (not available for const viewer holder type)
  */
 template<typename ModelType>
 ModelType& get_model_ref(AbstractModel *am)
