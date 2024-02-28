@@ -14,7 +14,7 @@ using namespace teqp;
 TEST_CASE("multifluid derivatives", "[mf]")
 {
     std::vector<std::string> names = { "Ethane" };
-    auto model = build_multifluid_model(names, "../mycp");
+    auto model = build_multifluid_model(names, "../teqp/fluiddata");
 
     double T = 300, rho = 2;
     Eigen::ArrayX<double> z(1); z.fill(1.0);
@@ -25,8 +25,8 @@ TEST_CASE("multifluid derivatives", "[mf]")
     auto aig = teqp::IdealHelmholtz(jigs);
     
     using namespace teqp::cppinterface;
-    std::shared_ptr<AbstractModel> amm = teqp::cppinterface::make_multifluid_model(names, "../mycp");
-    std::shared_ptr<AbstractModel> aigg = teqp::cppinterface::make_model({{"kind","IdealHelmholtz"}, {"model", jigs}});
+    const std::shared_ptr<AbstractModel> amm = teqp::cppinterface::make_multifluid_model(names, "../teqp/fluiddata");
+    const std::shared_ptr<AbstractModel> aigg = teqp::cppinterface::make_model({{"kind","IdealHelmholtz"}, {"model", jigs}});
     
     std::vector<char> vars = {'P', 'S'};
     const auto vals = (Eigen::ArrayXd(2) << 300.0, 400.0).finished();
@@ -36,6 +36,9 @@ TEST_CASE("multifluid derivatives", "[mf]")
     
     BENCHMARK("alphar") {
         return model.alphar(T, rho, z);
+    };
+    BENCHMARK("Ar11") {
+        return amm->get_Ar11(T, rho, z);
     };
     
     BENCHMARK("All residual derivatives needed for first derivatives of h,s,u,p w.r.t. T&rho") {
@@ -49,7 +52,7 @@ TEST_CASE("multifluid derivatives", "[mf]")
     BENCHMARK("All residual derivatives (via AbstractModel) needed for first derivatives of h,s,u,p w.r.t. T&rho") {
         return amm->get_deriv_mat2(T, rho, z);
     };
-    BENCHMARK("All residual derivatives (via AbstractModel) needed for first derivatives of h,s,u,p w.r.t. T&rho") {
+    BENCHMARK("All ideal-gas derivatives (via AbstractModel) needed for first derivatives of h,s,u,p w.r.t. T&rho") {
         return aigg->get_deriv_mat2(T, rho, z);
     };
     
@@ -65,5 +68,20 @@ TEST_CASE("multifluid derivatives", "[mf]")
     BENCHMARK("Newton-Raphson take_steps") {
         return NR.take_steps(5);
     };
+}
+
+TEST_CASE("Time very low level operations", "[mf]"){
+    std::unordered_map<int, double> delta_map{{1, 3.7}, {3,9.7}, {5, -3}};
     
+    std::valarray<double> delta_array{3.7, 3, -6};
+    
+    BENCHMARK("return delta_map") {
+        return delta_map[3];
+    };
+    BENCHMARK("return delta_array") {
+        return delta_array[2];
+    };
+    BENCHMARK("calc powi(delta, 3)") {
+        return powi(1.3, 3);
+    };
 }

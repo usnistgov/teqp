@@ -114,7 +114,9 @@ public:
         return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_Psir_sigma_derivs(mp.get_cref(), T, rhovec, v);
     };
     
-    virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const override { throw teqp::NotImplementedError("Not available"); };
+    virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const override {
+        return DerivativeHolderSquare<2, AlphaWrapperOption::residual>(mp.get_cref(), T, rho, z).derivs;
+    };
 };
 
 template<typename TemplatedModel> auto view(const TemplatedModel& tp){
