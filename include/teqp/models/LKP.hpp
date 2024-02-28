@@ -41,7 +41,7 @@ public:
         }
         else{
             for (auto& krow: kmat){
-                if(kmat.size() != N){
+                if(krow.size() != N){
                     throw teqp::InvalidArgument(kmaterr);
                 }
             }
