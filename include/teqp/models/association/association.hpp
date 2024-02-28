@@ -164,9 +164,9 @@ public:
         }
         
         Mat Delta = Mat::Zero(Ngroups, Ngroups);
-        for (auto I = 0; I < Ngroups; ++I){
+        for (auto I = 0U; I < Ngroups; ++I){
             auto i = std::get<0>(mapper.to_CompSite.at(I));
-            for (auto J = 0; J < Ngroups; ++J){
+            for (auto J = 0U; J < Ngroups; ++J){
                 auto j = std::get<0>(mapper.to_CompSite.at(J));
                 
                 using namespace teqp::constants;
@@ -193,7 +193,7 @@ public:
         
         auto Ngroups = mapper.to_CompSite.size();
         Eigen::RowVectorX<typename MoleFracsType::Scalar> xj(Ngroups); // Mole fractions of the component containing each siteid
-        for (auto I = 0; I< Ngroups; ++I){
+        for (auto I = 0U; I< Ngroups; ++I){
             xj(I) = molefracs(std::get<0>(mapper.to_CompSite.at(I)));
         }
         
