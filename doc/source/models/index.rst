@@ -12,6 +12,7 @@ Models
    AdvancedCubicMixing
    RK-PR
    CPA
+   LKP
 
    model_potentials
    
