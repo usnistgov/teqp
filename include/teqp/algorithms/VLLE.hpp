@@ -516,7 +516,7 @@ namespace VLLE {
     /**
     \brief Given an initial VLLE solution, trace the VLLE curve. We know the VLLE curve is a function of only one state variable by Gibbs' rule
      */
-    inline auto trace_VLLE_binary(const teqp::VLLE::AbstractModel& model, const double Tinit, const EArrayd& rhovecV, const EArrayd& rhovecL1, const EArrayd& rhovecL2, const std::optional<VLLETracerOptions>& options_ = std::nullopt){
+    inline auto trace_VLLE_binary(const teqp::VLLE::AbstractModel& model, const double Tinit, const EArrayd& rhovecVinit, const EArrayd& rhovecL1init, const EArrayd& rhovecL2init, const std::optional<VLLETracerOptions>& options_ = std::nullopt){
         auto options = options_.value_or(VLLETracerOptions());
         
         // Typedefs for the types for odeint for simple Euler and RK45 integrators
@@ -543,11 +543,12 @@ namespace VLLE {
         double abs_err = options.abs_err, rel_err = options.rel_err, a_x = 1.0, a_dxdt = 1.0;
         controlled_stepper_type controlled_stepper(default_error_checker< double, range_algebra, default_operations >(abs_err, rel_err, a_x, a_dxdt));
         
+        // Copy variables into the stepping array
         double T = Tinit, dT = options.init_dT;
         state_type x0(3*2);
-        Eigen::Map<Eigen::ArrayXd>(&(x0[0]), 2) = rhovecV;
-        Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 2, 2) = rhovecL1;
-        Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 4, 2) = rhovecL2;
+        Eigen::Map<Eigen::ArrayXd>(&(x0[0]), 2) = rhovecVinit;
+        Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 2, 2) = rhovecL1init;
+        Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 4, 2) = rhovecL2init;
         
         nlohmann::json data_collector = nlohmann::json::array();
         for (auto iter = 0; iter < options.max_step_count; ++iter) {
@@ -576,6 +577,10 @@ namespace VLLE {
             // Reduce step size if greater than the specified max step size
             dT = std::min(dT, options.max_dT);
             
+            const auto rhovecV = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), 2),
+                       rhovecL1 = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 2, 2),
+                       rhovecL2 = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 4, 2);
+            
             // Polish if requested
             if (options.polish){
                 auto [code, rhovecVnew, rhovecL1new, rhovecL2new] = teqp::VLLE::mix_VLLE_T(model, T, rhovecV, rhovecL1, rhovecL2, 1e-10, 1e-10, 1e-10, 1e-10, options.max_polish_steps);
@@ -584,16 +589,33 @@ namespace VLLE {
                 Eigen::Map<Eigen::ArrayXd>(&(x0[0]) + 4, 2) = rhovecL2new;
             }
             
-            const auto rhovecV_ = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]), 2),
-                       rhovecL1_ = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 2, 2),
-                       rhovecL2_ = Eigen::Map<const Eigen::ArrayXd>(&(x0[0]) + 4, 2);
-            
-            auto critV = model.get_criticality_conditions(T, rhovecV_);
-            auto critL1 = model.get_criticality_conditions(T, rhovecL1_);
-            auto critL2 = model.get_criticality_conditions(T, rhovecL2_);
+            auto critV = model.get_criticality_conditions(T, rhovecV);
+            auto critL1 = model.get_criticality_conditions(T, rhovecL1);
+            auto critL2 = model.get_criticality_conditions(T, rhovecL2);
+            double rhomolarV = rhovecV.sum();
+            auto molefracV = rhovecV/rhomolarV;
+            auto pV = rhomolarV*model.get_R(molefracV)*T*(1.0 + model.get_Ar01(T, rhomolarV, molefracV));
+            if (!std::isfinite(pV)){
+                if (options.verbosity > 0) {
+                    std::cout << "Calculated pressure is not finite" << std::endl;
+                }
+                break;
+            }
+            if(options.init_dT > 0 && T > options.T_limit){
+                if (options.verbosity > 0) {
+                    std::cout << "Exceeded maximum temperature of " << options.T_limit << " K" << std::endl;
+                }
+                break;
+            }
+            if(options.init_dT < 0 && T < options.T_limit){
+                if (options.verbosity > 0) {
+                    std::cout << "Exceeded minimum temperature of " << options.T_limit << " K" << std::endl;
+                }
+                break;
+            }
             
             if (options.verbosity > 100){
-                std::cout << "[T,x0L1,x0L2,x0V]: " << T << "," << rhovecL1_[0]/rhovecL1_.sum() << "," << rhovecL2_[0]/rhovecL2_.sum() << "," << rhovecV_[0]/rhovecV_.sum() << std::endl;
+                std::cout << "[T,x0L1,x0L2,x0V]: " << T << "," << rhovecL1[0]/rhovecL1.sum() << "," << rhovecL2[0]/rhovecL2.sum() << "," << rhovecV[0]/rhovecV.sum() << std::endl;
                 std::cout << "[crits]: " << critV << "," << critL1 << "," << critL2 << std::endl;
             }
             
@@ -615,7 +637,11 @@ namespace VLLE {
                 {"T / K", T},
                 {"rhoL1 / mol/m^3", rhovecL1},
                 {"rhoL2 / mol/m^3", rhovecL2},
-                {"rhoV / mol/m^3", rhovecV}
+                {"rhoV / mol/m^3", rhovecV},
+                {"critV", critV},
+                {"critL1", critL1},
+                {"critL2", critL2},
+                {"pV / Pa", pV}
             };
             data_collector.push_back(entry);
         }
