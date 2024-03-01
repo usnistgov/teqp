@@ -1,5 +1,8 @@
 #pragma once
 
+#include <optional>
+#include <variant>
+
 #include "nlohmann/json.hpp"
 #include <Eigen/Dense>
 #include "teqp/types.hpp"
