@@ -38,7 +38,7 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
           CIBW_ENVIRONMENT_LINUX: CXXFLAGS='-fconcepts'
           CIBW_BUILD_VERBOSITY_WINDOWS: 2
-          CIBW_SKIP: "*pypy* *pp* *cp36*"
+          CIBW_SKIP: "*pypy* *pp* *cp36* *musl*"
 
       - uses: actions/upload-artifact@v3
         with:
