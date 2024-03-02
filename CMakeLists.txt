@@ -50,6 +50,10 @@ option (TEQP_MULTICOMPLEX_ENABLED
         "Enable the use of multi-complex arithmetic for taking derivatives"
         OFF)
         
+option (TEQP_COMPLEXSTEP_ENABLED
+        "Enable the use of complex-step derivatives for taking first derivatives"
+        ON)
+
 
 ####  SETUP
 set(CMAKE_CXX_STANDARD 17)
@@ -192,6 +196,7 @@ if (NOT TEQP_NO_TESTS)
 
   target_compile_definitions(catch_tests PRIVATE -DTEQPC_CATCH)
   target_compile_definitions(catch_tests PRIVATE -DTEQP_MULTICOMPLEX_ENABLED)
+  target_compile_definitions(catch_tests PRIVATE -DTEQP_COMPLEXSTEP_ENABLED)
   target_compile_definitions(catch_tests PRIVATE -DTEQP_MULTIPRECISION_ENABLED)
   target_link_libraries(catch_tests PUBLIC teqpcpp PRIVATE autodiff PRIVATE teqpinterface PRIVATE Catch2WithMain)
   add_test(normal_tests catch_tests)
