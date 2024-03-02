@@ -30,7 +30,8 @@ jobs:
       - name: install teqp, built from source
         # https://github.com/usnistgov/ChebTools/blob/master/README.md#prerequisites regarding the need for libgcc
         run: |
-          conda install libgcc 
+          conda install libgcc libstdcxx-ng
+          conda list
           CXX=clang++ python -m pip install .
           cd doc 
           make html
