@@ -3,6 +3,25 @@
 
 using Catch::Approx;
 
+#include <filesystem>
+
+#include <catch2/reporters/catch_reporter_event_listener.hpp>
+#include <catch2/reporters/catch_reporter_registrars.hpp>
+
+#include "test_common.in"
+
+class testRunListener : public Catch::EventListenerBase {
+public:
+    using Catch::EventListenerBase::EventListenerBase;
+
+    void testRunStarting(Catch::TestRunInfo const&) override {
+        if (!std::filesystem::exists(FLUIDDATAPATH)){
+            throw std::invalid_argument("Tests must be run from the folder where this folder points to a valid location relative to current working diretory: " + FLUIDDATAPATH);
+        }
+    }
+};
+CATCH_REGISTER_LISTENER(testRunListener)
+
 #include "teqp/models/cubicsuperancillary.hpp"
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/vdW.hpp"
