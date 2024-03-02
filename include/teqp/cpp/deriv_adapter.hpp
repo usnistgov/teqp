@@ -96,6 +96,9 @@ public:
     virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& molefrac) const override {
         return VirialDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_dmBnvirdTm_runtime(Nderiv, NTderiv, mp.get_cref(), T, molefrac);
     };
+    virtual double get_ATrhoXi(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NX) const override {
+        return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_ATrhoXi_runtime(mp.get_cref(), T, NT, rhomolar, ND, molefrac, i, NX);
+    };
     
     // Derivatives from isochoric thermodynamics (all have the same signature within each block), and they differ by their output argument
 #define X(f) virtual double f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::f(mp.get_cref(), T, rhovec); };

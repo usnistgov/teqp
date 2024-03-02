@@ -218,7 +218,111 @@ struct TDXDerivatives {
                 throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iD > 0 and iT > 0");
             }
         }
-//        return static_cast<Scalar>(-999999999*T); // This will never hit, only to make compiler happy because it doesn't know the return type
+        //        return static_cast<Scalar>(-999999999*T); // This will never hit, only to make compiler happy because it doesn't know the return type
+    }
+    
+    /**
+     Calculate the derivative
+     \f[
+     \Lambda_{xyz_i} = (1/T)^x(\rho)^y\deriv{^{x+y+z_i}(\alpha^r)}{(1/T)^x\partial \rho^y \partial \mathbf{Z}_i^{z_i}}}{}
+     \f]
+     in which all the compositions are treated as being independent
+     */
+    template<int iT, int iD, int iXi, typename AlphaWrapper>
+    static auto get_ATrhoXi(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac, int i){
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi, double>;
+        adtype Trecipad = 1.0 / T, rhoad = rho, xi = molefrac[i];
+        auto f = [&w, &molefrac, &i](const adtype& Trecip, const adtype& rho_, const adtype& xi_) {
+            adtype T_ = 1.0/Trecip;
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            return eval(w.alphar(T_, rho_, molefracdual)); }; // TODO: generalize to alphar, alpha, or alphaig
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi));
+        return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
+    }
+    
+    template<typename AlphaWrapper>
+    static auto get_ATrhoXi_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi){
+        if (iT == 0 and iD == 0){
+            if (iXi == 1){
+                return get_ATrhoXi<0, 0, 1>(w, T, rho, molefrac, i);
+            }
+            else if (iXi == 2){
+                return get_ATrhoXi<0, 0, 2>(w, T, rho, molefrac, i);
+            }
+            else if (iXi == 3){
+                return get_ATrhoXi<0, 0, 3>(w, T, rho, molefrac, i);
+            }
+        }
+        else if (iT == 1 and iD == 0){
+            if (iXi == 1){
+                return get_ATrhoXi<1, 0, 1>(w, T, rho, molefrac, i);
+            }
+            else if (iXi == 2){
+                return get_ATrhoXi<1, 0, 2>(w, T, rho, molefrac, i);
+            }
+            else if (iXi == 3){
+                return get_ATrhoXi<1, 0, 3>(w, T, rho, molefrac, i);
+            }
+        }
+        else if (iT == 0 and iD == 1){
+            if (iXi == 1){
+                return get_ATrhoXi<0, 1, 1>(w, T, rho, molefrac, i);
+            }
+            else if (iXi == 2){
+                return get_ATrhoXi<0, 1, 2>(w, T, rho, molefrac, i);
+            }
+            else if (iXi == 3){
+                return get_ATrhoXi<0, 1, 3>(w, T, rho, molefrac, i);
+            }
+        }
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+    
+    /**
+     Calculate the derivative
+     \f[
+     \Lambda_{xyz_i z_j } = (1/T)^x(\rho)^y\left(\frac{\partial^{x+y+z_i+z_j}(\alpha^r)}{\partial (1/T)^x\partial \rho^y \partial \mathbf{Z}_i^{z_i} \partial \mathbf{Z}_j^{z_j}  \}\right)
+     \f]
+     in which all the compositions are treated as being independent
+     */
+    template<int iT, int iD, int iXi, int iXj, typename AlphaWrapper>
+    static auto get_ATrhoXiXj(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac, int i, int j){
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj, double>;
+        adtype Trecipad = 1.0 / T, rhoad = rho, xi = molefrac[i], xj = molefrac[j];
+        auto f = [&w, &molefrac, i, j](const adtype& Trecip, const adtype& rho_, const adtype& xi_, const adtype& xj_) {
+            adtype T_ = 1.0/Trecip;
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            molefracdual[j] = xj_;
+            return eval(w.alphar(T_, rho_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi, xj));
+        return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
+    }
+    
+    /**
+     Calculate the derivative
+     \f[
+     \Lambda_{xyz_i z_j z_k} = (1/T)^x(\rho)^y\left(\frac{\partial^{x+y+z_i+z_j+z_k}(\alpha^r)}{\partial (1/T)^x\partial \rho^y \partial \mathbf{Z}_i^{z_i} \partial \mathbf{Z}_j^{z_j} \partial \mathbf{Z}_k^{z_k}   \}\right
+     \f]
+     in which all the compositions are treated as being independent
+     */
+    template<int iT, int iD, int iXi, int iXj, int iXk, typename AlphaWrapper>
+    static auto get_ATrhoXiXjXk(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac, int i, int j, int k){
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj + iXk, double>;
+        adtype Trecipad = 1.0 / T, rhoad = rho, xi = molefrac[i], xj = molefrac[j], xk = molefrac[k];
+        auto f = [&w, &molefrac, i, j, k](const adtype& Trecip, const adtype& rho_, const adtype& xi_, const adtype& xj_, const adtype& xk_) {
+            adtype T_ = 1.0/Trecip;
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            molefracdual[j] = xj_;
+            molefracdual[k] = xk_;
+            return eval(w.alphar(T_, rho_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)), build_duplicated_tuple<iXk>(std::ref(xk)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi, xj, xk));
+        return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
     }
 
     /**

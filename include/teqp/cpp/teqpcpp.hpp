@@ -112,6 +112,9 @@ namespace teqp {
             virtual double get_B12vir(const double T, const EArrayd& z) const = 0;
             virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& z) const = 0;
             
+            // Composition derivatives
+            virtual double get_ATrhoXi(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NX) const = 0;
+            
             // Derivatives from isochoric thermodynamics (all have the same signature whithin each block)
             #define X(f) virtual double f(const double T, const EArrayd& rhovec) const = 0;
                 ISOCHORIC_double_args
