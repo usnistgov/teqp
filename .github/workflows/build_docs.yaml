@@ -15,11 +15,11 @@ jobs:
         run: git submodule update --init --recursive
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          miniconda-version: "latest"
+          mamba-version: "*"
           channels: conda-forge, defaults
           use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
-          auto-activate-base: true
+          auto-activate-base: false
       - name: install teqp, built from source
         run: |
           cd doc 
@@ -28,6 +28,7 @@ jobs:
           cd ..
           CXX=clang++ python -m pip install .
           cd doc 
+          which python
           make html
       - name: archive docs 
         run: cd doc && python -c "import shutil; shutil.make_archive('teqpdocs', 'xztar', 'build')"
