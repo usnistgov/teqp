@@ -29,16 +29,15 @@ TEST_CASE("alphaig derivative", "[alphaig]") {
     j.push_back(demo_pure_term(a_1, a_2));
     IdealHelmholtz ih(j);
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
-    auto wih = AlphaCallWrapper<AlphaWrapperOption::idealgas, decltype(ih)>(ih);
-    wih.alpha(T, rho, molefrac);
+    ih.alphaig(T, rho, molefrac);
     using tdx = TDXDerivatives<decltype(ih), double, Eigen::ArrayXd>;
     SECTION("All cross derivatives should be zero") {
-        REQUIRE(tdx::get_Agenxy<1, 1, ADBackends::autodiff>(wih, T, rho, molefrac) == 0);
-        REQUIRE(tdx::get_Agenxy<1, 2, ADBackends::autodiff>(wih, T, rho, molefrac) == 0);
-        REQUIRE(tdx::get_Agenxy<1, 3, ADBackends::autodiff>(wih, T, rho, molefrac) == 0);
-        REQUIRE(tdx::get_Agenxy<2, 1, ADBackends::autodiff>(wih, T, rho, molefrac) == 0);
-        REQUIRE(tdx::get_Agenxy<2, 2, ADBackends::autodiff>(wih, T, rho, molefrac) == 0);
-        REQUIRE(tdx::get_Agenxy<2, 3, ADBackends::autodiff>(wih, T, rho, molefrac) == 0);
+        REQUIRE(tdx::get_Agenxy<1, 1, ADBackends::autodiff>(ih, T, rho, molefrac) == 0);
+        REQUIRE(tdx::get_Agenxy<1, 2, ADBackends::autodiff>(ih, T, rho, molefrac) == 0);
+        REQUIRE(tdx::get_Agenxy<1, 3, ADBackends::autodiff>(ih, T, rho, molefrac) == 0);
+        REQUIRE(tdx::get_Agenxy<2, 1, ADBackends::autodiff>(ih, T, rho, molefrac) == 0);
+        REQUIRE(tdx::get_Agenxy<2, 2, ADBackends::autodiff>(ih, T, rho, molefrac) == 0);
+        REQUIRE(tdx::get_Agenxy<2, 3, ADBackends::autodiff>(ih, T, rho, molefrac) == 0);
     }
 }
 
@@ -59,10 +58,9 @@ TEST_CASE("Ammonia derivative", "[alphaig][NH3]") {
     nlohmann::json j = {{ {"R", 8.31446261815324}, {"terms", j0terms} }};
     IdealHelmholtz ih(j);
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
-    auto wih = AlphaCallWrapper<AlphaWrapperOption::idealgas, decltype(ih)>(ih);
-    auto calc = wih.alpha(T, rho, molefrac);
+    auto calc = ih.alphaig(T, rho, molefrac);
     auto expected = -5.3492909452728545;
     REQUIRE(calc == Approx(expected));
     
-    DerivativeHolderSquare<2, AlphaWrapperOption::idealgas> dhs(ih, T, rho, molefrac);
+    DerivativeHolderSquare<2> dhs(ih, T, rho, molefrac);
 }
