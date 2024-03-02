@@ -16,13 +16,15 @@ jobs:
       - name: checkout submodules
         run: git submodule update --init --recursive
       - name: conda env create
-        run: cd doc && conda env create && conda init
+        run: cd doc && conda env create
       - name: install teqp, built from source
         run: |
+          conda init
           conda activate teqpdocs
           CXX=clang++ python -m pip install .
       - name: build docs 
         run: |
+          conda init
           conda activate teqpdocs
           make html
       - name: archive docs 
