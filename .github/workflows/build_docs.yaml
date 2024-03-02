@@ -8,6 +8,11 @@ jobs:
   Matrix-build:
     runs-on: ubuntu-latest
     # container: node:latest 
+
+    # See: https://github.com/marketplace/actions/setup-miniconda#important
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -23,7 +28,6 @@ jobs:
           activate-environment: teqpdocs
           environment-file: doc/environment.yml
       - name: install teqp, built from source
-        shell: bash -el {0}
         run: |
           CXX=clang++ python -m pip install .
           cd doc 
