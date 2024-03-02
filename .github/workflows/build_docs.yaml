@@ -1,0 +1,33 @@
+name: build docs w/ compilation
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  Matrix-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: checkout submodules
+        run: git submodule update --init --recursive
+      - name: conda env create
+        run: cd doc && conda env create
+      - name: install teqp, built from source
+        run: |
+          conda activate teqpdocs
+          CXX=clang++ python -m pip install .
+      - name: build docs 
+        run: |
+          conda activate teqpdocs
+          make html
+      - name: conda env create
+        run: cd doc && python -c "import shutil; shutil.make_archive('teqpdocs', 'xztar', 'build')"
+      - uses: actions/upload-artifact@v3
+        with:
+          path: |
+            ./docs/*.tar.xz
