@@ -118,7 +118,7 @@ public:
     };
     
     virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const override {
-        return DerivativeHolderSquare<2, AlphaWrapperOption::residual>(mp.get_cref(), T, rho, z).derivs;
+        return DerivativeHolderSquare<2>(mp.get_cref(), T, rho, z).derivs;
     };
 };
 
