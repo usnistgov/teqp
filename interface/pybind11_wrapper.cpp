@@ -445,6 +445,7 @@ void init_teqp(py::module& m) {
         .def("get_Bnvir", &am::get_Bnvir, "Nderiv"_a, "T"_a, "molefrac"_a.noconvert())
         .def("get_dmBnvirdTm", &am::get_dmBnvirdTm, "Nderiv"_a, "NTderiv"_a, "T"_a, "molefrac"_a.noconvert())
         .def("get_B12vir", &am::get_B12vir, "T"_a, "molefrac"_a.noconvert())
+        .def("get_ATrhoXi", &am::get_ATrhoXi)
     
         .def("get_Arxy", &am::get_Arxy, "NT"_a, "ND"_a, "T"_a, "rho"_a, "molefrac"_a.noconvert())
         // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
