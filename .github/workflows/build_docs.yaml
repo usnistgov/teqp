@@ -19,13 +19,13 @@ jobs:
         run: cd doc && conda env create
       - name: install teqp, built from source
         run: |
-          conda init
-          conda activate teqpdocs
+          conda init && 
+          conda activate teqpdocs &&
           CXX=clang++ python -m pip install .
       - name: build docs 
         run: |
-          conda init
-          conda activate teqpdocs
+          conda init && 
+          conda activate teqpdocs &&
           make html
       - name: archive docs 
         run: cd doc && python -c "import shutil; shutil.make_archive('teqpdocs', 'xztar', 'build')"
