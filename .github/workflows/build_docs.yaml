@@ -16,7 +16,7 @@ jobs:
       - name: checkout submodules
         run: git submodule update --init --recursive
       - name: conda env create
-        run: cd doc && conda env create
+        run: cd doc && conda env create && conda init
       - name: install teqp, built from source
         run: |
           conda activate teqpdocs
@@ -25,7 +25,7 @@ jobs:
         run: |
           conda activate teqpdocs
           make html
-      - name: conda env create
+      - name: archive docs 
         run: cd doc && python -c "import shutil; shutil.make_archive('teqpdocs', 'xztar', 'build')"
       - uses: actions/upload-artifact@v3
         with:
