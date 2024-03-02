@@ -20,15 +20,13 @@ jobs:
           use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true
           auto-activate-base: false
+          activate-environment: teqpdocs
+          environment-file: doc/environment.yml
       - name: install teqp, built from source
+        shell: bash -el {0}
         run: |
-          cd doc 
-          conda env create
-          conda activate teqpdocs || true
-          cd ..
           CXX=clang++ python -m pip install .
           cd doc 
-          which python
           make html
       - name: archive docs 
         run: cd doc && python -c "import shutil; shutil.make_archive('teqpdocs', 'xztar', 'build')"
