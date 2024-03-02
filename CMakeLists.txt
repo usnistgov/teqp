@@ -56,7 +56,7 @@ option (TEQP_COMPLEXSTEP_ENABLED
 
 
 ####  SETUP
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/docker/boost_bcp_docker/boost_teqp.tar.xz")
 set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp/boost/version.hpp")
@@ -134,9 +134,11 @@ if (NOT TEQP_NO_TEQPCPP)
 
   if(MSVC)
     target_compile_options(teqpcpp PRIVATE /W4 ) # or add /WX to turn warnings into errors
+        target_compile_options(teqpcpp PUBLIC /wc5054)
   else()
     # Turn on all warnings, and then disable selectively
-    target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic       -Wno-deprecated-copy -Wno-language-extension-token) # or add -Werror to turn warnings into errors
+    target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic  -Wno-deprecated-copy -Wno-language-extension-token) # or add -Werror to turn warnings into errors
+        target_compile_options(teqpcpp PUBLIC -Wno-deprecated-anon-enum-enum-conversion)
   endif()
 
   if (TEQP_TESTTEQPCPP)
