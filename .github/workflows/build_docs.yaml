@@ -6,26 +6,28 @@ on:
     branches: [main]
 jobs:
   Matrix-build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
+    runs-on: ubuntu-latest
+    # container: node:latest 
     steps:
       - name: checkout
         uses: actions/checkout@v3
       - name: checkout submodules
         run: git submodule update --init --recursive
-      - name: conda env create
-        run: cd doc && conda env create
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          channels: conda-forge, defaults
+          use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
+          auto-activate-base: true
       - name: install teqp, built from source
         run: |
-          conda init && 
-          conda activate teqpdocs &&
+          cd doc 
+          conda env create
+          conda activate teqpdocs || true
+          cd ..
           CXX=clang++ python -m pip install .
-      - name: build docs 
-        run: |
-          conda init && 
-          conda activate teqpdocs &&
+          cd doc 
           make html
       - name: archive docs 
         run: cd doc && python -c "import shutil; shutil.make_archive('teqpdocs', 'xztar', 'build')"
