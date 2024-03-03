@@ -266,6 +266,50 @@ struct TDXDerivatives {
         throw teqp::InvalidArgument("Can't match these derivative counts");
     }
     
+    #define get_ATrhoXiXj_runtime_combinations \
+        X(0,0,1,0) \
+        X(0,0,2,0) \
+        X(0,0,0,1) \
+        X(0,0,0,2) \
+        X(0,0,1,1) \
+        X(1,0,1,0) \
+        X(1,0,2,0) \
+        X(1,0,0,1) \
+        X(1,0,0,2) \
+        X(1,0,1,1) \
+        X(0,1,1,0) \
+        X(0,1,2,0) \
+        X(0,1,0,1) \
+        X(0,1,0,2) \
+        X(0,1,1,1)
+
+    template<typename AlphaWrapper>
+    static auto get_ATrhoXiXj_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi, int j, int iXj){
+        #define X(a,b,c,d) if (iT == a && iD == b && iXi == c && iXj == d) { return get_ATrhoXiXj<a,b,c,d>(w, T, rho, molefrac, i, j); }
+        get_ATrhoXiXj_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+    
+    #define get_ATrhoXiXjXk_runtime_combinations \
+        X(0,0,0,1,1) \
+        X(0,0,1,0,1) \
+        X(0,0,1,1,0) \
+        X(1,0,0,1,1) \
+        X(1,0,1,0,1) \
+        X(1,0,1,1,0) \
+        X(0,1,0,1,1) \
+        X(0,1,1,0,1) \
+        X(0,1,1,1,0) \
+
+    template<typename AlphaWrapper>
+    static auto get_ATrhoXiXjXk_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi, int j, int iXj, int k, int iXk){
+        #define X(a,b,c,d,e) if (iT == a && iD == b && iXi == c && iXj == d && iXk == e) { return get_ATrhoXiXjXk<a,b,c,d,e>(w, T, rho, molefrac, i, j, k); }
+        get_ATrhoXiXjXk_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+    
     /**
      Calculate the derivative
      \f[
