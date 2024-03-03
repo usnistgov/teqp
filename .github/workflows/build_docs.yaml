@@ -1,0 +1,43 @@
+name: build docs w/ compilation
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  Matrix-build:
+    runs-on: windows-latest
+    # container: node:latest 
+
+    # See: https://github.com/marketplace/actions/setup-miniconda#important
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: checkout submodules
+        run: git submodule update --init --recursive
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          mamba-version: "*"
+          channels: conda-forge, defaults
+          use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
+          auto-update-conda: true
+          auto-activate-base: false
+          activate-environment: teqpdocs
+          environment-file: doc/environment.yml
+      - name: install teqp, built from source
+        # https://github.com/usnistgov/ChebTools/blob/master/README.md#prerequisites regarding the need for libgcc
+        # conda install libgcc libstdcxx-ng
+        run: |
+          conda list
+          python -m pip install .
+          cd doc 
+          make html
+      - name: archive docs 
+        run: cd doc && python -c "import shutil; shutil.make_archive('teqpdocs', 'xztar', 'build')"
+      - uses: actions/upload-artifact@v3
+        with:
+          path: |
+            ./doc/*.tar.xz
