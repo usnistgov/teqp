@@ -446,6 +446,13 @@ void init_teqp(py::module& m) {
         .def("get_dmBnvirdTm", &am::get_dmBnvirdTm, "Nderiv"_a, "NTderiv"_a, "T"_a, "molefrac"_a.noconvert())
         .def("get_B12vir", &am::get_B12vir, "T"_a, "molefrac"_a.noconvert())
     
+        .def("get_ATrhoXi", &am::get_ATrhoXi, "T"_a, "NT"_a, "rhomolar"_a, "Nrho"_a, "molefrac"_a.noconvert(), "i"_a, "NXi"_a)
+        .def("get_ATrhoXiXj", &am::get_ATrhoXiXj, "T"_a, "NT"_a, "rhomolar"_a, "Nrho"_a, "molefrac"_a.noconvert(), "i"_a, "NXi"_a, "j"_a, "NXj"_a)
+        .def("get_ATrhoXiXjXk", &am::get_ATrhoXiXjXk, "T"_a, "NT"_a, "rhomolar"_a, "Nrho"_a, "molefrac"_a.noconvert(), "i"_a, "NXi"_a, "j"_a, "NXj"_a, "k"_a, "NXk"_a)
+        .def("get_AtaudeltaXi", &am::get_AtaudeltaXi, "tau"_a, "Ntau"_a, "delta"_a, "Ndelta"_a, "molefrac"_a.noconvert(), "i"_a, "NXi"_a)
+        .def("get_AtaudeltaXiXj", &am::get_AtaudeltaXiXj, "tau"_a, "Ntau"_a, "delta"_a, "Ndelta"_a, "molefrac"_a.noconvert(), "i"_a, "NXi"_a, "j"_a, "NXj"_a)
+        .def("get_AtaudeltaXiXjXk", &am::get_AtaudeltaXiXjXk, "tau"_a, "Ntau"_a, "delta"_a, "Ndelta"_a, "molefrac"_a.noconvert(), "i"_a, "NXi"_a, "j"_a, "NXj"_a, "k"_a, "NXk"_a)
+    
         .def("get_Arxy", &am::get_Arxy, "NT"_a, "ND"_a, "T"_a, "rho"_a, "molefrac"_a.noconvert())
         // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
         #define X(i,j) .def(stringify(get_Ar ## i ## j), &am::get_Ar ## i ## j, "T"_a, "rho"_a, "molefrac"_a.noconvert())

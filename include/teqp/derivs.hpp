@@ -6,6 +6,7 @@
 #include <map>
 #include <tuple>
 #include <numeric>
+#include <concepts>
 
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
@@ -88,35 +89,6 @@ struct wrt_helper {
     }
 };
 
-enum class AlphaWrapperOption {residual, idealgas};
-/**
-* \brief This class is used to wrap a model that exposes the generic 
-* functions alphar, alphaig, etc., and allow the desired member function to be
-* called at runtime via perfect forwarding
-* 
-* This class is needed because conventional binding methods (e.g., std::bind)
-* require the argument types to be known, and they are not known in this case
-* so we give the hard work of managing the argument types to the compiler
-*/
-template<AlphaWrapperOption o, class Model>
-struct AlphaCallWrapper {
-    const Model& m_model;
-    AlphaCallWrapper(const Model& model) : m_model(model) {};
-
-    template <typename ... Args>
-    auto alpha(const Args& ... args) const {
-        if constexpr (o == AlphaWrapperOption::residual) {
-            // The alphar method is REQUIRED to be implemented by all
-            // models, so can just call it via perfect fowarding
-            return m_model.alphar(std::forward<const Args>(args)...);
-        }
-        else {
-            //throw teqp::InvalidArgument("Missing implementation for alphaig");
-            return m_model.alphaig(std::forward<const Args>(args)...);
-        }
-    }
-};
-
 enum class ADBackends { autodiff
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
     ,multicomplex
@@ -126,11 +98,45 @@ enum class ADBackends { autodiff
 #endif
 };
 
+template<typename T, typename U, typename V, typename W>
+concept CallableAlpha = requires(T t, U u, V v, W w) {
+    { t.alpha(u,v,w) };
+};
+
+template<typename T, typename U, typename V, typename W>
+concept CallableAlphar = requires(T t, U u, V v, W w) {
+    { t.alphar(u,v,w) };
+};
+
+template<typename T, typename U, typename V, typename W>
+concept CallableAlpharTauDelta = requires(T t, U u, V v, W w) {
+    { t.alphar_taudelta(u,v,w) };
+};
+
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
 struct TDXDerivatives {
     
     static auto get_Ar00(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         return model.alphar(T, rho, molefrac);
+    }
+    
+    template<typename AlphaWrapper, typename S1, typename S2, typename Vec>
+    static auto AlphaCaller(const AlphaWrapper& w, const S1& T, const S2& rho, const Vec& molefrac) requires CallableAlpha<AlphaWrapper, S1, S2, Vec>{
+        return w.alpha(T, rho, molefrac);
+    }
+    template<typename AlphaWrapper, typename S1, typename S2, typename Vec>
+    static auto AlphaCaller(const AlphaWrapper& w, const S1& T, const S2& rho, const Vec& molefrac) requires CallableAlphar<AlphaWrapper, S1, S2, Vec>{
+        return w.alphar(T, rho, molefrac);
+    }
+    
+    template<typename AlphaWrapper, typename S1, typename S2, typename Vec>
+    static auto AlpharTauDeltaCaller(const AlphaWrapper& w, const S1& T, const S2& rho, const Vec& molefrac) requires CallableAlpharTauDelta<AlphaWrapper, S1, S2, Vec>{
+        return w.alphar_taudelta(T, rho, molefrac);
+    }
+    template<typename AlphaWrapper, typename S1, typename S2, typename Vec>
+    static auto AlpharTauDeltaCaller(const AlphaWrapper& , const S1&, const S2&, const Vec& molefrac){
+        throw teqp::NotImplementedError("Cannot take derivatives of a class that doesn't define the alphar_taudelta method");
+        return std::common_type_t<S1, S2, decltype(molefrac[0])>(1e99);
     }
     
     /**
@@ -144,25 +150,27 @@ struct TDXDerivatives {
     template<int iT, int iD, ADBackends be = ADBackends::autodiff, class AlphaWrapper>
     static auto get_Agenxy(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
         
-        static_assert(iT > 0 || iD > 0);
-        if constexpr (iT == 0 && iD > 0) {
+        if constexpr (iT == 0 && iD == 0){
+            return AlphaCaller(w, T, rho, molefrac);
+        }
+        else if constexpr (iT == 0 && iD > 0) {
             if constexpr (be == ADBackends::autodiff) {
                 // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
                 autodiff::Real<iD, Scalar> rho_ = rho;
-                auto f = [&w, &T, &molefrac](const auto& rho__) { return w.alpha(T, rho__, molefrac); };
+                auto f = [&w, &T, &molefrac](const auto& rho__) { return AlphaCaller(w, T, rho__, molefrac); };
                 return powi(rho, iD)*derivatives(f, along(1), at(rho_))[iD];
             }
 #if defined(TEQP_COMPLEXSTEP_ENABLED)
             else if constexpr (iD == 1 && be == ADBackends::complex_step) {
                 double h = 1e-100;
                 auto rho_ = std::complex<Scalar>(rho, h);
-                return powi(rho, iD) * w.alpha(T, rho_, molefrac).imag() / h;
+                return powi(rho, iD) * AlphaCaller(w, T, rho_, molefrac).imag() / h;
             }
 #endif
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
-                fcn_t f = [&](const auto& rhomcx) { return w.alpha(T, rhomcx, molefrac); };
+                fcn_t f = [&](const auto& rhomcx) { return AlphaCaller(w, T, rhomcx, molefrac); };
                 auto ders = diff_mcx1(f, rho, iD, true /* and_val */);
                 return powi(rho, iD)*ders[iD];
             }
@@ -176,7 +184,7 @@ struct TDXDerivatives {
             if constexpr (be == ADBackends::autodiff) {
                 // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
                 autodiff::Real<iT, Scalar> Trecipad = Trecip;
-                auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(forceeval(1.0/Trecip__), rho, molefrac); };
+                auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return AlphaCaller(w, forceeval(1.0/Trecip__), rho, molefrac); };
                 return powi(Trecip, iT)*derivatives(f, along(1), at(Trecipad))[iT];
             }
 #if defined(TEQP_COMPLEXSTEP_ENABLED)
@@ -189,7 +197,7 @@ struct TDXDerivatives {
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
             else if constexpr (be == ADBackends::multicomplex) {
                 using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
-                fcn_t f = [&](const auto& Trecipmcx) { return w.alpha(1.0/Trecipmcx, rho, molefrac); };
+                fcn_t f = [&](const auto& Trecipmcx) { return AlphaCaller(w, 1.0/Trecipmcx, rho, molefrac); };
                 auto ders = diff_mcx1(f, Trecip, iT, true /* and_val */);
                 return powi(Trecip, iT)*ders[iT];
             }
@@ -204,7 +212,7 @@ struct TDXDerivatives {
                 adtype Trecipad = 1.0 / T, rhoad = rho;
                 auto f = [&w, &molefrac](const adtype& Trecip, const adtype& rho_) {
                     adtype T_ = 1.0/Trecip;
-                    return eval(w.alpha(T_, rho_, molefrac)); };
+                    return eval(AlphaCaller(w, T_, rho_, molefrac)); };
                 auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)));
                 auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad));
                 return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
@@ -214,7 +222,7 @@ struct TDXDerivatives {
                 using fcn_t = std::function< mcx::MultiComplex<double>(const std::valarray<mcx::MultiComplex<double>>&)>;
                 const fcn_t func = [&w, &molefrac](const auto& zs) {
                     auto Trecip = zs[0], rhomolar = zs[1];
-                    return w.alpha(1.0 / Trecip, rhomolar, molefrac);
+                    return AlphaCaller(w, 1.0 / Trecip, rhomolar, molefrac);
                 };
                 std::vector<double> xs = { 1.0 / T, rho};
                 std::vector<int> order = { iT, iD };
@@ -226,7 +234,213 @@ struct TDXDerivatives {
                 throw std::invalid_argument("algorithmic differentiation backend is invalid in get_Agenxy for iD > 0 and iT > 0");
             }
         }
-//        return static_cast<Scalar>(-999999999*T); // This will never hit, only to make compiler happy because it doesn't know the return type
+        //        return static_cast<Scalar>(-999999999*T); // This will never hit, only to make compiler happy because it doesn't know the return type
+    }
+    
+    /**
+     Calculate the derivative
+     \f[
+     \Lambda_{xyz_i} = (1/T)^x(\rho)^y\deriv{^{x+y+z_i}(\alpha^r)}{(1/T)^x\partial \rho^y \partial \mathbf{Z}_i^{z_i}}}{}
+     \f]
+     in which all the compositions are treated as being independent
+     */
+    template<int iT, int iD, int iXi, typename AlphaWrapper>
+    static auto get_ATrhoXi(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac, int i){
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi, double>;
+        adtype Trecipad = 1.0 / T, rhoad = rho, xi = molefrac[i];
+        auto f = [&w, &molefrac, &i](const adtype& Trecip, const adtype& rho_, const adtype& xi_) {
+            adtype T_ = 1.0/Trecip;
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            return eval(AlphaCaller(w, T_, rho_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi));
+        return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
+    }
+    
+    #define get_ATrhoXi_runtime_combinations X(0,0,1) \
+        X(0,0,2) \
+        X(0,0,3) \
+        X(1,0,1) \
+        X(1,0,2) \
+        X(1,0,3) \
+        X(0,1,1) \
+        X(0,1,2) \
+        X(0,1,3)
+    
+    template<typename AlphaWrapper>
+    static auto get_ATrhoXi_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi){
+        #define X(a,b,c) if (iT == a && iD == b && iXi == c) { return get_ATrhoXi<a,b,c>(w, T, rho, molefrac, i); }
+        get_ATrhoXi_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+    
+    #define get_ATrhoXiXj_runtime_combinations \
+        X(0,0,1,0) \
+        X(0,0,2,0) \
+        X(0,0,0,1) \
+        X(0,0,0,2) \
+        X(0,0,1,1) \
+        X(1,0,1,0) \
+        X(1,0,2,0) \
+        X(1,0,0,1) \
+        X(1,0,0,2) \
+        X(1,0,1,1) \
+        X(0,1,1,0) \
+        X(0,1,2,0) \
+        X(0,1,0,1) \
+        X(0,1,0,2) \
+        X(0,1,1,1)
+
+    template<typename AlphaWrapper>
+    static auto get_ATrhoXiXj_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi, int j, int iXj){
+        #define X(a,b,c,d) if (iT == a && iD == b && iXi == c && iXj == d) { return get_ATrhoXiXj<a,b,c,d>(w, T, rho, molefrac, i, j); }
+        get_ATrhoXiXj_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+    
+    #define get_ATrhoXiXjXk_runtime_combinations \
+        X(0,0,0,1,1) \
+        X(0,0,1,0,1) \
+        X(0,0,1,1,0) \
+        X(1,0,0,1,1) \
+        X(1,0,1,0,1) \
+        X(1,0,1,1,0) \
+        X(0,1,0,1,1) \
+        X(0,1,1,0,1) \
+        X(0,1,1,1,0) \
+
+    template<typename AlphaWrapper>
+    static auto get_ATrhoXiXjXk_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi, int j, int iXj, int k, int iXk){
+        #define X(a,b,c,d,e) if (iT == a && iD == b && iXi == c && iXj == d && iXk == e) { return get_ATrhoXiXjXk<a,b,c,d,e>(w, T, rho, molefrac, i, j, k); }
+        get_ATrhoXiXjXk_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+    
+    template<int iT, int iD, int iXi, typename AlphaWrapper>
+    static auto get_AtaudeltaXi(const AlphaWrapper& w, const Scalar& tau, const Scalar& delta, const VectorType& molefrac, const int i) {
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi, double>;
+        adtype tauad = tau, deltaad = delta, xi = molefrac[i];
+        auto f = [&w, &molefrac, &i](const adtype& tau_, const adtype& delta_, const adtype& xi_) {
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi));
+        return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
+    }
+    
+    template<int iT, int iD, int iXi, int iXj, typename AlphaWrapper>
+    static auto get_AtaudeltaXiXj(const AlphaWrapper& w, const Scalar& tau, const Scalar& delta, const VectorType& molefrac, const int i, const int j) {
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj, double>;
+        if (i == j){
+            throw teqp::InvalidArgument("i cannot equal j");
+        }
+        adtype tauad = tau, deltaad = delta, xi = molefrac[i], xj = molefrac[j];
+        auto f = [&w, &molefrac, i, j](const adtype& tau_, const adtype& delta_, const adtype& xi_, const adtype& xj_) {
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            molefracdual[j] = xj_;
+            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi, xj));
+        return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
+    }
+    
+    template<int iT, int iD, int iXi, int iXj, int iXk, typename AlphaWrapper>
+    static auto get_AtaudeltaXiXjXk(const AlphaWrapper& w, const Scalar& tau, const Scalar& delta, const VectorType& molefrac, const int i, const int j, const int k) {
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj + iXk, double>;
+        if (i == j || j == k || i == k){
+            throw teqp::InvalidArgument("i, j, and k must all be unique");
+        }
+        adtype tauad = tau, deltaad = delta, xi = molefrac[i], xj = molefrac[j], xk = molefrac[k];
+        auto f = [&w, &molefrac, i, j, k](const adtype& tau_, const adtype& delta_, const adtype& xi_, const adtype& xj_, const adtype& xk_) {
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            molefracdual[j] = xj_;
+            molefracdual[k] = xk_;
+            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)), build_duplicated_tuple<iXk>(std::ref(xk)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi, xj, xk));
+        return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
+    }
+
+    template<typename AlphaWrapper>
+    static auto get_AtaudeltaXi_runtime(const AlphaWrapper& w, const Scalar& tau, const int iT, const Scalar& delta, const int iD, const VectorType& molefrac, const int i, const int iXi){
+        #define X(a,b,c) if (iT == a && iD == b && iXi == c) { return get_AtaudeltaXi<a,b,c>(w, tau, delta, molefrac, i); }
+        get_ATrhoXi_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+
+    template<typename AlphaWrapper>
+    static auto get_AtaudeltaXiXj_runtime(const AlphaWrapper& w, const Scalar& tau, const int iT, const Scalar& delta, const int iD, const VectorType& molefrac, const int i, const int iXi, const int j, const int iXj){
+        #define X(a,b,c,d) if (iT == a && iD == b && iXi == c && iXj == d) { return get_AtaudeltaXiXj<a,b,c,d>(w, tau, delta, molefrac, i, j); }
+        get_ATrhoXiXj_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+
+    template<typename AlphaWrapper>
+    static auto get_AtaudeltaXiXjXk_runtime(const AlphaWrapper& w, const Scalar& tau, const int iT, const Scalar& delta, const int iD, const VectorType& molefrac, const int i, int iXi, const int j, const int iXj, const int k, const int iXk){
+        #define X(a,b,c,d,e) if (iT == a && iD == b && iXi == c && iXj == d && iXk == e) { return get_AtaudeltaXiXjXk<a,b,c,d,e>(w, tau, delta, molefrac, i, j, k); }
+        get_ATrhoXiXjXk_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+    
+    /**
+     Calculate the derivative
+     \f[
+     \Lambda_{xyz_i z_j } = (1/T)^x(\rho)^y\left(\frac{\partial^{x+y+z_i+z_j}(\alpha^r)}{\partial (1/T)^x\partial \rho^y \partial \mathbf{Z}_i^{z_i} \partial \mathbf{Z}_j^{z_j}  \}\right)
+     \f]
+     in which all the compositions are treated as being independent
+     */
+    template<int iT, int iD, int iXi, int iXj, typename AlphaWrapper>
+    static auto get_ATrhoXiXj(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac, int i, int j){
+        if (i == j){
+            throw teqp::InvalidArgument("i cannot equal j");
+        }
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj, double>;
+        adtype Trecipad = 1.0 / T, rhoad = rho, xi = molefrac[i], xj = molefrac[j];
+        auto f = [&w, &molefrac, i, j](const adtype& Trecip, const adtype& rho_, const adtype& xi_, const adtype& xj_) {
+            adtype T_ = 1.0/Trecip;
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            molefracdual[j] = xj_;
+            return eval(AlphaCaller(w, T_, rho_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi, xj));
+        return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
+    }
+    
+    /**
+     Calculate the derivative
+     \f[
+     \Lambda_{xyz_i z_j z_k} = (1/T)^x(\rho)^y\left(\frac{\partial^{x+y+z_i+z_j+z_k}(\alpha^r)}{\partial (1/T)^x\partial \rho^y \partial \mathbf{Z}_i^{z_i} \partial \mathbf{Z}_j^{z_j} \partial \mathbf{Z}_k^{z_k}   \}\right
+     \f]
+     in which all the compositions are treated as being independent
+     */
+    template<int iT, int iD, int iXi, int iXj, int iXk, typename AlphaWrapper>
+    static auto get_ATrhoXiXjXk(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac, int i, int j, int k){
+        if (i == j || j == k || i == k){
+            throw teqp::InvalidArgument("i, j, and k must all be unique");
+        }
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj + iXk, double>;
+        adtype Trecipad = 1.0 / T, rhoad = rho, xi = molefrac[i], xj = molefrac[j], xk = molefrac[k];
+        auto f = [&w, &molefrac, i, j, k](const adtype& Trecip, const adtype& rho_, const adtype& xi_, const adtype& xj_, const adtype& xk_) {
+            adtype T_ = 1.0/Trecip;
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            molefracdual[j] = xj_;
+            molefracdual[k] = xk_;
+            return eval(AlphaCaller(w, T_, rho_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)), build_duplicated_tuple<iXk>(std::ref(xk)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi, xj, xk));
+        return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
     }
 
     /**
@@ -239,13 +453,7 @@ struct TDXDerivatives {
     */
     template<int iT, int iD, ADBackends be = ADBackends::autodiff>
     static auto get_Arxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = AlphaCallWrapper<AlphaWrapperOption::residual, decltype(model)>(model);
-        if constexpr (iT == 0 && iD == 0) {
-            return wrapper.alpha(T, rho, molefrac);
-        }
-        else {
-            return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
-        }
+        return get_Agenxy<iT, iD, be>(model, T, rho, molefrac);
     }
 
     /**
@@ -258,13 +466,7 @@ struct TDXDerivatives {
     */
     template<int iT, int iD, ADBackends be = ADBackends::autodiff>
     static auto get_Aigxy(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = AlphaCallWrapper<AlphaWrapperOption::idealgas, decltype(model)>(model);
-        if constexpr (iT == 0 && iD == 0) {
-            return wrapper.alpha(T, rho, molefrac);
-        }
-        else {
-            return get_Agenxy<iT, iD, be>(wrapper, T, rho, molefrac);
-        }
+        return get_Agenxy<iT, iD, be>(model, T, rho, molefrac);
     }
 
     template<ADBackends be = ADBackends::autodiff>
@@ -323,7 +525,7 @@ struct TDXDerivatives {
         if constexpr (be == ADBackends::autodiff) {
             // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
             autodiff::Real<Nderiv, Scalar> rho_ = rho;
-            auto f = [&w, &T, &molefrac](const auto& rho__) { return w.alpha(T, rho__, molefrac); };
+            auto f = [&w, &T, &molefrac](const auto& rho__) { return AlphaCaller(w, T, rho__, molefrac); };
             auto ders = derivatives(f, along(1), at(rho_));
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = forceeval(powi(rho, n) * ders[n]);
@@ -334,7 +536,7 @@ struct TDXDerivatives {
         else {
             using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
             bool and_val = true;
-            fcn_t f = [&w, &T, &molefrac](const auto& rhomcx) { return w.alpha(T, rhomcx, molefrac); };
+            fcn_t f = [&w, &T, &molefrac](const auto& rhomcx) { return AlphaCaller(w, T, rhomcx, molefrac); };
             auto ders = diff_mcx1(f, rho, Nderiv, and_val);
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = powi(rho, n) * ders[n];
@@ -352,7 +554,7 @@ struct TDXDerivatives {
         if constexpr (be == ADBackends::autodiff) {
             // If a pure derivative, then we can use autodiff::Real for that variable and Scalar for other variable
             autodiff::Real<Nderiv, Scalar> Trecipad = Trecip;
-            auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return w.alpha(forceeval(1.0/Trecip__), rho, molefrac); };
+            auto f = [&w, &rho, &molefrac](const auto& Trecip__) {return AlphaCaller(w, forceeval(1.0/Trecip__), rho, molefrac); };
             auto ders = derivatives(f, along(1), at(Trecipad));
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = powi(Trecip, n) * ders[n];
@@ -361,7 +563,7 @@ struct TDXDerivatives {
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
         else if constexpr (be == ADBackends::multicomplex) {
             using fcn_t = std::function<mcx::MultiComplex<Scalar>(const mcx::MultiComplex<Scalar>&)>;
-            fcn_t f = [&](const auto& Trecipmcx) { return w.alpha(1.0/Trecipmcx, rho, molefrac); };
+            fcn_t f = [&](const auto& Trecipmcx) { return AlphaCaller(w, 1.0/Trecipmcx, rho, molefrac); };
             auto ders = diff_mcx1(f, Trecip, Nderiv+1, true /* and_val */);
             for (auto n = 0; n <= Nderiv; ++n) {
                 o[n] = powi(Trecip, n) * ders[n];
@@ -384,8 +586,7 @@ struct TDXDerivatives {
     */
     template<int iT, ADBackends be = ADBackends::autodiff>
     static auto get_Arn0(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = AlphaCallWrapper<AlphaWrapperOption::residual, decltype(model)>(model);
-        return get_Agenn0<iT, be>(wrapper, T, rho, molefrac);
+        return get_Agenn0<iT, be>(model, T, rho, molefrac);
     }
     
     /**
@@ -398,8 +599,7 @@ struct TDXDerivatives {
     */
     template<int iD, ADBackends be = ADBackends::autodiff>
     static auto get_Ar0n(const Model& model, const Scalar& T, const Scalar& rho, const VectorType& molefrac) {
-        auto wrapper = AlphaCallWrapper<AlphaWrapperOption::residual, decltype(model)>(model);
-        return get_Agen0n<iD, be>(wrapper, T, rho, molefrac);
+        return get_Agen0n<iD, be>(model, T, rho, molefrac);
     }
     
 
@@ -1252,7 +1452,7 @@ struct IsochoricDerivatives{
     }
 };
 
-template<int Nderivsmax, AlphaWrapperOption opt>
+template<int Nderivsmax>
 class DerivativeHolderSquare{
     
 public:
@@ -1262,19 +1462,19 @@ public:
     DerivativeHolderSquare(const Model& model, const Scalar& T, const Scalar& rho, const VecType& z) {
         using tdx = TDXDerivatives<decltype(model), Scalar, VecType>;
         static_assert(Nderivsmax == 2, "It's gotta be 2 for now");
-        AlphaCallWrapper<opt, Model> wrapper(model);
         
-        auto AX02 = tdx::template get_Agen0n<2>(wrapper, T, rho, z);
+        
+        auto AX02 = tdx::template get_Agen0n<2>(model, T, rho, z);
         derivs(0, 0) = AX02[0];
         derivs(0, 1) = AX02[1];
         derivs(0, 2) = AX02[2];
         
-        auto AX20 = tdx::template get_Agenn0<2>(wrapper, T, rho, z);
+        auto AX20 = tdx::template get_Agenn0<2>(model, T, rho, z);
         derivs(0, 0) = AX20[0];
         derivs(1, 0) = AX20[1];
         derivs(2, 0) = AX20[2];
         
-        derivs(1, 1) = tdx::template get_Agenxy<1,1>(wrapper, T, rho, z);
+        derivs(1, 1) = tdx::template get_Agenxy<1,1>(model, T, rho, z);
     }
 };
 
