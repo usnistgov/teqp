@@ -96,6 +96,8 @@ public:
     virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& molefrac) const override {
         return VirialDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_dmBnvirdTm_runtime(Nderiv, NTderiv, mp.get_cref(), T, molefrac);
     };
+    
+    // Composition derivatives with temperature and density as the working variables
     virtual double get_ATrhoXi(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NXi) const override {
         return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_ATrhoXi_runtime(mp.get_cref(), T, NT, rhomolar, ND, molefrac, i, NXi);
     };
