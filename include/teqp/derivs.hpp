@@ -248,41 +248,21 @@ struct TDXDerivatives {
         return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
     }
     
+    #define get_ATrhoXi_runtime_combinations X(0,0,1) \
+        X(0,0,2) \
+        X(0,0,3) \
+        X(1,0,1) \
+        X(1,0,2) \
+        X(1,0,3) \
+        X(0,1,1) \
+        X(0,1,2) \
+        X(0,1,3)
+    
     template<typename AlphaWrapper>
     static auto get_ATrhoXi_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi){
-        if (iT == 0 and iD == 0){
-            if (iXi == 1){
-                return get_ATrhoXi<0, 0, 1>(w, T, rho, molefrac, i);
-            }
-            else if (iXi == 2){
-                return get_ATrhoXi<0, 0, 2>(w, T, rho, molefrac, i);
-            }
-            else if (iXi == 3){
-                return get_ATrhoXi<0, 0, 3>(w, T, rho, molefrac, i);
-            }
-        }
-        else if (iT == 1 and iD == 0){
-            if (iXi == 1){
-                return get_ATrhoXi<1, 0, 1>(w, T, rho, molefrac, i);
-            }
-            else if (iXi == 2){
-                return get_ATrhoXi<1, 0, 2>(w, T, rho, molefrac, i);
-            }
-            else if (iXi == 3){
-                return get_ATrhoXi<1, 0, 3>(w, T, rho, molefrac, i);
-            }
-        }
-        else if (iT == 0 and iD == 1){
-            if (iXi == 1){
-                return get_ATrhoXi<0, 1, 1>(w, T, rho, molefrac, i);
-            }
-            else if (iXi == 2){
-                return get_ATrhoXi<0, 1, 2>(w, T, rho, molefrac, i);
-            }
-            else if (iXi == 3){
-                return get_ATrhoXi<0, 1, 3>(w, T, rho, molefrac, i);
-            }
-        }
+        #define X(a,b,c) if (iT == a && iD == b && iXi == c) { return get_ATrhoXi<a,b,c>(w, T, rho, molefrac, i); }
+        get_ATrhoXi_runtime_combinations
+        #undef X
         throw teqp::InvalidArgument("Can't match these derivative counts");
     }
     
