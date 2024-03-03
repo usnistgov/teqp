@@ -113,9 +113,9 @@ namespace teqp {
             virtual double get_dmBnvirdTm(const int Nderiv, const int NTderiv, const double T, const EArrayd& z) const = 0;
             
             // Composition derivatives
-            virtual double get_ATrhoXi(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NXi) const = 0;
-            virtual double get_ATrhoXiXj(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NXi, int j, int NXj) const = 0;
-            virtual double get_ATrhoXiXjXk(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NXi, int j, int NXj, int k, int NXk) const = 0;
+            virtual double get_ATrhoXi(const double T, const int NT, const double rhomolar, int ND, const EArrayd& molefrac, const int i, const int NXi) const = 0;
+            virtual double get_ATrhoXiXj(const double T, const int NT, const double rhomolar, int ND, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj) const = 0;
+            virtual double get_ATrhoXiXjXk(const double T, const int NT, const double rhomolar, int ND, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj, const int k, const int NXk) const = 0;
             
             // Derivatives from isochoric thermodynamics (all have the same signature whithin each block)
             #define X(f) virtual double f(const double T, const EArrayd& rhovec) const = 0;

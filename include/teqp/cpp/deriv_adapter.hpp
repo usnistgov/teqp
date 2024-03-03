@@ -98,13 +98,13 @@ public:
     };
     
     // Composition derivatives with temperature and density as the working variables
-    virtual double get_ATrhoXi(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NXi) const override {
+    virtual double get_ATrhoXi(const double T, const int NT, const double rhomolar, const int ND, const EArrayd& molefrac, const int i, const int NXi) const override {
         return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_ATrhoXi_runtime(mp.get_cref(), T, NT, rhomolar, ND, molefrac, i, NXi);
     };
-    virtual double get_ATrhoXiXj(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NXi, int j, int NXj) const override {
+    virtual double get_ATrhoXiXj(const double T, const int NT, const double rhomolar, const int ND, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj) const override {
         return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_ATrhoXiXj_runtime(mp.get_cref(), T, NT, rhomolar, ND, molefrac, i, NXi, j, NXj);
     };
-    virtual double get_ATrhoXiXjXk(const double T, int NT, const double rhomolar, int ND, const EArrayd& molefrac, int i, int NXi, int j, int NXj, int k, int NXk) const override {
+    virtual double get_ATrhoXiXjXk(const double T, const int NT, const double rhomolar, const int ND, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj, const int k, const int NXk) const override {
         return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_ATrhoXiXjXk_runtime(mp.get_cref(), T, NT, rhomolar, ND, molefrac, i, NXi, j, NXj, k, NXk);
     };
     
