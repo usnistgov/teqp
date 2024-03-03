@@ -258,7 +258,8 @@ struct TDXDerivatives {
         return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
     }
     
-    #define get_ATrhoXi_runtime_combinations X(0,0,1) \
+    #define get_ATrhoXi_runtime_combinations \
+        X(0,0,1) \
         X(0,0,2) \
         X(0,0,3) \
         X(1,0,1) \
@@ -266,7 +267,16 @@ struct TDXDerivatives {
         X(1,0,3) \
         X(0,1,1) \
         X(0,1,2) \
-        X(0,1,3)
+        X(0,1,3) \
+        X(2,0,1) \
+        X(2,0,2) \
+        X(2,0,3) \
+        X(1,1,1) \
+        X(1,1,2) \
+        X(1,1,3) \
+        X(0,2,1) \
+        X(0,2,2) \
+        X(0,2,3)
     
     template<typename AlphaWrapper>
     static auto get_ATrhoXi_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi){
@@ -305,12 +315,15 @@ struct TDXDerivatives {
         X(0,0,0,1,1) \
         X(0,0,1,0,1) \
         X(0,0,1,1,0) \
+        X(0,0,1,1,1) \
         X(1,0,0,1,1) \
         X(1,0,1,0,1) \
         X(1,0,1,1,0) \
+        X(1,0,1,1,1) \
         X(0,1,0,1,1) \
         X(0,1,1,0,1) \
         X(0,1,1,1,0) \
+        X(0,1,1,1,1)
 
     template<typename AlphaWrapper>
     static auto get_ATrhoXiXjXk_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi, int j, int iXj, int k, int iXk){

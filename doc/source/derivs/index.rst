@@ -6,4 +6,5 @@ Derivatives
    :caption: Contents:
 
    derivs
+   compderivs
    ideal_gas
