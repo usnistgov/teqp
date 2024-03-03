@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_approx.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/benchmark/catch_benchmark_all.hpp>
-using Catch::Approx;
+using Catch::Matchers::WithinRel;
 
 #include <iostream>
 
@@ -29,6 +29,8 @@ TEST_CASE("Test ethanol + water association", "[association]"){
     
     std::vector<std::vector<std::string>> molecule_sites = {{"e", "H"}, {"e", "e", "H", "H"}};
     association::AssociationOptions opt;
+    opt.radial_dist = association::radial_dist::CS;
+    opt.max_iters = 1000;
     opt.interaction_partners = {{"e", {"H",}}, {"H", {"e",}}};
     
     association::Association a(b_m3mol, beta, epsilon_Jmol, molecule_sites, opt);
@@ -37,20 +39,67 @@ TEST_CASE("Test ethanol + water association", "[association]"){
     auto Ngroups = a.mapper.to_siteid.size();
     Eigen::ArrayXd X_init = Eigen::ArrayXd::Ones(Ngroups);
     
-    double v = 3.0680691201961814e-5;
-    Eigen::ArrayXd X_A = a.successive_substitution(303.15, 1/v, molefracs, X_init);
-    CHECK(X_A[0] == Approx(0.06258400385436955));
-    CHECK(X_A[3] == Approx(0.10938445109190545));
+    double v = 3.0680691201961814e-5, T = 303.15;
+    auto Delta = a.get_Delta(T, 1/v, molefracs);
+    CAPTURE(Delta);
+    CHECK_THAT(Delta(0,0), WithinRel(5.85623687e-27, 1e-8));
+    CHECK_THAT(Delta(0,3), WithinRel(4.26510827e-27, 1e-8));
+    CHECK_THAT(Delta(3,3), WithinRel(2.18581242e-27, 1e-8));
+    Eigen::ArrayXd X_A = a.successive_substitution(T, 1/v, molefracs, X_init);
+    CHECK_THAT(X_A[0], WithinRel(0.06258400385436955, 1e-8));
+    CHECK_THAT(X_A[3], WithinRel(0.10938445109190545, 1e-8));
     
     BENCHMARK("SS"){
-        return a.successive_substitution(303.15, 1/v, molefracs, X_init);
+        return a.successive_substitution(T, 1/v, molefracs, X_init);
     };
     BENCHMARK("alphar"){
-        return a.alphar(303.15, 1/v, molefracs);
+        return a.alphar(T, 1/v, molefracs);
     };
 }
 
-TEST_CASE("Ethanol + water with CPA", "[association]"){
+TEST_CASE("Ethanol with CPA and old class names", "[association]"){
+    nlohmann::json ethanol = {
+        {"a0i / Pa m^6/mol^2", 0.85164}, {"bi / m^3/mol", 0.0491e-3}, {"c1", 0.7502}, {"Tc / K", 513.92},
+        {"epsABi / J/mol", 21500.0}, {"betaABi", 0.008}, {"class", "2B"}
+    };
+    nlohmann::json jCPA = {
+        {"cubic", "SRK"},
+        {"radial_dist", "CS"},
+        {"pures", {ethanol}},
+        {"R_gas / J/mol/K", 8.31446261815324}
+    };
+    nlohmann::json j = {
+        {"kind", "CPA"},
+        {"model", jCPA}
+    };
+    CHECK_NOTHROW(teqp::cppinterface::make_model(j, false));
+}
+
+TEST_CASE("Ethanol + water with CPA and old class names", "[association]"){
+    nlohmann::json water = {
+        {"a0i / Pa m^6/mol^2", 0.12277}, {"bi / m^3/mol", 0.0000145}, {"c1", 0.6736}, {"Tc / K", 647.13},
+        {"epsABi / J/mol", 16655.0}, {"betaABi", 0.0692}, {"sites", {"e","e","H","H"}}
+    };
+    nlohmann::json ethanol = {
+        {"a0i / Pa m^6/mol^2", 0.85164}, {"bi / m^3/mol", 0.0491e-3}, {"c1", 0.7502}, {"Tc / K", 513.92},
+        {"epsABi / J/mol", 21500.0}, {"betaABi", 0.008}, {"sites", {"e","H"}}
+    };
+    nlohmann::json jCPA = {
+        {"cubic", "SRK"},
+        {"radial_dist", "CS"},
+//        {"combining", "CR1"},
+        {"pures", {ethanol, water}},
+        {"R_gas / J/mol/K", 8.31446261815324}
+    };
+    nlohmann::json j = {
+        {"kind", "CPA"},
+        {"validate", false},
+        {"model", jCPA}
+    };
+    CHECK_NOTHROW(teqp::cppinterface::make_model(j, false));
+}
+
+TEST_CASE("Ethanol + water with CPA against Clapeyron.jl", "[association]"){
     nlohmann::json water = {
         {"a0i / Pa m^6/mol^2", 0.12277}, {"bi / m^3/mol", 0.0000145}, {"c1", 0.6736}, {"Tc / K", 647.13},
         {"epsABi / J/mol", 16655.0}, {"betaABi", 0.0692}, {"sites", {"e","e","H","H"}}
@@ -79,10 +128,10 @@ TEST_CASE("Ethanol + water with CPA", "[association]"){
     double R = model->get_R(molefracs);
     
     auto alphar = model->get_Ar00(303.15, rhomolar, molefracs);
-    CHECK(alphar == Approx(-8.333844120879878));
+    CHECK_THAT(alphar, WithinRel(-8.333844120879878, 1e-8));
     
     double p = T*R*rhomolar*(1+model->get_Ar01(T, rhomolar, molefracs));
-    CHECK(p == Approx(1e5));
+    CHECK_THAT(p, WithinRel(1e5, 1e-6));
     BENCHMARK("p(T,rho)"){
         return T*R*rhomolar*(1+model->get_Ar01(T, rhomolar, molefracs));
     };

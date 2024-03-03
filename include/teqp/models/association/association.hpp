@@ -28,7 +28,7 @@ struct AssociationOptions{
     association::radial_dist radial_dist;
     double alpha = 0.5;
     double rtol = 1e-12, atol = 1e-12;
-    int max_iters = 10;
+    int max_iters = 100;
 };
 inline void from_json(const nlohmann::json& j, AssociationOptions& o) {
     if (j.contains("alpha")){ j.at("alpha").get_to(o.alpha); }
