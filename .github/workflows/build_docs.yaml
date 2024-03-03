@@ -40,4 +40,4 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           path: |
-            ./docs/*.tar.xz
+            ./doc/*.tar.xz
