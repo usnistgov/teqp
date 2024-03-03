@@ -69,6 +69,7 @@ TEST_CASE("Ethanol + water with CPA", "[association]"){
     };
     nlohmann::json j = {
         {"kind", "CPA"},
+        {"validate", false},
         {"model", jCPA}
     };
     auto model = teqp::cppinterface::make_model(j, false);

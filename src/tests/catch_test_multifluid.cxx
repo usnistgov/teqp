@@ -551,7 +551,7 @@ TEST_CASE("Ar20 for CO2", "[Ar20CO2]"){
     auto f = [&rho, &z, &model](const auto Trecip){ return model.alphar(1.0/Trecip, rho, z); };
     
     std::cout << std::setprecision(20);
-    std::cout << "T / K,rho / mol/m^3,multiprecision,autodiff,err2MP" << std::endl;
+//    std::cout << "T / K,rho / mol/m^3,multiprecision,autodiff,err2MP" << std::endl;
     for (double T = 304.2; T < 340; T += 0.05){
         my_float Trecip = 1.0/T;
         my_float h = 1e-20;
@@ -559,6 +559,6 @@ TEST_CASE("Ar20 for CO2", "[Ar20CO2]"){
         
         using tdx = TDXDerivatives<decltype(model), double>;
         auto ad = -tdx::get_Ar20(model, T, rho, z);
-        std::cout << T << "," << rho << "," << mp << "," << ad << "," << mp/ad-1 << std::endl;
+//        std::cout << T << "," << rho << "," << mp << "," << ad << "," << mp/ad-1 << std::endl;
     }
 }
