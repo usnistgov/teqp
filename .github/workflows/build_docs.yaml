@@ -6,7 +6,7 @@ on:
     branches: [main]
 jobs:
   Matrix-build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     # container: node:latest 
 
     # See: https://github.com/marketplace/actions/setup-miniconda#important
@@ -29,10 +29,10 @@ jobs:
           environment-file: doc/environment.yml
       - name: install teqp, built from source
         # https://github.com/usnistgov/ChebTools/blob/master/README.md#prerequisites regarding the need for libgcc
+        # conda install libgcc libstdcxx-ng
         run: |
-          conda install libgcc libstdcxx-ng
           conda list
-          CXX=clang++ python -m pip install .
+          python -m pip install .
           cd doc 
           make html
       - name: archive docs 
