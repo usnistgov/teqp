@@ -117,6 +117,10 @@ namespace teqp {
             virtual double get_ATrhoXiXj(const double T, const int NT, const double rhomolar, int ND, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj) const = 0;
             virtual double get_ATrhoXiXjXk(const double T, const int NT, const double rhomolar, int ND, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj, const int k, const int NXk) const = 0;
             
+            virtual double get_AtaudeltaXi(const double tau, const int Ntau, const double delta, int Ndelta, const EArrayd& molefrac, const int i, const int NXi) const = 0;
+            virtual double get_AtaudeltaXiXj(const double tau, const int Ntau, const double delta, int Ndelta, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj) const = 0;
+            virtual double get_AtaudeltaXiXjXk(const double tau, const int Ntau, const double delta, int Ndelta, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj, const int k, const int NXk) const = 0;
+            
             // Derivatives from isochoric thermodynamics (all have the same signature whithin each block)
             #define X(f) virtual double f(const double T, const EArrayd& rhovec) const = 0;
                 ISOCHORIC_double_args

@@ -108,6 +108,17 @@ public:
         return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_ATrhoXiXjXk_runtime(mp.get_cref(), T, NT, rhomolar, ND, molefrac, i, NXi, j, NXj, k, NXk);
     };
     
+    // Composition derivatives with tau and delta as the working variables
+    virtual double get_AtaudeltaXi(const double tau, const int NT, const double delta, const int ND, const EArrayd& molefrac, const int i, const int NXi) const override {
+        return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_AtaudeltaXi_runtime(mp.get_cref(), tau, NT, delta, ND, molefrac, i, NXi);
+    };
+    virtual double get_AtaudeltaXiXj(const double tau, const int NT, const double delta, const int ND, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj) const override {
+        return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_AtaudeltaXiXj_runtime(mp.get_cref(), tau, NT, delta, ND, molefrac, i, NXi, j, NXj);
+    };
+    virtual double get_AtaudeltaXiXjXk(const double tau, const int NT, const double delta, const int ND, const EArrayd& molefrac, const int i, const int NXi, const int j, const int NXj, const int k, const int NXk) const override {
+        return TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_AtaudeltaXiXjXk_runtime(mp.get_cref(), tau, NT, delta, ND, molefrac, i, NXi, j, NXj, k, NXk);
+    };
+    
     // Derivatives from isochoric thermodynamics (all have the same signature within each block), and they differ by their output argument
 #define X(f) virtual double f(const double T, const EArrayd& rhovec) const override { return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::f(mp.get_cref(), T, rhovec); };
     ISOCHORIC_double_args

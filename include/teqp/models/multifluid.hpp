@@ -174,6 +174,18 @@ public:
         auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
         return forceeval(val);
     }
+    
+    template<typename TType, typename RhoType, typename MoleFracType>
+    auto alphar_taudelta(const TType &tau,
+        const RhoType &delta,
+        const MoleFracType& molefrac) const
+    {
+        if (static_cast<std::size_t>(molefrac.size()) != corr.size()){
+            throw teqp::InvalidArgument("Wrong size of mole fractions; "+std::to_string(corr.size()) + " are loaded but "+std::to_string(molefrac.size()) + " were provided");
+        }
+        auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
+        return forceeval(val);
+    }
 };
 
 

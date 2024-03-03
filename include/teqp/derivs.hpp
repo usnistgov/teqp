@@ -129,6 +129,16 @@ struct TDXDerivatives {
         return w.alphar(T, rho, molefrac);
     }
     
+    template<typename AlphaWrapper, typename S1, typename S2, typename Vec>
+    static auto AlpharTauDeltaCaller(const AlphaWrapper& w, const S1& T, const S2& rho, const Vec& molefrac) requires CallableAlpharTauDelta<AlphaWrapper, S1, S2, Vec>{
+        return w.alphar_taudelta(T, rho, molefrac);
+    }
+    template<typename AlphaWrapper, typename S1, typename S2, typename Vec>
+    static auto AlpharTauDeltaCaller(const AlphaWrapper& , const S1&, const S2&, const Vec& molefrac){
+        throw teqp::NotImplementedError("Cannot take derivatives of a class that doesn't define the alphar_taudelta method");
+        return std::common_type_t<S1, S2, decltype(molefrac[0])>(1e99);
+    }
+    
     /**
      * Calculate the derivative \f$\Lambda_{xy}\f$, where
      * \f[
@@ -305,6 +315,78 @@ struct TDXDerivatives {
     template<typename AlphaWrapper>
     static auto get_ATrhoXiXjXk_runtime(const AlphaWrapper& w, const Scalar& T, int iT, const Scalar& rho, int iD, const VectorType& molefrac, int i, int iXi, int j, int iXj, int k, int iXk){
         #define X(a,b,c,d,e) if (iT == a && iD == b && iXi == c && iXj == d && iXk == e) { return get_ATrhoXiXjXk<a,b,c,d,e>(w, T, rho, molefrac, i, j, k); }
+        get_ATrhoXiXjXk_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+    
+    template<int iT, int iD, int iXi, typename AlphaWrapper>
+    static auto get_AtaudeltaXi(const AlphaWrapper& w, const Scalar& tau, const Scalar& delta, const VectorType& molefrac, const int i) {
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi, double>;
+        adtype tauad = tau, deltaad = delta, xi = molefrac[i];
+        auto f = [&w, &molefrac, &i](const adtype& tau_, const adtype& delta_, const adtype& xi_) {
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi));
+        return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
+    }
+    
+    template<int iT, int iD, int iXi, int iXj, typename AlphaWrapper>
+    static auto get_AtaudeltaXiXj(const AlphaWrapper& w, const Scalar& tau, const Scalar& delta, const VectorType& molefrac, const int i, const int j) {
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj, double>;
+        if (i == j){
+            throw teqp::InvalidArgument("i cannot equal j");
+        }
+        adtype tauad = tau, deltaad = delta, xi = molefrac[i], xj = molefrac[j];
+        auto f = [&w, &molefrac, i, j](const adtype& tau_, const adtype& delta_, const adtype& xi_, const adtype& xj_) {
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            molefracdual[j] = xj_;
+            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi, xj));
+        return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
+    }
+    
+    template<int iT, int iD, int iXi, int iXj, int iXk, typename AlphaWrapper>
+    static auto get_AtaudeltaXiXjXk(const AlphaWrapper& w, const Scalar& tau, const Scalar& delta, const VectorType& molefrac, const int i, const int j, const int k) {
+        using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj + iXk, double>;
+        if (i == j || j == k || i == k){
+            throw teqp::InvalidArgument("i, j, and k must all be unique");
+        }
+        adtype tauad = tau, deltaad = delta, xi = molefrac[i], xj = molefrac[j], xk = molefrac[k];
+        auto f = [&w, &molefrac, i, j, k](const adtype& tau_, const adtype& delta_, const adtype& xi_, const adtype& xj_, const adtype& xk_) {
+            Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
+            molefracdual[i] = xi_;
+            molefracdual[j] = xj_;
+            molefracdual[k] = xk_;
+            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+        auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)), build_duplicated_tuple<iXk>(std::ref(xk)));
+        auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi, xj, xk));
+        return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
+    }
+
+    template<typename AlphaWrapper>
+    static auto get_AtaudeltaXi_runtime(const AlphaWrapper& w, const Scalar& tau, const int iT, const Scalar& delta, const int iD, const VectorType& molefrac, const int i, const int iXi){
+        #define X(a,b,c) if (iT == a && iD == b && iXi == c) { return get_AtaudeltaXi<a,b,c>(w, tau, delta, molefrac, i); }
+        get_ATrhoXi_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+
+    template<typename AlphaWrapper>
+    static auto get_AtaudeltaXiXj_runtime(const AlphaWrapper& w, const Scalar& tau, const int iT, const Scalar& delta, const int iD, const VectorType& molefrac, const int i, const int iXi, const int j, const int iXj){
+        #define X(a,b,c,d) if (iT == a && iD == b && iXi == c && iXj == d) { return get_AtaudeltaXiXj<a,b,c,d>(w, tau, delta, molefrac, i, j); }
+        get_ATrhoXiXj_runtime_combinations
+        #undef X
+        throw teqp::InvalidArgument("Can't match these derivative counts");
+    }
+
+    template<typename AlphaWrapper>
+    static auto get_AtaudeltaXiXjXk_runtime(const AlphaWrapper& w, const Scalar& tau, const int iT, const Scalar& delta, const int iD, const VectorType& molefrac, const int i, int iXi, const int j, const int iXj, const int k, const int iXk){
+        #define X(a,b,c,d,e) if (iT == a && iD == b && iXi == c && iXj == d && iXk == e) { return get_AtaudeltaXiXjXk<a,b,c,d,e>(w, tau, delta, molefrac, i, j, k); }
         get_ATrhoXiXjXk_runtime_combinations
         #undef X
         throw teqp::InvalidArgument("Can't match these derivative counts");

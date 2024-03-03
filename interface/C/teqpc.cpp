@@ -152,6 +152,49 @@ EXPORT_CODE int CONVENTION get_ATrhoXiXjXk(const long long int uuid, const doubl
     return errcode;
 }
 
+
+EXPORT_CODE int CONVENTION get_AtaudeltaXi(const long long int uuid, const double tau, const int Ntau, const double delta, const int Ndelta, const double* molefrac, const int Ncomp, const int i, const int NXi, double *val, char* errmsg, int errmsg_length) {
+    int errcode = 0;
+    try {
+        // Make an Eigen view of the double buffer
+        Eigen::Map<const Eigen::ArrayXd> molefrac_(molefrac, Ncomp);
+        // Call the function
+        *val = library.at(uuid)->get_AtaudeltaXi(tau, Ntau, delta, Ndelta, molefrac_, i, NXi);
+    }
+    catch (...) {
+        exception_handler(errcode, errmsg, errmsg_length);
+    }
+    return errcode;
+}
+
+EXPORT_CODE int CONVENTION get_AtaudeltaXiXj(const long long int uuid, const double tau, const int Ntau, const double delta, const int Ndelta, const double* molefrac, const int Ncomp, const int i, const int NXi, const int j, const int NXj, double *val, char* errmsg, int errmsg_length) {
+    int errcode = 0;
+    try {
+        // Make an Eigen view of the double buffer
+        Eigen::Map<const Eigen::ArrayXd> molefrac_(molefrac, Ncomp);
+        // Call the function
+        *val = library.at(uuid)->get_AtaudeltaXiXj(tau, Ntau, delta, Ndelta, molefrac_, i, NXi, j, NXj);
+    }
+    catch (...) {
+        exception_handler(errcode, errmsg, errmsg_length);
+    }
+    return errcode;
+}
+
+EXPORT_CODE int CONVENTION get_AtaudeltaXiXjXk(const long long int uuid, const double tau, const int Ntau, const double delta, const int Ndelta, const double* molefrac, const int Ncomp, const int i, const int NXi, const int j, const int NXj, const int k, const int NXk, double *val, char* errmsg, int errmsg_length) {
+    int errcode = 0;
+    try {
+        // Make an Eigen view of the double buffer
+        Eigen::Map<const Eigen::ArrayXd> molefrac_(molefrac, Ncomp);
+        // Call the function
+        *val = library.at(uuid)->get_AtaudeltaXiXjXk(tau, Ntau, delta, Ndelta, molefrac_, i, NXi, j, NXj, k, NXk);
+    }
+    catch (...) {
+        exception_handler(errcode, errmsg, errmsg_length);
+    }
+    return errcode;
+}
+
 #if defined(TEQPC_CATCH)
 
 #include <catch2/catch_test_macros.hpp>
