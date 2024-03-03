@@ -26,8 +26,6 @@ jobs:
         run: cmake --build build --target teqpc
       - name: run all the compiled Catch tests
         run: cd build && ctest --verbose
-      - name: build multifluid
-        run: cmake --build build --target multifluid
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
