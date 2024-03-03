@@ -7,8 +7,8 @@ Welcome to teqp's documentation!
 
    getting_started/index
    cpp/index
-   models/index
    derivs/index
+   models/index
    algorithms/index
    examples/index
    fitting/index
