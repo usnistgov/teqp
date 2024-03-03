@@ -16,7 +16,7 @@ public:
 
     void testRunStarting(Catch::TestRunInfo const&) override {
         if (!std::filesystem::exists(FLUIDDATAPATH)){
-            throw std::invalid_argument("Tests must be run from the folder where this folder points to a valid location relative to current working diretory: " + FLUIDDATAPATH);
+            throw std::invalid_argument("Tests must be run from the folder where this folder points to a valid location relative to current working directory: " + FLUIDDATAPATH);
         }
     }
 };
