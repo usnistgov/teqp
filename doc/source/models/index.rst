@@ -19,6 +19,7 @@ Models
    PCSAFT
    SAFT-VR-Mie
    SAFT-VR-Mie-Polar
+   Association
    
    multifluid
    multifluid_mutant
