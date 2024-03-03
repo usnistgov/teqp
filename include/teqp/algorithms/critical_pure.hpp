@@ -4,7 +4,6 @@
 
 #include <Eigen/Dense>
 #include "teqp/derivs.hpp"
-#include "teqp/algorithms/rootfinding.hpp"
 #include "teqp/exceptions.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
