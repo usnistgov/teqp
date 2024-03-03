@@ -1,4 +1,7 @@
-set(CMAKE_OSX_ARCHITECTURES x86_64;arm64 CACHE INTERNAL "archs for osx")
+if(CMAKE_GENERATOR STREQUAL Xcode)
+  set(CMAKE_OSX_ARCHITECTURES arm64 CACHE INTERNAL "archs for osx")
+endif()
+
 cmake_minimum_required(VERSION 3.16)
 project(teqp)
 enable_testing()
