@@ -401,6 +401,9 @@ struct TDXDerivatives {
      */
     template<int iT, int iD, int iXi, int iXj, typename AlphaWrapper>
     static auto get_ATrhoXiXj(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac, int i, int j){
+        if (i == j){
+            throw teqp::InvalidArgument("i cannot equal j");
+        }
         using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj, double>;
         adtype Trecipad = 1.0 / T, rhoad = rho, xi = molefrac[i], xj = molefrac[j];
         auto f = [&w, &molefrac, i, j](const adtype& Trecip, const adtype& rho_, const adtype& xi_, const adtype& xj_) {
@@ -423,6 +426,9 @@ struct TDXDerivatives {
      */
     template<int iT, int iD, int iXi, int iXj, int iXk, typename AlphaWrapper>
     static auto get_ATrhoXiXjXk(const AlphaWrapper& w, const Scalar& T, const Scalar& rho, const VectorType& molefrac, int i, int j, int k){
+        if (i == j || j == k || i == k){
+            throw teqp::InvalidArgument("i, j, and k must all be unique");
+        }
         using adtype = autodiff::HigherOrderDual<iT + iD + iXi + iXj + iXk, double>;
         adtype Trecipad = 1.0 / T, rhoad = rho, xi = molefrac[i], xj = molefrac[j], xk = molefrac[k];
         auto f = [&w, &molefrac, i, j, k](const adtype& Trecip, const adtype& rho_, const adtype& xi_, const adtype& xj_, const adtype& xk_) {
