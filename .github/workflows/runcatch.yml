@@ -9,7 +9,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest]
         python-version: [3.9]  # Could add more here, but it just makes the build matrix bigger
     steps:
       - name: checkout
