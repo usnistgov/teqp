@@ -2,7 +2,7 @@ import os, warnings, functools
 
 # Bring all entities from the extension module into this namespace
 from .teqp import *
-from .teqp import _make_model, _build_multifluid_mutant
+from .teqp import _make_model, _build_multifluid_mutant, _build_multifluid_ecs_mutant
 
 def get_datapath():
     """Get the absolute path to the folder containing the root of multi-fluid data"""
@@ -134,5 +134,10 @@ def build_multifluid_model(components, coolprop_root, BIPcollectionpath = "", fl
 
 def build_multifluid_mutant(*args, **kwargs):
     AS = _build_multifluid_mutant(*args, **kwargs)
+    attach_model_specific_methods(AS)
+    return AS
+
+def build_multifluid_ecs_mutant(*args, **kwargs):
+    AS = _build_multifluid_ecs_mutant(*args, **kwargs)
     attach_model_specific_methods(AS)
     return AS
