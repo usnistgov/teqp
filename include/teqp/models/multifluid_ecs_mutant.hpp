@@ -1,24 +1,54 @@
 #pragma once
 #include <Eigen/Dense>
+#include "teqp/exceptions.hpp"
 
-    // Implementation of the polynomial extended corresponding states (pECS) mixture model
-    // The mixture model depends on coefficients for a temperature and density polynomial
-    // So far only valid for a binary mixture
 
 namespace teqp {
 
+    /*!
+            Implementation of the polynomial extended corresponding states (pECS) mixture model \n
+            The mixture model depends on coefficients for a temperature and density polynomial. \n
+            Only valid for binary mixtures. \n
+            The pECS reducing function follow the mathematical operations: \n
+            \f$F(\bar x, Y, T, \rho ) = \sum_{i=1}^{N} x_{i}^{2} Y_{\mathrm{c},i} + \sum_{i=1}^{N-1}\sum_{j=i+1}^{N} 2 x_{i} x_{j}  Y_{ij} f_{Y}(T,\rho).\f$ \n
+            \f$f_{T,v} = \sum_{i}^{n} \sum_{j}^{m-i} c_{ij,T,v} \tau_{\mathrm{ECS}}^{i} \delta_{\mathrm{ECS}}^{j}\f$ \n
+            \f$\tau_{\mathrm{ECS}} = \frac{Y_{T,ij}}{T}\f$ \n
+            \f$\delta_{\mathrm{ECS}} = \rho Y_{v,ij}\f$ \n
+            \f$Y_{T,ij} =  \sqrt{T_{\mathrm{c},i} T_{\mathrm{c},j}}\f$ \n
+            \f$Y_{v,ij} =  \left( \frac{1}{\rho_{\mathrm{c},i}^{1/3}} + \frac{1}{\rho_{\mathrm{c},j}^{1/3}}\right)^{3}\f$ \n
+            \f$c_{ij,T,v} = a_{ij,1} + a_{ij,2} x_{i} + a_{ij,3} x_{i}^{2}\f$. 
+    */
     class Reducing_ECS {
 
     private:
-
+        /*!
+          Matrix containing the coefficients for the temperature polynominal: \f$a_{ij,T}\f$
+        */
         Eigen::MatrixXd  tr_coeffs;
+        /*!
+                  Matrix containing the coefficients for the volume polynominal: \f$a_{ij,v}\f$
+        */
         Eigen::MatrixXd dr_coeffs;
 
     public:
-
-        Eigen::ArrayXd Tc, vc;
+        /*!
+          Critical temperature array of corresponding pure fluid contributions.
+        */
+        Eigen::ArrayXd Tc;
+        /*!
+          Critical volume array of corresponding pure fluid contributions.
+        */
+        Eigen::ArrayXd vc;
         template<typename ArrayLike>
         Reducing_ECS(const ArrayLike& Tc, const ArrayLike& vc, const nlohmann::json& jj) : Tc(Tc), vc(vc) {
+
+            if (not jj.contains("tr_coeffs")) {
+                throw teqp::InvalidArgument("tr_coeffs not in provided json");
+            }
+
+            if (not jj.contains("dr_coeffs")) {
+                throw teqp::InvalidArgument("dr_coeffs not in provided json");
+            }
 
             auto json_tr_coeffs = jj.at("tr_coeffs");
             auto json_dr_coeffs = jj.at("dr_coeffs");
@@ -46,6 +76,9 @@ namespace teqp {
 
         }
 
+        /*!
+            Reducing function for temperature
+        */
         template <typename TTYPE, typename RHOTYPE, typename MoleFractions>
         auto get_tr(const TTYPE& temperature, const RHOTYPE& density, const MoleFractions& molefraction) const {
             
@@ -62,10 +95,13 @@ namespace teqp {
 
             auto tc_func = pow(molefraction[0], 2.0) * Tc[0] + pow(molefraction[1], 2.0) * Tc[1] + 2.0 * molefraction[0] * molefraction[1] * \
                 (p00 + p10 * delta + p01 * tau + p20 * delta * delta + p02 * tau * tau + p11 * delta * tau) * tc_scale;
-			return forceeval(tc_func);
+            return forceeval(tc_func);
         }
 
 
+        /*!
+            Reducing function for density
+        */
         template <typename TTYPE, typename RHOTYPE, typename MoleFractions>
         auto get_dr(const TTYPE& temperature, const RHOTYPE& density, const MoleFractions& molefraction) const {
 
@@ -76,14 +112,14 @@ namespace teqp {
             auto p11 = dr_coeffs(4, 0) + molefraction[0] * dr_coeffs(4, 1) + molefraction[0] * molefraction[0] * dr_coeffs(4, 2);
             auto p02 = dr_coeffs(5, 0) + molefraction[0] * dr_coeffs(5, 1) + molefraction[0] * molefraction[0] * dr_coeffs(5, 2);
             auto dc_scale = 1.0/(0.125* pow( pow(vc[0],1.0/3.0)  + pow(vc[1],1.0/3.0),3.0));
-            auto vc_scale = (0.125 * pow(pow(vc[0], 1.0 / 3.0) + pow(vc[1], 1.0 / 3.0), 3.0));
+            auto vc_scale = 1.0/dc_scale;
             auto tc_scale = sqrt(Tc[0] * Tc[1]);
             auto tau = tc_scale / temperature;
             auto delta = density / dc_scale;
 
-            auto vc_ = pow(molefraction[0], 2.0) * vc[0] * 1E3 + pow(molefraction[1], 2.0) * vc[1] * 1E3 + 2.0 * molefraction[0] * molefraction[1] * \
-                (p00 + p10 * delta + p01 * tau + p20 * delta * delta + p02 * tau * tau + p11 * delta * tau) * vc_scale * 1E3;
-            auto dc_func = 1E3 * (1.0 / vc_);
+            auto vc_ = pow(molefraction[0], 2.0) * vc[0] + pow(molefraction[1], 2.0) * vc[1] + 2.0 * molefraction[0] * molefraction[1] * \
+                (p00 + p10 * delta + p01 * tau + p20 * delta * delta + p02 * tau * tau + p11 * delta * tau) * vc_scale;
+            auto dc_func = (1.0 / vc_);
             return forceeval(dc_func);
         }
 
@@ -115,6 +151,9 @@ namespace teqp {
             const RhoType& rho,
             const MoleFracType& molefrac) const
         {
+            if (static_cast<std::size_t>(molefrac.size()) != 2){
+                 throw teqp::InvalidArgument("Wrong size of mole fractions - ECS mutant is only valid for a binary mixture");
+            }
             auto Tred = forceeval(redfunc.get_tr(T, rho, molefrac));
             auto rhored = forceeval(redfunc.get_dr(T, rho, molefrac));
             auto delta = forceeval(rho / rhored);
