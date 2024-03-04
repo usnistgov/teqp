@@ -1,4 +1,4 @@
-#include "teqp/core.hpp"
+
 #include "teqp/models/multifluid.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
 

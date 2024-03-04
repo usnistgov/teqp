@@ -5,7 +5,6 @@
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/derivs.hpp"
-#include "teqp/json_builder.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
 
 #include <array>

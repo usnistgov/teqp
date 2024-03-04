@@ -42,11 +42,11 @@ TEST_CASE("multifluid derivatives", "[mf]")
     };
     
     BENCHMARK("All residual derivatives needed for first derivatives of h,s,u,p w.r.t. T&rho") {
-        return DerivativeHolderSquare<2,AlphaWrapperOption::residual>(model, T, rho, z).derivs;
+        return DerivativeHolderSquare<2>(model, T, rho, z).derivs;
     };
     
     BENCHMARK("All ideal-gas derivatives needed for first derivatives of h,s,u,p w.r.t. T&rho") {
-        return DerivativeHolderSquare<2,AlphaWrapperOption::idealgas>(aig, T, rho, z).derivs;
+        return DerivativeHolderSquare<2>(aig, T, rho, z).derivs;
     };
     
     BENCHMARK("All residual derivatives (via AbstractModel) needed for first derivatives of h,s,u,p w.r.t. T&rho") {
