@@ -15,6 +15,7 @@
 #include "teqp/cpp/deriv_adapter.hpp"
 #include "teqp/models/fwd.hpp"
 #include "teqp/algorithms/ancillary_builder.hpp"
+#include "teqp/models/multifluid_ecs_mutant.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -79,6 +80,21 @@ void add_multifluid_mutant(py::module& m) {
     m.def("_build_multifluid_mutant", [](const py::object& o, const nlohmann::json &j){
         const MultiFluid& model = get_typed<MultiFluid>(o);
         auto mutant{build_multifluid_mutant(model, j)};
+        return teqp::cppinterface::adapter::make_owned(mutant);
+    });
+}
+
+void add_multifluid_ecs_mutant(py::module& m) {
+    using namespace teqp;
+    using namespace teqp::cppinterface;
+
+    // A typedef for the base model
+    using MultiFluid = decltype(build_multifluid_model(std::vector<std::string>{"", ""}, "", ""));
+
+    // Wrap the function for generating a multifluid mutant
+    m.def("_build_multifluid_ecs_mutant", [](const py::object& o, const nlohmann::json& j) {
+        const MultiFluid& model = get_typed<MultiFluid>(o);
+        auto mutant{ build_multifluid_ecs_mutant(model, j) };
         return teqp::cppinterface::adapter::make_owned(mutant);
     });
 }
@@ -435,6 +451,7 @@ void init_teqp(py::module& m) {
 
     add_multifluid(m);
     add_multifluid_mutant(m);
+    add_multifluid_ecs_mutant(m);
     
     using am = teqp::cppinterface::AbstractModel;
     py::class_<AbstractModel, std::unique_ptr<AbstractModel>>(m, "AbstractModel", py::dynamic_attr())
