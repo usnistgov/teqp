@@ -3,7 +3,12 @@
 
 using Catch::Approx;
 
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+using Catch::Matchers::WithinAbsMatcher;
+using Catch::Matchers::WithinRelMatcher;
+
 #include "teqp/models/GERG/GERG.hpp"
+#include "teqp/derivs.hpp"
 
 #include "GERG2008.cpp"
 
@@ -46,6 +51,17 @@ TEST_CASE("Load all GERG2004 models", "[GERG2004]"){
     CHECK_NOTHROW(GERG2004::GERG2004ResidualModel(names));
 }
 
+TEST_CASE("Load all GERG2004idealgas models", "[GERG2004]"){
+    const auto& names = GERG2004::component_names;
+    REQUIRE(names.size() == 18);
+    CHECK_NOTHROW(GERG2004::GERG2004IdealGasModel(names));
+}
+
+TEST_CASE("Load all GERG2008idealgas models", "[GERG2008]"){
+    const auto& names = GERG2008::component_names;
+    REQUIRE(names.size() == 21);
+    CHECK_NOTHROW(GERG2008::GERG2008IdealGasModel(names));
+}
 
 TEST_CASE("Load all GERG2008 models", "[GERG2008]"){
     const auto& names = GERG2008::component_names;
@@ -495,6 +511,7 @@ TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
     
     CHECK_NOTHROW(GERG2008::GERG2008ResidualModel(components));
     auto model = GERG2008::GERG2008ResidualModel(components);
+    auto modelig = GERG2008::GERG2008IdealGasModel(components);
     
     double R = 8.314472;
     
@@ -524,15 +541,22 @@ TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
             CAPTURE(components[i]);
             CAPTURE(components[j]);
             
+            Eigen::ArrayXd Eigmolefracs = Eigen::Map<const Eigen::ArrayXd>(&molefracs[0], molefracs.size());
+            double cv_calc_JmolK = -(TDXDerivatives<decltype(modelig)>::get_Ar20(modelig, T_K, rho_molm3, Eigmolefracs) + TDXDerivatives<decltype(model)>::get_Ar20(model, T_K, rho_molm3, Eigmolefracs))*R;
+            
             double rho_moldm3 = rho_molm3/1000;
             double pGERG2008_AGA8 = -1, ZZ = -1;
             std::vector<double> molefracsGERG = molefracs;
             molefracsGERG.insert(molefracsGERG.begin(), 0.0); // This array uses 1-based indexing, so insert a placeholder
             PressureGERG(T_K, rho_moldm3, molefracsGERG, pGERG2008_AGA8, ZZ);
             double pGERG2008_AGA8_MPa = pGERG2008_AGA8/1000.0;
-            CHECK(pGERG2008_AGA8_MPa == Approx(p_calc_MPa).margin(1e-120));
-            CHECK(pGERG2008_AGA8_MPa == Approx(pbin_MPa).margin(1e-120));
+            double P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A;
+            PropertiesGERG(T_K, rho_moldm3, molefracsGERG, P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A);
             
+            CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-9));
+            CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(pbin_MPa, 1e-9));
+            
+            CHECK_THAT(cvGERG2008_AGA8_JmolK, WithinRelMatcher(cv_calc_JmolK, 1e-9));
         }
     }
 }
@@ -584,6 +608,6 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         CHECK(std::isfinite(alphar));
         double Ar01 = rho*model.alphar(T, rhocomplex, molefracs).imag()/1e-100;
         double p_calc_MPa = rho*R*T*(1.0 + Ar01)/1e6;
-        CHECK(pGERG2008_AGA8_MPa == Approx(p_calc_MPa));
+        CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-6));
     }
 }

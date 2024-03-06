@@ -48,6 +48,8 @@ namespace teqp {
             
             {"GERG2004resid", [](const nlohmann::json& spec){ return make_owned(GERG2004::GERG2004ResidualModel(spec.at("names")));}},
             {"GERG2008resid", [](const nlohmann::json& spec){ return make_owned(GERG2008::GERG2008ResidualModel(spec.at("names")));}},
+            {"GERG2004idealgas", [](const nlohmann::json& spec){ return make_owned(GERG2004::GERG2004IdealGasModel(spec.at("names")));}},
+            {"GERG2008idealgas", [](const nlohmann::json& spec){ return make_owned(GERG2008::GERG2008IdealGasModel(spec.at("names")));}},
             
             // Implemented in its own compilation unit to help with compilation time
             {"SAFT-VR-Mie", [](const nlohmann::json& spec){ return make_SAFTVRMie(spec); }}
