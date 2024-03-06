@@ -11,6 +11,8 @@
 
 #include "teqp/math/pow_templates.hpp"
 #include "teqp/types.hpp"
+#include "teqp/exceptions.hpp"
+
 #include "Eigen/Dense"
 #include <boost/functional/hash.hpp>
 
@@ -30,6 +32,10 @@ struct BetasGammas {
 struct DepartureCoeffs{
     std::vector<double> n, t, d, eta, beta, gamma, epsilon;
     std::set<std::size_t> sizes(){ return {n.size(), t.size(), d.size(), eta.size(), beta.size(), gamma.size(), epsilon.size()}; }
+};
+struct AlphaigCoeffs{
+    std::vector<double> n0, theta0;
+    std::set<std::size_t> sizes(){ return {n0.size(), theta0.size()}; }
 };
 
 
@@ -298,6 +304,80 @@ public:
     }
 };
 
+class GERG200XAlphaig{
+public:
+    using GetPureInfo = std::function<PureInfo(const std::string&)>;
+    GetPureInfo _get_pure_info;
+    using GetAlphaigCoeffs = std::function<AlphaigCoeffs(const std::string&)>;
+    GetAlphaigCoeffs _get_alphaig_coeffs;
+    
+private:
+    auto get_Tc(const GetPureInfo& getter, const std::vector<std::string>& names) const{
+        std::vector<double> Tc_;
+        for (auto i = 0U; i < names.size(); ++i){
+            Tc_.emplace_back(getter(names[i]).Tc_K);
+        }
+        return Tc_;
+    }
+    auto get_rhoc(const GetPureInfo& getter, const std::vector<std::string>& names) const{
+        std::vector<double> rhoc_;
+        for (auto i = 0U; i < names.size(); ++i){
+            rhoc_.emplace_back(getter(names[i]).rhoc_molm3);
+        }
+        return rhoc_;
+    }
+    auto get_coeffs(const GetAlphaigCoeffs& getter, const std::vector<std::string>& names) const{
+        std::vector<AlphaigCoeffs> coeffs_;
+        for (auto i = 0U; i < names.size(); ++i){
+            coeffs_.emplace_back(getter(names[i]));
+        }
+        return coeffs_;
+    }
+    
+public:
+    
+    const double Rstar = 8.314510; // J/mol/K
+    const double R = 8.314472; // J/mol/K
+    
+    const std::vector<double> Tc, rhoc;
+    const std::vector<AlphaigCoeffs> coeffs;
+    
+    GERG200XAlphaig(const std::vector<std::string> &names, const GetPureInfo &get_pure_info, const GetAlphaigCoeffs & get_alphaig_coeffs) : Tc(get_Tc(get_pure_info, names)), rhoc(get_rhoc(get_pure_info, names)), coeffs(get_coeffs(get_alphaig_coeffs,names)) {
+        if (coeffs.size() != Tc.size()){
+            throw teqp::InvalidArgument("Bad sizes");
+        }
+    };
+    
+    std::size_t size() const { return Tc.size(); }
+    
+    template<typename TType, typename RhoType>
+    auto alphaig_pure(const TType& T, const RhoType& rhomolar, const int i) const {
+        const auto& c = coeffs[i];
+        const std::vector<double>& n0i = c.n0;
+        const std::vector<double>& theta0i = c.theta0;
+        using std::abs;
+        double Tci = Tc[i];
+        auto out = forceeval(log(rhomolar/rhoc[i]) + n0i[1] + n0i[1]*Tci/T+ n0i[3]*log(Tci/T));
+        if (theta0i[4] != 0) { out += n0i[4]*log(abs(sinh(theta0i[4]*Tci/T))); }
+        if (theta0i[6] != 0) { out += n0i[6]*log(abs(sinh(theta0i[6]*Tci/T))); }
+        if (theta0i[5] != 0) { out -= n0i[5]*log(abs(cosh(theta0i[5]*Tci/T))); }
+        if (theta0i[7] != 0) { out -= n0i[7]*log(abs(cosh(theta0i[7]*Tci/T))); }
+        return forceeval(Rstar/R*out);
+    }
+    
+    template<typename TType, typename RhoType, typename MoleFractions>
+    auto alphaig(const TType& T, const RhoType& rhomolar, const MoleFractions& molefracs) const {
+        using resulttype = std::decay_t<std::common_type_t<decltype(T), decltype(rhomolar), decltype(molefracs[0])>>; // Type promotion, without the const-ness
+        resulttype alpha = 0.0;
+        for (auto i = 0U; i < molefracs.size(); ++i){
+            if (getbaseval(molefracs[i]) > 0){
+                // If x_i = 0, log(x_i) is -oo, but lim_{x_i -> 0}(x_i*log(x_i)) is zero
+                alpha += molefracs[i]*(alphaig_pure(T, rhomolar, i) + log(molefracs[i]));
+            }
+        }
+        return alpha;
+    }
+};
 
 }
 
@@ -342,6 +422,48 @@ inline PureInfo get_pure_info(const std::string& name){
 }
 
 
+inline AlphaigCoeffs get_alphaig_coeffs(const std::string& fluid){
+    
+    static std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<double>>> dict = {
+        {"methane", {{19.597538587, -83.959667892, 3.000880, 0.763150, 0.00460, 8.744320, -4.469210000}, {4.306474465, 0.936220902, 5.577233895, 5.722644361}}},
+        {"nitrogen", {{11.083437707, -22.202102428, 2.500310, 0.137320, -0.14660, 0.900660, 0}, {5.251822620, -5.393067706, 13.788988208, 0}}},
+        {"carbondioxide", {{11.925182741, -16.118762264, 2.500020, 2.044520, -1.060440, 2.033660, 0.013930000}, {3.022758166, -2.844425476, 1.589964364, 1.121596090}}},
+        {"ethane", {{24.675465518, -77.425313760, 3.002630, 4.339390, 1.237220, 13.19740, -6.019890000}, {1.831882406, 0.731306621, 3.378007481, 3.508721939}}},
+        {"propane", {{31.602934734, -84.463284382, 3.029390, 6.605690, 3.1970, 19.19210, -8.372670000}, {1.297521801, 0.543210978, 2.583146083, 2.777773271}}},
+        {"n-butane", {{20.884168790, -91.638478026, 3.339440, 9.448930, 6.894060, 24.46180, 14.782400000},  {1.101487798, 0.431957660, 4.502440459, 2.124516319}}},
+        {"isobutane", {{20.413751434, -94.467620036, 3.067140, 8.975750, 5.251560, 25.14230, 16.138800000 }, {1.074673199, 0.485556021, 4.671261865, 2.191583480}}},
+        {"n-pentane", {{14.536635738, -89.919548319, 3.0, 8.950430, 21.8360, 33.40320, 0}, {0.380391739, 1.789520971, 3.777411113, 0}}},
+        {"isopentane", {{15.449937973, -101.298172792, 3.0, 11.76180, 20.11010, 33.16880, 0}, {0.635392636, 1.977271641, 4.169371131, 0}}},
+        {"n-hexane", {{14.345993081,-96.165722367,3.0,11.69770,26.81420,38.61640,0},  {0.359036667, 1.691951873, 3.596924107, 0}}},
+        {"n-heptane", {{15.063809621, -97.345252349, 3.0, 13.72660, 30.47070, 43.55610, 0}, {0.314348398, 1.548136560, 3.259326458, 0}}},
+        {"n-octane", {{15.864709639, -97.370667555, 3.0, 15.68650, 33.80290, 48.17310, 0}, {0.279143540, 1.431644769, 2.973845992,0}}},
+        {"hydrogen", {{13.796474934, -175.864487294, 1.479060, 0.958060, 0.454440, 1.560390, -1.375600000}, {6.891654113, 9.847634830, 49.765290750, 50.367279301}}},
+        {"oxygen", {{10.001874708,-14.996095135,2.501460,1.075580,1.013340,0,0}, {14.461722565, 7.223325463, 0, 0}}},
+        {"carbonmonoxide", {{10.814500335, -19.843695435, 2.500550, 1.028650, 0.004930, 0, 0}, {11.675075301, 5.305158133, 0, 0}}},
+        {"water", {{8.203553050, -11.996306443, 3.003920, 0.010590, 0.987630, 3.069040, 0}, {0.415386589, 1.763895929, 3.874803739,0}}},
+        {"helium",  {{13.628441975,-143.470759602,1.5,0,0,0,0},  {0,0,0,0}}},
+        {"argon", {{8.316662546, -4.946502600,1.50,0,0,0,0}, {0,0,0,0}}}
+    };
+    
+    if (dict.find(fluid) != dict.end()){
+        auto [n, theta] = dict[fluid];
+        if (n.size() != 7){
+            throw std::invalid_argument(fluid + " does not have 7 n coefficients in ideal gas");
+        }
+        if (theta.size() != 4){
+            throw std::invalid_argument(fluid + " does not have 4 theta coefficients in ideal gas");
+        }
+        GERGGeneral::AlphaigCoeffs c;
+        c.n0 = n;
+        c.n0.insert(c.n0.begin(), 0.0); // 0-pad the array to have the indexing match GERG-2004
+        c.theta0 = theta;
+        c.theta0.insert(c.theta0.begin(), 4, 0.0); // 0-pad the array to have the indexing match GERG-2004
+        return c;
+    }
+    else{
+        throw std::invalid_argument("Not able to get ideal-gas coefficients for " + fluid);
+    }
+}
 
 inline PureCoeffs get_pure_coeffs(const std::string& fluid){
     
@@ -759,6 +881,30 @@ public:
     }
 };
 
+
+class GERG2004IdealGasModel{
+public:
+    GERG200XAlphaig aig;
+    
+    GERG2004IdealGasModel(const std::vector<std::string>& names) : aig(names, get_pure_info, get_alphaig_coeffs){}
+    
+    template<class VecType>
+    auto R(const VecType& /*molefrac*/) const {
+        return 8.314472;
+    }
+    
+    template<typename TType, typename RhoType, typename MoleFracType>
+    auto alphar(const TType &T,
+        const RhoType &rho,
+        const MoleFracType& molefrac) const {
+        if (static_cast<std::size_t>(molefrac.size()) != aig.size()){
+            throw std::invalid_argument("sizes don't match");
+        }
+        return aig.alphaig(T, rho, molefrac);
+    }
+};
+
+
 } /* namespace GERG2004 */
 
 
@@ -811,8 +957,11 @@ inline BetasGammas get_betasgammas(const std::string&fluid1, const std::string &
         // occurs because the EOS has changed for isopentane and CO and
         // thus the estimated interaction parameters need to be calculated
         // with the "new" Tc.
+        {{"ethane","isopentane"}, {1.0, 1.045439935, 1.0, 1.021150247}},
         {{"n-butane","carbonmonoxide"}, {1.0, 1.084740904, 1.0, 1.173916162}},
+        {{"n-butane","isopentane"}, {1.0, 1.002728434, 1.0, 1.000792201}},
         {{"isobutane","carbonmonoxide"}, {1.0, 1.087272232, 1.0, 1.161390082}},
+        {{"isobutane","isopentane"}, {1.0, 1.002284353, 1.0, 1.001835788}},
         {{"n-pentane","carbonmonoxide"}, {1.0, 1.119954454, 1.0, 1.206043295}},
         {{"isopentane","carbonmonoxide"}, {1.0, 1.116694577, 1.0, 1.199326059}},
         {{"n-hexane","carbonmonoxide"}, {1.0, 1.155145836, 1.0, 1.233272781}},
@@ -822,6 +971,7 @@ inline BetasGammas get_betasgammas(const std::string&fluid1, const std::string &
         {{"isopentane","n-hexane"}, {1.0, 1.002995876, 1.0, 1.001204174}},
         {{"isopentane","n-heptane"}, {1.0, 1.009928206, 1.0, 1.003194615}},
         {{"isopentane","n-octane"}, {1.0, 1.017880545, 1.0, 1.00564748}},
+        {{"isopentane","hydrogen"}, {1.0, 1.184340443, 1.0, 1.996386669}},
         
         // The 57 new models added in GERG-2008
         {{"methane","n-nonane"}, {1.002852287, 1.141895355, 0.947716769, 1.528532478}},
@@ -926,6 +1076,38 @@ inline PureCoeffs get_pure_coeffs(const std::string& fluid){
     }
 }
 
+inline AlphaigCoeffs get_alphaig_coeffs(const std::string& fluid){
+    
+    static std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<double>>> dict = {
+        
+        {"carbonmonoxide", {{10.813340744, -19.834733959, 2.50055, 1.02865, 0.00493, 0, 0}, {11.669802800, 5.302762306, 0, 0}}}, // Updated in GERG-2008
+        {"isopentane", {{15.449907693, -101.298172792, 3.0, 11.76180, 20.11010, 33.16880, 0}, {292.503/460.35, 910.237/460.35, 1919.37/460.35, 0}}}, // Updated in GERG-2008
+        
+        {"n-nonane", {{16.313913248, -102.160247463, 3.0, 18.02410, 38.12350, 53.34150, 0}, {0.263819696, 1.370586158, 2.848860483, 0}}},
+        {"n-decane", {{15.870791919, -108.858547525, 3.0, 21.00690, 43.49310, 58.36570, 0}, {0.267034159, 1.353835195, 2.833479035, 0}}},
+        {"hydrogensulfide", {{9.336197742, -16.266508995, 3.0, 3.11942, 1.00243, 0, 0}, {4.914580541, 2.270653980, 0, 0}}},
+    };
+    
+    if (dict.find(fluid) != dict.end()){
+        auto [n, theta] = dict[fluid];
+        if (n.size() != 7){
+            throw std::invalid_argument(fluid + " does not have 7 n coefficients in ideal gas");
+        }
+        if (theta.size() != 4){
+            throw std::invalid_argument(fluid + " does not have 4 theta coefficients in ideal gas");
+        }
+        GERGGeneral::AlphaigCoeffs c;
+        c.n0 = n;
+        c.n0.insert(c.n0.begin(), 0.0); // 0-pad the array to have the indexing match GERG-2004
+        c.theta0 = theta;
+        c.theta0.insert(c.theta0.begin(), 4, 0.0); // 0-pad the array to have the indexing match GERG-2004
+        return c;
+    }
+    else{
+        return GERG2004::get_alphaig_coeffs(fluid);
+    }
+}
+
 
 class GERG2008ResidualModel{
 public:
@@ -952,6 +1134,28 @@ public:
         auto tau = forceeval(Tred / T);
         auto val = forceeval(corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac));
         return val;
+    }
+};
+
+class GERG2008IdealGasModel{
+public:
+    GERG200XAlphaig aig;
+    
+    GERG2008IdealGasModel(const std::vector<std::string>& names) : aig(names, get_pure_info, get_alphaig_coeffs){}
+    
+    template<class VecType>
+    auto R(const VecType& /*molefrac*/) const {
+        return 8.314472;
+    }
+    
+    template<typename TType, typename RhoType, typename MoleFracType>
+    auto alphar(const TType &T,
+        const RhoType &rho,
+        const MoleFracType& molefrac) const {
+        if (static_cast<std::size_t>(molefrac.size()) != aig.size()){
+            throw std::invalid_argument("sizes don't match");
+        }
+        return aig.alphaig(T, rho, molefrac);
     }
 };
     
