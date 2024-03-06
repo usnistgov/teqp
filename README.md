@@ -21,7 +21,7 @@ So far the following EOS are implemented:
 * SAFT*ish*:
     * PC-SAFT (+dipoles, +quadrupoles, but no association)
     * SAFT-VR-Mie (mixtures, but no association)
-    * cubic plus association (CPA) for pure fluids
+    * cubic plus association (CPA)
 * model fluids
     * Exp-6 (modified Buckingham) from Kataoka
     * square-well from Espíndola-Heredia et al.
