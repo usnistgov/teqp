@@ -7,4 +7,3 @@ Derivatives
 
    derivs
    compderivs
-   ideal_gas

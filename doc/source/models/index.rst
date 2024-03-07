@@ -26,3 +26,5 @@ Models
    REFPROP_conversion
    GERG
    ECS
+   
+   IdealGas

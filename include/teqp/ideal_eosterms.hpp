@@ -51,7 +51,7 @@ namespace teqp {
 
     \f$ \alpha^{\rm ig}= ln(\delta) + a_1^* + a_2^*\tau \f$
 
-    Note that a_1 contains an additive factor of -ln(rho_r) and a_2 contains a multiplicative factor of Tc
+    Note that \f$a_1\f$ contains an additive factor of \f$-ln(\rho_r)\f$ and \f$a_2\r$ contains a multiplicative factor of \f$T_r\f$
     relative to the former
 
     */
@@ -131,7 +131,7 @@ namespace teqp {
     };
 
     /**
-    \f$ \alpha^{\rm ig}= \sum_k n_k ln(|cosh(theta_k/T)|) \f$
+    \f$ \alpha^{\rm ig}= \sum_k n_k \ln(|cosh(\theta_k/T)|) \f$
 
     See Table 7.6 in GERG-2004 monograph
     */
@@ -154,7 +154,7 @@ namespace teqp {
     };
 
     /**
-    \f$ \alpha^{\rm ig}= \sum_k n_k ln(|sinh(theta_k/T)|) \f$
+    \f$ \alpha^{\rm ig}= \sum_k n_k \ln(|sinh(\theta_k/T)|) \f$
 
     See Table 7.6 in GERG-2004 monograph
     */
@@ -177,7 +177,7 @@ namespace teqp {
     };
 
     /**
-    \f$ \alpha^{\rm ig}= c*\left( \frac{T-T0}{T}-\ln\left(T/T0\right)\right) \f$
+    \f$ \alpha^{\rm ig}= c*\left( \frac{T-T_0}{T}-\ln\left(\frac{T}{T_0}\right)\right) \f$
      
     from a term that is like
     
