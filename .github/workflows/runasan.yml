@@ -1,4 +1,4 @@
-name: build and run tests
+name: run address sanitizer
 on:
   push:
     branches: [main]
