@@ -1,0 +1,26 @@
+name: build and run tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  Matrix-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+        python-version: [3.9]  # Could add more here, but it just makes the build matrix bigger
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: checkout submodules
+        run: git submodule update --init --recursive
+      - name: mkdir
+        run: mkdir build && cd build
+      - name: cmake config
+        run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTEQP_SNIPPETS=ON -DTEQP_TEQPC=ON -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+      - name: build all Catch tests
+        run: cmake --build build --target catch_tests
+      - name: run all the compiled Catch tests with address sanitizer
+        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1 ASAN_SYMBOLIZER_PATH=`brew --prefix`/opt/llvm/bin/llvm-symbolizer ./catch_tests
