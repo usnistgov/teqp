@@ -25,7 +25,7 @@ using namespace autodiff;
 
 namespace teqp {
 
-/***
+/**
 * \brief Given a function, use complex step derivatives to calculate the derivative with 
 * respect to the first variable which here is temperature
 */
@@ -36,7 +36,7 @@ typename ContainerType::value_type derivT(const FuncType& f, TType T, const Cont
 }
 
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
-/***
+/**
 * \brief Given a function, use multicomplex derivatives to calculate the derivative with
 * respect to the first variable which here is temperature
 */
@@ -49,7 +49,7 @@ typename ContainerType::value_type derivTmcx(const FuncType& f, TType T, const C
 }
 #endif
 
-/***
+/**
 * \brief Given a function, use complex step derivatives to calculate the derivative with respect 
 * to the given composition variable
 */
@@ -948,8 +948,8 @@ struct VirialDerivatives {
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>
 struct IsochoricDerivatives{
 
-    /***
-    * \brief Calculate the residual entropy (s^+ = -sr/R) from derivatives of alphar
+    /**
+    * \brief Calculate the residual entropy (\f$s^+ = -s^r/R\f$) from derivatives of alphar
     */
     static auto get_splus(const Model& model, const Scalar &T, const VectorType& rhovec) {
         auto rhotot = rhovec.sum();
@@ -957,7 +957,7 @@ struct IsochoricDerivatives{
         return model.alphar(T, rhotot, molefrac) - get_Ar10(model, T, rhovec);
     }
 
-    /***
+    /**
     * \brief Calculate the residual pressure from derivatives of alphar
     */
     static auto get_pr(const Model& model, const Scalar &T, const VectorType& rhovec)
@@ -995,8 +995,8 @@ struct IsochoricDerivatives{
         return Ar01;
     }
 
-    /***
-    * \brief Calculate Psir=ar*rho
+    /**
+    * \brief Calculate \f$\Psi^r=a^r \rho\f$
     */
     static auto get_Psir(const Model& model, const Scalar &T, const VectorType& rhovec) {
         auto rhotot_ = rhovec.sum();
@@ -1004,8 +1004,8 @@ struct IsochoricDerivatives{
         return model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_;
     }
 
-    /***
-    * \brief Calculate derivative Psir=ar*rho w.r.t. T at constant molar concentrations
+    /**
+    * \brief Calculate derivative \f$\Psi^r=a^r \rho\f$ w.r.t. T at constant molar concentrations
     */
     static auto get_dPsirdT_constrhovec(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot_ = rhovec.sum();
@@ -1015,8 +1015,8 @@ struct IsochoricDerivatives{
         return derivatives(f, along(1), at(Tad))[1];
     }
 
-    /***
-    * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations
+    /**
+    * \brief Calculate the Hessian of \f$\Psi^r = a^r \rho\f$ w.r.t. the molar concentrations
     *
     * Requires the use of autodiff derivatives to calculate second partial derivatives
     */
@@ -1035,8 +1035,8 @@ struct IsochoricDerivatives{
         return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g).eval(); // evaluate the function value u, its gradient, and its Hessian matrix H
     }
 
-    /***
-    * \brief Calculate the function value, gradient, and Hessian of Psir = ar*rho w.r.t. the molar concentrations
+    /**
+    * \brief Calculate the function value, gradient, and Hessian of \f$Psi^r = a^r\rho\f$ w.r.t. the molar concentrations
     *
     * Uses autodiff to calculate the derivatives
     */
@@ -1060,8 +1060,8 @@ struct IsochoricDerivatives{
         return std::make_tuple(f, gg, H);
     }
 
-    /***
-    * \brief Calculate the Hessian of Psi = a*rho w.r.t. the molar concentrations
+    /**
+    * \brief Calculate the Hessian of \f$\Psi = a \rho\f$ w.r.t. the molar concentrations
     *
     * Uses autodiff derivatives to calculate second partial derivatives
     */
@@ -1076,7 +1076,7 @@ struct IsochoricDerivatives{
     }
 
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
-    /***
+    /**
     * \brief Calculate the Hessian of Psir = ar*rho w.r.t. the molar concentrations (residual contribution only)
     *
     * Requires the use of multicomplex derivatives to calculate second partial derivatives
@@ -1099,7 +1099,7 @@ struct IsochoricDerivatives{
     }
 #endif
 
-    /***
+    /**
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
     *
     * Uses autodiff to calculate derivatives
@@ -1116,7 +1116,7 @@ struct IsochoricDerivatives{
     }
 
 #if defined(TEQP_MULTICOMPLEX_ENABLED)
-    /***
+    /**
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
     *
     * Uses multicomplex to calculate derivatives
@@ -1136,7 +1136,7 @@ struct IsochoricDerivatives{
         return out;
     }
 #endif
-    /***
+    /**
     * \brief Gradient of Psir = ar*rho w.r.t. the molar concentrations
     *
     * Uses complex step to calculate derivatives
@@ -1178,7 +1178,7 @@ struct IsochoricDerivatives{
 #endif
     }
 
-    /***
+    /**
     * \brief Calculate the chemical potential of each component
     *
     * Uses autodiff to calculate derivatives
@@ -1192,7 +1192,7 @@ struct IsochoricDerivatives{
         return (build_Psir_gradient_autodiff(model, T, rho).array() + model.R(molefrac)*T*(rhorefideal + log(rho / rhorefideal))).eval();
     }
 
-    /***
+    /**
     * \brief Calculate the fugacity coefficient of each component
     *
     * Uses autodiff to calculate derivatives
@@ -1203,7 +1203,7 @@ struct IsochoricDerivatives{
         return exp(lnphi).eval();
     }
     
-    /***
+    /**
     * \brief Calculate the natural logarithm of fugacity coefficient of each component
     *
     * Uses autodiff to calculate derivatives by default
@@ -1287,7 +1287,7 @@ struct IsochoricDerivatives{
         return deriv;
     }
     
-    /***
+    /**
     * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. temperature at constant mole concentrations (implying constant mole fractions and density)
     *
     * Uses autodiff to calculate derivatives by default
@@ -1308,7 +1308,7 @@ struct IsochoricDerivatives{
         return forceeval((1/(R*T)*(Tgrad - 1.0/T*grad)-dZdT_Z).eval());
     }
     
-    /***
+    /**
     * \brief Calculate ln(Z), Z, and dZ/drho at constant temperature and mole fractions
     *
     * Uses autodiff to calculate derivatives by default
@@ -1325,7 +1325,7 @@ struct IsochoricDerivatives{
         return std::make_tuple(log(Z), Z, dZdrho);
     }
     
-    /***
+    /**
     * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. molar density at constant temperature and mole fractions
     *
     * \f[
@@ -1342,7 +1342,7 @@ struct IsochoricDerivatives{
         return forceeval((1/(R*T)*(hessian*molefrac.matrix()).array() - dZdrho/Z).eval());
     }
     
-    /***
+    /**
     * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. molar volume at constant temperature and mole fractions
     *
     * \f[
@@ -1356,7 +1356,7 @@ struct IsochoricDerivatives{
         return get_d_ln_fugacity_coefficients_drho_constTmolefracs(model, T, rhovec)*drhodv;
     }
     
-    /***
+    /**
     * \brief Calculate the derivative of the natural logarithm of fugacity coefficient of each component w.r.t. mole fraction of each component, at constant temperature and molar density
     *
     * \f[
@@ -1396,7 +1396,7 @@ struct IsochoricDerivatives{
         return out;
     }
 
-    /***
+    /**
     * \brief Calculate the temperature derivative of the chemical potential of each component
     * \note: Some contributions to the ideal gas part are missing (reference state and cp0), but are not relevant to phase equilibria
     */
@@ -1407,7 +1407,7 @@ struct IsochoricDerivatives{
         return (build_d2PsirdTdrhoi_autodiff(model, T, rhovec) + model.R(molefrac)*(rhorefideal + log(rhovec/rhorefideal))).eval();
     }
 
-    /***
+    /**
     * \brief Calculate the temperature derivative of the pressure at constant molar concentrations
     */
     static auto get_dpdT_constrhovec(const Model& model, const Scalar& T, const VectorType& rhovec) {
@@ -1417,7 +1417,7 @@ struct IsochoricDerivatives{
         return rhotot*model.R(molefrac) - dPsirdT + rhovec.matrix().dot(build_d2PsirdTdrhoi_autodiff(model, T, rhovec).matrix());
     }
 
-    /***
+    /**
     * \brief Calculate the molar concentration derivatives of the pressure at constant temperature
     */
     static auto get_dpdrhovec_constT(const Model& model, const Scalar& T, const VectorType& rhovec) {
@@ -1428,12 +1428,48 @@ struct IsochoricDerivatives{
         return (RT + (hessian*rhovec.matrix()).array()).eval(); // at constant temperature
     }
 
-    /***
-    * \brief Calculate the partial molar volumes of each component
-    * 
-    * \f[
-    * \hat v_i = \left(\frac{\partial V}{\partial n_i}\right)_{T,V,n_{j \neq i}}
-    * \f]
+    /**
+    \brief Calculate the partial molar volumes of each component
+    
+    \f[
+    \hat v_i = \left(\frac{\partial V}{\partial n_i}\right)_{T,V,n_{j \neq i}}
+    \f]
+    
+     Eq 7.32 from GERG-2004
+     \f[
+             \hat v_i = \deriv{V}{n_i}{T,p,n_j} = \displaystyle\frac{-n\deriv{p}{n_i}{T,V,n_j}}{n\deriv{p}{V}{T,\vec{n}}}
+     \f]
+
+     Total differential of a variable \f$Y\f$ that is a function of \f$T\f$, \f$\vec{\rho}\f$:
+     \f[
+     \mathrm{d} Y = \deriv{Y}{T}{\vec{\rho}} \mathrm{d} T + \sum_k \deriv{Y}{\rho_k}{T,\rho_{j\neq i}} \mathrm{d} \rho_k
+     \f]
+     so
+     \f[
+     \deriv{Y}{n_i}{T,V,n_{j\neq i}} = \deriv{Y}{T}{\vec{\rho}} \cancelto{0}{\deriv{T}{n_i}{T,V,n_j}} + \sum_k \deriv{Y}{\rho_k}{T,\rho_{j\neq i}}  \deriv{\rho_k}{n_i}{T,V,n_j}
+     \f]
+     \f[
+     \deriv{\rho_k}{n_i}{T,V,n_j} = \frac{\delta_{ik}}{V}
+     \f]
+     because \f$\rho_k = n_k/V\f$.
+
+     Thus in the isochoric framework, the partial molar volume is given by
+     \f[
+     \hat v_i = \displaystyle\frac{-\frac{n}{V}\deriv{p}{\rho_i}{T,\rho_j}}{n\deriv{p}{V}{T,\vec{n}}}
+     \f]
+     The final formulation includes this term in the numerator (see the supporting info from isochoric paper):
+     \f[
+     \deriv{p}{\rho_i}{T,\rho_j} = RT + \sum_k\rho_k\deriv{^2\Psi^{\rm r}}{\rho_k\partial \rho_i}{T,\rho_{j\neq k}}
+     \f]
+     and the denominator is given by (Eq. 7.62 of GERG-2004)
+     \f[
+     n\deriv{p}{V}{T,\vec{n}} = -\rho^2 RT\left(1+2\delta\deriv{\alpha^{\rm r}}{\delta}{\tau} + \delta^2\deriv{^2\alpha^{\rm r}}{\delta^2}{\tau} \right)
+     \f]
+     and finally
+     \f[
+     \hat v_i = \displaystyle\frac{-\rho\deriv{p}{\rho_i}{T,\rho_j}}{n\deriv{p}{V}{T,\vec{n}}}
+     \f]
+     
     */
     static auto get_partial_molar_volumes(const Model& model, const Scalar& T, const VectorType& rhovec) {
         auto rhotot = rhovec.sum();
