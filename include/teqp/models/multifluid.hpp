@@ -788,7 +788,7 @@ inline auto collect_identifiers(const std::vector<nlohmann::json>& pureJSON)
         {"Name", Name},
         {"REFPROP", REFPROP}
     };
-    if (hash.size() > 0){
+    if (hash.size() == result["CAS"].size()){
         result["hash"] = hash;
     }
     return result;
@@ -813,7 +813,15 @@ inline auto select_identifier(const nlohmann::json& BIPcollection, const mapvecs
             
         }
     }
-    throw std::invalid_argument("Unable to match any of the identifier options");
+    std::string errmsg;
+    for (const auto& [k,v] : identifierset){
+        if (errmsg.empty()){
+            errmsg += k;
+        }else {
+            errmsg += "," + k;
+        }
+    }
+    throw std::invalid_argument("Unable to match any of the identifier options: " + errmsg);
 }
 
 /// Build a reverse-lookup map for finding a fluid JSON structure given a backup identifier
@@ -936,59 +944,39 @@ inline auto make_pure_components_JSON(const nlohmann::json& components, const st
     if (!components.is_array()){
         throw std::invalid_argument("Must be an array");
     }
-    
-    // Check if are possibly valid paths (JSON should not be)
-    bool all_valid_paths = true;
-    bool all_abspath_exist = true;
-    bool all_fluids_exist = true;
-    bool might_be_JSON = true;
-    for (auto s: components){
-        if (!s.is_object()){
-            might_be_JSON = false;
-        }
-        try{
-            std::filesystem::path p = s.get<std::string>();
-            if (!std::filesystem::exists(p)){
-                all_abspath_exist = false;
+    std::optional<decltype(build_alias_map(""))> optaliasmap;
+    for (const nlohmann::json& comp : components){
+        auto get_or_aliasmap = [&](){
+            try{
+                return multilevel_JSON_load(comp, root);
             }
-            if (!std::filesystem::exists(root+"/dev/fluids/"+s.get<std::string>()+".json")){
-                all_fluids_exist = false;
+            catch(...){
+                // Build the alias map if not already constructed
+                if (!optaliasmap){
+                    optaliasmap = build_alias_map(root);
+                }
+                return multilevel_JSON_load(optaliasmap.value().at(comp), root);
             }
-        }
-        catch(...){
-            all_valid_paths = false;
-        }
-    }
-    
-    // Normal treatment if:
-    // a) Absolute paths were provided, to files that exist
-    // b) Fluid names in the dev/fluids/ folder relative to the root
-    if (all_valid_paths && (all_fluids_exist || all_abspath_exist)){
-        return collect_component_json(components.get<std::vector<std::string>>(), root);
-    }
-    else if (might_be_JSON){
-        // Data is already in JSON format, just turn it into vector of nlohmann
-        for (auto c : components){
-            pureJSON.push_back(c);
-        }
-        return pureJSON;
-    }
-    else{
-        // Lookup the absolute paths for each component
-        auto aliasmap = build_alias_map(root);
-        std::vector<std::string> abspaths;
-        for (auto c : components) {
-            auto cstr = c.get<std::string>();
-            // Allow matching of absolute paths first
-            if (std::filesystem::is_regular_file(cstr)) {
-                abspaths.push_back(cstr);
+        };
+        if (comp.is_string()){
+            std::string contents = comp;
+            // Note: first arg to substr is first index to *keep*, no second arg so keep to the end
+            if (contents.find("PATH::") == 0){
+                pureJSON.push_back(load_a_JSON_file(contents.substr(6)));
             }
-            else {
-                abspaths.push_back(aliasmap[cstr]);
+            else if (contents.find("FLDPATH::") == 0){
+                pureJSON.push_back(RPinterop::FLDfile(contents.substr(9)).make_json(""));
+            }
+            else if (contents.find("FLD::") == 0){
+                pureJSON.push_back(RPinterop::FLDfile(contents.substr(5)).make_json(""));
+            }
+            else{
+                pureJSON.push_back(get_or_aliasmap());
             }
         }
-        // Backup lookup with absolute paths resolved for each component
-        pureJSON = collect_component_json(abspaths, root);
+        else{
+            pureJSON.push_back(get_or_aliasmap());
+        }
     }
     return pureJSON;
 }
