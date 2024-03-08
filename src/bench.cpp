@@ -115,7 +115,7 @@ TEST_CASE("PCSAFT more derivatives", "[PCSAFT]")
         return -tdx::get_Ar20(model, T, rho, z);
     };
     BENCHMARK("partial_molar_volumes w/ autodiff") {
-        return -IsochoricDerivatives<decltype(model)>::get_fugacity_coefficients(model, T, rhovec);
+        return -IsochoricDerivatives<decltype(model)>::get_partial_molar_volumes(model, T, rhovec);
     };
 }
 
