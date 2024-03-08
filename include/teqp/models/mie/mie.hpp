@@ -7,7 +7,7 @@ namespace teqp {
 namespace Mie{
 
     /**
-     Equation of state for the Mie ($\lambda_{\mathrm{r}}$,6) fluid with a repulsive exponent from 11 to 13
+     Equation of state for the Mie (\f$\lambda_{\mathrm{r}}\f$,6) fluid with a repulsive exponent from 11 to 13
      Pohl, S.; Fingerhut, R., Thol, M.; Vrabec, J.; Span, R.
      */
     class Mie6Pohl2023 {

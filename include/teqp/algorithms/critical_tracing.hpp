@@ -742,7 +742,7 @@ struct CriticalTracing {
     * \f[
     *     \rmderivsub{Y}{T}{\CRL} = \deriv{Y}{T}{\vec\rho}  + \sum_j \deriv{Y}{\rho_j}{T,\rho_{k\neq j}} \rmderivsub{\rho_j}{T}{\CRL}
     * \f]
-    * where the derivatives on the RHS without the subscript $\CRL$ are homogeneous derivatives taken at the mixture statepoint, and are NOT along the critical curve.
+    * where the derivatives on the RHS without the subscript CRL are homogeneous derivatives taken at the mixture statepoint, and are NOT along the critical curve.
     */
     static auto get_dp_dT_crit(const AbstractModel& model, const Scalar& T, const VecType& rhovec) {
         auto dpdrhovec = model.get_dpdrhovec_constT(T, rhovec);

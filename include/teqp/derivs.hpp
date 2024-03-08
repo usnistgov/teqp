@@ -860,89 +860,89 @@ struct VirialDerivatives {
 
 /**
  In the isochoric formalism, the fugacity coefficient array can be obtained by the gradient of the residual Helmholtz energy density (which is a scalar) and the compressibility factor \f$Z\f$  (which is also a scalar) in terms of the temperature \f$T\f$ and the molar concentration vector \f$\vec\rho\f$:
- \begin{equation}
+ \f[
      \ln\vec\phi = \frac{1}{RT}\frac{\partial \Psi^r}{d\vec\rho} - \ln(Z)
- \end{equation}
+ \f]
 
- \textbf{Easy}: temperature derivative at constant molar concentrations (implying constant volume and molar composition)
- \begin{equation}
+ Easy: temperature derivative at constant molar concentrations (implying constant volume and molar composition)
+ \f[
      \deriv{ \ln\vec\phi}{T}{\vec\rho} = \frac{1}{RT}\frac{\partial^2 \Psi^r}{\partial \vec\rho\partial T} + \frac{-1}{RT^2}\deriv{\Psi^r}{\vec\rho}{T} - \frac{1}{Z}\deriv{Z}{T}{\vec\rho}
- \end{equation}
+ \f]
 
- \textbf{Medium}: molar density derivative at constant temperature and mole fractions
- \begin{equation}
+ Medium: molar density derivative at constant temperature and mole fractions
+ \f[
      \deriv{ \ln\vec\phi}{\rho}{T,\vec x} = \frac{1}{RT}\frac{\partial^2 \Psi^r}{\partial \vec\rho\partial \rho}  - \frac{1}{Z}\deriv{Z}{\rho}{T,\vec x}
- \end{equation}
- \begin{equation}
+ \f]
+ \f[
      Z = 1+\rho\deriv{\alpha^r}{\rho}{T}
- \end{equation}
- \begin{equation}
+ \f]
+ \f[
  \deriv{Z}{\rho}{T,\vec x} = \rho\deriv{^2\alpha^r}{\rho^2}{T} + \deriv{\alpha^r}{\rho}{T}
- \end{equation}
+ \f]
 
  Back to basics, for a quantity \f$\chi\f$ that is a function of \f$T\f$ and \f$\vec\rho\f$, and then the derivative taken w.r.t. density at constant temperature and mole fractions:
- \begin{equation}
+ \f[
      \deriv{\chi}{\rho}{T, \vec x} =     \deriv{\chi}{T}{\vec \rho}\cancelto{0}{\deriv{T}{\rho}{T}} + \sum_i\deriv{\chi}{\rho_i}{T, \rho_{j\neq i}}\deriv{\rho_i}{\rho}{T,\vec x}
- \end{equation}
+ \f]
  with \f$\rho_i =x_i\rho\f$
- \begin{equation}
+ \f[
  \deriv{\rho_i}{\rho}{T, \vec x} = x_i
- \end{equation}
+ \f]
  thus
- \begin{equation}\
+ \f[
      \deriv{\chi}{\rho}{T, \vec x} =  \sum_i\deriv{\chi}{\rho_i}{T, \rho_{j\neq i}}x_i
- \end{equation}
+ \f]
 
  and following the pattern yields
- \begin{equation}
+ \f[
  \frac{\partial^2 \Psi^r}{\partial \vec\rho\partial \rho} =     \sum_i\deriv{\frac{\partial \Psi^r}{d\vec\rho} }{\rho_i}{T, \rho_{j\neq i}}x_i
- \end{equation}
+ \f]
  where the big thing is the Hessian of the residual Hessian matrix of the residual Helmholtz energy density.  This uses terms that are already developed.
 
- \textbf{Medium+}: Volume derivative, based on the density derivative
+ Medium+: Volume derivative, based on the density derivative
 
- \begin{equation}
+ \f[
  \deriv{ \ln\vec\phi}{v}{T,\vec x} = \deriv{ \ln\vec\phi}{\rho}{T,\vec x}\deriv{ \rho}{v}{}
- \end{equation}
- \begin{equation}
+ \f]
+ \f[
  \deriv{\rho}{v}{} = -1/v^2 = -\rho^2
- \end{equation}
+ \f]
 
- \textbf{Hard}: mole fraction derivatives (this results in a matrix rather than a vector)
- \begin{equation}
+ Hard: mole fraction derivatives (this results in a matrix rather than a vector)
+ \f[
      \deriv{ \ln\vec\phi}{\vec x}{T,\rho} = ?
- \end{equation}
+ \f]
 
- The first term is conceptually tricky. Again, considering a generic quantity $\chi$
- \begin{equation}
+ The first term is conceptually tricky. Again, considering a generic quantity \f$\chi\f$
+ \f[
      \deriv{\chi}{x_i}{T, \rho,  x_{j\neq i}} = \deriv{\chi}{T}{\vec \rho}\cancelto{0}{\deriv{T}{x_i}{T,\rho,x_{j\neq i}}} + \sum_i\deriv{\chi}{\rho_i}{T, \rho_{j\neq i}}\deriv{\rho_i}{x_i}{T,\rho, x_{j\neq i}}
- \end{equation}
+ \f]
  yields
- \begin{equation}
+ \f[
      \deriv{\chi}{x_i}{T, \rho,  x_{j\neq i}} = \rho \sum_i\deriv{\chi}{\rho_i}{T, \rho_{j\neq i}}
- \end{equation}
+ \f]
  so the first part becomes
- \begin{equation}
+ \f[
      \deriv{\frac{\partial \Psi^r}{d\vec\rho}}{x_i}{T, \rho,  x_{j\neq i}} = \rho \sum_i\deriv{\frac{\partial \Psi^r}{d\vec\rho}}{\rho_i}{T, \rho_{j\neq i}}
- \end{equation}
+ \f]
  or
- \begin{equation}
+ \f[
      \deriv{^2\partial \Psi^r}{\vec\rho \partial \vec x}{T, \rho} = \rho H(\Psi^r)
- \end{equation}
+ \f]
  which is somewhat surprising because the order of derivatives with respect to composition and density doesn't matter, as the Hessian is symmetric
 
  The second part, from derivatives of \f$\ln Z\f$, with \f$Z\f$ given by
- \begin{equation}
+ \f[
      Z = 1+\rho\deriv{\alpha^r}{\rho}{T, \vec x}
- \end{equation}
+ \f]
  yields
- \begin{equation}
+ \f[
  \deriv{\ln Z}{x_i}{T,\rho,x_{k \neq j}} = \frac{1}{Z}\deriv{Z}{x_i}{T,\rho,x_{k \neq i}}
- \end{equation}
+ \f]
  which results in a vector because you have
- \begin{equation}
+ \f[
  \deriv{Z}{x_i}{T,\rho,x_{k \neq i}} = \rho \deriv{^2\alpha^r}{\rho\partial x_i}{T}
- \end{equation}
+ \f]
  
  */
 template<typename Model, typename Scalar = double, typename VectorType = Eigen::ArrayXd>

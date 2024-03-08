@@ -874,7 +874,7 @@ public:
         return coeff*get_Kijk(K444_555, rhostar, Tstarij, Tstarik, Tstarjk);
     };
     
-    /// Return \f$\alpha_2=A_2/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to $-w_o^{(2)}/\rhoN$ from Gray et al.
+    /// Return \f$\alpha_2=A_2/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to \f$-w_o^{(2)}/\rhoN\f$ from Gray et al.
     template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType, typename MuPrimeType>
     auto get_alpha2(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions, const MuPrimeType& muprime) const{
         const auto& x = mole_fractions; // concision
@@ -912,7 +912,7 @@ public:
         return forceeval(-rhoN*k_e*k_e*summer); // The factor of k_e^2 takes us from CGS to SI units
     }
     
-    /// Return \f$\alpha_2=A_2/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to $-w_o^{(2)}/\rhoN$ from Gray et al.
+    /// Return \f$\alpha_2=A_2/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to \f$-w_o^{(2)}/\rhoN\f$ from Gray et al.
     template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType, typename MuPrimeType>
     auto get_alpha2_muprime_gradient(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions, const MuPrimeType& muprime) const{
         const auto& x = mole_fractions; // concision
@@ -945,7 +945,7 @@ public:
         return (-k_e*k_e*Eprime2*mole_fractions.template cast<type_>()*beta).eval(); // The factor of k_e^2 takes us from CGS to SI units
     }
     
-    /// Return \f$\alpha_3=A_3/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to $-w_o^{(3)}/\rhoN$ from Gray et al.
+    /// Return \f$\alpha_3=A_3/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to \f$-w_o^{(3)}/\rhoN\f$ from Gray et al.
     template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType, typename MuPrimeType>
     auto get_alpha3(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions, const MuPrimeType& muprime) const{
         const VecType& x = mole_fractions; // concision
@@ -993,7 +993,7 @@ public:
         return forceeval(C3*(rhoN*summer_a + rhoN*rhoN*summer_b)*k_e*k_e*k_e); // The factor of k_e^3 takes us from CGS to SI units
     }
     
-    /// Return \f$\alpha_3=A_3/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to $-w_o^{(3)}/\rhoN$ from Gray et al.
+    /// Return \f$\alpha_3=A_3/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to \f$-w_o^{(3)}/\rhoN\f$ from Gray et al.
     template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType, typename MuPrimeType>
     auto get_alpha3_muprime_gradient(const TTYPE& T, const RhoType& rhoN, const RhoStarType& rhostar, const VecType& mole_fractions, const MuPrimeType& muprime) const{
         const VecType& x = mole_fractions; // concision
