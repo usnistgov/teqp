@@ -23,4 +23,5 @@ jobs:
       - name: build all Catch tests
         run: cmake --build build --target catch_tests --config Asan
       - name: run all the compiled Catch tests with address sanitizer
-        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1 ASAN_SYMBOLIZER_PATH=`brew --prefix`/opt/llvm/bin/llvm-symbolizer ./catch_tests
+        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1:verbosity=1 ASAN_SYMBOLIZER_PATH=`brew --prefix`/opt/llvm/bin/llvm-symbolizer ./catch_tests --benchmark-samples 1
+        # ASAN CLI docs here: https://github.com/google/sanitizers/wiki/AddressSanitizerFlags
