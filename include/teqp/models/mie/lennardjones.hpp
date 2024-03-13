@@ -2,6 +2,7 @@
 
 #include "teqp/models/multifluid.hpp"
 #include "teqp/types.hpp"
+#include "teqp/math/pow_templates.hpp"
 
 namespace teqp {
 
@@ -76,16 +77,6 @@ namespace teqp {
      */
     class LJ126KolafaNezbeda1994{
     private:
-
-        template<typename T>
-        auto POW2(const T& x) const {
-            return x*x;
-        }
-
-        template<typename T>
-        auto POW3(const T& x) const{
-            return POW2(x)*x;
-        }
 
         const double MY_PI = EIGEN_PI;
 
@@ -162,7 +153,7 @@ namespace teqp {
 
         template<typename TTYPE>
         auto get_d_DeltaB2hBH_d1T(const TTYPE& Tstar) const {
-            auto summer = 0.0;
+            TTYPE summer = 0.0;
             for (auto [i, C_i] : c_Delta_B2_hBH){
                 summer += (i/2.0)*C_i*pow(Tstar, i/2.0);
             }
