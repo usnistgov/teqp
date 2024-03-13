@@ -6,6 +6,9 @@ using Catch::Approx;
 #include "teqp/models/model_potentials/2center_ljf.hpp"
 #include "teqp/derivs.hpp"
 
+#include "nlohmann/json.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
+
 using namespace teqp;
 using namespace twocenterljf;
 
@@ -141,4 +144,29 @@ TEST_CASE("Test for pressure for 2-Center Lennard-Jones Model (Lisal et al.) plu
 
     }
 
+}
+
+
+TEST_CASE("2CLJF tests with make_model", "[2CLJF]"){
+    
+    auto m1 = teqp::cppinterface::make_model(R"({
+      "kind": "2CLJF-Dipole",
+      "model": {
+          "author": "2CLJF_Lisal",
+          "L^*": 0.5,
+          "(mu^*)^2": 0.1
+      }
+    })"_json);
+    auto cr1 = m1->solve_pure_critical(1.3, 0.3);
+
+    auto m2 = teqp::cppinterface::make_model(R"({
+      "kind": "2CLJF-Quadrupole",
+      "model": {
+          "author": "2CLJF_Lisal",
+          "L^*": 0.5,
+          "(Q^*)^2": 0.1
+      }
+    })"_json);
+    auto cr2 = m2->solve_pure_critical(1.3, 0.3);
+    
 }
