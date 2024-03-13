@@ -142,6 +142,8 @@ const std::type_index advancedPRaEres_i{std::type_index(typeid(advancedPRaEres_t
 const std::type_index RKPRCismondi2005_i{std::type_index(typeid(RKPRCismondi2005_t))};
 const std::type_index GERG2004ResidualModel_i{std::type_index(typeid(GERG2004::GERG2004ResidualModel))};
 const std::type_index GERG2008ResidualModel_i{std::type_index(typeid(GERG2008::GERG2008ResidualModel))};
+using CPA_t = decltype(teqp::CPA::CPAfactory(""));
+const std::type_index CPA_i{std::type_index(typeid(CPA_t))};
 
 /**
  At runtime we can add additional model-specific methods that only apply for a particular model.  We take in a Python-wrapped
@@ -291,6 +293,9 @@ void attach_model_specific_methods(py::object& obj){
     else if (index == twocenterLJF_i){
         setattr("Lstar", get_typed<twocenterLJF_t>(obj).L);
         setattr("mustar_sq", get_typed<twocenterLJF_t>(obj).mu_sq);
+    }
+    else if (index == CPA_i){
+        setattr("get_assoc_calcs", MethodType(py::cpp_function([](py::object& o, double T, double rhomolar, REArrayd& molefrac){ return get_typed<CPA_t>(o).assoc.get_assoc_calcs(T, rhomolar, molefrac); }, "self"_a, "T"_a, "rhomolar"_a, "molefrac"_a), obj));
     }
 };
 

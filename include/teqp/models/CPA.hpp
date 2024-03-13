@@ -206,6 +206,24 @@ private:
 public:
     CPAAssociation(const std::vector<association_classes>& classes, const radial_dist dist, const std::valarray<double> &epsABi, const std::valarray<double> &betaABi, const std::valarray<double> &bi, double R_gas)
         : classes(classes), dist(dist), epsABi(epsABi), betaABi(betaABi), bi(bi), N_sites(get_N_sites(classes)), R_gas(R_gas) {};
+    
+    nlohmann::json get_assoc_calcs(double T, double rhomolar, const Eigen::ArrayXd& mole_fractions) const{
+        
+        auto fromArrayX = [](const Eigen::ArrayXd &x){std::valarray<double>n(x.size()); for (auto i = 0U; i < n.size(); ++i){ n[i] = x[i];} return n;};
+        
+        // Calculate b of the mixture
+        auto b_cubic = (Eigen::Map<const Eigen::ArrayXd>(&bi[0], bi.size())*mole_fractions).sum();
+        
+        // Calculate the fraction of sites not bonded with other active sites
+        auto RT = forceeval(R_gas * T); // R times T
+        auto XA = XA_calc_pure(N_sites[0], classes[0], dist, epsABi[0], betaABi[0], b_cubic, RT, rhomolar, mole_fractions);
+        
+        return {
+            {"b_mix", b_cubic},
+            {"X_A", fromArrayX(XA)},
+            {"note", "X_A is the fraction of non-bonded sites for each site type"}
+        };
+    }
 
     template<typename TType, typename RhoType, typename VecType>
     auto alphar(const TType& T, const RhoType& rhomolar, const VecType& molefrac) const {
@@ -271,6 +289,11 @@ struct AssociationVariantWrapper{
     auto alphar(const TType& T, const RhoType& rhomolar, const MoleFracsType& molefracs) const{
         return std::visit([&](auto& h){ return h.alphar(T, rhomolar, molefracs); }, holder);
     }
+    
+    auto get_assoc_calcs(double T, double rhomolar, const Eigen::ArrayXd& mole_fractions) const {
+        return std::visit([&](auto& h){ return h.get_assoc_calcs(T, rhomolar, mole_fractions); }, holder);
+    }
+        
 };
 
 /// A factory function to return an instantiated CPA instance given

@@ -263,6 +263,50 @@ public:
 //        return forceeval(alpha_r_asso);
     }
     
+    /**
+    \brief Get things from the association calculations for debug purposes
+     */
+    nlohmann::json get_assoc_calcs(double T, double rhomolar, const Eigen::ArrayXd& mole_fractions) const{
+        
+        using Mat = Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>;
+        const Mat Delta = get_Delta(T, rhomolar, mole_fractions);
+        Eigen::ArrayXd XAinit = 0.0*mole_fractions + 1.0;
+        auto XA = successive_substitution(T, rhomolar, mole_fractions, XAinit);
+        
+        auto fromArrayXd = [](const Eigen::ArrayXd &x){std::valarray<double>n(x.size()); for (auto i = 0U; i < n.size(); ++i){ n[i] = x[i];} return n;};
+        auto fromArrayXXd = [](const Eigen::ArrayXXd &x){
+            std::size_t N = x.rows();
+            std::vector<std::vector<double>> n; n.resize(N);
+            for (auto i = 0U; i < N; ++i){
+                n[i].resize(N);
+                for (auto j = 0U; j < N; ++j){
+                    n[i][j] = x(i,j);
+                }
+            }
+            return n;
+        };
+        auto fromArrayXXi = [](const Eigen::ArrayXXi &x){
+            std::size_t N = x.rows();
+            std::vector<std::vector<int>> n; n.resize(N);
+            for (auto i = 0U; i < N; ++i){
+                n[i].resize(N);
+                for (auto j = 0U; j < N; ++j){
+                    n[i][j] = x(i,j);
+                }
+            }
+            return n;
+        };
+        return {
+            {"to_CompSite", mapper.to_CompSite},
+            {"to_siteid", mapper.to_siteid},
+            {"counts", mapper.counts},
+            {"D", fromArrayXXi(D.array())},
+            {"Delta", fromArrayXXd(Delta.array())},
+            {"X_A", fromArrayXd(XA.array())},
+            {"note", "X_A is the fraction of non-bonded sites for each siteid"}
+        };
+    }
+    
 };
 
 }
