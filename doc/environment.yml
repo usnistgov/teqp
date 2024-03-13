@@ -9,6 +9,7 @@ dependencies:
   - cmake
   - pandoc
   - sympy
+  - imagemagick
   - pip:
     - breathe
     - teqp
