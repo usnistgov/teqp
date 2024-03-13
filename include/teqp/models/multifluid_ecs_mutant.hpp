@@ -53,12 +53,12 @@ namespace teqp {
             auto json_tr_coeffs = jj.at("tr_coeffs");
             auto json_dr_coeffs = jj.at("dr_coeffs");
 
-            int rows_tr = json_tr_coeffs.size();
-            int cols_tr = json_tr_coeffs[0].size();
+            auto rows_tr = json_tr_coeffs.size();
+            auto cols_tr = json_tr_coeffs[0].size();
             tr_coeffs.resize(rows_tr, cols_tr);
 
-            int rows_dr = json_dr_coeffs.size();
-            int cols_dr = json_dr_coeffs[0].size();
+            auto rows_dr = json_dr_coeffs.size();
+            auto cols_dr = json_dr_coeffs[0].size();
             dr_coeffs.resize(rows_dr, cols_dr);
 
 
