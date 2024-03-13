@@ -45,6 +45,10 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.19.1 :
+
+  * A mini bugfix to the Kolafa-Nezbeda to fix the docs; seems like a compiler bug?
+
 * 0.19 :
 
   * Features:
