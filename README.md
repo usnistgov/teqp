@@ -84,7 +84,11 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
     * [#102](https://github.com/usnistgov/teqp/pull/102) : Added multifluid_ecs_mutant
     * [#105](https://github.com/usnistgov/teqp/pull/105) : Add ideal-gas part of GERG-2008
 
-
+  * With contributions from:
+  
+    * Sven Pohl (@svenpohl1991)
+    * Felix Fielder (@fefiedler)
+    
 * 0.18 :
 
   * Features:
