@@ -75,7 +75,7 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
     * [#106](https://github.com/usnistgov/teqp/issues/106) : Fix asan in the builder
     * [#107](https://github.com/usnistgov/teqp/issues/107) : Docs for partial_molar_volume
 
-  *  Pull requests merged:
+  * Pull requests merged:
 
     * [#85](https://github.com/usnistgov/teqp/pull/85) : Add ability to load from REFPROP FLD and HMX.BNC files
     * [#90](https://github.com/usnistgov/teqp/pull/90) : LKP model
