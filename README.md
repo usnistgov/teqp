@@ -45,6 +45,46 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.19 :
+
+  * Features:
+
+    * Added the association term for mixtures to CPA
+    * Add ability to load from REFPROP FLD and HMX.BNC files directly
+    * Add composition derivatives to teqp interface
+    * Added the Lee-Kesler-Plöcker EOS
+    * Add ideal-gas part of GERG-2008
+
+  * Issues closed:
+
+    * [#67](https://github.com/usnistgov/teqp/issues/67) : Merge code from REFPROP-interop 
+    * [#72](https://github.com/usnistgov/teqp/issues/72) : Add association terms for CPA for mixtures
+    * [#83](https://github.com/usnistgov/teqp/issues/83) : build_model of C interface has no way to disable verification
+    * [#84](https://github.com/usnistgov/teqp/issues/84) : Add runtime methods to get betaT, gammaT etc. for multifluid and GERG
+    * [#87](https://github.com/usnistgov/teqp/issues/87) : Add example of loading REFPROP models into teqp
+    * [#88](https://github.com/usnistgov/teqp/issues/88) : Check that catch tests are being run from the right folder
+    * [#89](https://github.com/usnistgov/teqp/issues/89) : Add the Lee-Kesler-Plöcker EOS model
+    * [#91](https://github.com/usnistgov/teqp/issues/91) : adding composition derivatives of the reduced Helmholtz energy to tepq
+    * [#93](https://github.com/usnistgov/teqp/issues/93) : Write docs for LKP
+    * [#94](https://github.com/usnistgov/teqp/issues/94) : Complete docs for CPA and association
+    * [#95](https://github.com/usnistgov/teqp/issues/95) : Build docs on action, check they build properly
+    * [#96](https://github.com/usnistgov/teqp/issues/96) : VLLE tracing bugs
+    * [#101](https://github.com/usnistgov/teqp/issues/101) : Add docs for exposed composition derivatives
+    * [#103](https://github.com/usnistgov/teqp/issues/103) : Document the ideal-gas terms
+    * [#104](https://github.com/usnistgov/teqp/issues/104) : Ar and Lambdar need to be specified better
+    * [#106](https://github.com/usnistgov/teqp/issues/106) : Fix asan in the builder
+    * [#107](https://github.com/usnistgov/teqp/issues/107) : Docs for partial_molar_volume
+
+  *  Pull requests merged:
+
+    * [#85](https://github.com/usnistgov/teqp/pull/85) : Add ability to load from REFPROP FLD and HMX.BNC files
+    * [#90](https://github.com/usnistgov/teqp/pull/90) : LKP model
+    * [#92](https://github.com/usnistgov/teqp/pull/92) : Add association for mixtures
+    * [#99](https://github.com/usnistgov/teqp/pull/99) : Add composition derivatives to teqp interface
+    * [#102](https://github.com/usnistgov/teqp/pull/102) : Added multifluid_ecs_mutant
+    * [#105](https://github.com/usnistgov/teqp/pull/105) : Add ideal-gas part of GERG-2008
+
+
 * 0.18 :
 
   * Features:
