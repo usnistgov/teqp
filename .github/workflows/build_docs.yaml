@@ -6,7 +6,7 @@ on:
     branches: [main]
 jobs:
   Matrix-build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     # container: node:latest 
 
     # See: https://github.com/marketplace/actions/setup-miniconda#important
