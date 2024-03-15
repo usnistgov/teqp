@@ -34,7 +34,7 @@ jobs:
         # to supply options, put them in 'env', like:
         env:
           CIBW_ARCHS: auto64
-          CIBW_ARCHS_MACOS: universal2
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
           CIBW_ENVIRONMENT_LINUX: CXXFLAGS='-fconcepts'
           CIBW_BUILD_VERBOSITY_WINDOWS: 2
