@@ -29,14 +29,13 @@ author = 'Ian Bell'
 import teqp
 release = teqp.__version__
 
+# -- Execute all notebooks --------------------------------------------------
 if not on_actions:
     import sphinx_pre_run
     sphinx_pre_run.run()
 
 ### -- Auto-generate API documentation -----------------------------------------
 subprocess.check_output(f'sphinx-apidoc -f -o api {os.path.dirname(teqp.__file__)}', shell=True, cwd=here)
-
-# -- Execute all notebooks --------------------------------------------------
 
 # -- General configuration ---------------------------------------------------
 
@@ -78,4 +77,13 @@ else:
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+
+# -- Options for TeX output -------------------------------------------------
+
 latex_engine = 'xelatex'
+
+latex_elements = {
+    'preamble': open(os.path.abspath(here+'/../macros.tex')).read()
+}
+
+
