@@ -9,4 +9,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "teqp"
-version = "0.0.1"
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = {attr = "teqp.__version__"}
