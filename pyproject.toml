@@ -7,9 +7,10 @@ environment = { CXX="clang++" }
 requires = ["scikit-build-core", "pybind11"]
 build-backend = "scikit_build_core.build"
 
-[project]
-name = "teqp"
-dynamic = ["version"]
-
 [tool.setuptools.dynamic]
 version = {attr = "teqp.__version__"}
+
+[project]
+name = "teqp"
+version = "0.19.1"
+

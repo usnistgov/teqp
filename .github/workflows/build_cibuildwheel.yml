@@ -25,9 +25,9 @@ jobs:
       #   run: choco install -y llvm
       #   if: runner.os == 'Windows'
 
-      - name: Build sdist
-        run: python -m build --no-isolation --sdist --outdir wheelhouse
-        if: runner.os == 'Windows'
+      # - name: Build sdist
+      #   run: python -m build --no-isolation --sdist --outdir wheelhouse
+      #   if: runner.os == 'Windows'
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
