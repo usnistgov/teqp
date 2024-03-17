@@ -39,6 +39,7 @@ jobs:
           CIBW_ENVIRONMENT_LINUX: CXXFLAGS='-fconcepts'
           CIBW_BUILD_VERBOSITY_WINDOWS: 2
           CIBW_SKIP: "*pypy* *pp* *cp36* *cp37* *musl*"
+          CMAKE_BUILD_PARALLEL_LEVEL: 1
         with:
           output-dir: wheelhouse
           config-file: "{package}/pyproject.toml"

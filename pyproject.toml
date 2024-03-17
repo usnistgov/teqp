@@ -19,3 +19,6 @@ regex = '''(VERSION) *= *([""])v?(?P<value>.+?)\2'''
 [tool.scikit-build]
 cmake.verbose = true
 logging.level = "INFO"
+
+[tool.cibuildwheel]
+build-verbosity = 1
