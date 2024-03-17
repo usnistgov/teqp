@@ -180,11 +180,11 @@ if (NOT TEQP_NO_TEQPCPP)
 
   if(MSVC)
     target_compile_options(teqpcpp PRIVATE /W4 ) # or add /WX to turn warnings into errors
-        target_compile_options(teqpcpp PUBLIC /wc5054)
+    target_compile_options(teqpcpp PUBLIC /wd5054)
   else()
     # Turn on all warnings, and then disable selectively
     target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic  -Wno-deprecated-copy -Wno-language-extension-token) # or add -Werror to turn warnings into errors
-        target_compile_options(teqpcpp PUBLIC -Wno-deprecated-anon-enum-enum-conversion)
+    target_compile_options(teqpcpp PUBLIC -Wno-deprecated-anon-enum-enum-conversion)
   endif()
 
   if (TEQP_TESTTEQPCPP)
