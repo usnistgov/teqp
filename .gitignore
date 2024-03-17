@@ -2,7 +2,6 @@
 /bldgcc
 /build
 /dist
-/interface/teqpversion.hpp
 /pypirc
 /boost_teqp
 /teqp.egg-info

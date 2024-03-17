@@ -227,6 +227,7 @@ if (NOT TEQP_NO_PYTHON)
     if (MSVC)
       target_compile_options(teqp PRIVATE "/Zm1000")
     endif()
+    install(TARGETS teqp LIBRARY DESTINATION .)
 endif()
 
 if (NOT TEQP_NO_TESTS)
