@@ -70,6 +70,55 @@ TEST_CASE("Check RPinterop conversion with passing FLDFILE:: prefix for both flu
     CHECK_THROWS(cppinterface::make_model(j));
 }
 
+TEST_CASE("Check RPinterop conversion with passing FLDFILE:: prefix for both fluids, and null departure function", "[RPinterop]") {
+    auto [BIP, DEP] = RPinterop::HMXBNCfile("../doc/source/models/HMX.BNC").make_jsons();
+    BIP[2]["function"] = "";
+    BIP[2]["F"] = 0.0;
+    CAPTURE(BIP.dump(1));
+    nlohmann::json model = {
+        {"components", {
+            "FLDPATH::../doc/source/models/R152A.FLD",
+            "FLDPATH::../doc/source/models/NEWR1234YF.FLD"}},
+        {"BIP", BIP}
+    };
+    nlohmann::json j = {
+        {"kind", "multifluid"},
+        {"model", model}
+    };
+    CHECK_NOTHROW(cppinterface::make_model(j));
+}
+
+TEST_CASE("Check RPinterop conversion with passing FLDFILE:: prefix for both fluids, specified BIP and null departure function", "[RPinterop]") {
+    auto BIP = R"([{
+        "hash1": "63f364b0",
+        "hash2": "40377b40",
+        "CAS1": "754-12-1",
+        "CAS2": "7727-37-9",
+        "Name1": "R152A",
+        "Name2": "R1234YF",
+        "function": "Methane-Nitrogen",
+        "betaT": 0.99809883,
+        "gammaT": 0.979273013,
+        "betaV": 0.998721377,
+        "gammaV": 1.013950311,
+        "F": 0.0
+    }])"_json;
+    auto DEP = R"([{"Name": "Methane-Nitrogen", "type": "none"}])"_json;
+    
+    nlohmann::json model = {
+        {"components", {
+            "FLDPATH::../doc/source/models/R152A.FLD",
+            "FLDPATH::../doc/source/models/NEWR1234YF.FLD"}},
+        {"BIP", BIP},
+        {"departure", DEP}
+    };
+    nlohmann::json j = {
+        {"kind", "multifluid"},
+        {"model", model}
+    };
+    CHECK_NOTHROW(cppinterface::make_model(j));
+}
+
 //TEST_CASE("Check RPinterop conversion with passing FLDFILE:: prefix for one fluid and CAS# for other (to load the aliasmap)", "[RPinterop]") {
 //    auto [BIP, DEP] = RPinterop::HMXBNCfile("../doc/source/models/HMX.BNC").make_jsons();
 //    nlohmann::json model = {

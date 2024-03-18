@@ -486,6 +486,9 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
             std::string funcname = BIP.contains("function") ? BIP["function"] : "";
             nlohmann::json jj;
             if (!funcname.empty()) {
+                if (depcollection.empty()){
+                    throw teqp::InvalidArgument("No departure functions were loaded, unable to select requested function: " + funcname);
+                }
                 jj = get_departure_json(funcname);
                 funcs[i][j] = build_departure_function(jj);
                 funcs[j][i] = build_departure_function(jj);
@@ -938,7 +941,7 @@ inline auto build_multifluid_JSONstr(const std::vector<std::string>& componentJS
  3. Fluid data that is already in the JSON format
  4. Names that all resolve to absolute paths when looking up in the alias map
 */
-inline auto make_pure_components_JSON(const nlohmann::json& components, const std::string& root){
+inline auto make_pure_components_JSON(const nlohmann::json& components, const std::optional<std::string>& root = std::nullopt){
     
     std::vector<nlohmann::json> pureJSON;
     if (!components.is_array()){
@@ -952,10 +955,20 @@ inline auto make_pure_components_JSON(const nlohmann::json& components, const st
             }
             catch(...){
                 // Build the alias map if not already constructed
-                if (!optaliasmap){
-                    optaliasmap = build_alias_map(root);
+                if (!optaliasmap && root){
+                    optaliasmap = build_alias_map(root.value());
+                    if (optaliasmap.value().count(comp) != 1){
+                        std::string scomp = comp.get<std::string>();
+                        std::string errname = (scomp.size() > 200) ? scomp.substr(0, 200)+"..." : scomp;
+                        throw teqp::InvalidArgument("Alias map constructed, but component name is not found in alias map: " + errname);
+                    }
                 }
-                return multilevel_JSON_load(optaliasmap.value().at(comp), root);
+                else{
+                    std::string scomp = comp.get<std::string>();
+                    std::string errname = (scomp.size() > 200) ? scomp.substr(0, 200)+"..." : scomp;
+                    teqp::InvalidArgument("It was not possible to load the alias map because no path was provided. Failure to load:  " + errname);
+                }
+                return multilevel_JSON_load(optaliasmap.value()[comp], root);
             }
         };
         if (comp.is_string()){
@@ -998,7 +1011,7 @@ inline auto build_multifluid_model(const std::vector<std::string>& components, c
 /**
 * \brief Load a model from a JSON data structure
 * 
-* Required fields are: components, BIP, departure
+* Required fields are: components, BIP. The departure field is optional
 * 
 * BIP and departure can be either the data in JSON format, or a path to file with those contents
 * components is an array, which either contains the paths to the JSON data, or the file path
@@ -1026,7 +1039,9 @@ inline auto multifluidfactory(const nlohmann::json& spec) {
         nlohmann::json depcollection = nlohmann::json::array();
         if (components.size() > 1){
             BIPcollection = multilevel_JSON_load(spec.at("BIP"), root + "/dev/mixtures/mixture_binary_pairs.json");
-            depcollection = multilevel_JSON_load(spec.at("departure"), root + "/dev/mixtures/mixture_departure_functions.json");
+            if (spec.contains("departure")){
+                depcollection = multilevel_JSON_load(spec.at("departure"), root + "/dev/mixtures/mixture_departure_functions.json");
+            }
         }
            
         return _build_multifluid_model(make_pure_components_JSON(components, root), BIPcollection, depcollection, flags);

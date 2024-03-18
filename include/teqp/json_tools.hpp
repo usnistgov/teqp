@@ -74,7 +74,7 @@ namespace teqp{
      3. A JSON-encoded string
      
      */
-    inline auto multilevel_JSON_load(const nlohmann::json &j, const std::string& default_path){
+    inline auto multilevel_JSON_load(const nlohmann::json &j, const std::optional<std::string>& default_path){
         
         auto is_valid_path = [](const std::string & s){
             try{
@@ -87,7 +87,12 @@ namespace teqp{
         
         // If not provided (NULL, empty array or empty string), load from the default path provided
         if (j.is_null() || (j.is_array() && j.empty()) || (j.is_string() && j.get<std::string>().empty())){
-            return load_a_JSON_file(default_path);
+            if (default_path){
+                return load_a_JSON_file(default_path.value());
+            }
+            else{
+                throw teqp::InvalidArgument("default path was not provided, and cannot load this thing: " + j.dump(1));
+            }
         }
         else if (j.is_object()){
             // Assume we are already providing the thing
