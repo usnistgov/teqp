@@ -108,7 +108,8 @@ TEST_CASE("Check RPinterop conversion Fij instead of F in BIP", "[RPinterop]") {
 }
 
 TEST_CASE("Check RPinterop departure present but empty", "[RPinterop]") {
-    auto [BIP, DEP] = RPinterop::HMXBNCfile("../doc/source/models/HMX.BNC").make_jsons();
+    nlohmann::json BIP, DEP;
+    std::tie(BIP, DEP) = RPinterop::HMXBNCfile("../doc/source/models/HMX.BNC").make_jsons();
     auto get_w_dep = [&](nlohmann::json dep){
         nlohmann::json model = {
             {"components", {

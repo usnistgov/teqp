@@ -1049,7 +1049,7 @@ inline auto multifluidfactory(const nlohmann::json& spec) {
                     else if (j.is_string()){
                         const std::string& s = j;
                         if (s.find("PATH::") == 0){
-                            load_a_JSON_file(s.substr(6, s.size()-6));
+                            return load_a_JSON_file(s.substr(6));
                         }
                         else{
                             try{
