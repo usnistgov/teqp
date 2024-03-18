@@ -357,7 +357,7 @@ public:
         const std::vector<double>& theta0i = c.theta0;
         using std::abs;
         double Tci = Tc[i];
-        auto out = forceeval(n0i[1] + n0i[1]*Tci/T+ n0i[3]*log(Tci/T));
+        auto out = forceeval(n0i[1] + n0i[2]*Tci/T+ n0i[3]*log(Tci/T));
         if (theta0i[4] != 0) { out += n0i[4]*log(abs(sinh(theta0i[4]*Tci/T))); }
         if (theta0i[6] != 0) { out += n0i[6]*log(abs(sinh(theta0i[6]*Tci/T))); }
         if (theta0i[5] != 0) { out -= n0i[5]*log(abs(cosh(theta0i[5]*Tci/T))); }
