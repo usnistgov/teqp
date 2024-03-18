@@ -162,8 +162,8 @@ namespace teqp {
                         F(j, i) = 0.0;
                     }
                     else {
-                        F(i, j) = el["F"];
-                        F(j, i) = el["F"];
+                        F(i, j) = el.at("F");
+                        F(j, i) = el.at("F");
                     }
                 }
             }
