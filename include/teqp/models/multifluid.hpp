@@ -1039,8 +1039,43 @@ inline auto multifluidfactory(const nlohmann::json& spec) {
         nlohmann::json depcollection = nlohmann::json::array();
         if (components.size() > 1){
             BIPcollection = multilevel_JSON_load(spec.at("BIP"), root + "/dev/mixtures/mixture_binary_pairs.json");
+            
             if (spec.contains("departure")){
-                depcollection = multilevel_JSON_load(spec.at("departure"), root + "/dev/mixtures/mixture_departure_functions.json");
+                std::string msg = "departure was provided but is invalid; options are non-empty array, path to file as string, or JSON data encoded as string";
+                auto load_departure = [&msg](const nlohmann::json& j){
+                    if (j.is_array() && j.size() > 0){
+                        return j;
+                    }
+                    else if (j.is_string()){
+                        const std::string& s = j;
+                        if (s.find("PATH::") == 0){
+                            load_a_JSON_file(s.substr(6, s.size()-6));
+                        }
+                        else{
+                            try{
+                                try{
+                                    return multilevel_JSON_load(s);
+                                }
+                                catch(...){
+                                    return nlohmann::json::parse(s);
+                                }
+                            }
+                            catch(...){
+                                throw teqp::InvalidArgument(msg);
+                            }
+                        }
+                    }
+                    else{
+                        throw teqp::InvalidArgument(msg);
+                    }
+                };
+                
+                if (root.empty()){
+                    depcollection = load_departure(spec.at("departure"));
+                }
+                else{
+                    depcollection = multilevel_JSON_load(spec.at("departure"), root + "/dev/mixtures/mixture_departure_functions.json");
+                }
             }
         }
            

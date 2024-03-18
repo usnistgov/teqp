@@ -74,7 +74,7 @@ namespace teqp{
      3. A JSON-encoded string
      
      */
-    inline auto multilevel_JSON_load(const nlohmann::json &j, const std::optional<std::string>& default_path){
+    inline auto multilevel_JSON_load(const nlohmann::json &j, const std::optional<std::string>& default_path = std::nullopt){
         
         auto is_valid_path = [](const std::string & s){
             try{

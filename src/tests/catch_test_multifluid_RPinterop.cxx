@@ -107,6 +107,28 @@ TEST_CASE("Check RPinterop conversion Fij instead of F in BIP", "[RPinterop]") {
     CHECK_THROWS(cppinterface::make_model(j));
 }
 
+TEST_CASE("Check RPinterop departure present but empty", "[RPinterop]") {
+    auto [BIP, DEP] = RPinterop::HMXBNCfile("../doc/source/models/HMX.BNC").make_jsons();
+    auto get_w_dep = [&](nlohmann::json dep){
+        nlohmann::json model = {
+            {"components", {
+                "FLDPATH::../doc/source/models/R152A.FLD",
+                "FLDPATH::../doc/source/models/NEWR1234YF.FLD"}},
+            {"BIP", BIP},
+            {"departure", dep}
+        };
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", model}
+        };
+        return j;
+    };
+    CHECK_THROWS(cppinterface::make_model(get_w_dep(nullptr)));
+    CHECK_THROWS(cppinterface::make_model(get_w_dep({})));
+    CHECK_NOTHROW(cppinterface::make_model(get_w_dep(DEP)));
+    CHECK_NOTHROW(cppinterface::make_model(get_w_dep(DEP.dump(1))));
+}
+
 TEST_CASE("Check RPinterop conversion with passing FLDFILE:: prefix for both fluids, specified BIP and null departure function", "[RPinterop]") {
     auto BIP = R"([{
         "hash1": "63f364b0",
