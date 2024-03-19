@@ -620,6 +620,7 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         auto rhocomplex = std::complex<double>(rho, 1e-100);
         double alphar = model.alphar(T, rho, molefracs);
         double cv_calc_JmolK = -(TDXDerivatives<decltype(modelig)>::get_Ar20(modelig, T, rho, molefracs) + TDXDerivatives<decltype(model)>::get_Ar20(model, T, rho, molefracs))*R;
+        double Aig20 = TDXDerivatives<decltype(modelig)>::get_Ar20(modelig, T, rho, molefracs);
         
         double pGERG2008_AGA8 = -1, ZZ = -1;
         REQUIRE(ptr.size() == 21);
@@ -631,8 +632,8 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         PressureGERG(T, rho/1e3, x, pGERG2008_AGA8, ZZ);
         double pGERG2008_AGA8_MPa = pGERG2008_AGA8/1000.0;
         
-        double P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A;
-        PropertiesGERG(T, rho/1e3, x, P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A);
+        double P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, wGERG2008_AGA8_ms, G, JT, Kappa, A;
+        PropertiesGERG(T, rho/1e3, x, P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, wGERG2008_AGA8_ms, G, JT, Kappa, A);
         
         double Tr = model.red.get_Tr(molefracs);
         double rhor = model.red.get_rhor(molefracs);
@@ -647,9 +648,26 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         CAPTURE(pGERG2008_AGA8);
         CAPTURE(validation_data[i].GasNo-2);
         CHECK(std::isfinite(alphar));
+        
         double Ar01 = rho*model.alphar(T, rhocomplex, molefracs).imag()/1e-100;
         double p_calc_MPa = rho*R*T*(1.0 + Ar01)/1e6;
+        
+        using tdx = TDXDerivatives<decltype(model)>;
+//        auto Ar01 = tdx::get_Ar01(model, T, rho, z);
+        auto Ar02 = tdx::get_Ar02(model, T, rho, molefracs);
+        auto Ar11 = tdx::get_Ar11(model, T, rho, molefracs);
+        auto Ar20 = tdx::get_Ar20(model, T, rho, molefracs);
+
+        // M*w^2/(R*T) where w is the speed of sound
+        // from the definition w = sqrt(dp/drho|s)
+        double Mw2RT = 1 + 2*Ar01 + Ar02 - POW2(1 + Ar01 - Ar11)/(Aig20 + Ar20);
+        
+        auto MWvals = (Eigen::ArrayXd(21) << 16.04246, 28.0134, 44.0095, 30.06904, 44.09562, 58.1222, 58.1222, 72.14878, 72.14878, 86.17536, 100.20194, 114.22852, 128.2551, 142.28168, 2.01588, 31.9988, 28.0101, 18.01528, 34.08088, 4.002602, 39.948).finished();
+        double M = (MWvals*molefracs).sum()/1000.0;
+        double w_ms = sqrt(Mw2RT*R*T/M);
+        
         CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-12));
         CHECK_THAT(cvGERG2008_AGA8_JmolK, WithinRelMatcher(cv_calc_JmolK, 1e-10));
+        CHECK_THAT(wGERG2008_AGA8_ms, WithinRelMatcher(w_ms, 1e-10));
     }
 }
