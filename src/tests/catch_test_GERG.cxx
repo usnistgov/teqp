@@ -501,6 +501,8 @@ std::vector<G08El> validation_data = {
     { 199,357.24,11.0,9.77272264849,43.6891149152,673.95827868,247.228832437 },
     { 200,331.57,11.0,9.01349433702,47.2424214857,513.285937824,230.179140482 },
 };
+// In the component order of the AGA8 test code
+const std::vector<std::string> components = {"methane","nitrogen","carbondioxide","ethane","propane","isobutane","n-butane","isopentane","n-pentane","n-hexane","n-heptane","n-octane","n-nonane","n-decane","hydrogen","oxygen","carbonmonoxide","water","hydrogensulfide","helium","argon"};
 
 TEST_CASE("Validate all GERG2008 pures reference states", "[GERG20081]"){
     
