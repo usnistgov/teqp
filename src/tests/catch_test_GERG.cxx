@@ -502,6 +502,41 @@ std::vector<G08El> validation_data = {
     { 200,331.57,11.0,9.01349433702,47.2424214857,513.285937824,230.179140482 },
 };
 
+TEST_CASE("Validate all GERG2008 pures reference states", "[GERG20081]"){
+    
+    // In the component order of the AGA8 test code
+    std::vector<std::string> components = {"methane","nitrogen","carbondioxide","ethane","propane","isobutane","n-butane","isopentane","n-pentane","n-hexane","n-heptane","n-octane","n-nonane","n-decane","hydrogen","oxygen","carbonmonoxide","water","hydrogensulfide","helium","argon"};
+    
+    SetupGERG();
+    
+    auto modelig = GERG2008::GERG2008IdealGasModel(components);
+    
+    double T0_K = 298.15, p0_Pa = 101325, R = 8.314472, rho0_molm3 = p0_Pa/(T0_K*R);
+    
+    for (auto i = 0U; i < components.size(); ++i){
+        Eigen::ArrayXd Eigmolefracs = Eigen::ArrayXd::Zero(21); Eigmolefracs(i) = 1.0;
+        auto Aig00 = modelig.alphar(T0_K, rho0_molm3, Eigmolefracs);
+        auto Aig10 = TDXDerivatives<decltype(modelig)>::get_Ar10(modelig, T0_K, rho0_molm3, Eigmolefracs);
+        auto Aig20 = TDXDerivatives<decltype(modelig)>::get_Ar20(modelig, T0_K, rho0_molm3, Eigmolefracs);
+        auto h0 = R*T0_K*(1.0 + Aig10);
+        auto s0 = R*(Aig10 - Aig00);
+        CAPTURE(components[i]);
+        CHECK_THAT(h0, WithinAbsMatcher(0, 1e-6));
+        CHECK_THAT(s0, WithinAbsMatcher(0, 1e-6));
+        
+        double alphaigGERG[3];
+        std::vector<double> molefracsGERG(Eigmolefracs.size()+1); molefracsGERG[i+1] = 1.0;
+        Alpha0GERG(T0_K, rho0_molm3/1e3, molefracsGERG, alphaigGERG);
+        
+        CHECK_THAT(alphaigGERG[1], WithinAbsMatcher(Aig10, 1e-6));
+        CHECK_THAT(alphaigGERG[0], WithinAbsMatcher(Aig00, 1e-6));
+        auto h0_AGA = R*T0_K*(1.0 + alphaigGERG[1]);
+        auto s0_AGA = R*(alphaigGERG[1] - alphaigGERG[0]);
+        CHECK_THAT(h0_AGA, WithinAbsMatcher(0, 1e-4));
+        CHECK_THAT(s0_AGA, WithinAbsMatcher(0, 1e-4));
+    }
+}
+
 TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
     
     // In the component order of the AGA8 test code
@@ -520,7 +555,7 @@ TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
             
             double T_K = 300;
             double rho_molm3 = 1000;
-            std::vector<double> molefracs(21);
+            std::vector<double> molefracs(21, 0.0);
             molefracs[i] = 0.5;
             molefracs[j] = 0.5;
             
@@ -543,6 +578,9 @@ TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
             
             Eigen::ArrayXd Eigmolefracs = Eigen::Map<const Eigen::ArrayXd>(&molefracs[0], molefracs.size());
             double cv_calc_JmolK = -(TDXDerivatives<decltype(modelig)>::get_Ar20(modelig, T_K, rho_molm3, Eigmolefracs) + TDXDerivatives<decltype(model)>::get_Ar20(model, T_K, rho_molm3, Eigmolefracs))*R;
+            double alphaig00 = TDXDerivatives<decltype(modelig)>::get_Ar00(modelig, T_K, rho_molm3, Eigmolefracs);//modelig.alphar(T_K, rho_molm3, molefracs);
+            std::complex<double> compT{T_K, 1e-100};
+            double alphaig10 = -T_K*modelig.alphar(compT, rho_molm3, Eigmolefracs).imag()/1e-100;//modelig.alphar(T_K, rho_molm3, molefracs);
             
             double rho_moldm3 = rho_molm3/1000;
             double pGERG2008_AGA8 = -1, ZZ = -1;
@@ -552,10 +590,15 @@ TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
             double pGERG2008_AGA8_MPa = pGERG2008_AGA8/1000.0;
             double P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A;
             PropertiesGERG(T_K, rho_moldm3, molefracsGERG, P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A);
+            double alphaigGERG[3];
+            Alpha0GERG(T_K, rho_moldm3, molefracsGERG, alphaigGERG);
             
             CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-9));
             CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(pbin_MPa, 1e-9));
             
+//            CHECK_THAT(alphaigGERG[1], WithinRelMatcher(alphaig10, 1e-16));
+            CAPTURE(cv_calc_JmolK);
+            CAPTURE(cvGERG2008_AGA8_JmolK);
             CHECK_THAT(cvGERG2008_AGA8_JmolK, WithinRelMatcher(cv_calc_JmolK, 1e-9));
         }
     }
@@ -568,6 +611,7 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
     
     CHECK_NOTHROW(GERG2008::GERG2008ResidualModel(components));
     auto model = GERG2008::GERG2008ResidualModel(components);
+    auto modelig = GERG2008::GERG2008IdealGasModel(components);
     
     SetupGERG();
     for (auto i = 0U; i < validation_data.size(); ++i){
@@ -582,6 +626,7 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         
         auto rhocomplex = std::complex<double>(rho, 1e-100);
         double alphar = model.alphar(T, rho, molefracs);
+        double cv_calc_JmolK = -(TDXDerivatives<decltype(modelig)>::get_Ar20(modelig, T, rho, molefracs) + TDXDerivatives<decltype(model)>::get_Ar20(model, T, rho, molefracs))*R;
         
         double pGERG2008_AGA8 = -1, ZZ = -1;
         REQUIRE(ptr.size() == 21);
@@ -592,6 +637,9 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         }
         PressureGERG(T, rho/1e3, x, pGERG2008_AGA8, ZZ);
         double pGERG2008_AGA8_MPa = pGERG2008_AGA8/1000.0;
+        
+        double P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A;
+        PropertiesGERG(T, rho/1e3, x, P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A);
         
         double Tr = model.red.get_Tr(molefracs);
         double rhor = model.red.get_rhor(molefracs);
@@ -608,6 +656,7 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         CHECK(std::isfinite(alphar));
         double Ar01 = rho*model.alphar(T, rhocomplex, molefracs).imag()/1e-100;
         double p_calc_MPa = rho*R*T*(1.0 + Ar01)/1e6;
-        CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-6));
+        CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-12));
+        CHECK_THAT(cvGERG2008_AGA8_JmolK, WithinRelMatcher(cv_calc_JmolK, 1e-10));
     }
 }

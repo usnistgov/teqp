@@ -36,6 +36,42 @@ struct DepartureCoeffs{
 struct AlphaigCoeffs{
     std::vector<double> n0, theta0;
     std::set<std::size_t> sizes(){ return {n0.size(), theta0.size()}; }
+    
+    /**
+     Solve the 2x2 system of equations to yield the integration constants matching h0(298.15 K, 101.325 kPa) = 0 and s0(298.15 K, 101.325 kPa) = 0
+     h = 0, so h/(R*T) = 0 and Aig10 = -1
+     \param T Reference temperature, K
+     \param Tci Critical temperature of the component, K
+     \param rho Molar density at the reference state, mol/m^3
+     \param rhoci Molar density at teh critical point, mol/m^3
+     \param Rstar_R ratio of \f$R^* / R \f$
+     */
+    auto recalc_integration_constants(double T, double Tci, double rho, double rhoci, double Rstar_R){
+        
+        // terms multiplying first two multiplicative constants, then the constant term that does not depend on the integration constants
+        std::vector<double> Aig00 = {Rstar_R, Rstar_R*Tci/T, log(rho/rhoci) + Rstar_R*(n0[3]*log(Tci/T)
+            + ((n0[4] != 0) ? n0[4]*log(abs(sinh(theta0[4]*Tci/T))) : 0)
+            + ((n0[6] != 0) ? n0[6]*log(abs(sinh(theta0[6]*Tci/T))) : 0)
+            - ((n0[5] != 0) ? n0[5]*log(abs(cosh(theta0[5]*Tci/T))) : 0)
+            - ((n0[7] != 0) ? n0[7]*log(abs(cosh(theta0[7]*Tci/T))) : 0))
+        };
+        std::vector<double> Aig10 = {0, Rstar_R*Tci/T, Rstar_R*(n0[3]
+            + ((n0[4] != 0) ? n0[4]*theta0[4]*Tci/T/tanh(theta0[4]*Tci/T) : 0)
+            + ((n0[6] != 0) ? n0[6]*theta0[6]*Tci/T/tanh(theta0[6]*Tci/T) : 0)
+            - n0[5]*theta0[5]*Tci/T*tanh(theta0[5]*Tci/T) - n0[7]*theta0[7]*Tci/T*tanh(theta0[7]*Tci/T))};
+        
+//        double n2 = (-1-Aig10[2])/Aig10[1];
+        
+        Eigen::MatrixXd A(2,2), b(2,1);
+        b(0) = -1-Aig10[2]; // h0/(RT) = 1 + Aig10, so Aig = -1 if h0 = 0, move constants to other side
+        A(0,0) = Aig10[0];
+        A(0,1) = Aig10[1];
+        b(1) = -Aig10[2] + Aig00[2]; // s0/(RT) = Aig10 - Aig00, move constants to the other side
+        A(1,0) = Aig10[0] - Aig00[0];
+        A(1,1) = Aig10[1] - Aig00[1];
+        Eigen::ArrayXd n12 = A.colPivHouseholderQr().solve(b);
+        return n12;
+    }
 };
 
 
@@ -311,6 +347,12 @@ public:
     using GetAlphaigCoeffs = std::function<AlphaigCoeffs(const std::string&)>;
     GetAlphaigCoeffs _get_alphaig_coeffs;
     
+    const double Rstar = 8.314510; // J/mol/K
+    const double R = 8.314472; // J/mol/K
+    
+    const std::vector<double> Tc, rhoc;
+    const std::vector<AlphaigCoeffs> coeffs;
+    
 private:
     auto get_Tc(const GetPureInfo& getter, const std::vector<std::string>& names) const{
         std::vector<double> Tc_;
@@ -330,17 +372,18 @@ private:
         std::vector<AlphaigCoeffs> coeffs_;
         for (auto i = 0U; i < names.size(); ++i){
             coeffs_.emplace_back(getter(names[i]));
+            auto& coeff = coeffs_.back();
+            
+            // And set the integration constants to yield precisely h=s=0 at 298.15 K and 101325 Pa
+            double T0 = 298.15/* K */, p0 = 101325 /* Pa */, rho0 = p0/(R*T0);
+            auto n12 = coeff.recalc_integration_constants(T0, Tc[i], rho0, rhoc[i], Rstar/R);
+            coeff.n0[1] = n12[0];
+            coeff.n0[2] = n12[1];
         }
         return coeffs_;
     }
     
 public:
-    
-    const double Rstar = 8.314510; // J/mol/K
-    const double R = 8.314472; // J/mol/K
-    
-    const std::vector<double> Tc, rhoc;
-    const std::vector<AlphaigCoeffs> coeffs;
     
     GERG200XAlphaig(const std::vector<std::string> &names, const GetPureInfo &get_pure_info, const GetAlphaigCoeffs & get_alphaig_coeffs) : Tc(get_Tc(get_pure_info, names)), rhoc(get_rhoc(get_pure_info, names)), coeffs(get_coeffs(get_alphaig_coeffs,names)) {
         if (coeffs.size() != Tc.size()){
