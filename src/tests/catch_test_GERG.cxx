@@ -504,9 +504,6 @@ std::vector<G08El> validation_data = {
 
 TEST_CASE("Validate all GERG2008 pures reference states", "[GERG20081]"){
     
-    // In the component order of the AGA8 test code
-    std::vector<std::string> components = {"methane","nitrogen","carbondioxide","ethane","propane","isobutane","n-butane","isopentane","n-pentane","n-hexane","n-heptane","n-octane","n-nonane","n-decane","hydrogen","oxygen","carbonmonoxide","water","hydrogensulfide","helium","argon"};
-    
     SetupGERG();
     
     auto modelig = GERG2008::GERG2008IdealGasModel(components);
@@ -538,9 +535,6 @@ TEST_CASE("Validate all GERG2008 pures reference states", "[GERG20081]"){
 }
 
 TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
-    
-    // In the component order of the AGA8 test code
-    static std::vector<std::string> components = {"methane","nitrogen","carbondioxide","ethane","propane","isobutane","n-butane","isopentane","n-pentane","n-hexane","n-heptane","n-octane","n-nonane","n-decane","hydrogen","oxygen","carbonmonoxide","water","hydrogensulfide","helium","argon"};
     
     SetupGERG();
     
@@ -605,9 +599,6 @@ TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
 }
 
 TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
-    
-    // In the component order of the AGA8 test code
-    static std::vector<std::string> components = {"methane","nitrogen","carbondioxide","ethane","propane","isobutane","n-butane","isopentane","n-pentane","n-hexane","n-heptane","n-octane","n-nonane","n-decane","hydrogen","oxygen","carbonmonoxide","water","hydrogensulfide","helium","argon"};
     
     CHECK_NOTHROW(GERG2008::GERG2008ResidualModel(components));
     auto model = GERG2008::GERG2008ResidualModel(components);
