@@ -130,6 +130,7 @@ target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-interop/include")
+target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/stbrumme-hashing/include")
 
 if (NOT TEQP_NO_TESTS)
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
