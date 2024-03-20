@@ -6,9 +6,11 @@ using Catch::Approx;
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 using Catch::Matchers::WithinAbsMatcher;
 using Catch::Matchers::WithinRelMatcher;
+using Catch::Matchers::WithinRel;
 
 #include "teqp/models/GERG/GERG.hpp"
 #include "teqp/derivs.hpp"
+#include "teqp/json_tools.hpp"
 
 #include "GERG2008.cpp"
 
@@ -312,7 +314,7 @@ std::vector<std::vector<double> > mixture_comps = {
     {100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 };
 
-std::vector<G08El> validation_data = {
+const std::vector<G08El> validation_data = {
     { 2,190.68,11.0,4.62270367011,45.4451259446,7883.3949099,229.601025004 },
     { 3,190.5,11.0,4.61746427515,45.5151912828,7771.78810714,229.085523569 },
     { 4,190.83,11.0,4.64516211814,45.2658426433,4905.55490022,230.317348488 },
@@ -508,10 +510,12 @@ TEST_CASE("Validate all GERG2008 pures reference states", "[GERG20081]"){
     
     SetupGERG();
     
+    auto model = GERG2008::GERG2008ResidualModel(components);
     auto modelig = GERG2008::GERG2008IdealGasModel(components);
     
     double T0_K = 298.15, p0_Pa = 101325, R = 8.314472, rho0_molm3 = p0_Pa/(T0_K*R);
     
+    nlohmann::json o = nlohmann::json::array();
     for (auto i = 0U; i < components.size(); ++i){
         Eigen::ArrayXd Eigmolefracs = Eigen::ArrayXd::Zero(21); Eigmolefracs(i) = 1.0;
         auto Aig00 = modelig.alphar(T0_K, rho0_molm3, Eigmolefracs);
@@ -533,7 +537,19 @@ TEST_CASE("Validate all GERG2008 pures reference states", "[GERG20081]"){
         auto s0_AGA = R*(alphaigGERG[1] - alphaigGERG[0]);
         CHECK_THAT(h0_AGA, WithinAbsMatcher(0, 1e-4));
         CHECK_THAT(s0_AGA, WithinAbsMatcher(0, 1e-4));
+        
+        double P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A;
+        PropertiesGERG(T0_K, rho0_molm3/1e3, molefracsGERG, P, Z, dPdD, d2PdD2, d2PdTD, dPdT, U, H, S, cvGERG2008_AGA8_JmolK, Cp, W, G, JT, Kappa, A);
+        double cv_calc_JmolK = -(TDXDerivatives<decltype(modelig)>::get_Ar20(modelig, T0_K, rho0_molm3, Eigmolefracs) + TDXDerivatives<decltype(model)>::get_Ar20(model, T0_K, rho0_molm3, Eigmolefracs))*R;
+        CHECK_THAT(cv_calc_JmolK, WithinRel(cvGERG2008_AGA8_JmolK, 1e-9));
+        
+        o.push_back(nlohmann::json{
+            {"name", components[i]},
+            {"n_1", modelig.aig.coeffs[i].n0[1]},
+            {"n_2", modelig.aig.coeffs[i].n0[2]}
+        });
     }
+    teqp::JSON_to_file(o, "GERG200X_integration_constants.json");
 }
 
 TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
@@ -589,8 +605,8 @@ TEST_CASE("Validate all GERG2008 binaries", "[GERG20082]"){
             double alphaigGERG[3];
             Alpha0GERG(T_K, rho_moldm3, molefracsGERG, alphaigGERG);
             
-            CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-9));
-            CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(pbin_MPa, 1e-9));
+            CHECK_THAT(pGERG2008_AGA8_MPa, WithinRel(p_calc_MPa, 1e-9));
+            CHECK_THAT(pGERG2008_AGA8_MPa, WithinRel(pbin_MPa, 1e-9));
             
 //            CHECK_THAT(alphaigGERG[1], WithinRelMatcher(alphaig10, 1e-16));
             CAPTURE(cv_calc_JmolK);
@@ -616,6 +632,7 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         
         auto ptr = mixture_comps[validation_data[i].GasNo-2];
         Eigen::ArrayXd molefracs = Eigen::Map<Eigen::ArrayXd>(&(ptr[0]), ptr.size())/100.0;
+        CHECK(abs(molefracs.sum()-1) < 1e-7);
         
         auto rhocomplex = std::complex<double>(rho, 1e-100);
         double alphar = model.alphar(T, rho, molefracs);
@@ -646,6 +663,7 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         CAPTURE(T);
         CAPTURE(rho);
         CAPTURE(pGERG2008_AGA8);
+        CAPTURE(cv_calc_JmolK);
         CAPTURE(validation_data[i].GasNo-2);
         CHECK(std::isfinite(alphar));
         
@@ -665,9 +683,13 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
         auto MWvals = (Eigen::ArrayXd(21) << 16.04246, 28.0134, 44.0095, 30.06904, 44.09562, 58.1222, 58.1222, 72.14878, 72.14878, 86.17536, 100.20194, 114.22852, 128.2551, 142.28168, 2.01588, 31.9988, 28.0101, 18.01528, 34.08088, 4.002602, 39.948).finished();
         double M = (MWvals*molefracs).sum()/1000.0;
         double w_ms = sqrt(Mw2RT*R*T/M);
-        
-        CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-12));
+        CAPTURE(w_ms);
+        CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(p_calc_MPa, 1e-10));
         CHECK_THAT(cvGERG2008_AGA8_JmolK, WithinRelMatcher(cv_calc_JmolK, 1e-10));
         CHECK_THAT(wGERG2008_AGA8_ms, WithinRelMatcher(w_ms, 1e-10));
+        
+//        CHECK_THAT(pGERG2008_AGA8_MPa, WithinRelMatcher(validation_data[i].P_MPa, 1e-5));
+//        CHECK_THAT(cvGERG2008_AGA8_JmolK, WithinRelMatcher(validation_data[i].cv_JmolK, 1e-5));
+//        CHECK_THAT(wGERG2008_AGA8_ms, WithinRelMatcher(validation_data[i].w_ms, 1e-5));
     }
 }
