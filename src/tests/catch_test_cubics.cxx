@@ -66,6 +66,7 @@ TEST_CASE("Check calling superancillary curves", "[cubic][superanc]")
     std::valarray<double> Tc_K = { 150.687 };
     std::valarray<double> pc_Pa = { 4863000.0 };
     std::valarray<double> acentric = { 0.0 }; 
+    std::valarray<double> z = {1.0};
     SECTION("PR") {
         auto model = canonical_PR(Tc_K, pc_Pa, acentric);
         auto [rhoL, rhoV] = model.superanc_rhoLV(130.0);
@@ -83,6 +84,14 @@ TEST_CASE("Check calling superancillary curves", "[cubic][superanc]")
         auto model = canonical_SRK(Tc_K, pc_Pa, acentric);
         auto [rhoL, rhoV] = model.superanc_rhoLV(130.0);
         CHECK(rhoL > rhoV);
+    }
+    SECTION("SRK with custom R") {
+        auto model = canonical_SRK(Tc_K, pc_Pa, acentric, {}, 8.4);
+        CHECK(model.R(z) == 8.4);
+    }
+    SECTION("PR with custom R") {
+        auto model = canonical_PR(Tc_K, pc_Pa, acentric, {}, 8.4);
+        CHECK(model.R(z) == 8.4);
     }
 }
 
@@ -627,6 +636,31 @@ TEST_CASE("QCPR", "[QCPR]"){
     double T = 50.0;
     auto z = (Eigen::ArrayXd(2) << 0.3, 0.7).finished();
     CHECK(std::isfinite(model->get_B12vir(T, z)));
+    
+    SECTION("funny R"){
+        /// Naming convention of variables follows the paper, not teqp
+        auto j = R"(
+        {
+            "kind": "QCPRAasen",
+            "model": {
+                "Ls": [156.21, 0.40453],
+                "Ms": [-0.0062072, 0.95861],
+                "Ns": [5.047, 0.8396],
+                "As": [3.0696, 0.4673],
+                "Bs": [12.682, 2.4634],
+                "cs / m^3/mol": [-3.8139, -2.4665],
+                "Tcrit / K": [33.19, 44.492],
+                "pcrit / Pa": [12.964e5, 26.79],
+                "kmat": [[0.0, 0.18], [0.18, 0.0]],
+                "lmat": [[0.0, 0.0], [0.0, 0.0]],
+                "R / J/mol/K": 8.4
+            }
+        }
+        )"_json;
+        auto model = make_model(j);
+        auto z = (Eigen::ArrayXd(2) << 0.3, 0.7).finished();
+        CHECK(model->get_R(z) == 8.4);
+    }
 }
 
 TEST_CASE("Advanced cubic EOS", "[AdvancedPR]"){
@@ -690,6 +724,21 @@ TEST_CASE("Advanced cubic EOS w/ make_model", "[AdvancedPR]"){
         }
     })"_json;
     auto model = make_model(j);
+    SECTION("funny R"){
+        auto j = R"({
+            "kind": "advancedPRaEres",
+            "model": {
+               "Tcrit / K": [304.21, 126.19],
+               "pcrit / Pa": [7.383e6, 3395800.0],
+               "alphas": [{"type": "PR78", "acentric": 0.22394}, {"type": "PR78", "acentric": 0.0372}],
+               "aresmodel": {"type": "Wilson", "m": [[0.0, -3.4768], [3.5332, 0.0]], "n": [[0.0, 825], [-585, 0.0]]},
+               "options": {"s": 2.0, "brule": "Quadratic", "CEoS": -0.52398, "R / J/mol/K": 8.4}
+            }
+        })"_json;
+        auto z = (Eigen::ArrayXd(1) << 0.3, 0.7).finished();
+        auto model = make_model(j);
+        CHECK(model->get_R(z) == 8.4);
+    }
 }
 
 TEST_CASE("RK-PR EOS w/ make_model", "[RKPR]"){
@@ -705,6 +754,25 @@ TEST_CASE("RK-PR EOS w/ make_model", "[RKPR]"){
         }
     })"_json;
     auto model = make_model(j);
+    
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    REQUIRE(model->get_R(z) == 8.31446261815324);
+    CHECK(std::isfinite(model->get_Ar00(300, 1, z)));
     CHECK(std::isfinite(model->get_B2vir(300, z)));
+    SECTION("funny R"){
+        auto j = R"({
+            "kind": "RKPRCismondi2005",
+            "model": {
+               "delta_1": [1.6201],
+               "Tcrit / K": [369.89],
+               "pcrit / Pa": [4251200.0],
+               "k": [1.97064],
+               "kmat": [[0.0]],
+               "lmat": [[0.0]],
+               "R / J/mol/K": 8.4
+            }
+        })"_json;
+        auto model = make_model(j);
+        CHECK(model->get_R(z) == 8.4);
+    }
 }

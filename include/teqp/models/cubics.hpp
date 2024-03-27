@@ -142,6 +142,7 @@ protected:
     Eigen::ArrayXXd kmat;
     
     nlohmann::json meta;
+    const double m_R_JmolK;
     
     template<typename TType, typename IndexType>
     auto get_ai(TType /*T*/, IndexType i) const { return ai[i]; }
@@ -163,14 +164,14 @@ protected:
     };
     
 public:
-    GenericCubic(NumType Delta1, NumType Delta2, NumType OmegaA, NumType OmegaB, int superanc_index, const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const Eigen::ArrayXXd& kmat)
-    : Delta1(Delta1), Delta2(Delta2), OmegaA(OmegaA), OmegaB(OmegaB), superanc_index(superanc_index), alphas(alphas), kmat(kmat)
+    GenericCubic(NumType Delta1, NumType Delta2, NumType OmegaA, NumType OmegaB, int superanc_index, const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const Eigen::ArrayXXd& kmat, const double R_JmolK)
+    : Delta1(Delta1), Delta2(Delta2), OmegaA(OmegaA), OmegaB(OmegaB), superanc_index(superanc_index), alphas(alphas), kmat(kmat), m_R_JmolK(R_JmolK)
     {
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
         for (auto i = 0U; i < Tc_K.size(); ++i) {
-            ai[i] = OmegaA * pow2(Ru * Tc_K[i]) / pc_Pa[i];
-            bi[i] = OmegaB * Ru * Tc_K[i] / pc_Pa[i];
+            ai[i] = OmegaA * pow2(m_R_JmolK * Tc_K[i]) / pc_Pa[i];
+            bi[i] = OmegaB * m_R_JmolK * Tc_K[i] / pc_Pa[i];
         }
         check_kmat(ai.size());
     };
@@ -208,11 +209,9 @@ public:
                                );
     }
     
-    const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
-    
     template<class VecType>
     auto R(const VecType& /*molefrac*/) const {
-        return Ru;
+        return m_R_JmolK;
     }
     
     template<typename TType, typename CompType>
@@ -251,13 +250,13 @@ public:
         auto b = get_b(T, molefrac);
         auto Psiminus = -log(1.0 - b * rho);
         auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
-        auto val = Psiminus - get_a(T, molefrac) / (Ru * T) * Psiplus;
+        auto val = Psiminus - get_a(T, molefrac) / (m_R_JmolK * T) * Psiplus;
         return forceeval(val);
     }
 };
 
 template <typename TCType, typename PCType, typename AcentricType>
-auto canonical_SRK(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) {
+auto canonical_SRK(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt, const std::optional<double> R_JmolK = std::nullopt) {
     double Delta1 = 1;
     double Delta2 = 0;
     AcentricType m = 0.48 + 1.574 * acentric - 0.176 * acentric * acentric;
@@ -276,10 +275,11 @@ auto canonical_SRK(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::
         {"Delta2", Delta2},
         {"OmegaA", OmegaA},
         {"OmegaB", OmegaB},
-        {"kind", "Soave-Redlich-Kwong"}
+        {"kind", "Soave-Redlich-Kwong"},
+        {"R / J/mol/K", R_JmolK.value_or(constants::R_CODATA2017)}
     };
     const std::size_t N = m.size();
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::SRK_CODE, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)));
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::SRK_CODE, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)), R_JmolK.value_or(constants::R_CODATA2017));
     cub.set_meta(meta);
     return cub;
 }
@@ -295,7 +295,7 @@ inline auto make_canonicalSRK(const nlohmann::json& spec){
 }
 
 template <typename TCType, typename PCType, typename AcentricType>
-auto canonical_PR(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt) {
+auto canonical_PR(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt, const std::optional<double> R_JmolK = std::nullopt) {
     double Delta1 = 1+sqrt(2.0);
     double Delta2 = 1-sqrt(2.0);
     AcentricType m = acentric*0.0;
@@ -319,11 +319,12 @@ auto canonical_PR(TCType Tc_K, PCType pc_Pa, AcentricType acentric, const std::o
         {"Delta2", Delta2},
         {"OmegaA", OmegaA},
         {"OmegaB", OmegaB},
-        {"kind", "Peng-Robinson"}
+        {"kind", "Peng-Robinson"},
+        {"R / J/mol/K", R_JmolK.value_or(constants::R_CODATA2017)}
     };
     
     const std::size_t N = m.size();
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::PR_CODE, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)));
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, CubicSuperAncillary::PR_CODE, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)), R_JmolK.value_or(constants::R_CODATA2017));
     cub.set_meta(meta);
     return cub;
 }
@@ -349,6 +350,10 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
     std::optional<Eigen::ArrayXXd> kmat;
     if (spec.contains("kmat")){
         kmat = build_square_matrix(spec.at("kmat"));
+    }
+    std::optional<double> R_JmolK;
+    if (spec.contains("R / J/mol/K")){
+        R_JmolK = spec.at("R / J/mol/K");
     }
     
     int superanc_code = CubicSuperAncillary::UNKNOWN_CODE;
@@ -419,13 +424,14 @@ inline auto make_generalizedcubic(const nlohmann::json& spec){
         {"Delta2", Delta2},
         {"OmegaA", OmegaA},
         {"OmegaB", OmegaB},
-        {"kind", kind}
+        {"kind", kind},
+        {"R / J/mol/K", R_JmolK.value_or(constants::R_CODATA2017)}
     };
     if (spec.contains("alpha")){
         meta["alpha"] = spec.at("alpha");
     }
     
-    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, superanc_code, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)));
+    auto cub = GenericCubic(Delta1, Delta2, OmegaA, OmegaB, superanc_code, Tc_K, pc_Pa, std::move(alphas), kmat.value_or(Eigen::ArrayXXd::Zero(N,N)), R_JmolK.value_or(constants::R_CODATA2017));
     cub.set_meta(meta);
     return cub;
 }
@@ -442,12 +448,16 @@ struct AdvancedPRaEOptions{
     AdvancedPRaEMixingRules brule = AdvancedPRaEMixingRules::kQuadratic;
     double s = 2.0;
     double CEoS = -sqrt(2.0)/2.0*log(1.0 + sqrt(2.0));
+    double R_JmolK = constants::R_CODATA2017;
 };
 
 inline void from_json(const json& j, AdvancedPRaEOptions& o) {
     j.at("brule").get_to(o.brule);
     j.at("s").get_to(o.s);
     j.at("CEoS").get_to(o.CEoS);
+    if (j.contains("R / J/mol/K")){
+        o.R_JmolK = j.at("R / J/mol/K");
+    }
 }
 
 /**
@@ -487,7 +497,6 @@ template<typename NumType>
 class WilsonResidualHelmholtzOverRT {
     
 public:
-    const double R = 8.31446261815324;
     const std::vector<double> b;
     const Eigen::ArrayXXd m, n;
     WilsonResidualHelmholtzOverRT(const std::vector<double>& b, const Eigen::ArrayXXd& m, const Eigen::ArrayXXd& n) : b(b), m(m), n(n) {};
@@ -580,6 +589,7 @@ protected:
     const AdvancedPRaEMixingRules brule;
     const double s;
     const double CEoS;
+    const double R_JmolK;
     
     nlohmann::json meta;
     
@@ -607,13 +617,13 @@ protected:
     
 public:
     AdvancedPRaEres(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const ResidualHelmholtzOverRTVariant& ares, const Eigen::ArrayXXd& lmat, const AdvancedPRaEOptions& options = {})
-    : Tc_K(Tc_K), pc_Pa(pc_Pa), alphas(alphas), ares(ares), lmat(lmat), brule(options.brule), s(options.s), CEoS(options.CEoS)
+    : Tc_K(Tc_K), pc_Pa(pc_Pa), alphas(alphas), ares(ares), lmat(lmat), brule(options.brule), s(options.s), CEoS(options.CEoS), R_JmolK(options.R_JmolK)
     {
         ai.resize(Tc_K.size());
         bi.resize(Tc_K.size());
         for (auto i = 0U; i < Tc_K.size(); ++i) {
-            ai[i] = OmegaA * pow2(Ru * Tc_K[i]) / pc_Pa[i];
-            bi[i] = OmegaB * Ru * Tc_K[i] / pc_Pa[i];
+            ai[i] = OmegaA * pow2(R_JmolK * Tc_K[i]) / pc_Pa[i];
+            bi[i] = OmegaB * R_JmolK * Tc_K[i] / pc_Pa[i];
         }
         check_lmat(ai.size());
     };
@@ -659,11 +669,9 @@ public:
         );
     }
     
-    const NumType Ru = get_R_gas<double>(); /// Universal gas constant, exact number
-    
     template<class VecType>
     auto R(const VecType& /*molefrac*/) const {
-        return Ru;
+        return R_JmolK;
     }
     
     template<typename TType, typename CompType>
@@ -674,7 +682,7 @@ public:
     template<typename TType, typename CompType>
     auto get_am_over_bm(TType T, const CompType& molefracs) const {
         auto aEresRT = std::visit([&](auto& aresRTfunc) { return aresRTfunc(T, molefracs); }, ares); // aEres/RT, so a non-dimensional quantity
-        std::common_type_t<TType, decltype(molefracs[0])> summer = aEresRT*Ru*T/CEoS;
+        std::common_type_t<TType, decltype(molefracs[0])> summer = aEresRT*R_JmolK*T/CEoS;
         for (auto i = 0U; i < molefracs.size(); ++i) {
             summer += molefracs[i]*get_ai(T,i)/get_bi(T,i);
         }
@@ -720,7 +728,7 @@ public:
         auto a = get_am_over_bm(T, molefrac)*b;
         auto Psiminus = -log(1.0 - b * rho);
         auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
-        auto val = Psiminus - a / (Ru * T) * Psiplus;
+        auto val = Psiminus - a / (R_JmolK * T) * Psiplus;
         return forceeval(val);
     }
 };
@@ -766,11 +774,13 @@ using advancedPRaEres_t = decltype(make_AdvancedPRaEres({}));
  https://doi.org/10.1016/j.fluid.2020.112790
  */
 class QuantumCorrectedPR{
+    
 private:
     const std::vector<double> Tc_K, pc_Pa;
     const std::vector<AlphaFunctionOptions> alphas;
     const std::vector<double> As, Bs, cs_m3mol;
     const Eigen::ArrayXXd kmat, lmat;
+    const double Ru;
     
     auto build_alphas(const nlohmann::json& j){
         std::vector<AlphaFunctionOptions> alphas_;
@@ -788,9 +798,9 @@ private:
     std::vector<double> get_(const nlohmann::json &j, const std::string& k) const { return j.at(k).get<std::vector<double>>(); }
 public:
     
-    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(get_(j, "Tcrit / K")), pc_Pa(get_(j, "pcrit / Pa")), alphas(build_alphas(j)), As(get_(j, "As")), Bs(get_(j, "Bs")), cs_m3mol(get_(j, "cs / m^3/mol")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))) {}
+    QuantumCorrectedPR(const nlohmann::json &j) : Tc_K(get_(j, "Tcrit / K")), pc_Pa(get_(j, "pcrit / Pa")), alphas(build_alphas(j)), As(get_(j, "As")), Bs(get_(j, "Bs")), cs_m3mol(get_(j, "cs / m^3/mol")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))), Ru(j.value("R / J/mol/K", constants::R_CODATA2017)) {}
     
-    const double Ru = get_R_gas<double>(); /// Universal gas constant, exact number
+    
     
     template<class VecType>
     auto R(const VecType& /*molefrac*/) const {
@@ -894,12 +904,10 @@ public:
  https://doi.org/10.1016/j.fluid.2005.03.020.
  */
 class RKPRCismondi2005{
-public:
-    const double Ru = get_R_gas<double>(); /// Universal gas constant, exact number
-
 private:
     const std::vector<double> delta_1, Tc_K, pc_Pa, k;
     const Eigen::ArrayXXd kmat, lmat;
+    const double Ru; ///< Universal gas constant, in J/mol/K
     const std::vector<double> a_c, b_c;
     
     /// A convenience function to save some typing
@@ -930,7 +938,7 @@ private:
     }
 public:
     
-    RKPRCismondi2005(const nlohmann::json &j) : delta_1(get_(j, "delta_1")), Tc_K(get_(j, "Tcrit / K")), pc_Pa(get_(j, "pcrit / Pa")), k(get_(j, "k")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))), a_c(build_ac()), b_c(build_bc()) {}
+    RKPRCismondi2005(const nlohmann::json &j) : delta_1(get_(j, "delta_1")), Tc_K(get_(j, "Tcrit / K")), pc_Pa(get_(j, "pcrit / Pa")), k(get_(j, "k")), kmat(build_square_matrix(j.at("kmat"))), lmat(build_square_matrix(j.at("lmat"))), Ru(j.value("R / J/mol/K", constants::R_CODATA2017)), a_c(build_ac()), b_c(build_bc()) {}
     
     template<class VecType>
     auto R(const VecType& /*molefrac*/) const {
@@ -989,7 +997,7 @@ public:
         
         auto Psiminus = -log(1.0 - b*rho);
         auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
-        auto val = Psiminus - a/(Ru*T)*Psiplus;
+        auto val = Psiminus - a/(this->Ru*T)*Psiplus;
         return forceeval(val);
     }
 };
