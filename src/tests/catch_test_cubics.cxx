@@ -735,7 +735,7 @@ TEST_CASE("Advanced cubic EOS w/ make_model", "[AdvancedPR]"){
                "options": {"s": 2.0, "brule": "Quadratic", "CEoS": -0.52398, "R / J/mol/K": 8.4}
             }
         })"_json;
-        auto z = (Eigen::ArrayXd(1) << 0.3, 0.7).finished();
+        auto z = (Eigen::ArrayXd(2) << 0.3, 0.7).finished();
         auto model = make_model(j);
         CHECK(model->get_R(z) == 8.4);
     }
