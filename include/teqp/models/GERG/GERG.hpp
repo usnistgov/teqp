@@ -50,10 +50,10 @@ struct AlphaigCoeffs{
         
         // terms multiplying first two multiplicative constants, then the constant term that does not depend on the integration constants
         std::vector<double> Aig00 = {Rstar_R, Rstar_R*Tci/T, log(rho/rhoci) + Rstar_R*(n0[3]*log(Tci/T)
-            + ((n0[4] != 0) ? n0[4]*log(abs(sinh(theta0[4]*Tci/T))) : 0)
-            + ((n0[6] != 0) ? n0[6]*log(abs(sinh(theta0[6]*Tci/T))) : 0)
-            - ((n0[5] != 0) ? n0[5]*log(abs(cosh(theta0[5]*Tci/T))) : 0)
-            - ((n0[7] != 0) ? n0[7]*log(abs(cosh(theta0[7]*Tci/T))) : 0))
+            + ((n0[4] != 0) ? n0[4]*log(std::abs(sinh(theta0[4]*Tci/T))) : 0)
+            + ((n0[6] != 0) ? n0[6]*log(std::abs(sinh(theta0[6]*Tci/T))) : 0)
+            - ((n0[5] != 0) ? n0[5]*log(std::abs(cosh(theta0[5]*Tci/T))) : 0)
+            - ((n0[7] != 0) ? n0[7]*log(std::abs(cosh(theta0[7]*Tci/T))) : 0))
         };
         std::vector<double> Aig10 = {0, Rstar_R*Tci/T, Rstar_R*(n0[3]
             + ((n0[4] != 0) ? n0[4]*theta0[4]*Tci/T/tanh(theta0[4]*Tci/T) : 0)
