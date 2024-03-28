@@ -195,6 +195,20 @@ EXPORT_CODE int CONVENTION get_AtaudeltaXiXjXk(const long long int uuid, const d
     return errcode;
 }
 
+EXPORT_CODE int CONVENTION get_virials(const long long int uuid, const int Nvir, const int NT, const double T, const double* molefrac, const int Ncomp, double* val, char* errmsg, int errmsg_length) {
+    int errcode = 0;
+    try {
+        // Make an Eigen view of the double buffer
+        Eigen::Map<const Eigen::ArrayXd> molefrac_(molefrac, Ncomp);
+        // Call the function
+        *val = library.at(uuid)->get_dmBnvirdTm(Nvir, NT, T, molefrac_);
+    }
+    catch (...) {
+        exception_handler(errcode, errmsg, errmsg_length);
+    }
+    return errcode;
+}
+
 #if defined(TEQPC_CATCH)
 
 #include <catch2/catch_test_macros.hpp>
