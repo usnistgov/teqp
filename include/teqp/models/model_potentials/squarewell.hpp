@@ -151,22 +151,22 @@ private:
             o = o + gamman(i, lambda_)*pow(rhostar, i+2);
         }
         return forceeval(o);
-    };
+    }
     
     template<typename RhoType>
     auto get_a2(const RhoType & rhostar, double lambda_) const{
         return forceeval(Chi(rhostar, lambda_)*exp(xi2(lambda_)*rhostar + phii(1, lambda_)*pow(rhostar,3) + phii(2,lambda_)*pow(rhostar,4)));
-    };
+    }
     
     template<typename RhoType>
     auto get_a3(const RhoType & rhostar, double lambda_) const {
         return forceeval(a2i(3, lambda_)*rhostar*exp(xi3(lambda_)*rhostar + Ki(3, rhostar, lambda_)));
-    };
+    }
     
     template<typename RhoType>
     auto get_a4(const RhoType & rhostar, double lambda_) const {
         return forceeval(a2i(4, lambda_)*rhostar*exp(xi4(lambda_)*rhostar + Ki(4, rhostar, lambda_)));
-    };
+    }
     
 public:
     EspindolaHeredia2009(double lambda) : lambda(lambda){};

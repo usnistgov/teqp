@@ -173,19 +173,19 @@ if (NOT TEQP_NO_TEQPCPP)
   # Add the schema file
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/model_schemas.cpp")
 
-  target_compile_options(teqpcpp PRIVATE
-     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
-        -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic>
-     $<$<CXX_COMPILER_ID:MSVC>:
-          /W4 /wd4127 /wd4389 /wd4100>)
+  # target_compile_options(teqpcpp PRIVATE
+  #    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+  #       -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic>
+  #    $<$<CXX_COMPILER_ID:MSVC>:
+  #         /W4 /wd4127 /wd4389 /wd4100>)
 
   if(MSVC)
     target_compile_options(teqpcpp PRIVATE /W4 ) # or add /WX to turn warnings into errors
-    target_compile_options(teqpcpp PUBLIC /wd5054)
+    target_compile_options(teqpcpp PUBLIC /wd4127 /wd4389 /wd4100 /wd5054)
   else()
     # Turn on all warnings, and then disable selectively
     target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic  -Wno-deprecated-copy -Wno-language-extension-token) # or add -Werror to turn warnings into errors
-    target_compile_options(teqpcpp PUBLIC -Wno-deprecated-anon-enum-enum-conversion)
+    target_compile_options(teqpcpp PUBLIC -Wno-deprecated-anon-enum-enum-conversion -Wno-deprecated-enum-enum-conversion -Wno-parentheses -Wno-class-memaccess)
   endif()
 
   if (TEQP_TESTTEQPCPP)

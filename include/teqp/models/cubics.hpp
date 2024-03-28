@@ -161,7 +161,7 @@ protected:
         else if (static_cast<std::size_t>(kmat.cols()) != N) {
             throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components [" + std::to_string(N) + "]");
         }
-    };
+    }
     
 public:
     GenericCubic(NumType Delta1, NumType Delta2, NumType OmegaA, NumType OmegaB, int superanc_index, const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const Eigen::ArrayXXd& kmat, const double R_JmolK)
@@ -525,7 +525,7 @@ public:
             summer += molefracs[i]*log(phi_i_over_z_i);
         }
         return summer;
-    };
+    }
     
     template<typename TType>
     auto get_Aij(std::size_t i, std::size_t j, const TType& T) const{
@@ -549,7 +549,7 @@ public:
             summer += molefracs[i]*log(summerj);
         }
         return forceeval(-summer);
-    };
+    }
     
     // Returns ares/RT
     template<typename TType, typename MoleFractions>
@@ -613,7 +613,7 @@ protected:
         else if (lmat.cols() != static_cast<Eigen::Index>(N)) {
             throw teqp::InvalidArgument("lmat needs to be a square matrix the same size as the number of components [" + std::to_string(N) + "]");
         }
-    };
+    }
     
 public:
     AdvancedPRaEres(const std::valarray<NumType>& Tc_K, const std::valarray<NumType>& pc_Pa, const AlphaFunctions& alphas, const ResidualHelmholtzOverRTVariant& ares, const Eigen::ArrayXXd& lmat, const AdvancedPRaEOptions& options = {})
