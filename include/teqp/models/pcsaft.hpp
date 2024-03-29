@@ -17,6 +17,8 @@
 namespace teqp {
 namespace PCSAFT {
 
+//#define PCSAFTDEBUG
+
 /// Coefficients for one fluid
 struct SAFTCoeffs {
     std::string name; ///< Name of fluid
@@ -70,14 +72,15 @@ public:
 /// Erratum: should actually be 1/RHS of equation A.11 according to sample
 /// FORTRAN code
 template <typename Eta, typename Mbar>
-auto C1(const Eta& eta, Mbar mbar) {
+auto C1(const Eta& eta, const Mbar& mbar) {
+    auto oneeta = 1.0 - eta;
     return forceeval(1.0 / (1.0
-        + mbar * (8.0 * eta - 2.0 * eta * eta) / pow(1.0 - eta, 4)
-        + (1.0 - mbar) * (20.0 * eta - 27.0 * eta * eta + 12.0 * pow(eta, 3) - 2.0 * pow(eta, 4)) / pow((1.0 - eta) * (2.0 - eta), 2)));
+        + mbar * (8.0 * eta - 2.0 * eta * eta) / (oneeta*oneeta*oneeta*oneeta)
+        + (1.0 - mbar) * (20.0 * eta - 27.0 * eta * eta + 12.0 * eta*eta*eta - 2.0 * eta*eta*eta*eta) / ((1.0 - eta) * (2.0 - eta)*(1.0 - eta) * (2.0 - eta))));
 }
 /// Eqn. A.31
 template <typename Eta, typename Mbar>
-auto C2(const Eta& eta, Mbar mbar) {
+auto C2(const Eta& eta, const Mbar& mbar) {
     return forceeval(-pow(C1(eta, mbar), 2) * (
         mbar * (-4.0 * eta * eta + 20.0 * eta + 8.0) / pow(1.0 - eta, 5)
         + (1.0 - mbar) * (2.0 * eta * eta * eta + 12.0 * eta * eta - 48.0 * eta + 40.0) / pow((1.0 - eta) * (2.0 - eta), 3)
@@ -85,7 +88,7 @@ auto C2(const Eta& eta, Mbar mbar) {
 }
 /// Eqn. A.18
 template<typename TYPE>
-auto get_a(TYPE mbar) {
+auto get_a(const TYPE& mbar) {
     static Eigen::ArrayXd a_0 = (Eigen::ArrayXd(7) << 0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084).finished();
     static Eigen::ArrayXd a_1 = (Eigen::ArrayXd(7) << -0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930).finished();
     static Eigen::ArrayXd a_2 = (Eigen::ArrayXd(7) << -0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368).finished();
@@ -93,7 +96,7 @@ auto get_a(TYPE mbar) {
 }
 /// Eqn. A.19
 template<typename TYPE>
-auto get_b(TYPE mbar) {
+auto get_b(const TYPE& mbar) {
     // See https://stackoverflow.com/a/35170514/1360263
     static Eigen::ArrayXd b_0 = (Eigen::ArrayXd(7) << 0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612).finished();
     static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(7) << -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346).finished();
@@ -101,12 +104,32 @@ auto get_b(TYPE mbar) {
     return forceeval(b_0.cast<TYPE>().array() + (mbar - 1.0) / mbar * b_1.cast<TYPE>().array() + (mbar - 1.0) / mbar * (mbar - 2.0) / mbar * b_2.cast<TYPE>().array()).eval();
 }
 /// Residual contribution to alphar from hard-sphere (Eqn. A.6)
-template<typename VecType>
-auto get_alphar_hs(const VecType& zeta) {
-    // The limit of alphar_hs in the case of density going to zero is still zero,
-    // but the way it goes to zero is subtle
+template<typename VecType, typename VecType2>
+auto get_alphar_hs(const VecType& zeta, const VecType2& D) {
+    // The limit of alphar_hs in the case of density going to zero is zero,
+    // but its derivatives must still match so that the automatic differentiation tooling
+    // will work properly, so a Taylor series around rho=0 is constructed. The first term is
+    // needed for calculations of virial coefficient temperature derivatives.
+    /*
+     from sympy import *
+     zeta_0, zeta_1, zeta_2, zeta_3, rho = symbols('zeta_0, zeta_1, zeta_2, zeta_3, rho')
+     D_0, D_1, D_2, D_3 = symbols('D_0, D_1, D_2, D_3')
+     POW2 = lambda x: x**2
+     POW3 = lambda x: x**3
+     alpha = 1/zeta_0*(3*zeta_1*zeta_2/(1-zeta_3) + zeta_2**3/(zeta_3*POW2(1-zeta_3)) + (POW3(zeta_2)/POW2(zeta_3)-zeta_0)*log(1-zeta_3))
+     alpha = alpha.subs(zeta_0, rho*D_0).subs(zeta_1, rho*D_1).subs(zeta_2, rho*D_2).subs(zeta_3, rho*D_3)
+     for Nderiv in [1, 2, 3, 4, 5]:
+         display(simplify((simplify(diff(alpha, rho, Nderiv)).subs(rho,0)*rho**Nderiv/factorial(Nderiv)).subs(D_0, zeta_0/rho).subs(D_1, zeta_1/rho).subs(D_2, zeta_2/rho).subs(D_3, zeta_3/rho)))
+     */
     if (getbaseval(zeta[3]) == 0){
-        return forceeval(4.0*zeta[3]);
+        return forceeval(
+             0.0 // 0-th order term, the limit of the function at zero density is zero
+             + zeta[3] + 3.0*D[1]*zeta[2]/D[0] // 1st order term f'(x=0)*x/1!
+             + (zeta[3]*zeta[3] + 6.0*D[1]/D[0]*zeta[2]*zeta[3] + 3.0*zeta[2]*zeta[2]*D[2]/D[0])/2.0 // 2nd order term f''(x=0)*x^2/2!
+             + D[3]/D[0]*(zeta[0]*zeta[3]*zeta[3] + 9.0*zeta[1]*zeta[2]*zeta[3] + 8.0*zeta[2]*zeta[2]*zeta[2])/3.0 // 3rd order term f'''(x=0)*x^3/3!
+             + zeta[3]*D[3]/D[0]*(zeta[0]*zeta[3]*zeta[3] + 12.0*zeta[1]*zeta[2]*zeta[3] + 15.0*zeta[2]*zeta[2]*zeta[2])/4.0 // 4th order term f''''(x=0)*x^4/4!
+             // ... and so on
+         );
     }
     auto Upsilon = 1.0 - zeta[3];
     return forceeval(1.0 / zeta[0] * (3.0 * zeta[1] * zeta[2] / Upsilon
@@ -120,12 +143,17 @@ template<typename zVecType, typename dVecType>
 auto gij_HS(const zVecType& zeta, const dVecType& d,
     std::size_t i, std::size_t j) {
     auto Upsilon = 1.0 - zeta[3];
+#if defined(PCSAFTDEBUG)
+    auto term1 = forceeval(1.0 / (Upsilon));
+    auto term2 = forceeval(d[i] * d[j] / (d[i] + d[j]) * 3.0 * zeta[2] / pow(Upsilon, 2));
+    auto term3 = forceeval(pow(d[i] * d[j] / (d[i] + d[j]), 2) * 2.0 * zeta[2]*zeta[2] / pow(Upsilon, 3));
+#endif
     return forceeval(1.0 / (Upsilon)+d[i] * d[j] / (d[i] + d[j]) * 3.0 * zeta[2] / pow(Upsilon, 2)
-        + pow(d[i] * d[j] / (d[i] + d[j]), 2) * 2.0 * pow(zeta[2], 2) / pow(Upsilon, 3));
+        + pow(d[i] * d[j] / (d[i] + d[j]), 2) * 2.0 * zeta[2]*zeta[2] / pow(Upsilon, 3));
 }
 /// Eqn. A.16, Eqn. A.29
 template <typename Eta, typename MbarType>
-auto get_I1(const Eta& eta, MbarType mbar) {
+auto get_I1(const Eta& eta, const MbarType& mbar) {
     auto avec = get_a(mbar);
     Eta summer_I1 = 0.0, summer_etadI1deta = 0.0;
     for (std::size_t i = 0; i < 7; ++i) {
@@ -137,7 +165,7 @@ auto get_I1(const Eta& eta, MbarType mbar) {
 }
 /// Eqn. A.17, Eqn. A.30
 template <typename Eta, typename MbarType>
-auto get_I2(const Eta& eta, MbarType mbar) {
+auto get_I2(const Eta& eta, const MbarType& mbar) {
     auto bvec = get_b(mbar);
     Eta summer_I2 = 0.0 * eta, summer_etadI2deta = 0.0 * eta;
     for (std::size_t i = 0; i < 7; ++i) {
@@ -234,12 +262,13 @@ public:
         
         /// Evaluate the components of zeta
         using ta = std::common_type_t<decltype(pi6), decltype(m[0]), decltype(c.d[0]), decltype(rho_A3)>;
-        std::vector<ta> zeta(4);
+        std::vector<ta> zeta(4), D(4);
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
             auto dn = pow(c.d, static_cast<int>(n));
             TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()*dn.template cast<TRHOType>().array()).sum());
-            zeta[n] = forceeval(pi6*rho_A3*xmdn);
+            D[n] = forceeval(pi6*xmdn);
+            zeta[n] = forceeval(D[n]*rho_A3);
         }
         
         /// Packing fraction is the 4-th value in zeta, at index 3
@@ -254,11 +283,27 @@ public:
         for (auto i = 0; i < lngii_hs.size(); ++i) {
             lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
         }
-        auto alphar_hc = forceeval(mbar * get_alphar_hs(zeta) - sumproduct(mole_fractions, mminus1, lngii_hs)); // Eq. A.4
+        auto alphar_hc = forceeval(mbar * get_alphar_hs(zeta, D) - sumproduct(mole_fractions, mminus1, lngii_hs)); // Eq. A.4
         
         // Dispersive contribution
-        auto alphar_disp = forceeval(-2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1(eta, mbar) * I2 * c.m2_epsilon2_sigma3_bar);
-                                     
+        auto C1_ = C1(eta, mbar);
+        auto alphar_disp = forceeval(-2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1_ * I2 * c.m2_epsilon2_sigma3_bar);
+                                    
+        if (!std::isfinite(getbaseval(alphar_hc))){
+            throw teqp::InvalidValue("An invalid value was obtained for alphar_hc; please investigate");
+        }
+        if (!std::isfinite(getbaseval(I1))){
+            throw teqp::InvalidValue("An invalid value was obtained for I1; please investigate");
+        }
+        if (!std::isfinite(getbaseval(I2))){
+            throw teqp::InvalidValue("An invalid value was obtained for I2; please investigate");
+        }
+        if (!std::isfinite(getbaseval(C1_))){
+            throw teqp::InvalidValue("An invalid value was obtained for C1; please investigate");
+        }
+        if (!std::isfinite(getbaseval(alphar_disp))){
+            throw teqp::InvalidValue("An invalid value was obtained for alphar_disp; please investigate");
+        }
         using eta_t = decltype(eta);
         using hc_t = decltype(alphar_hc);
         using disp_t = decltype(alphar_disp);
@@ -267,7 +312,7 @@ public:
             hc_t alphar_hc;
             disp_t alphar_disp;
         };
-        return PCSAFTHardChainContributionTerms{forceeval(eta), forceeval(alphar_hc), forceeval(alphar_disp)};
+        return PCSAFTHardChainContributionTerms{forceeval(eta), alphar_hc, alphar_disp};
     }
 };
 

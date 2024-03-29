@@ -8,7 +8,6 @@ using Catch::Approx;
 #include "teqp/types.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/models/saftvrmie.hpp"
-#include "teqp/models/pcsaft.hpp"
 #include "teqp/math/finite_derivs.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/constants.hpp"

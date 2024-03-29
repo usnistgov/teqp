@@ -37,6 +37,10 @@ namespace teqp {
         IterationFailure(const std::string& msg) : teqpException(100, msg) {};
     };
     using IterationError = IterationFailure;
+    class InvalidValue : public teqpException {
+    public:
+        InvalidValue(const std::string& msg) : teqpException(101, msg) {};
+    };
 
     class NotImplementedError : public teqpException {
     public:
