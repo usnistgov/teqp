@@ -1,5 +1,7 @@
 #include "teqp/cpp/teqpcpp.hpp"
-#include "teqp/models/fwd.hpp"
+
+#include "teqp/models/vdW.hpp"
+#include "teqp/models/cubics.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 
 // This large block of schema definitions is populated by cmake
@@ -9,8 +11,29 @@ extern const nlohmann::json model_schema_library;
 namespace teqp {
     namespace cppinterface {
 
-        std::unique_ptr<teqp::cppinterface::AbstractModel> make_SAFTVRMie(const nlohmann::json &j);
-
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_SAFTVRMie(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_PCSAFT(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_GERG2004resid(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_GERG2008resid(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_GERG2004idealgas(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_GERG2008idealgas(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_LKP(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_multifluid(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_multifluid_ECS_HuberEly1994(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_AmmoniaWaterTillnerRoth();
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_LJ126_TholJPCRD2016();
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_LJ126_KolafaNezbeda1994();
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_LJ126_Johnson1993();
+    
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_SW_EspindolaHeredia2009(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_EXP6_Kataoka1992(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_Mie_Pohl2023(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_2CLJF_Dipole(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_2CLJF_Quadrupole(const nlohmann::json &);
+    
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_CPA(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_IdealHelmholtz(const nlohmann::json &);
+    
         using makefunc = ModelPointerFactoryFunction;
         using namespace teqp::cppinterface::adapter;
     
@@ -28,31 +51,36 @@ namespace teqp {
             {"advancedPRaEres", [](const nlohmann::json& spec){ return make_owned(make_AdvancedPRaEres(spec));}},
             {"RKPRCismondi2005", [](const nlohmann::json& spec){ return make_owned(RKPRCismondi2005(spec));}},
             
-            {"CPA", [](const nlohmann::json& spec){ return make_owned(CPA::CPAfactory(spec));}},
-            {"PCSAFT", [](const nlohmann::json& spec){ return make_owned(PCSAFT::PCSAFTfactory(spec));}},
+            // Implemented in their own compilation units to help with compilation time and memory
+            // use. Having all the template instantations in one file is handy, but requires a huge amount of RAM
+            // ---------
+            {"SAFT-VR-Mie", [](const nlohmann::json& spec){ return make_SAFTVRMie(spec); }},
             
-            {"LKP", [](const nlohmann::json& spec){ return make_owned(LKP::make_LKPMix(spec));}},
+            {"PCSAFT", [](const nlohmann::json& spec){ return make_PCSAFT(spec); }},
             
-            {"multifluid", [](const nlohmann::json& spec){ return make_owned(multifluidfactory(spec));}},
-            {"multifluid-ECS-HuberEly1994", [](const nlohmann::json& spec){ return make_owned(ECSHuberEly::ECSHuberEly1994(spec));}},
-            {"SW_EspindolaHeredia2009",  [](const nlohmann::json& spec){ return make_owned(squarewell::EspindolaHeredia2009(spec.at("lambda")));}},
-            {"EXP6_Kataoka1992", [](const nlohmann::json& spec){ return make_owned(exp6::Kataoka1992(spec.at("alpha")));}},
-            {"AmmoniaWaterTillnerRoth", [](const nlohmann::json& /*spec*/){ return make_owned(AmmoniaWaterTillnerRoth());}},
-            {"LJ126_TholJPCRD2016", [](const nlohmann::json& /*spec*/){ return make_owned(build_LJ126_TholJPCRD2016());}},
-            {"LJ126_KolafaNezbeda1994", [](const nlohmann::json& /*spec*/){ return make_owned(LJ126KolafaNezbeda1994());}},
-            {"LJ126_Johnson1993", [](const nlohmann::json& /*spec*/){ return make_owned(LJ126Johnson1993());}},
-            {"Mie_Pohl2023", [](const nlohmann::json& spec){ return make_owned(Mie::Mie6Pohl2023(spec.at("lambda_a")));}},
-            {"2CLJF-Dipole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_dipole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2")));}},
-            {"2CLJF-Quadrupole", [](const nlohmann::json& spec){ return make_owned(twocenterljf::build_two_center_model_quadrupole(spec.at("author"), spec.at("L^*"), spec.at("(Q^*)^2")));}},
-            {"IdealHelmholtz", [](const nlohmann::json& spec){ return make_owned(IdealHelmholtz(spec));}},
+            {"GERG2004resid", [](const nlohmann::json& spec){ return make_GERG2004resid(spec);}},
+            {"GERG2008resid", [](const nlohmann::json& spec){ return make_GERG2008resid(spec);}},
+            {"GERG2004idealgas", [](const nlohmann::json& spec){ return make_GERG2004idealgas(spec);}},
+            {"GERG2008idealgas", [](const nlohmann::json& spec){ return make_GERG2008idealgas(spec);}},
             
-            {"GERG2004resid", [](const nlohmann::json& spec){ return make_owned(GERG2004::GERG2004ResidualModel(spec.at("names")));}},
-            {"GERG2008resid", [](const nlohmann::json& spec){ return make_owned(GERG2008::GERG2008ResidualModel(spec.at("names")));}},
-            {"GERG2004idealgas", [](const nlohmann::json& spec){ return make_owned(GERG2004::GERG2004IdealGasModel(spec.at("names")));}},
-            {"GERG2008idealgas", [](const nlohmann::json& spec){ return make_owned(GERG2008::GERG2008IdealGasModel(spec.at("names")));}},
+            {"LKP", [](const nlohmann::json& spec){ return make_LKP(spec);}},
             
-            // Implemented in its own compilation unit to help with compilation time
-            {"SAFT-VR-Mie", [](const nlohmann::json& spec){ return make_SAFTVRMie(spec); }}
+            {"multifluid", [](const nlohmann::json& spec){ return make_multifluid(spec);}},
+            {"multifluid-ECS-HuberEly1994", [](const nlohmann::json& spec){ return make_multifluid_ECS_HuberEly1994(spec);}},
+            {"AmmoniaWaterTillnerRoth", [](const nlohmann::json& /*spec*/){ return make_AmmoniaWaterTillnerRoth();}},
+            {"LJ126_TholJPCRD2016", [](const nlohmann::json& /*spec*/){ return make_LJ126_TholJPCRD2016();}},
+            {"LJ126_KolafaNezbeda1994", [](const nlohmann::json& /*spec*/){ return make_LJ126_KolafaNezbeda1994();}},
+            {"LJ126_Johnson1993", [](const nlohmann::json& /*spec*/){ return make_LJ126_Johnson1993();}},
+            
+            {"SW_EspindolaHeredia2009",  [](const nlohmann::json& spec){ return make_SW_EspindolaHeredia2009(spec);}},
+            {"EXP6_Kataoka1992", [](const nlohmann::json& spec){ return make_EXP6_Kataoka1992(spec); }},
+            {"Mie_Pohl2023", [](const nlohmann::json& spec){ return make_Mie_Pohl2023(spec); }},
+            {"2CLJF-Dipole", [](const nlohmann::json& spec){ return make_2CLJF_Dipole(spec); }},
+            {"2CLJF-Quadrupole", [](const nlohmann::json& spec){ return make_2CLJF_Quadrupole(spec); }},
+            
+            {"CPA", [](const nlohmann::json& spec){ return make_CPA(spec); }},
+            
+            {"IdealHelmholtz", [](const nlohmann::json& spec){ return make_IdealHelmholtz(spec); }},
         };
 
         std::unique_ptr<teqp::cppinterface::AbstractModel> build_model_ptr(const nlohmann::json& json, const bool validate) {
@@ -82,8 +110,8 @@ namespace teqp {
             }
         }
     
-        std::unique_ptr<AbstractModel> make_multifluid_model(const std::vector<std::string>& components, const std::string& coolprop_root, const std::string& BIPcollectionpath, const nlohmann::json& flags, const std::string& departurepath) {
-            return make_owned(build_multifluid_model(components, coolprop_root, BIPcollectionpath, flags, departurepath));
+        std::unique_ptr<AbstractModel> make_multifluid_model(const std::vector<std::string>& components, const std::string& root, const std::string& BIP, const nlohmann::json& flags, const std::string& departurepath) {
+            return make_multifluid({{"components", components}, {"root",root}, {"BIP", BIP}, {"flags", flags}, {"departure", departurepath}});
         }
     
         std::unique_ptr<AbstractModel> make_model(const nlohmann::json& j, const bool validate) {
