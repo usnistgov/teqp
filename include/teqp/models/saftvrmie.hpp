@@ -661,12 +661,16 @@ struct SAFTVRMieChainContributionTerms{
     auto get_a_HS(const RhoType& rhos, const Eigen::Array<ZetaType, 4, 1>& zeta, const Eigen::Array<DType, 4, 1>& D) const{
         constexpr double MY_PI = static_cast<double>(EIGEN_PI);
         if (getbaseval(rhos) == 0){
-            
-            // The limit of alphar_hs in the case of density going to zero is zero,
-            // but its derivatives must still match so that the automatic differentiation tooling
-            // will work properly, so a Taylor series around rho=0 is constructed. The first term is
-            // needed for calculations of virial coefficient temperature derivatives.
             /*
+            The limit of alphar_hs in the case of density going to zero is zero,
+            but its derivatives must still match so that the automatic differentiation tooling
+            will work properly, so a Taylor series around rho=0 is constructed. The first term is
+            needed for calculations of virial coefficient temperature derivatives.
+            The term zeta_0 in the denominator is zero, but *ratios* of zeta values are ok because
+            they cancel the rho (in the limit at least) so we can write that zeta_x/zeta_y = D_x/D_x where
+            D_i = sum_i x_im_id_{ii}. This allows for the substitution into the series expansion terms.
+            
+            <sympy>
              from sympy import *
              zeta_0, zeta_1, zeta_2, zeta_3, rho = symbols('zeta_0, zeta_1, zeta_2, zeta_3, rho')
              D_0, D_1, D_2, D_3 = symbols('D_0, D_1, D_2, D_3')
@@ -676,7 +680,8 @@ struct SAFTVRMieChainContributionTerms{
              alpha = alpha.subs(zeta_0, rho*D_0).subs(zeta_1, rho*D_1).subs(zeta_2, rho*D_2).subs(zeta_3, rho*D_3)
              for Nderiv in [1, 2, 3, 4, 5]:
                  display(simplify((simplify(diff(alpha, rho, Nderiv)).subs(rho,0)*rho**Nderiv/factorial(Nderiv)).subs(D_0, zeta_0/rho).subs(D_1, zeta_1/rho).subs(D_2, zeta_2/rho).subs(D_3, zeta_3/rho)))
-             */
+            </sympy>
+            */
             return forceeval(
                  0.0 // 0-th order term, the limit of the function at zero density is zero
                  + zeta[3] + 3.0*D[1]*zeta[2]/D[0] // 1st order term f'(x=0)*x/1!
