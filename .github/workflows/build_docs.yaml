@@ -1,9 +1,7 @@
 name: build docs w/ compilation
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+
+on: [push, pull_request]
+
 jobs:
   Matrix-build:
     runs-on: ubuntu-latest
