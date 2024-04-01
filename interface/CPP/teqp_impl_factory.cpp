@@ -89,12 +89,13 @@ namespace teqp {
             std::string kind = json.at("kind");
             auto spec = json.at("model");
             
-            // Read in flag to enable/disable validation, if present
-            bool validate_in_json = json.value("validate", true);
-            
             auto itr = pointer_factory.find(kind);
             if (itr != pointer_factory.end()){
-                if (validate || validate_in_json){
+                bool do_validation = validate;
+                if (json.contains("validate")){
+                    do_validation = json["validate"];
+                }
+                if (do_validation){
                     if (model_schema_library.contains(kind)){
                         // This block is not thread-safe, needs a mutex or something
                         JSONValidator validator(model_schema_library.at(kind));
