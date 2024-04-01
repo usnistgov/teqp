@@ -7,7 +7,7 @@ namespace teqp{
         using teqp::cppinterface::adapter::make_owned;
     
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_IdealHelmholtz(const nlohmann::json &spec){
-            return make_owned(IdealHelmholtz(spec.at("lambda")));
+            return make_owned(IdealHelmholtz(spec));
         }
     }
 }
