@@ -58,7 +58,6 @@ TEST_CASE("Ammonia derivative", "[alphaig][NH3]") {
     };
     nlohmann::json j = {o{ {"R", 8.31446261815324}, {"terms", j0terms} }};
     nlohmann::json model = {{"kind","IdealHelmholtz"}, {"validate",false}, {"model", j}};
-    std::cout << model.dump(1) << std::endl;
     CHECK_NOTHROW(teqp::cppinterface::make_model(model, false));
     IdealHelmholtz ih(j);
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
