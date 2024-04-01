@@ -7,6 +7,11 @@
 
 using Catch::Approx;
 
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+using Catch::Matchers::WithinAbsMatcher;
+using Catch::Matchers::WithinRelMatcher;
+using Catch::Matchers::WithinRel;
+
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/algorithms/critical_tracing.hpp"
@@ -561,4 +566,47 @@ TEST_CASE("Ar20 for CO2", "[Ar20CO2]"){
         auto ad = -tdx::get_Ar20(model, T, rho, z);
 //        std::cout << T << "," << rho << "," << mp << "," << ad << "," << mp/ad-1 << std::endl;
     }
+}
+
+TEST_CASE("Check composition derivatives for ternary with all one component", "[ternary]") {
+    std::string root = FLUIDDATAPATH;
+    const auto model = build_multifluid_model({ "Methane","Ethane","n-Propane" }, root);
+    double T = 300, rho = 10.0;
+    
+    auto z = (Eigen::ArrayXd(3) << 1, 0, 0).finished();
+    using tdx = TDXDerivatives<decltype(model)>;
+    using iso = IsochoricDerivatives<decltype(model)>;
+    double valdil = tdx::get_Arxy<0, 1>(model, T, rho, z);
+    CAPTURE(valdil);
+    CHECK(std::isfinite(valdil));
+    auto graddil = iso::build_Psir_gradient_autodiff(model, T, rho*z);
+    CHECK_THROWS(iso::build_Psir_Hessian_autodiff(model, T, rho*z));
+    
+    double dx = 1e-13;
+    auto zalmost = (Eigen::ArrayXd(3) << 1-2*dx, dx, dx).finished();
+    double valalmost = tdx::get_Arxy<0, 1>(model, T, rho, zalmost);
+    CAPTURE(valalmost);
+    CHECK(std::isfinite(valalmost));
+    auto gradalmost = iso::build_Psir_gradient_autodiff(model, T, rho*zalmost);
+    auto Hessalmost = iso::build_Psir_Hessian_autodiff(model, T, rho*zalmost);
+    auto deltagrad = graddil - gradalmost;
+    CAPTURE(deltagrad);
+    
+    auto fT = [&](const auto &molefracs){ return model.redfunc.get_Tr(molefracs); };
+    ArrayXdual2nd zz = z.cast<dual2nd>();
+    
+    dual2nd u; // the output scalar u = f(x), evaluated together with Hessian below
+    ArrayXdual g;
+    CHECK_THROWS(autodiff::hessian(fT, wrt(zz), at(zz), u, g));
+    
+    ArrayXdual2nd zzalmost = zalmost.cast<dual2nd>();
+    dual2nd ualmost; // the output scalar u = f(x), evaluated together with Hessian below
+    ArrayXdual galmost;
+    auto HessTralmost = autodiff::hessian(fT, wrt(zzalmost), at(zzalmost), ualmost, galmost).eval();
+    CAPTURE(HessTralmost);
+    
+    CHECK_THAT(valdil, WithinRel(valalmost, 1e-10));
+    CHECK_THAT(graddil[0], WithinRel(gradalmost[0], 1e-10));
+    CHECK_THAT(graddil[1], WithinRel(gradalmost[1], 1e-10));
+    CHECK_THAT(graddil[2], WithinRel(gradalmost[2], 1e-10));
 }

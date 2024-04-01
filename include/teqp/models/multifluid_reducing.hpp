@@ -192,10 +192,10 @@ namespace teqp {
             Yv.resize(N, N); Yv.setZero();
             for (auto i = 0; i < N; ++i) {
                 for (auto j = i + 1; j < N; ++j) {
-                    YT(i, j) = betaT(i, j) * gammaT(i, j) * sqrt(Tc[i] * Tc[j]);
-                    YT(j, i) = betaT(j, i) * gammaT(j, i) * sqrt(Tc[i] * Tc[j]);
-                    Yv(i, j) = 1.0 / 8.0 * betaV(i, j) * gammaV(i, j) * pow3(cbrt(vc[i]) + cbrt(vc[j]));
-                    Yv(j, i) = 1.0 / 8.0 * betaV(j, i) * gammaV(j, i) * pow3(cbrt(vc[i]) + cbrt(vc[j]));
+                    YT(i, j) = 2.0 * betaT(i, j) * gammaT(i, j) * sqrt(Tc[i] * Tc[j]);
+                    YT(j, i) = 2.0 * betaT(j, i) * gammaT(j, i) * sqrt(Tc[i] * Tc[j]);
+                    Yv(i, j) = 2.0 * 1.0 / 8.0 * betaV(i, j) * gammaV(i, j) * pow3(cbrt(vc[i]) + cbrt(vc[j]));
+                    Yv(j, i) = 2.0 * 1.0 / 8.0 * betaV(j, i) * gammaV(j, i) * pow3(cbrt(vc[i]) + cbrt(vc[j]));
                 }
             }
         }
@@ -212,7 +212,27 @@ namespace teqp {
             typename MoleFractions::value_type sum2 = 0.0;
             for (auto i = 0U; i < N - 1; ++i) {
                 for (auto j = i + 1; j < N; ++j) {
-                    sum2 = sum2 + 2.0 * z[i] * z[j] * (z[i] + z[j]) / (pow2(beta(i, j)) * z[i] + z[j]) * Yij(i, j);
+                    auto den = beta(i, j)*beta(i, j) * z[i] + z[j];
+                    if (getbaseval(den) != 0){
+                        sum2 = sum2 + z[i] * z[j] * (z[i] + z[j]) / den * Yij(i, j);
+                    }
+                    else{
+                        // constexpr check to abort if trying to do second derivatives
+                        // and at least two compositions are zero. This should incur
+                        // zero runtime overhead. First derivatives are ok.
+                        if constexpr (is_eigen_impl<MoleFractions>::value){
+                            using namespace autodiff::detail;
+                            constexpr auto isDual_ = isDual<typename MoleFractions::Scalar>;
+                            constexpr auto order = NumberTraits<typename MoleFractions::Scalar>::Order;
+                            if constexpr (isDual_ && order > 1){
+                                throw teqp::InvalidArgument("The multifluid reducing term of GERG does not permit more than one zero composition when taking second composition derivatives with autodiff");
+                            }
+                        }
+                        double beta2 = beta(i,j)*beta(i,j);
+                        sum2 = sum2 + Yij(i, j)*(
+                             z[i]*z[j] + z[i]*z[i]*(1.0-beta2)
+                        );
+                    }
                 }
             }
 
