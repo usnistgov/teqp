@@ -1,3 +1,12 @@
+/**
+Matrices needed for the FeANN model of Chaparro and Müller for the Mie fluid
+ 
+In principle one could also use direct initialization of the Eigen::MatrixXd as well, but they are
+ too big (comma initializing a 45x45 matrix crashed apple clang), so instead a big valarray is
+ constructed and then it is remapped into the Matrix, after a transpose to get the order
+ of reading right. The Map seems to use the opposite (row/column-major) order than the
+ comma initializer (weird...)
+*/
 
 #include <Eigen/Dense>
 #include <valarray>
