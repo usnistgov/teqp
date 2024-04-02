@@ -124,7 +124,7 @@ public:
         x = x*kernel_helmholtz;
         x_rhoad0 = x_rhoad0*kernel_helmholtz;
         
-        return (x - x_rhoad0).array()[0];
+        return forceeval((x - x_rhoad0).array()[0]/(Tstar));
     }
 };
 
