@@ -108,21 +108,21 @@ public:
         Eigen::RowVectorX<Type> x = (Eigen::ArrayX<Type>(3) << m_alpha, rhostar, 1.0/Tstar).finished();
         Eigen::RowVectorX<Type> x_rhoad0 = (Eigen::ArrayX<Type>(3) << m_alpha, 0.0, 1.0/Tstar).finished();
         
-        x = tanh(((x*kernel_0).reshaped().array() + bias_0).array());
-        x_rhoad0 = tanh(((x_rhoad0*kernel_0).reshaped().array() + bias_0).array());
+        x = tanh(((x*kernel_0.cast<Type>()).reshaped().array() + bias_0.cast<Type>()).array());
+        x_rhoad0 = tanh(((x_rhoad0*kernel_0.cast<Type>()).reshaped().array() + bias_0.cast<Type>()).array());
         
-        x = tanh(((x*kernel_1).reshaped().array() + bias_1).array());
-        x_rhoad0 = tanh(((x_rhoad0*kernel_1).reshaped().array() + bias_1).array());
+        x = tanh(((x*kernel_1.cast<Type>()).reshaped().array() + bias_1.cast<Type>()).array());
+        x_rhoad0 = tanh(((x_rhoad0*kernel_1.cast<Type>()).reshaped().array() + bias_1.cast<Type>()).array());
         
-        x = tanh(((x*kernel_2).reshaped().array() + bias_2).array());
-        x_rhoad0 = tanh(((x_rhoad0*kernel_2).reshaped().array() + bias_2).array());
+        x = tanh(((x*kernel_2.cast<Type>()).reshaped().array() + bias_2.cast<Type>()).array());
+        x_rhoad0 = tanh(((x_rhoad0*kernel_2.cast<Type>()).reshaped().array() + bias_2.cast<Type>()).array());
         
-        x = tanh(((x*kernel_3).reshaped().array() + bias_3).array());
-        x_rhoad0 = tanh(((x_rhoad0*kernel_3).reshaped().array() + bias_3).array());
+        x = tanh(((x*kernel_3.cast<Type>()).reshaped().array() + bias_3.cast<Type>()).array());
+        x_rhoad0 = tanh(((x_rhoad0*kernel_3.cast<Type>()).reshaped().array() + bias_3.cast<Type>()).array());
         
         // The last layer doesn't have bias
-        x = x*kernel_helmholtz;
-        x_rhoad0 = x_rhoad0*kernel_helmholtz;
+        x = x*kernel_helmholtz.cast<Type>();
+        x_rhoad0 = x_rhoad0*kernel_helmholtz.cast<Type>();
         
         return forceeval((x - x_rhoad0).array()[0]/(Tstar));
     }
