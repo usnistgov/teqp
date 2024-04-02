@@ -186,7 +186,7 @@ if (NOT TEQP_NO_TEQPCPP)
 
   if(MSVC)
     target_compile_options(teqpcpp PRIVATE /W4 ) # or add /WX to turn warnings into errors
-    target_compile_options(teqpcpp PUBLIC /wd4127 /wd4389 /wd4100 /wd5054)
+    target_compile_options(teqpcpp PUBLIC /wd4127 /wd4389 /wd4100 /wd5054 /wd4702)
   else()
     # Turn on all warnings, and then disable selectively
     target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic  -Wno-deprecated-copy -Wno-language-extension-token) # or add -Werror to turn warnings into errors
