@@ -28,6 +28,7 @@ namespace teqp {
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_SW_EspindolaHeredia2009(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_EXP6_Kataoka1992(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_Mie_Pohl2023(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_Mie_Chaparro2023(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_2CLJF_Dipole(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_2CLJF_Quadrupole(const nlohmann::json &);
     
@@ -75,6 +76,7 @@ namespace teqp {
             {"SW_EspindolaHeredia2009",  [](const nlohmann::json& spec){ return make_SW_EspindolaHeredia2009(spec);}},
             {"EXP6_Kataoka1992", [](const nlohmann::json& spec){ return make_EXP6_Kataoka1992(spec); }},
             {"Mie_Pohl2023", [](const nlohmann::json& spec){ return make_Mie_Pohl2023(spec); }},
+            {"Mie_Chaparro2023", [](const nlohmann::json& spec){ return make_Mie_Chaparro2023(spec); }},
             {"2CLJF-Dipole", [](const nlohmann::json& spec){ return make_2CLJF_Dipole(spec); }},
             {"2CLJF-Quadrupole", [](const nlohmann::json& spec){ return make_2CLJF_Quadrupole(spec); }},
             
