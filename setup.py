@@ -58,7 +58,7 @@ class CMakeBuild(build_ext):
             # cmake_args += ['-T ClangCL']
             if sys.maxsize > 2**32:
                 cmake_args += ['-A', 'x64']
-            build_args += ['--', '/m']
+            build_args += ['--', '/m:4', '/p:CL_MPCount=4']
         else:
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
             build_args += ['--', '-j6']
