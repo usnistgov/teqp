@@ -19,6 +19,9 @@ namespace teqp{
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_Mie_Pohl2023(const nlohmann::json &spec){
             return make_owned(Mie::Mie6Pohl2023(spec.at("lambda_a")));
         }
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_Mie_Chaparro2023(const nlohmann::json &spec){
+            return make_owned(FEANN::ChaparroJCP2023(spec.at("lambda_r"), spec.at("lambda_a")));
+        }
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_2CLJF_Dipole(const nlohmann::json &spec){
             return make_owned(twocenterljf::build_two_center_model_dipole(spec.at("author"), spec.at("L^*"), spec.at("(mu^*)^2")));
         }
