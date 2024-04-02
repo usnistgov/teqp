@@ -34,21 +34,21 @@ namespace Mie{
         const EArray4 gam = (EArray4() <<  1.55,-0.0826,1.505,1.07 ).finished();
         const EArray4 eps = (EArray4() <<  -1,-1,-0.195,-0.287 ).finished();
         
-        const double m_lambda_a;
+        const double m_lambda_r;
         const EArray6 n_pol, n_exp;
         const EArray4 n_gbs;
         const double Tc, rhoc; // In simulation units
     public:
         
-        Mie6Pohl2023(double lambda_a) : m_lambda_a(lambda_a),
-        n_pol(c1_pol + c2_pol / m_lambda_a),
-        n_exp(c1_exp + c2_exp / m_lambda_a),
-        n_gbs(c1_gbs + c2_gbs / m_lambda_a),
-        Tc(0.668 + 6.84 / m_lambda_a + 145 / pow(m_lambda_a, 3)), // T^*
-        rhoc(0.2516 + 0.049 * log10(m_lambda_a)) // rho^*
+        Mie6Pohl2023(double lambda_r) : m_lambda_r(lambda_r),
+        n_pol(c1_pol + c2_pol / m_lambda_r),
+        n_exp(c1_exp + c2_exp / m_lambda_r),
+        n_gbs(c1_gbs + c2_gbs / m_lambda_r),
+        Tc(0.668 + 6.84 / m_lambda_r + 145 / pow(m_lambda_r, 3)), // T^*
+        rhoc(0.2516 + 0.049 * log10(m_lambda_r)) // rho^*
         {}
         
-        auto get_lambda_a() const { return m_lambda_a; }
+        auto get_lambda_r() const { return m_lambda_r; }
 
         // We are in "simulation units", so R is 1.0, and T and rho that
         // go into alphar are actually T^* and rho^*
