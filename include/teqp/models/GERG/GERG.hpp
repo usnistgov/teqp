@@ -186,7 +186,7 @@ public:
             sum1 += z[i]*z[i]*Yc[i];
             for (auto j = i+1; j < N; ++j){
                 auto denom = POW2(beta(i,j))*z[i]+z[j];
-                if (getbaseval(z[i]) != 0 && getbaseval(z[j]) != 0){
+                if (getbaseval(denom) != 0){
                     sum2 += 2.0*z[i]*z[j]*(z[i]+z[j])/denom*Yij(i,j);
                 }
             }

@@ -11,10 +11,15 @@ using Catch::Matchers::WithinRel;
 #include "teqp/models/GERG/GERG.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/json_tools.hpp"
+#include "teqp/math/finite_derivs.hpp"
 
 #include "GERG2008.cpp"
 
 using namespace teqp;
+
+// Imports from boost
+#include <boost/multiprecision/cpp_bin_float.hpp>
+using namespace boost::multiprecision;
 
 TEST_CASE("Load all GERG2004 models", "[GERG2004]"){
     const auto& names = GERG2004::component_names;
@@ -692,4 +697,23 @@ TEST_CASE("Validate all GERG2008 models", "[GERG2008]"){
 //        CHECK_THAT(cvGERG2008_AGA8_JmolK, WithinRelMatcher(validation_data[i].cv_JmolK, 1e-5));
 //        CHECK_THAT(wGERG2008_AGA8_ms, WithinRelMatcher(validation_data[i].w_ms, 1e-5));
     }
+}
+
+TEST_CASE("Test infinite dilution case", "[GERG2008dil]"){
+    std::vector<std::string> comps = {"carbondioxide", "methane"};
+    auto model = GERG2008::GERG2008ResidualModel(comps);
+    auto molefracs = (Eigen::ArrayXd(2) << 0, 1).finished();
+    using iso = IsochoricDerivatives<decltype(model)>;
+    double T = 260;
+    auto grad = iso::build_Psir_gradient_autodiff(model, T, molefracs*20000);
+//    std::cout << grad << std::endl;
+    using my_float = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100U>>;
+    Eigen::ArrayX<my_float> rhovec = (molefracs*20000).eval().cast<my_float>();
+    double R = 8.314472;
+    auto f = [&](const auto& rhovec){ auto rhotot = rhovec.sum(); auto z = (rhovec/rhotot).eval(); return model.alphar(T, rhotot, z)*rhotot*R*T; };
+    auto grad_fd = gradient_forward(f, rhovec, 1e-16);
+//    std::cout << grad_fd << std::endl;
+    double max_err = (grad_fd.cast<double>()-grad.array()).abs().maxCoeff();
+    CAPTURE(max_err);
+    CHECK(max_err < 1e-12);
 }
