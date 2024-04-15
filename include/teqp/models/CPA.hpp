@@ -358,6 +358,10 @@ inline auto CPAfactory(const nlohmann::json &j){
             if (j.contains("options")){
                 opt = j.at("options"); // Pulls in the options that are POD types
             }
+            // Copy over the self-association mask
+            if (j.contains("/options/self_association_mask"_json_pointer)){
+                opt.self_association_mask = j.at("/options/self_association_mask"_json_pointer).template get<std::vector<bool>>();
+            }
             
             std::vector<std::vector<std::string>> molecule_sites;
             std::size_t i = 0;

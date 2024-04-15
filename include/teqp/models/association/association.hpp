@@ -14,6 +14,7 @@ The implementation follows the approach of Langenbach for the index compression,
 
 #include "teqp/constants.hpp"
 #include "teqp/types.hpp"
+#include "teqp/exceptions.hpp"
 
 #include <Eigen/Dense>
 
@@ -26,6 +27,7 @@ struct AssociationOptions{
     std::map<std::string, std::vector<std::string>> interaction_partners;
     std::vector<std::string> site_order;
     association::radial_dist radial_dist;
+    std::vector<bool> self_association_mask;
     double alpha = 0.5;
     double rtol = 1e-12, atol = 1e-12;
     int max_iters = 100;
@@ -116,6 +118,11 @@ private:
             */
             auto [ph1, typei] = ind.to_CompSite.at(I);
             auto [ph2, typej] = ind.to_CompSite.at(J);
+            
+            // If self-association is disabled for this site, then return zero for the D matrix
+            if (!options.self_association_mask.empty() && ph1 == ph2 && !options.self_association_mask[ph1]){
+                return 0;
+            }
             auto contains = [](auto& container, const auto& val){ return std::find(container.begin(), container.end(), val) != container.end(); };
             /// If interaction parameters are not provided, assume conservatively that all sites can interact with all other sites
             if (options.interaction_partners.empty() || (contains(options.interaction_partners.at(typei), typej))){
@@ -123,7 +130,9 @@ private:
             }
             return 0;
         };
-        
+        if (!options.self_association_mask.empty() && options.self_association_mask.size() != static_cast<std::size_t>(ind.N_sites.size())){
+            throw teqp::InvalidArgument("self_association_mask is of the wrong size");
+        }
         int Ngroups = static_cast<int>(ind.to_siteid.size());
         Eigen::ArrayXXi D(Ngroups, Ngroups);
         // I and J are the numerical indices of the sites
