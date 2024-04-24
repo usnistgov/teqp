@@ -1,6 +1,8 @@
 #pragma once
 
 #include "teqp/types.hpp"
+#include "teqp/exceptions.hpp"
+#include "teqp/models/cubics.hpp"
 
 namespace teqp {
 
@@ -341,6 +343,43 @@ public:
     }
 };
 
+/**
+ This implementation is for generic cubic EOS, in teh 
+ */
+class GenericCubicTerm {
+public:
+    const double Tcrit_K, pcrit_Pa, R_gas, Delta1, Delta2, Tred_K, rhored_molm3, a0_cubic, b_cubic;
+    const std::vector<AlphaFunctionOptions> alphas_cubic;
+    
+    GenericCubicTerm(const nlohmann::json& spec) :
+        Tcrit_K(spec.at("Tcrit / K")),
+        pcrit_Pa(spec.at("pcrit / Pa")),
+        R_gas(spec.at("R / J/mol/K")),
+        Delta1(spec.at("Delta1")),
+        Delta2(spec.at("Delta2")),
+        Tred_K(spec.at("Tred / K")),
+        rhored_molm3(spec.at("rhored / mol/m^3")),
+        a0_cubic(spec.at("OmegaA").get<double>() * pow2(R_gas * Tcrit_K) / pcrit_Pa),
+        b_cubic(spec.at("OmegaB").get<double>() * R_gas * Tcrit_K / pcrit_Pa),
+        alphas_cubic(build_alpha_functions(std::vector<double>(1, Tcrit_K), spec.at("alpha")))
+    {
+        if (alphas_cubic.size() != 1){
+            throw teqp::InvalidArgument("alpha should be of size 1");
+        }
+    }
+    
+    template<typename TauType, typename DeltaType>
+    auto alphar(const TauType& tau, const DeltaType& delta) const {
+        auto T = Tred_K/tau;
+        auto rhomolar = delta*rhored_molm3;
+        auto alpha = forceeval(std::visit([&](auto& t) { return t(T); }, alphas_cubic[0]));
+        auto a_cubic = a0_cubic*alpha;
+        auto Psiminus = -log(1.0 - b_cubic * rhomolar);
+        auto Psiplus = log((Delta1 * b_cubic * rhomolar + 1.0) / (Delta2 * b_cubic * rhomolar + 1.0)) / (b_cubic * (Delta1 - Delta2));
+        auto val = Psiminus - a_cubic / (R_gas * T) * Psiplus;
+        return forceeval(val);
+    }
+};
 
 template<typename... Args>
 class EOSTermContainer {  
@@ -367,7 +406,7 @@ public:
     }
 };
 
-using EOSTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm, DoubleExponentialEOSTerm>;
+using EOSTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm, DoubleExponentialEOSTerm, GenericCubicTerm>;
 
 using DepartureTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm, DoubleExponentialEOSTerm,Chebyshev2DEOSTerm>;
 

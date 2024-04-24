@@ -610,3 +610,49 @@ TEST_CASE("Check composition derivatives for ternary with all one component", "[
     CHECK_THAT(graddil[1], WithinRel(gradalmost[1], 1e-10));
     CHECK_THAT(graddil[2], WithinRel(gradalmost[2], 1e-10));
 }
+
+
+TEST_CASE("Check adding cubic EOS as pure fluid contribution in multifluid approach", "[multifluidpurecubic]") {
+    std::string root = FLUIDDATAPATH;
+    
+    // Load some existing data from the JSON structure to avoid repeating ourselves
+    auto f = load_a_JSON_file(root+"/dev/fluids/CarbonDioxide.json");
+    
+    // Flush existing contributions
+    f["EOS"][0]["alphar"].clear();
+    
+    // Overwrite the residual portion with a cubic EOS
+    // In this case SRK which defines the values for
+    // OmegaA, OmegaB, Delta1 and Delta2, all other values taken
+    // from the Span&Wagner EOS
+    auto reducing = f["EOS"][0]["STATES"]["reducing"];
+    double Tc_K = reducing.at("T");
+    double pc_Pa = reducing.at("p");
+    double rhoc_molm3 = reducing.at("rhomolar");
+    f["EOS"][0]["alphar"].push_back({
+        {"R / J/mol/K", 8.31446261815324},
+        {"OmegaA", 0.42748023354034140439},
+        {"OmegaB", 0.086640349964957721589},
+        {"Delta1", 1.0},
+        {"Delta2", 0.0},
+        {"Tcrit / K", Tc_K},
+        {"pcrit / Pa", pc_Pa},
+        // Reducing state variables are taken from critical point
+        {"Tred / K", Tc_K},
+        {"rhored / mol/m^3", rhoc_molm3},
+        {"alpha", {
+            {{"type", "Twu"}, {"c", {1, 2, 3}}} // Dummy values for coefficients
+        }},
+        {"type", "ResidualHelmholtzGenericCubic"}
+    });
+//    std::cout << f["EOS"][0]["alphar"].dump(1) << std::endl;
+    
+    nlohmann::json model = {
+        {"components", {f}}
+    };
+    nlohmann::json j = {
+        {"kind", "multifluid"},
+        {"model", model}
+    };
+    auto model_ = cppinterface::make_model(j);
+}

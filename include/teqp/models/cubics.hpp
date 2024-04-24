@@ -99,7 +99,7 @@ auto build_alpha_functions(const TC& Tc_K, const nlohmann::json& jalphas){
     std::vector<AlphaFunctionOptions> alphas;
     std::size_t i = 0;
     if (jalphas.size() != Tc_K.size()){
-        throw teqp::InvalidArgument("alpha must be the same length as components");
+        throw teqp::InvalidArgument("alpha [size "+std::to_string(jalphas.size())+"] must be the same size as components [size "+std::to_string(Tc_K.size())+"]");
     }
     for (auto alpha : jalphas){
         std::string type = alpha.at("type");
