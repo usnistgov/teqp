@@ -123,6 +123,10 @@ public:
 #define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefrac) const  override { auto vals = TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::template get_Ar0n<i>(mp.get_cref(), T, rho, molefrac); return Eigen::Map<Eigen::ArrayXd>(&(vals[0]), vals.size()); };
     AR0N_args
 #undef X
+    // And like get_Ar10n, get_Ar20n, ....
+#define X(i) virtual EArrayd get_Ar ## i ## 0n(const double T, const double rho, const REArrayd& molefrac) const  override { auto vals = TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::template get_Arn0<i>(mp.get_cref(), T, rho, molefrac); return Eigen::Map<Eigen::ArrayXd>(&(vals[0]), vals.size()); };
+    ARN0_args
+#undef X
     
     // Virial derivatives
     virtual double get_B2vir(const double T, const EArrayd& z) const override {

@@ -45,6 +45,14 @@ using REMatrixd = Eigen::Ref<const Eigen::Array<double, Eigen::Dynamic, Eigen::D
     X(5) \
     X(6)
 
+// Note: the 0 index is not included because it is already present in the AR0N_args array
+// otherwise you would have two copies of the 00
+#define ARN0_args \
+    X(1) \
+    X(2) \
+    X(3) \
+    X(4)
+
 // Functions that return a double, take T and rhovec as arguments
 #define ISOCHORIC_double_args \
     X(get_pr) \
@@ -103,6 +111,10 @@ namespace teqp {
             // And like get_Ar01n, get_Ar02n, ....
             #define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefrac) const = 0;
                 AR0N_args
+            #undef X
+            // And like get_Ar10n, get_Ar20n, ....
+            #define X(i) virtual EArrayd get_Ar ## i ## 0n(const double T, const double rho, const REArrayd& molefrac) const = 0;
+                ARN0_args
             #undef X
             
             
