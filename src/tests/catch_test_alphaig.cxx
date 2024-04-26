@@ -5,6 +5,7 @@ using Catch::Approx;
 #include "nlohmann/json.hpp"
 #include "teqp/ideal_eosterms.hpp"
 #include "teqp/derivs.hpp"
+#include "teqp/cpp/teqpcpp.hpp"
 
 using namespace teqp;
 
@@ -55,7 +56,9 @@ TEST_CASE("Ammonia derivative", "[alphaig][NH3]") {
           o{ {"type", "Constant"}, { "a", (c0 - 1) * log(Tcrit) } }, // Term from ln(tau)
           o{ {"type", "PlanckEinstein"}, { "n",  n}, {"theta", theta}}
     };
-    nlohmann::json j = {{ {"R", 8.31446261815324}, {"terms", j0terms} }};
+    nlohmann::json j = {o{ {"R", 8.31446261815324}, {"terms", j0terms} }};
+    nlohmann::json model = {{"kind","IdealHelmholtz"}, {"validate",false}, {"model", j}};
+    CHECK_NOTHROW(teqp::cppinterface::make_model(model, false));
     IdealHelmholtz ih(j);
     auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
     auto calc = ih.alphaig(T, rho, molefrac);

@@ -10,6 +10,7 @@ enable_testing()
 if (MSVC)
     add_compile_options(/bigobj)
     add_compile_options(/permissive-)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 
 get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -131,6 +132,7 @@ target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-interop/include")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/stbrumme-hashing/include")
+target_sources(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/FEANN.cpp")
 
 if (NOT TEQP_NO_TESTS)
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
@@ -173,19 +175,23 @@ if (NOT TEQP_NO_TEQPCPP)
   # Add the schema file
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/model_schemas.cpp")
 
-  target_compile_options(teqpcpp PRIVATE
-     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
-        -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic>
-     $<$<CXX_COMPILER_ID:MSVC>:
-          /W4 /wd4127 /wd4389 /wd4100>)
+  # target_compile_options(teqpcpp PRIVATE
+  #    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+  #       -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic>
+  #    $<$<CXX_COMPILER_ID:MSVC>:
+  #         /W4 /wd4127 /wd4389 /wd4100>)
+
+  target_compile_options(teqpcpp PUBLIC
+     $<$<OR:$<CXX_COMPILER_ID:GNU>>:
+         -Wno-class-memaccess>)
 
   if(MSVC)
     target_compile_options(teqpcpp PRIVATE /W4 ) # or add /WX to turn warnings into errors
-    target_compile_options(teqpcpp PUBLIC /wd5054)
+    target_compile_options(teqpcpp PUBLIC /wd4127 /wd4389 /wd4100 /wd5054 /wd4702)
   else()
     # Turn on all warnings, and then disable selectively
     target_compile_options(teqpcpp PRIVATE -Wall -Wextra -Wpedantic  -Wno-deprecated-copy -Wno-language-extension-token) # or add -Werror to turn warnings into errors
-    target_compile_options(teqpcpp PUBLIC -Wno-deprecated-anon-enum-enum-conversion)
+    target_compile_options(teqpcpp PUBLIC -Wno-deprecated-anon-enum-enum-conversion -Wno-deprecated-enum-enum-conversion -Wno-parentheses)
   endif()
 
   if (TEQP_TESTTEQPCPP)

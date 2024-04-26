@@ -484,6 +484,10 @@ void init_teqp(py::module& m) {
         #define X(i) .def(stringify(get_Ar0 ## i ## n), &am::get_Ar0 ## i ## n, "T"_a, "rho"_a, "molefrac"_a.noconvert())
             AR0N_args
         #undef X
+        // And like get_Ar10n, get_Ar20n, ....
+        #define X(i) .def(stringify(get_Ar ## i ## 0n), &am::get_Ar ## i ## 0n, "T"_a, "rho"_a, "molefrac"_a.noconvert())
+            ARN0_args
+        #undef X
         .def("get_neff", &am::get_neff, "T"_a, "rho"_a, "molefrac"_a.noconvert())
     
         // Methods that come from the isochoric derivatives formalism

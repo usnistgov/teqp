@@ -415,13 +415,16 @@ struct SAFTVRMieChainContributionTerms{
         auto pi6 = MY_PI/6;
         
         using TRHOType = std::common_type_t<std::decay_t<TType>, std::decay_t<RhoType>, std::decay_t<decltype(molefracs[0])>, std::decay_t<decltype(m[0])>>;
+        using DType = std::common_type_t<std::decay_t<TType>, std::decay_t<decltype(molefracs[0])>, std::decay_t<decltype(m[0])>>;
         Eigen::Array<TRHOType, 4, 1> zeta;
+        Eigen::Array<DType, 4, 1> D;
         for (auto l = 0; l < 4; ++l){
-            TRHOType summer = 0.0;
+            DType summer = 0.0;
             for (auto i = 0U; i < N; ++i){
                 summer += xs(i)*powi(dmat(i,i), l);
             }
-            zeta(l) = forceeval(pi6*rhos*summer);
+            D(l) = forceeval(pi6*summer);
+            zeta(l) = forceeval(D(l)*rhos);
         }
         
         NumType summer_zeta_x = 0.0;
@@ -600,7 +603,7 @@ struct SAFTVRMieChainContributionTerms{
             }
         }
         
-        auto ahs = get_a_HS(rhos, zeta);
+        auto ahs = get_a_HS(rhos, zeta, D);
         // Eq. A5 from Lafitte, multiplied by mbar
         auto alphar_mono = forceeval(mbar*(ahs + a1kB/T + a2kB2/(T*T) + a3kB3/(T*T*T)));
         
@@ -654,12 +657,39 @@ struct SAFTVRMieChainContributionTerms{
     }
     
     /// Eq. A6 from Lafitte, accounting for the case of rho_s=0, for which the limit is zero
-    template<typename RhoType, typename ZetaType>
-    auto get_a_HS(const RhoType& rhos, const Eigen::Array<ZetaType, 4, 1>& zeta) const{
+    template<typename RhoType, typename ZetaType, typename DType>
+    auto get_a_HS(const RhoType& rhos, const Eigen::Array<ZetaType, 4, 1>& zeta, const Eigen::Array<DType, 4, 1>& D) const{
         constexpr double MY_PI = static_cast<double>(EIGEN_PI);
         if (getbaseval(rhos) == 0){
-            // The way in which the function goes to zero is subtle, and the factor of 4 accounts for the contributions from each term
-            return forceeval(4.0*zeta[3]);
+            /*
+            The limit of alphar_hs in the case of density going to zero is zero,
+            but its derivatives must still match so that the automatic differentiation tooling
+            will work properly, so a Taylor series around rho=0 is constructed. The first term is
+            needed for calculations of virial coefficient temperature derivatives.
+            The term zeta_0 in the denominator is zero, but *ratios* of zeta values are ok because
+            they cancel the rho (in the limit at least) so we can write that zeta_x/zeta_y = D_x/D_x where
+            D_i = sum_i x_im_id_{ii}. This allows for the substitution into the series expansion terms.
+            
+            <sympy>
+             from sympy import *
+             zeta_0, zeta_1, zeta_2, zeta_3, rho = symbols('zeta_0, zeta_1, zeta_2, zeta_3, rho')
+             D_0, D_1, D_2, D_3 = symbols('D_0, D_1, D_2, D_3')
+             POW2 = lambda x: x**2
+             POW3 = lambda x: x**3
+             alpha = 1/zeta_0*(3*zeta_1*zeta_2/(1-zeta_3) + zeta_2**3/(zeta_3*POW2(1-zeta_3)) + (POW3(zeta_2)/POW2(zeta_3)-zeta_0)*log(1-zeta_3))
+             alpha = alpha.subs(zeta_0, rho*D_0).subs(zeta_1, rho*D_1).subs(zeta_2, rho*D_2).subs(zeta_3, rho*D_3)
+             for Nderiv in [1, 2, 3, 4, 5]:
+                 display(simplify((simplify(diff(alpha, rho, Nderiv)).subs(rho,0)*rho**Nderiv/factorial(Nderiv)).subs(D_0, zeta_0/rho).subs(D_1, zeta_1/rho).subs(D_2, zeta_2/rho).subs(D_3, zeta_3/rho)))
+            </sympy>
+            */
+            return forceeval(
+                 0.0 // 0-th order term, the limit of the function at zero density is zero
+                 + zeta[3] + 3.0*D[1]*zeta[2]/D[0] // 1st order term f'(x=0)*x/1!
+                 + (zeta[3]*zeta[3] + 6.0*D[1]/D[0]*zeta[2]*zeta[3] + 3.0*zeta[2]*zeta[2]*D[2]/D[0])/2.0 // 2nd order term f''(x=0)*x^2/2!
+                 + D[3]/D[0]*(zeta[0]*zeta[3]*zeta[3] + 9.0*zeta[1]*zeta[2]*zeta[3] + 8.0*zeta[2]*zeta[2]*zeta[2])/3.0 // 3rd order term f'''(x=0)*x^3/3!
+                 + zeta[3]*D[3]/D[0]*(zeta[0]*zeta[3]*zeta[3] + 12.0*zeta[1]*zeta[2]*zeta[3] + 15.0*zeta[2]*zeta[2]*zeta[2])/4.0 // 4th order term f''''(x=0)*x^4/4!
+                 // ... and so on
+             );
         }
         else{
             return forceeval(6.0/(MY_PI*rhos)*(3.0*zeta[1]*zeta[2]/(1.0-zeta[3]) + POW3(zeta[2])/(zeta[3]*POW2(1.0-zeta[3])) + (POW3(zeta[2])/POW2(zeta[3])-zeta[0])*log(1.0-zeta[3])));

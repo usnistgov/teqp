@@ -1069,7 +1069,7 @@ struct IsochoricDerivatives{
         auto rhotot_ = rho.sum();
         auto molefrac = (rho / rhotot_).eval();
         auto H = build_Psir_Hessian_autodiff(model, T, rho).eval();
-        for (auto i = 0; i < 2; ++i) {
+        for (auto i = 0; i < rho.size(); ++i) {
             H(i, i) += model.R(molefrac) * T / rho[i];
         }
         return H;

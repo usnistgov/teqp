@@ -507,9 +507,13 @@ inline auto get_departure_function_matrix(const nlohmann::json& depcollection, c
 inline auto get_EOS_terms(const nlohmann::json& j)
 {
     auto alphar = j["EOS"][0]["alphar"];
+    
+    if (alphar.empty()){
+        throw teqp::InvalidArgument("alphar array cannot be empty");
+    }
 
     // First check whether term type is allowed
-    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005", "ResidualHelmholtzExponential", "ResidualHelmholtzDoubleExponential" };
+    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005", "ResidualHelmholtzExponential", "ResidualHelmholtzDoubleExponential","ResidualHelmholtzGenericCubic" };
 
     auto isallowed = [&](const auto& conventional_types, const std::string& name) {
         for (auto& a : conventional_types) { if (name == a) { return true; }; } return false;
@@ -713,7 +717,7 @@ inline auto get_EOS_terms(const nlohmann::json& j)
     };
     
     for (auto& term : alphar) {
-        std::string type = term["type"];
+        std::string type = term.at("type");
         if (type == "ResidualHelmholtzPower") {
             build_power(term, container);
         }
@@ -734,6 +738,9 @@ inline auto get_EOS_terms(const nlohmann::json& j)
         }
         else if (type == "ResidualHelmholtzDoubleExponential") {
             container.add_term(build_doubleexponential(term));
+        }
+        else if (type == "ResidualHelmholtzGenericCubic") {
+            container.add_term(GenericCubicTerm(term));
         }
         else {
             throw std::invalid_argument("Bad term type: "+type);

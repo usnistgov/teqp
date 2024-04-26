@@ -7,6 +7,7 @@ using Catch::Approx;
 #include <concepts>
 
 #include "teqp/models/multifluid.hpp"
+#include "teqp/models/multifluid_mutant.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/models/vdW.hpp"
 
@@ -80,4 +81,18 @@ TEST_CASE("Test composition derivatives with get_ArTDXi", "[compderivs]"){
     std::cout << val0 - val1 << std::endl;
     std::cout << grad << std::endl;
     std::cout << H << std::endl;
+}
+
+
+TEST_CASE("get_AtaudeltaXi with multifluid mutant", "[mutant]") {
+    std::string root = FLUIDDATAPATH;
+    nlohmann::json flags = { {"estimate", "Lorentz-Berthelot"} };
+    auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
+    auto model = build_multifluid_model({ "R32", "R1234ZEE" }, FLUIDDATAPATH, BIPcollection, flags);
+    std::string s0 = R"({"0": {"1": {"BIP": {"betaT": 1.0, "gammaT": 1.0, "betaV": 1.0, "gammaV": 1.0, "Fij": 1.0}, "departure": {"type": "none"}}}})";
+    nlohmann::json j = nlohmann::json::parse(s0);
+    auto mutant = build_multifluid_mutant(model, j);
+    double tau = 1.3, delta = 0.9;
+    auto molefrac = (Eigen::ArrayXd(2) << 0.3, 0.7).finished();
+    TDXDerivatives<decltype(mutant)>::get_AtaudeltaXi<1, 1, 1>(mutant, tau, delta, molefrac, 0);
 }

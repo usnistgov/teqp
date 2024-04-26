@@ -34,6 +34,47 @@ public:
     ConstViewer(ModelType& m) : model(m), index(std::type_index(typeid(ModelType))) {};
 };
 
+/**
+ \brief A collection type that allows you to sum contributions from multiple EOS terms
+ 
+  Each term in the summation must support the alphar generic interface that accepts T, rho, molefrac as arguments
+ 
+ The gas constant method is used of the FIRST function in the instance
+ 
+ \note Some information used from https://stackoverflow.com/a/40749139 regarding the tuple summation
+ */
+template<typename... Funcs>
+class OwnershipSummer{
+public:
+    std::tuple<Funcs...> contributions;
+    OwnershipSummer(Funcs && ...f) : contributions(std::forward<Funcs>(f)...){};
+    
+    auto& get_ref(){ return *this; };
+    const auto& get_cref() const { return *this; };
+    const std::type_index index;
+    
+    /// The gas constant, obtained from the first model in the tuple
+    template<typename MoleFracType>
+    auto R(const MoleFracType& molefrac){
+        return std::get<0>(contributions).R(molefrac);
+    }
+    
+    /// The generic alphar function, which sums the contributions coming from the individual models passed into the constructor
+    template<typename TType, typename RhoType, typename MoleFracType>
+    auto alphar(const TType& T, const RhoType& rhomolar, const MoleFracType& molefrac) const {
+        auto sum_func = [&T, &rhomolar, &molefrac](auto const&... e)->decltype(auto) {
+            return (e.alphar(T, rhomolar, molefrac)+...);
+        };
+        return std::apply(sum_func, contributions);
+    }
+};
+
+template <typename... Args>
+OwnershipSummer<Args...> make_OwnershipSummer(Args&&... args)
+{
+    return OwnershipSummer<Args...>(std::forward<Args>(args)...);
+}
+
 namespace internal{
     template<class T>struct tag{using type=T;};
 }
@@ -54,7 +95,7 @@ public:
     const auto& get_ModelPack_cref() const { return mp; }
     
     template<typename T>
-    DerivativeAdapter(internal::tag<T> /*tag_*/, const T&& mp): mp(mp) {} ;
+    DerivativeAdapter(internal::tag<T> /*tag_*/, const T&& mp): mp(mp) {} 
     
     const std::type_index& get_type_index() const override {
         return mp.index;
@@ -81,6 +122,10 @@ public:
     // And like get_Ar01n, get_Ar02n, ....
 #define X(i) virtual EArrayd get_Ar0 ## i ## n(const double T, const double rho, const REArrayd& molefrac) const  override { auto vals = TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::template get_Ar0n<i>(mp.get_cref(), T, rho, molefrac); return Eigen::Map<Eigen::ArrayXd>(&(vals[0]), vals.size()); };
     AR0N_args
+#undef X
+    // And like get_Ar10n, get_Ar20n, ....
+#define X(i) virtual EArrayd get_Ar ## i ## 0n(const double T, const double rho, const REArrayd& molefrac) const  override { auto vals = TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::template get_Arn0<i>(mp.get_cref(), T, rho, molefrac); return Eigen::Map<Eigen::ArrayXd>(&(vals[0]), vals.size()); };
+    ARN0_args
 #undef X
     
     // Virial derivatives

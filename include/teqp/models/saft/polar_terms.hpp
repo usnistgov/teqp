@@ -854,25 +854,25 @@ public:
         auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
         const double coeff = 64.0*PI3/5.0*sqrt(14*PI_/5.0)/SIGMAIJ(i,j)/SIGMAIJ(i,k)/SIGMAIJ(j,k);
         return coeff*get_Kijk(K222_333, rhostar, Tstarij, Tstarik, Tstarjk);
-    };
+    }
     template<typename TTYPE, typename RhoStarType>
     auto ImmQ(std::size_t i, std::size_t j, std::size_t k, const TTYPE& T, const RhoStarType& rhostar) const {
         auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
         const double coeff = 2048.0*PI3/7.0*sqrt(3.0*PI_)/SIGMAIJ(i,j)/POW2(SIGMAIJ(i,k)*SIGMAIJ(j,k));
         return coeff*get_Kijk(K233_344, rhostar, Tstarij, Tstarik, Tstarjk);
-    };
+    }
     template<typename TTYPE, typename RhoStarType>
     auto ImQQ(std::size_t i, std::size_t j, std::size_t k, const TTYPE& T, const RhoStarType& rhostar) const {
         auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
         const double coeff = -4096.0*PI3/9.0*sqrt(22.0*PI_/7.0)/POW2(SIGMAIJ(i,j)*SIGMAIJ(i,k))/POW3(SIGMAIJ(j,k));
         return coeff*get_Kijk_334445(K334_445, rhostar, Tstarij, Tstarik, Tstarjk);
-    };
+    }
     template<typename TTYPE, typename RhoStarType>
     auto IQQQ(std::size_t i, std::size_t j, std::size_t k, const TTYPE& T, const RhoStarType& rhostar) const {
         auto Tstarij = T/EPSKIJ(i,j), Tstarik = T/EPSKIJ(i,k), Tstarjk = T/EPSKIJ(j, k);
         const double coeff = 8192.0*PI3/81.0*sqrt(2002.0*PI_)/POW3(SIGMAIJ(i,j)*SIGMAIJ(i,k)*SIGMAIJ(j,k));
         return coeff*get_Kijk(K444_555, rhostar, Tstarij, Tstarik, Tstarjk);
-    };
+    }
     
     /// Return \f$\alpha_2=A_2/(Nk_BT)\f$, thus this is a nondimensional term. This is equivalent to \f$-w_o^{(2)}/\rhoN\f$ from Gray et al.
     template<typename TTYPE, typename RhoType, typename RhoStarType, typename VecType, typename MuPrimeType>

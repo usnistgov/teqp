@@ -351,7 +351,7 @@ TEST_CASE("Check B and its temperature derivatives", "[PCSAFT],[B]")
     })");
     CHECK_NOTHROW(teqp::cppinterface::make_model(j));
     auto model = teqp::cppinterface::make_model(j);
-    double rhotest = 1e-3; double Tspec = 100;
+    double rhotest = 1e-6; double Tspec = 100;
     Eigen::ArrayXd z(1); z[0] = 1.0;
     
     auto Bnondilute = model->get_Ar00(Tspec, rhotest, z)/rhotest;
@@ -361,4 +361,19 @@ TEST_CASE("Check B and its temperature derivatives", "[PCSAFT],[B]")
     auto TdBdTnondilute = -model->get_Ar10(Tspec, rhotest, z)/rhotest;
     auto TdBdT = Tspec*model->get_dmBnvirdTm(2, 1, Tspec, z);
     CHECK(TdBdT == Approx(TdBdTnondilute));
+    
+    auto tau2d2Bdtau2nondilute = model->get_Ar20(Tspec, rhotest, z)/rhotest;
+    auto T2d2BdT2 = Tspec*Tspec*model->get_dmBnvirdTm(2, 2, Tspec, z);
+    auto tau2d2Bdtau2 = T2d2BdT2 + 2*TdBdT;
+    CHECK(tau2d2Bdtau2 == Approx(tau2d2Bdtau2nondilute));
+    
+    auto Cnondilute = model->get_Ar02(Tspec, rhotest, z)/(rhotest*rhotest);
+    auto C = model->get_dmBnvirdTm(3, 0, Tspec, z);
+    CHECK(C == Approx(Cnondilute));
+    
+    auto dCdTnondilute = -model->get_Ar12(Tspec, rhotest, z)/(rhotest*rhotest);
+    auto dCdT = Tspec*model->get_dmBnvirdTm(3, 1, Tspec, z);
+    CHECK(dCdT == Approx(dCdTnondilute));
+    
+    CHECK(std::isfinite(model->get_dmBnvirdTm(3, 2, Tspec, z)));
 }

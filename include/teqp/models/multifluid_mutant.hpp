@@ -38,6 +38,15 @@ namespace teqp {
             }
             return redfunc.get_BIP(i, j, key);
         }
+        
+        template<typename TauType, typename DeltaType, typename MoleFracType>
+        auto alphar_taudelta(const TauType& tau,
+            const DeltaType& delta,
+            const MoleFracType& molefrac) const
+        {
+            auto val = base.corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
+            return forceeval(val);
+        }
 
         template<typename TType, typename RhoType, typename MoleFracType>
         auto alphar(const TType& T,

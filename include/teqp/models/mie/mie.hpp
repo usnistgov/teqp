@@ -34,21 +34,21 @@ namespace Mie{
         const EArray4 gam = (EArray4() <<  1.55,-0.0826,1.505,1.07 ).finished();
         const EArray4 eps = (EArray4() <<  -1,-1,-0.195,-0.287 ).finished();
         
-        const double m_lambda_a;
+        const double m_lambda_r;
         const EArray6 n_pol, n_exp;
         const EArray4 n_gbs;
         const double Tc, rhoc; // In simulation units
     public:
         
-        Mie6Pohl2023(double lambda_a) : m_lambda_a(lambda_a),
-        n_pol(c1_pol + c2_pol / m_lambda_a),
-        n_exp(c1_exp + c2_exp / m_lambda_a),
-        n_gbs(c1_gbs + c2_gbs / m_lambda_a),
-        Tc(0.668 + 6.84 / m_lambda_a + 145 / pow(m_lambda_a, 3)), // T^*
-        rhoc(0.2516 + 0.049 * log10(m_lambda_a)) // rho^*
+        Mie6Pohl2023(double lambda_r) : m_lambda_r(lambda_r),
+        n_pol(c1_pol + c2_pol / m_lambda_r),
+        n_exp(c1_exp + c2_exp / m_lambda_r),
+        n_gbs(c1_gbs + c2_gbs / m_lambda_r),
+        Tc(0.668 + 6.84 / m_lambda_r + 145 / pow(m_lambda_r, 3)), // T^*
+        rhoc(0.2516 + 0.049 * log10(m_lambda_r)) // rho^*
         {}
         
-        auto get_lambda_a() const { return m_lambda_a; }
+        auto get_lambda_r() const { return m_lambda_r; }
 
         // We are in "simulation units", so R is 1.0, and T and rho that
         // go into alphar are actually T^* and rho^*
@@ -69,4 +69,64 @@ namespace Mie{
     };
 
 };
+
+namespace FEANN{
+
+    namespace FEANNMatrices{
+        extern const Eigen::MatrixXd kernel_0, kernel_1, kernel_2, kernel_3, kernel_helmholtz;
+        extern const Eigen::ArrayXd bias_0, bias_1, bias_2, bias_3;
+    }
+
+class ChaparroJCP2023 {
+    
+private:
+    const double m_lambda_r, m_lambda_a, m_alpha;
+    
+    auto alpha_helper(double lambda_r, double lambda_a){
+        auto c_alpha = lambda_r / (lambda_r-lambda_a) * pow(lambda_r/lambda_a, lambda_a/(lambda_r-lambda_a));
+        auto alpha = c_alpha*(1.0/(lambda_a-3) - 1.0/(lambda_r-3));
+        return alpha;
+    }
+public:
+    
+    ChaparroJCP2023(double lambda_r, double lambda_a) : m_lambda_r(lambda_r), m_lambda_a(lambda_a), m_alpha(alpha_helper(m_lambda_r, m_lambda_a)){}
+    
+    auto get_lambda_r() const { return m_lambda_r; }
+    auto get_lambda_a() const { return m_lambda_a; }
+    auto get_alpha() const { return m_alpha; }
+
+    // We are in "simulation units", so R is 1.0, and T and rho that
+    // go into alphar are actually T^* and rho^*
+    template<typename MoleFracType>
+    double R(const MoleFracType &) const { return 1.0; }
+
+    template<typename TTYPE, typename RHOTYPE, typename MoleFracType>
+    auto alphar(const TTYPE& Tstar, const RHOTYPE& rhostar, const MoleFracType& /*molefrac*/) const {
+        using namespace FEANNMatrices;
+        
+        using Type = std::decay_t<std::common_type_t<TTYPE, RHOTYPE>>;
+        Eigen::RowVectorX<Type> x = (Eigen::ArrayX<Type>(3) << m_alpha, rhostar, 1.0/Tstar).finished();
+        Eigen::RowVectorX<Type> x_rhoad0 = (Eigen::ArrayX<Type>(3) << m_alpha, 0.0, 1.0/Tstar).finished();
+        
+        x = tanh(((x*kernel_0.cast<Type>()).reshaped().array() + bias_0.cast<Type>()).array());
+        x_rhoad0 = tanh(((x_rhoad0*kernel_0.cast<Type>()).reshaped().array() + bias_0.cast<Type>()).array());
+        
+        x = tanh(((x*kernel_1.cast<Type>()).reshaped().array() + bias_1.cast<Type>()).array());
+        x_rhoad0 = tanh(((x_rhoad0*kernel_1.cast<Type>()).reshaped().array() + bias_1.cast<Type>()).array());
+        
+        x = tanh(((x*kernel_2.cast<Type>()).reshaped().array() + bias_2.cast<Type>()).array());
+        x_rhoad0 = tanh(((x_rhoad0*kernel_2.cast<Type>()).reshaped().array() + bias_2.cast<Type>()).array());
+        
+        x = tanh(((x*kernel_3.cast<Type>()).reshaped().array() + bias_3.cast<Type>()).array());
+        x_rhoad0 = tanh(((x_rhoad0*kernel_3.cast<Type>()).reshaped().array() + bias_3.cast<Type>()).array());
+        
+        // The last layer doesn't have bias
+        x = x*kernel_helmholtz.cast<Type>();
+        x_rhoad0 = x_rhoad0*kernel_helmholtz.cast<Type>();
+        
+        return forceeval((x - x_rhoad0).array()[0]/(Tstar));
+    }
+};
+
+}
 };

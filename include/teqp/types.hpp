@@ -42,6 +42,10 @@ namespace teqp {
     template <typename... Ts> struct is_container<std::valarray<Ts...> > : std::true_type { };
     // Missing Eigen::Array and Eigen::Matrix types here
 
+    template <typename T> struct is_eigen_impl : std::false_type {};
+    template <typename T, int... Is> struct is_eigen_impl<Eigen::Matrix<T, Is...>> : std::true_type {};
+    template <typename T, int... Is> struct is_eigen_impl<Eigen::Array<T, Is...>> : std::true_type {};
+
     template<typename T>
     auto forceeval(T&& expr)
     {

@@ -68,5 +68,16 @@ template<typename Function, typename Scalarx, typename Scalary>
 auto centered_diff_xy(const Function &f, const Scalarx x, const Scalary y, const Scalarx dx, const Scalary dy) {
     return (f(x+dx, y+dy) - f(x+dx, y-dy) - f(x-dx, y+dy) + f(x-dx, y-dy))/(4*dx*dy);
 }
+
+template<typename Function, typename Vec, typename Scalar>
+auto gradient_forward(const Function &f, const Vec& x, Scalar h) {
+    Vec out = 0.0*x, xplus = x;
+    for (auto i = 0; i < out.size(); ++i){
+        xplus = x;
+        xplus[i] += h;
+        out[i] = (f(xplus)-f(x))/h;
+    }
+    return out;
+}
     
 }; // namespace teqp
