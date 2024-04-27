@@ -23,6 +23,32 @@ TEST_CASE("Single alphar check value", "[PCSAFT]")
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     using tdx = teqp::TDXDerivatives<decltype(model), double>;
     CHECK(tdx::get_Ar00(model, T, Dmolar, z) == Approx(-0.032400020930842724));
+    
+    nlohmann::json j = {
+        {"m", model.get_m()[0]},
+        {"sigma / A", model.get_sigma_Angstrom()[0]},
+        {"epsilon_over_k", model.get_epsilon_over_k_K()[0]}
+    };
+    PCSAFTPureGrossSadowski2001 pure(j);
+    
+    auto valpure = teqp::TDXDerivatives<decltype(pure), double>::get_Ar00(pure, T, Dmolar, z);
+    CAPTURE(valpure);
+    CHECK(valpure == Approx(-0.032400020930842724));
+}
+
+TEST_CASE("Pure with neon", "[PCSAFT]")
+{
+    PCSAFTPureGrossSadowski2001 pure(R"({"m": 1.593, "sigma / A": 3.445, "epsilon_over_k": 176.47})"_json);
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    auto valpure = teqp::TDXDerivatives<decltype(pure), double>::get_Ar00(pure, 450.0, 10000.0, z);
+    CAPTURE(valpure);
+    CHECK(valpure == Approx(-3.00381333e-01));
+    auto j = R"(
+    {"kind": "PCSAFTPureGrossSadowski2001", "model": {"m": 1.593, "sigma / A": 3.445, "epsilon_over_k": 176.47}}
+    )"_json;
+    
+    auto model = make_model(j);
+    CHECK(model->get_Ar00(450.0, 10000.0, z) == Approx(-3.00381333e-01));
 }
 
 TEST_CASE("Check get_names and get_BibTeXKeys", "[PCSAFT]")

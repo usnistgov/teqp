@@ -280,7 +280,7 @@ TEST_CASE("Benchmark CO2 with polar PC-SAFT model", "[CO2bench]"){
     };
 }
 
-TEST_CASE("Benchmark methane with PC-SAFT model", "[CO2bench]"){
+TEST_CASE("Benchmark methane with PC-SAFT model", "[methanebench]"){
     auto contents = R"(
     {
       "kind": "PCSAFT",
@@ -293,6 +293,30 @@ TEST_CASE("Benchmark methane with PC-SAFT model", "[CO2bench]"){
                  "epsilon_over_k": 150.03
             }]
       }
+    }
+    )"_json;
+    auto model = teqp::cppinterface::make_model(contents);
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    BENCHMARK("alphar"){
+        return model->get_Ar00(300, 10000, z);
+    };
+    BENCHMARK("Ar11"){
+        return model->get_Ar11(300, 10000, z);
+    };
+    BENCHMARK("Ar02"){
+        return model->get_Ar02(300, 10000, z);
+    };
+    BENCHMARK("Ar20"){
+        return model->get_Ar20(300, 10000, z);
+    };
+}
+
+TEST_CASE("Benchmark methane with pure PC-SAFT model", "[methanebench]"){
+    auto contents = R"(
+    {
+      "kind": "PCSAFTPureGrossSadowski2001",
+      "model": {"m": 1.593, "sigma / A": 3.445, "epsilon_over_k": 176.47}
     }
     )"_json;
     auto model = teqp::cppinterface::make_model(contents);

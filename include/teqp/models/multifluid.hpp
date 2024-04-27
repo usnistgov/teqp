@@ -513,7 +513,7 @@ inline auto get_EOS_terms(const nlohmann::json& j)
     }
 
     // First check whether term type is allowed
-    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005", "ResidualHelmholtzExponential", "ResidualHelmholtzDoubleExponential","ResidualHelmholtzGenericCubic" };
+    const std::vector<std::string> allowed_types = { "ResidualHelmholtzPower", "ResidualHelmholtzGaussian", "ResidualHelmholtzNonAnalytic","ResidualHelmholtzGaoB", "ResidualHelmholtzLemmon2005", "ResidualHelmholtzExponential", "ResidualHelmholtzDoubleExponential","ResidualHelmholtzGenericCubic","ResidualHelmholtzPCSAFTGrossSadowski2001" };
 
     auto isallowed = [&](const auto& conventional_types, const std::string& name) {
         for (auto& a : conventional_types) { if (name == a) { return true; }; } return false;
@@ -741,6 +741,9 @@ inline auto get_EOS_terms(const nlohmann::json& j)
         }
         else if (type == "ResidualHelmholtzGenericCubic") {
             container.add_term(GenericCubicTerm(term));
+        }
+        else if (type == "ResidualHelmholtzPCSAFTGrossSadowski2001") {
+            container.add_term(PCSAFTGrossSadowski2001Term(term));
         }
         else {
             throw std::invalid_argument("Bad term type: "+type);
