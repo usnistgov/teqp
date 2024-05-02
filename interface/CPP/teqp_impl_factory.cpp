@@ -13,6 +13,8 @@ namespace teqp {
 
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_SAFTVRMie(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_PCSAFT(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_PCSAFTPureGrossSadowski2001(const nlohmann::json &);
+    
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_GERG2004resid(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_GERG2008resid(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_GERG2004idealgas(const nlohmann::json &);
@@ -58,6 +60,7 @@ namespace teqp {
             {"SAFT-VR-Mie", [](const nlohmann::json& spec){ return make_SAFTVRMie(spec); }},
             
             {"PCSAFT", [](const nlohmann::json& spec){ return make_PCSAFT(spec); }},
+            {"PCSAFTPureGrossSadowski2001", [](const nlohmann::json& spec){ return make_PCSAFTPureGrossSadowski2001(spec); }},
             
             {"GERG2004resid", [](const nlohmann::json& spec){ return make_GERG2004resid(spec);}},
             {"GERG2008resid", [](const nlohmann::json& spec){ return make_GERG2008resid(spec);}},

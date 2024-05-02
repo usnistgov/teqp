@@ -3,6 +3,7 @@
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
 #include "teqp/models/cubics.hpp"
+#include "teqp/models/pcsaft.hpp"
 
 namespace teqp {
 
@@ -381,6 +382,28 @@ public:
     }
 };
 
+/**
+ This implementation is for PC-SAFT for a pure fluid as taken from Gross & Sadowski, I&ECR, 2001
+ */
+class PCSAFTGrossSadowski2001Term {
+public:
+    const double Tred_K, rhored_molm3;
+    const PCSAFT::PCSAFTPureGrossSadowski2001 pcsaft;
+    
+    PCSAFTGrossSadowski2001Term(const nlohmann::json& spec) :
+        Tred_K(spec.at("Tred / K")),
+        rhored_molm3(spec.at("rhored / mol/m^3")),
+        pcsaft(spec) // The remaining arguments will be consumed by the constructor
+    {}
+    
+    template<typename TauType, typename DeltaType>
+    auto alphar(const TauType& tau, const DeltaType& delta) const {
+        auto T = forceeval(Tred_K/tau);
+        auto rhomolar = forceeval(delta*rhored_molm3);
+        return forceeval(pcsaft.alphar(T, rhomolar, Eigen::Array<double,1,1>{}));
+    }
+};
+
 template<typename... Args>
 class EOSTermContainer {  
 private:
@@ -406,7 +429,7 @@ public:
     }
 };
 
-using EOSTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm, DoubleExponentialEOSTerm, GenericCubicTerm>;
+using EOSTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, NonAnalyticEOSTerm, Lemmon2005EOSTerm, GaoBEOSTerm, ExponentialEOSTerm, DoubleExponentialEOSTerm, GenericCubicTerm, PCSAFTGrossSadowski2001Term>;
 
 using DepartureTerms = EOSTermContainer<JustPowerEOSTerm, PowerEOSTerm, GaussianEOSTerm, GERG2004EOSTerm, NullEOSTerm, DoubleExponentialEOSTerm,Chebyshev2DEOSTerm>;
 
