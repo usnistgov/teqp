@@ -489,14 +489,17 @@ namespace teqp {
     inline nlohmann::json convert_CoolProp_idealgas(const std::string &s, int index){
         
         nlohmann::json j;
-        
         // Get the JSON structure to be parsed
-        try{
-            // First assume that the input argument is a path
-            std::filesystem::path p = s;
+        //
+        // With path prefix specified, the "thing" must be a path, exception will be thrown otherwise
+        if (s.find("PATH::") == 0){ // the PATH:: prefix is provided
+            j = load_a_JSON_file(s.substr(6)); // strip off the PATH:: prefix
+        }
+        // fallback to interrogation
+        else if (std::filesystem::is_regular_file(s)){
             j = load_a_JSON_file(s);
         }
-        catch(std::exception &){
+        else{
             j = nlohmann::json::parse(s);
         }
         
