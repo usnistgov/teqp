@@ -132,7 +132,6 @@ target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-interop/include")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/stbrumme-hashing/include")
-target_sources(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/FEANN.cpp")
 
 if (NOT TEQP_NO_TESTS)
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
@@ -174,6 +173,9 @@ if (NOT TEQP_NO_TEQPCPP)
   
   # Add the schema file
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/model_schemas.cpp")
+  
+  # The FEANN data file too
+  target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/FEANN.cpp")
 
   # target_compile_options(teqpcpp PRIVATE
   #    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
