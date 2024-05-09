@@ -289,15 +289,18 @@ namespace teqp {
                 }
             }
         }
+        /// As implemented in Table 7.18 from GERG-2004
         template <typename MoleFractions>
         auto Y(const MoleFractions& z, const Eigen::MatrixXd& phi, const Eigen::MatrixXd& lambda, const Eigen::MatrixXd& Yij) const {
             auto N = z.size();
             typename MoleFractions::value_type sum = 0.0;
             for (auto i = 0U; i < N; ++i) {
+                typename MoleFractions::value_type sumj1 = 0.0, sumj2 = 0.0;
                 for (auto j = 0U; j < N; ++j) {
-                    auto contrib = z[i] * z[j] * (phi(i, j) + z[j] * lambda(i, j)) * Yij(i, j);
-                    sum = sum + contrib;
+                    sumj1 += z[j] * phi(i, j) * Yij(i, j);
+                    sumj2 += z[j] * cbrt(lambda(i,j)) * cbrt(Yij(i,j));
                 }
+                sum += z[i]*(sumj1 + sumj2*sumj2*sumj2);
             }
             return sum;
         }
