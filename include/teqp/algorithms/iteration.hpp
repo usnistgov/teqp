@@ -15,12 +15,12 @@ class NRIterator{
 private:
     const AbstractModel *ar, *aig;
     const std::vector<char>  vars;
-    const Eigen::Ref<const Eigen::ArrayXd> vals;
+    const Eigen::ArrayXd vals;
     double T, rho;
     const Eigen::Ref<const Eigen::ArrayXd> z;
     
 public:
-    NRIterator(const AbstractModel* ar, const AbstractModel* aig, const std::vector<char>& vars, const Eigen::Ref<const Eigen::ArrayXd>& vals, double T, double rho, const Eigen::Ref<const Eigen::ArrayXd>& z) : ar(ar), aig(aig), vars(vars), vals(vals), T(T), rho(rho), z(z){}
+    NRIterator(const AbstractModel* ar, const AbstractModel* aig, const std::vector<char>& vars, const Eigen::ArrayXd& vals, double T, double rho, const Eigen::Ref<const Eigen::ArrayXd>& z) : ar(ar), aig(aig), vars(vars), vals(vals), T(T), rho(rho), z(z){}
     
     /// Return the variables that are being used in the iteration
     std::vector<char> get_vars() const { return vars; }
@@ -38,7 +38,7 @@ public:
     * \param T Temperature
     * \param rho Molar density
     */
-    auto calc_step(double T, double rho){
+    auto calc_step(double T, double rho) const{
         auto Ar = ar->get_deriv_mat2(T, rho, z);
         auto Aig = aig->get_deriv_mat2(T, rho, z);
         auto R = ar->get_R(z);
@@ -52,6 +52,15 @@ public:
         T += dx(0);
         rho += dx(1);
         return (im.v-vals).eval();
+    }
+    
+    /// Take one step, return the max(abs(residuals))
+    auto take_step_getmaxabsr(){
+        auto [dx, im] = calc_step(T, rho);
+        T += dx(0);
+        rho += dx(1);
+        auto r = (im.v-vals).eval();
+        return r.abs().maxCoeff();
     }
     
     /** Take a given number of steps
