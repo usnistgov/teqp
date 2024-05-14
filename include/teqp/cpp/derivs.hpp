@@ -49,6 +49,7 @@ auto build_iteration_Jv(const std::vector<char>& vars, const Eigen::Array<double
     auto d2alphadrho2 = [&](){ return A(0,2)/(rho*rho); };
     //
     // Derivatives of total Helmholtz energy a in terms of derivatives of alpha
+    auto a = [&](){ return alpha()*R*T; };
     auto dadTrecip = [&](){ return R/(Trecip*Trecip)*(Trecip*dalphadTrecip()-alpha());};
     auto d2adTrecip2 = [&](){ return R/(Trecip*Trecip*Trecip)*(Trecip*Trecip*d2alphadTrecip2()-2*Trecip*dalphadTrecip()+2*alpha());};
     auto dadrho = [&](){return R/Trecip*(dalphadrho());};
@@ -76,6 +77,11 @@ auto build_iteration_Jv(const std::vector<char>& vars, const Eigen::Array<double
                 v(i) = Trecip*Trecip*dadTrecip();
                 J(i, 0) = (Trecip*Trecip*d2adTrecip2() + 2*Trecip*dadTrecip())*dTrecipdT;
                 J(i, 1) = Trecip*Trecip*d2adTrecipdrho();
+                break;
+            case 'H':
+                v(i) = a() + Trecip*dadTrecip() + rho*dadrho();
+                J(i, 0) = (Trecip*d2adTrecip2() + rho*d2adTrecipdrho() + 2*dadTrecip())*dTrecipdT;
+                J(i, 1) = (Trecip*d2adTrecipdrho() + rho*d2adrho2() + 2*dadrho());
                 break;
             default:
                 throw std::invalid_argument("bad var: " + std::to_string(vars[i]));
