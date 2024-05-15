@@ -8,8 +8,8 @@ namespace cppinterface{
  */
 struct IterationMatrices{
     std::vector<char> vars; ///< The set of variables matching the rows in the Jacobian
-    Eigen::ArrayXXd J; ///< The Jacobian
-    Eigen::ArrayXd v; ///< The values of the thermodynamic variables matching the variables in vars
+    Eigen::Array22d J; ///< The Jacobian
+    Eigen::Array2d v; ///< The values of the thermodynamic variables matching the variables in vars
 };
 
 /**
@@ -25,11 +25,11 @@ struct IterationMatrices{
  */
 template<typename Array>
 auto build_iteration_Jv(const std::vector<char>& vars, const Eigen::Array<double, 3, 3>& Ar, const Eigen::Array<double, 3, 3>& Aig, const double R, const double T, const double rho, const Array &z){
-    IterationMatrices im; im.J.resize(vars.size(), 2); im.v.resize(vars.size()); im.vars = vars;
+    IterationMatrices im; im.vars = vars;
     
     auto A = Ar + Aig;
-    Eigen::ArrayXd& v = im.v;
-    Eigen::ArrayXXd& J = im.J;
+    Eigen::Array2d& v = im.v;
+    Eigen::Array22d& J = im.J;
     auto Trecip = 1.0/T;
     auto dTrecipdT = -Trecip*Trecip;
     
