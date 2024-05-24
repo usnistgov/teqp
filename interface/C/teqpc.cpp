@@ -195,7 +195,7 @@ EXPORT_CODE int CONVENTION get_AtaudeltaXiXjXk(const long long int uuid, const d
     return errcode;
 }
 
-EXPORT_CODE int CONVENTION get_virials(const long long int uuid, const int Nvir, const int NT, const double T, const double* molefrac, const int Ncomp, double* val, char* errmsg, int errmsg_length) {
+EXPORT_CODE int CONVENTION get_dmBnvirdTm(const long long int uuid, const int Nvir, const int NT, const double T, const double* molefrac, const int Ncomp, double* val, char* errmsg, int errmsg_length) {
     int errcode = 0;
     try {
         // Make an Eigen view of the double buffer
