@@ -62,9 +62,9 @@ public:
         resulttype alphar = 0.0;
         auto N = molefracs.size();
         for (auto i = 0U; i < N; ++i) {
-            alphar = alphar + molefracs[i] * EOSs[i].alphar(tau, delta);
+            alphar += molefracs[i] * EOSs[i].alphar(tau, delta);
         }
-        return forceeval(alphar);
+        return alphar;
     }
 
     template<typename TauType, typename DeltaType>
@@ -95,7 +95,7 @@ public:
         std::size_t N = molefracs.size();
         for (auto i = 0U; i < N; ++i) {
             for (auto j = i+1; j < N; ++j) {
-                alphar = alphar + molefracs[i] * molefracs[j] * F(i, j) * funcs[i][j].alphar(tau, delta);
+                alphar += molefracs[i] * molefracs[j] * F(i, j) * funcs[i][j].alphar(tau, delta);
             }
         }
         return forceeval(alphar);
@@ -167,12 +167,13 @@ public:
         if (static_cast<std::size_t>(molefrac.size()) != corr.size()){
             throw teqp::InvalidArgument("Wrong size of mole fractions; "+std::to_string(corr.size()) + " are loaded but "+std::to_string(molefrac.size()) + " were provided");
         }
-        auto Tred = forceeval(redfunc.get_Tr(molefrac));
-        auto rhored = forceeval(redfunc.get_rhor(molefrac));
-        auto delta = forceeval(rho / rhored);
-        auto tau = forceeval(Tred / T);
-        auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
-        return forceeval(val);
+        auto delta = forceeval(rho / redfunc.get_rhor(molefrac));
+        auto tau = forceeval(redfunc.get_Tr(molefrac) / T);
+        if (molefrac.size() == 1){
+            // Short circuit for pure fluids and avoid mole fractions and departure terms
+            return corr.alphari(tau, delta, 0);
+        }
+        return forceeval(corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac));
     }
     
     template<typename TType, typename RhoType, typename MoleFracType>
@@ -183,8 +184,10 @@ public:
         if (static_cast<std::size_t>(molefrac.size()) != corr.size()){
             throw teqp::InvalidArgument("Wrong size of mole fractions; "+std::to_string(corr.size()) + " are loaded but "+std::to_string(molefrac.size()) + " were provided");
         }
-        auto val = corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac);
-        return forceeval(val);
+        if (molefrac.size() == 1){
+            return corr.alphari(tau, delta, 0U);
+    }
+        return forceeval(corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac));
     }
 };
 
