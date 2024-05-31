@@ -422,8 +422,18 @@ public:
     auto alphar(const Tau& tau, const Delta& delta) const {
         std::common_type_t <Tau, Delta> ar = 0.0;
         for (const auto& term : coll) {
+//            // This approach is recommended to speed up visitor, but doesn't seem to make a difference in Xcode
+//            if (const auto t = std::get_if<JustPowerEOSTerm>(&term)){
+//                ar += t->alphar(tau, delta); continue;
+//            }
+//            if (const auto t = std::get_if<GaussianEOSTerm>(&term)){
+//                ar += t->alphar(tau, delta); continue;
+//            }
+//            if (const auto t = std::get_if<PowerEOSTerm>(&term)){
+//                ar += t->alphar(tau, delta); continue;
+//            }
             auto contrib = std::visit([&](auto& t) { return t.alphar(tau, delta); }, term);
-            ar = ar + contrib;
+            ar += contrib;
         }
         return ar;
     }
