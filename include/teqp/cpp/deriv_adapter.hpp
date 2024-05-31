@@ -21,8 +21,8 @@ public:
     Owner(ModelType&& m) : model(m), index(std::type_index(typeid(ModelType))) {};
 };
 
-/// The ownership wrapper of a model
-/// \note Takes ownership, so the argument passed to the constructor is invalidated
+/// The viewer wrapper of a model
+/// \note Does not take ownership, so the argument passed to the constructor must have a longer lifespan than this class
 template<typename ModelType>
 struct ConstViewer{
 private:
