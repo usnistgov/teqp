@@ -27,7 +27,7 @@ public:
         else {
             result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta);
+                r += n[i] * exp(t[i] * lntau + d[i] * lndelta);
             }
         }
         return forceeval(r);
@@ -39,28 +39,33 @@ public:
 */
 class PowerEOSTerm {
 public:
-    Eigen::ArrayXd n, t, d, c, l;
-    Eigen::ArrayXi l_i;
+    struct PowerEOSTermCoeffs {
+        Eigen::ArrayXd n, t, d, c, l;
+        Eigen::ArrayXi l_i;
+    };
+    const PowerEOSTermCoeffs coeffs;
+    
+    PowerEOSTerm(const PowerEOSTermCoeffs& coef) : coeffs(coef){}
 
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
         result r = 0.0, lntau = log(tau);
-        if (l_i.size() == 0 && n.size() > 0) {
+        if (coeffs.l_i.size() == 0 && coeffs.n.size() > 0) {
             throw std::invalid_argument("l_i cannot be zero length if some terms are provided");
         }
         if (getbaseval(delta) == 0) {
-            for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau - c[i] * powi(delta, l_i[i])) * powi(delta, static_cast<int>(d[i]));
+            for (auto i = 0; i < coeffs.n.size(); ++i) {
+                r += coeffs.n[i] * exp(coeffs.t[i] * lntau - coeffs.c[i] * powi(delta, coeffs.l_i[i])) * powi(delta, static_cast<int>(coeffs.d[i]));
             }
         }
         else {
             result lndelta = log(delta);
-            for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - c[i] * powi(delta, l_i[i]));
+            for (auto i = 0; i < coeffs.n.size(); ++i) {
+                r += coeffs.n[i] * exp(coeffs.t[i] * lntau + coeffs.d[i] * lndelta - coeffs.c[i] * powi(delta, coeffs.l_i[i]));
             }
         }
-        return forceeval(r);
+        return r;
     }
 };
 
@@ -84,7 +89,7 @@ public:
         else {
             result lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - g[i] * powi(delta, l_i[i]));
+                r += n[i] * exp(t[i] * lntau + d[i] * lndelta - g[i] * powi(delta, l_i[i]));
             }
         }
         return forceeval(r);

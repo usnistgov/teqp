@@ -227,7 +227,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
             return;
         }
 
-        PowerEOSTerm eos;
+        PowerEOSTerm::PowerEOSTermCoeffs eos;
 
         auto eigorzero = [&term, &N](const std::string& name) -> Eigen::ArrayXd {
             if (!term[name].empty()) {
@@ -314,14 +314,14 @@ inline auto build_departure_function(const nlohmann::json& j) {
             poly.d = eos.d.head(Nlzero);
             dep.add_term(poly);
 
-            PowerEOSTerm e;
+            PowerEOSTerm::PowerEOSTermCoeffs e;
             e.n = eos.n.tail(Nlnonzero);
             e.t = eos.t.tail(Nlnonzero);
             e.d = eos.d.tail(Nlnonzero);
             e.c = eos.c.tail(Nlnonzero);
             e.l = eos.l.tail(Nlnonzero);
             e.l_i = eos.l_i.tail(Nlnonzero);
-            dep.add_term(e);
+            dep.add_term(PowerEOSTerm(e));
         }
         else {
             // Don't try to get too clever, just add the departure term
@@ -380,7 +380,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
         int Npower = term["Npower"];
         auto NGERG = static_cast<int>(term["n"].size()) - Npower;
 
-        PowerEOSTerm eos;
+        PowerEOSTerm::PowerEOSTermCoeffs eos;
         eos.n = toeig(term["n"]).head(Npower);
         eos.t = toeig(term["t"]).head(Npower);
         eos.d = toeig(term["d"]).head(Npower);
@@ -392,7 +392,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
         }
         eos.c = (eos.l > 0).cast<int>().cast<double>();
         eos.l_i = eos.l.cast<int>();
-        dep.add_term(eos);
+        dep.add_term(PowerEOSTerm(eos));
 
         GERG2004EOSTerm e;
         e.n = toeig(term["n"]).tail(NGERG);
@@ -411,7 +411,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
         int Npower = term["Npower"];
         auto NGauss = static_cast<int>(term["n"].size()) - Npower;
 
-        PowerEOSTerm eos;
+        PowerEOSTerm::PowerEOSTermCoeffs eos;
         eos.n = toeig(term["n"]).head(Npower);
         eos.t = toeig(term["t"]).head(Npower);
         eos.d = toeig(term["d"]).head(Npower);
@@ -423,7 +423,7 @@ inline auto build_departure_function(const nlohmann::json& j) {
         }
         eos.c = (eos.l > 0).cast<int>().cast<double>();
         eos.l_i = eos.l.cast<int>();
-        dep.add_term(eos);
+        dep.add_term(PowerEOSTerm(eos));
 
         GaussianEOSTerm e;
         e.n = toeig(term["n"]).tail(NGauss);
@@ -535,7 +535,7 @@ inline auto get_EOS_terms(const nlohmann::json& j)
     auto build_power = [&](auto term, auto & container) {
         std::size_t N = term["n"].size();
 
-        PowerEOSTerm eos;
+        PowerEOSTerm::PowerEOSTermCoeffs eos;
 
         auto eigorzero = [&term, &N](const std::string& name) -> Eigen::ArrayXd {
             if (!term[name].empty()) {
@@ -609,14 +609,14 @@ inline auto get_EOS_terms(const nlohmann::json& j)
             poly.d = eos.d.head(Nlzero);
             container.add_term(poly);
 
-            PowerEOSTerm e;
+            PowerEOSTerm::PowerEOSTermCoeffs e;
             e.n = eos.n.tail(Nlnonzero);
             e.t = eos.t.tail(Nlnonzero);
             e.d = eos.d.tail(Nlnonzero);
             e.c = eos.c.tail(Nlnonzero);
             e.l = eos.l.tail(Nlnonzero);
             e.l_i = eos.l_i.tail(Nlnonzero);
-            container.add_term(e);
+            container.add_term(PowerEOSTerm(e));
         }
         else {
             // Don't try to get too clever, just add the term
