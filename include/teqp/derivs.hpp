@@ -212,7 +212,7 @@ struct TDXDerivatives {
                 adtype Trecipad = 1.0 / T, rhoad = rho;
                 auto f = [&w, &molefrac](const adtype& Trecip, const adtype& rho_) {
                     adtype T_ = 1.0/Trecip;
-                    return eval(AlphaCaller(w, T_, rho_, molefrac)); };
+                    return forceeval(AlphaCaller(w, T_, rho_, molefrac)); };
                 auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)));
                 auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad));
                 return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
@@ -252,7 +252,7 @@ struct TDXDerivatives {
             adtype T_ = 1.0/Trecip;
             Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
             molefracdual[i] = xi_;
-            return eval(AlphaCaller(w, T_, rho_, molefracdual)); };
+            return forceeval(AlphaCaller(w, T_, rho_, molefracdual)); };
         auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)));
         auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi));
         return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
@@ -340,7 +340,7 @@ struct TDXDerivatives {
         auto f = [&w, &molefrac, &i](const adtype& tau_, const adtype& delta_, const adtype& xi_) {
             Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
             molefracdual[i] = xi_;
-            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+            return forceeval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
         auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)));
         auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi));
         return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
@@ -357,7 +357,7 @@ struct TDXDerivatives {
             Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
             molefracdual[i] = xi_;
             molefracdual[j] = xj_;
-            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+            return forceeval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
         auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)));
         auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi, xj));
         return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
@@ -375,7 +375,7 @@ struct TDXDerivatives {
             molefracdual[i] = xi_;
             molefracdual[j] = xj_;
             molefracdual[k] = xk_;
-            return eval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
+            return forceeval(AlpharTauDeltaCaller(w, tau_, delta_, molefracdual)); };
         auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(tauad)), build_duplicated_tuple<iD>(std::ref(deltaad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)), build_duplicated_tuple<iXk>(std::ref(xk)));
         auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(tauad, deltaad, xi, xj, xk));
         return powi(tau, iT) * powi(delta, iD) * der[der.size() - 1];
@@ -424,7 +424,7 @@ struct TDXDerivatives {
             Eigen::ArrayX<adtype> molefracdual = molefrac.template cast<adtype>();
             molefracdual[i] = xi_;
             molefracdual[j] = xj_;
-            return eval(AlphaCaller(w, T_, rho_, molefracdual)); };
+            return forceeval(AlphaCaller(w, T_, rho_, molefracdual)); };
         auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)));
         auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi, xj));
         return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
@@ -450,7 +450,7 @@ struct TDXDerivatives {
             molefracdual[i] = xi_;
             molefracdual[j] = xj_;
             molefracdual[k] = xk_;
-            return eval(AlphaCaller(w, T_, rho_, molefracdual)); };
+            return forceeval(AlphaCaller(w, T_, rho_, molefracdual)); };
         auto wrts = std::tuple_cat(build_duplicated_tuple<iT>(std::ref(Trecipad)), build_duplicated_tuple<iD>(std::ref(rhoad)), build_duplicated_tuple<iXi>(std::ref(xi)), build_duplicated_tuple<iXj>(std::ref(xj)), build_duplicated_tuple<iXk>(std::ref(xk)));
         auto der = derivatives(f, std::apply(wrt_helper(), wrts), at(Trecipad, rhoad, xi, xj, xk));
         return powi(forceeval(1.0 / T), iT) * powi(rho, iD) * der[der.size() - 1];
@@ -1030,7 +1030,7 @@ struct IsochoricDerivatives{
         auto hfunc = [&model, &T](const ArrayXdual2nd& rho_) {
             auto rhotot_ = rho_.sum();
             auto molefrac = (rho_ / rhotot_).eval();
-            return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
+            return forceeval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
         };
         return autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g).eval(); // evaluate the function value u, its gradient, and its Hessian matrix H
     }
@@ -1050,7 +1050,7 @@ struct IsochoricDerivatives{
         auto hfunc = [&model, &T](const ArrayXdual2nd& rho_) {
             auto rhotot_ = rho_.sum();
             auto molefrac = (rho_ / rhotot_).eval();
-            return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
+            return forceeval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
         };
         // Evaluate the function value u, its gradient, and its Hessian matrix H
         Eigen::MatrixXd H = autodiff::hessian(hfunc, wrt(rhovecc), at(rhovecc), u, g); 
@@ -1109,7 +1109,7 @@ struct IsochoricDerivatives{
         auto psirfunc = [&model, &T](const ArrayXdual& rho_) {
             auto rhotot_ = rho_.sum();
             auto molefrac = (rho_ / rhotot_).eval();
-            return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
+            return forceeval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
         };
         auto val = autodiff::gradient(psirfunc, wrt(rhovecc), at(rhovecc)).eval(); // evaluate the gradient
         return val;
@@ -1262,7 +1262,7 @@ struct IsochoricDerivatives{
                 rhovecc[i] = rhoi;
                 auto rhotot_ = rhovecc.sum();
                 auto molefrac = (rhovecc / rhotot_).eval();
-                return eval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
+                return forceeval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
             };
             dual2nd Tdual = T, rhoidual = rho[i];
             auto [u00, u10, u11] = derivatives(psirfunc, wrt(Tdual, rhoidual), at(Tdual, rhoidual));
