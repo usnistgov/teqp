@@ -17,7 +17,8 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau);
+        result r = 0.0;
+        TauType lntau = log(tau);
         double base_delta = getbaseval(delta);
         if (base_delta == 0) {
             for (auto i = 0; i < n.size(); ++i) {
@@ -25,7 +26,7 @@ public:
             }
         }
         else {
-            result lndelta = log(delta);
+            DeltaType lndelta = log(delta);
             for (auto i = 0; i < n.size(); ++i) {
                 r += n[i] * exp(t[i] * lntau + d[i] * lndelta);
             }
@@ -50,7 +51,8 @@ public:
     template<typename TauType, typename DeltaType>
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         using result = std::common_type_t<TauType, DeltaType>;
-        result r = 0.0, lntau = log(tau);
+        result r = 0.0;
+        TauType lntau = log(tau);
         if (coeffs.l_i.size() == 0 && coeffs.n.size() > 0) {
             throw std::invalid_argument("l_i cannot be zero length if some terms are provided");
         }
@@ -60,9 +62,13 @@ public:
             }
         }
         else {
-            result lndelta = log(delta);
+            DeltaType lndelta = log(delta);
+            result arg;
+            DeltaType dpart;
             for (auto i = 0; i < coeffs.n.size(); ++i) {
-                r += coeffs.n[i] * exp(coeffs.t[i] * lntau + coeffs.d[i] * lndelta - coeffs.c[i] * powi(delta, coeffs.l_i[i]));
+                dpart = coeffs.d[i] * lndelta - coeffs.c[i] * powi(delta, coeffs.l_i[i]);
+                arg = (coeffs.t[i] * lntau) + dpart;
+                r += coeffs.n[i] * exp(arg);
             }
         }
         return r;
@@ -144,9 +150,15 @@ public:
             }
         }
         else {
-            result lndelta = log(delta);
+            DeltaType lndelta = log(delta);
+            DeltaType d1, d2;
+            TauType t1, t2;
+            result arg;
             for (auto i = 0; i < n.size(); ++i) {
-                r = r + n[i] * exp(t[i] * lntau + d[i] * lndelta - eta[i] * square(delta - epsilon[i]) - beta[i] * square(tau - gamma[i]));
+                d1 = delta - epsilon[i]; d2 = d1*d2;
+                t1 = tau - gamma[i]; t2 = t1*t1;
+                arg = t[i] * lntau + d[i] * lndelta - eta[i]*d2 - beta[i]*t2;
+                r = r + n[i] * exp(arg);
             }
         }
         return forceeval(r);
