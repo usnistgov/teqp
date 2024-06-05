@@ -24,7 +24,7 @@ inline auto build_alphar_fgradHessian_autodiff(const Model& model, const Scalar&
     ArrayXdual g;
     ArrayXdual2nd molefracdual(molefrac.size()); for (auto i = 0; i < molefrac.size(); ++i) { molefracdual[i] = molefrac[i]; }
     auto hfunc = [&model, &T, &rhomolar](const ArrayXdual2nd& molefracdual_) {
-        return eval(model.alphar(T, rhomolar, molefracdual_));
+        return forceeval(model.alphar(T, rhomolar, molefracdual_));
     };
     // Evaluate the function value u, its gradient, and its Hessian matrix H
     Eigen::MatrixXd H = autodiff::hessian(hfunc, wrt(molefracdual), at(molefracdual), u, g);
