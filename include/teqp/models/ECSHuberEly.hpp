@@ -54,8 +54,8 @@ public:
         auto h = rhomolar_crit_reference/rhomolar_crit_fluid*phi;
         
         // Calculate the effective temperature and density (sometimes called conformal temperature and conformal density)
-        auto T_effective = T/f;
-        auto rho_effective = rhomolar*h;
+        auto T_effective = forceeval(T/f);
+        auto rho_effective = forceeval(rhomolar*h);
         
         return reference_model.alphar(T_effective, rho_effective, mole_fractions);
     }
