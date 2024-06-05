@@ -149,13 +149,8 @@ namespace teqp {
             return static_cast<T>(x2 * x2);
         }
         if (n < 0) {
-            using namespace autodiff::detail;
-            if constexpr (isDual<T> || isExpr<T>) {
-                return eval(powi(eval(1.0 / x), -n));
-            }
-            else {
-                return powi(static_cast<T>(1.0) / x, -n);
-            }
+            T xrecip = 1.0/x;
+            return powi(xrecip, -n);
         }
         else {
             T y(x), xpwr(x);
