@@ -278,7 +278,7 @@ public:
         
         for (int k = N; k >= 0; --k) {
             // Do the recurrent calculation
-            u_k = 2.0 * ind * u_kp1 - u_kp2 + c.row(k);
+            u_k = 2.0 * ind * u_kp1 - u_kp2 + c.row(k).template cast<XType>();
             if (k > 0) {
                 // Update the values
                 u_kp2 = u_kp1; u_kp1 = u_k;
@@ -302,7 +302,7 @@ public:
     auto alphar(const TauType& tau, const DeltaType& delta) const {
         TauType x = (2.0*tau - (taumax + taumin)) / (taumax - taumin);
         DeltaType y = (2.0*delta - (deltamax + deltamin)) / (deltamax - deltamin);
-        return forceeval(Clenshaw2DEigen(a, forceeval(x), forceeval(y)));
+        return forceeval(Clenshaw2DEigen(a, x, y));
     }
 };
 
