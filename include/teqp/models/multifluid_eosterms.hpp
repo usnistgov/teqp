@@ -155,7 +155,7 @@ public:
             TauType t1, t2;
             result arg;
             for (auto i = 0; i < n.size(); ++i) {
-                d1 = delta - epsilon[i]; d2 = d1*d2;
+                d1 = delta - epsilon[i]; d2 = d1*d1;
                 t1 = tau - gamma[i]; t2 = t1*t1;
                 arg = t[i] * lntau + d[i] * lndelta - eta[i]*d2 - beta[i]*t2;
                 r = r + n[i] * exp(arg);
