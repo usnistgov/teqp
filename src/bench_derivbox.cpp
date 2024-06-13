@@ -13,10 +13,10 @@ using namespace teqp;
 
 TEST_CASE("multifluid derivatives", "[mf]")
 {
-    std::vector<std::string> names = { "Ethane" };
+    std::vector<std::string> names = { "n-Propane" };
     auto model = build_multifluid_model(names, "../teqp/fluiddata");
 
-    double T = 300, rho = 2;
+    double T = 400, rho = 5000;
     Eigen::ArrayX<double> z(1); z.fill(1.0);
     
     auto json = nlohmann::json::parse(model.get_meta());
@@ -29,13 +29,28 @@ TEST_CASE("multifluid derivatives", "[mf]")
     const std::shared_ptr<AbstractModel> aigg = teqp::cppinterface::make_model({{"kind","IdealHelmholtz"}, {"model", jigs}});
     
     std::vector<char> vars = {'P', 'S'};
-    const auto vals = (Eigen::ArrayXd(2) << 300.0, 400.0).finished();
+    const auto vals = (Eigen::ArrayXd(2) << 6646000.0, 99).finished();
     
     Eigen::Ref<const Eigen::ArrayXd> rvals = vals, rz = z;
-    teqp::iteration::NRIterator NR(amm.get(), aigg.get(), vars, rvals, T, rho, rz);
+    double R = amm->R(rz);
+    teqp::iteration::AlphaModel alpha{aigg, amm};
+    const std::tuple<bool, bool> &relative_error = {true, false};
+    std::vector<std::shared_ptr<teqp::iteration::StoppingCondition>> stopping_conditions;
+    stopping_conditions.emplace_back(std::make_shared<teqp::iteration::MaxAbsErrorCondition>(1e-16));
+    stopping_conditions.emplace_back(std::make_shared<teqp::iteration::StepCountErrorCondition>(20));
+    stopping_conditions.emplace_back(std::make_shared<teqp::iteration::NanXDXErrorCondition>());
+    stopping_conditions.emplace_back(std::make_shared<teqp::iteration::MinRelStepsizeCondition>(1e-16));
+    
+    teqp::iteration::NRIterator NR(alpha, vars, rvals, T, rho, rz, relative_error, stopping_conditions);
     
     BENCHMARK("alphar") {
         return model.alphar(T, rho, z);
+    };
+    BENCHMARK("alpha.get_A00A10A01") {
+        return alpha.get_A00A10A01(T, rho, z);
+    };
+    BENCHMARK("alpha.get_vals") {
+        return alpha.get_vals(vars, R, T, rho, z);
     };
     BENCHMARK("Ar11") {
         return amm->get_Ar11(T, rho, z);
@@ -57,15 +72,16 @@ TEST_CASE("multifluid derivatives", "[mf]")
     };
     
     BENCHMARK("Newton-Raphson construction") {
-        return teqp::iteration::NRIterator(amm.get(), aigg.get(), vars, rvals, T, rho, rz);
+        return teqp::iteration::NRIterator(alpha, vars, rvals, T, rho, rz, relative_error, stopping_conditions);
     };
     BENCHMARK("Newton-Raphson calc_step") {
         return NR.calc_step(T, rho);
     };
     BENCHMARK("Newton-Raphson take_step") {
-        return NR.take_step();
+        return NR.take_steps(1);
     };
     BENCHMARK("Newton-Raphson take_steps") {
+        teqp::iteration::NRIterator NR(alpha, vars, rvals, T, rho, rz, relative_error, stopping_conditions);
         return NR.take_steps(5);
     };
 }
