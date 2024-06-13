@@ -33,7 +33,7 @@ private:
     
     const double m_pi = 3.1415926535897932384626433;
     
-    auto __factorial(int i) const{ return tgamma(i+1); }
+    double __factorial(int i) const{ return tgamma(i+1); }
     
     const double lambda;
     
@@ -54,7 +54,7 @@ private:
     };
     
     template<typename GType>
-    auto Rn(const GType &gn, double lambda_) const{
+    double Rn(const GType &gn, double lambda_) const{
         auto o = gn[3];
         for (auto j = 4; j < 9; ++j){
             o += gn[j]*pow(pow(lambda_,3)-1, j-2);
@@ -63,7 +63,7 @@ private:
     }
     
     template<typename GType>
-    auto Qn(const GType &gn, double lambda_) const{
+    double Qn(const GType &gn, double lambda_) const{
         auto o = gn[9];
         for (auto j = 10; j < 15; ++j){
             o += gn[j]*pow(pow(lambda_,3)-1, j-7);
@@ -71,12 +71,12 @@ private:
         return o;
     }
 
-    auto gamman(int n, double lambda_) const{
+    double gamman(int n, double lambda_) const{
         const auto& gn = gammanvals.at(n);
         return gn[1]*lambda_ + gn[2]*pow(lambda_,2) + Rn(gn, lambda_)/Qn(gn, lambda_);
     }
     
-    auto phii(int i, double lambda_) const{
+    double phii(int i, double lambda_) const{
         const auto& phivalsi = phivals.at(i);
         double o = 0.0;
         for (auto n = 0; n < 8; ++n){
@@ -85,24 +85,24 @@ private:
         return o;
     };
     
-    auto P1(double lambda_) const{return pow(lambda_,6) - 18*pow(lambda_,4) + 32*pow(lambda_,3) - 15;}
-    auto P2(double lambda_) const{return -2*pow(lambda_,6) + 36*pow(lambda_,4) - 32*pow(lambda_,3) - 18*pow(lambda_,2) + 16;}
-    auto P3(double lambda_) const{return 6*pow(lambda_,6) - 18*pow(lambda_,4) + 18*pow(lambda_,2)-6;}
-    auto P4(double lambda_) const{return 32*pow(lambda_,3) - 18*pow(lambda_,2) - 48;}
-    auto P5(double lambda_) const{return 5*pow(lambda_,6) - 32*pow(lambda_,3) + 18*pow(lambda_,2) + 26;};
+    double P1(double lambda_) const{return pow(lambda_,6) - 18*pow(lambda_,4) + 32*pow(lambda_,3) - 15;}
+    double P2(double lambda_) const{return -2*pow(lambda_,6) + 36*pow(lambda_,4) - 32*pow(lambda_,3) - 18*pow(lambda_,2) + 16;}
+    double P3(double lambda_) const{return 6*pow(lambda_,6) - 18*pow(lambda_,4) + 18*pow(lambda_,2)-6;}
+    double P4(double lambda_) const{return 32*pow(lambda_,3) - 18*pow(lambda_,2) - 48;}
+    double P5(double lambda_) const{return 5*pow(lambda_,6) - 32*pow(lambda_,3) + 18*pow(lambda_,2) + 26;};
     
-    auto a2i(int i, double lambda_) const{ return -2*m_pi/(3*__factorial(i))*(pow(lambda_, 3)-1); };
+    double a2i(int i, double lambda_) const{ return -2*m_pi/(3*__factorial(i))*(pow(lambda_, 3)-1); };
     
-    auto a31(double lambda_) const{ return -pow(m_pi/6, 2)*(P1(std::min(lambda_, 2.0)));};
+    double a31(double lambda_) const{ return -pow(m_pi/6, 2)*(P1(std::min(lambda_, 2.0)));};
     
-    auto a32(double lambda_) const {
+    double a32(double lambda_) const {
         if (lambda_ <= 2)
             return pow(m_pi/6,2)*(P2(lambda_) - P1(lambda_)/2);
         else
             return pow(m_pi/6,2)*(-17/2 + P4(lambda_));
     }
 
-    auto a33(double lambda_) const {
+    double a33(double lambda_) const {
         if (lambda_ <= 2)
             return pow(m_pi/6,2)*(P2(lambda_) - P1(lambda_)/6 - P3(lambda_));
         else
@@ -116,9 +116,9 @@ private:
             return pow(m_pi/6,2)*(-17/24 + 7*P4(lambda_)/12 - 3*P5(lambda_)/2);
     }
         
-    auto xi2(double lambda_) const{ return a32(lambda_)/a2i(2, lambda_); }
-    auto xi3(double lambda_) const{ return a33(lambda_)/a2i(3, lambda_); }
-    auto xi4(double lambda_) const{ return a34(lambda_)/a2i(4, lambda_); }
+    double xi2(double lambda_) const{ return a32(lambda_)/a2i(2, lambda_); }
+    double xi3(double lambda_) const{ return a33(lambda_)/a2i(3, lambda_); }
+    double xi4(double lambda_) const{ return a34(lambda_)/a2i(4, lambda_); }
     
     template<typename RhoType>
     auto Ki(int i, const RhoType & rhostar, double lambda_) const{
