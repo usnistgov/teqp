@@ -25,6 +25,8 @@
 using namespace teqp::PCSAFT;
 #include "teqp/derivs.hpp"
 
+#include "tests/test_common.in"
+
 using namespace teqp;
 
 struct OneTiming {
@@ -186,7 +188,7 @@ int main()
         // Prepare some input values. It doesn't matter what the values of tau and delta are,
         // so long as they are not the same since we are not doing a phase equilibrium calculation, just
         // non-iterative calculations
-        auto dummymodel = build_multifluid_model({ "n-Propane" }, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+        auto dummymodel = build_multifluid_model({ "n-Propane" }, FLUIDDATAPATH, FLUIDDATAPATH + "/dev/mixtures/mixture_binary_pairs.json");
         double rhoc = 1/dummymodel.redfunc.vc[0];
         double Tc = dummymodel.redfunc.Tc[0];
         std::default_random_engine re;
@@ -229,7 +231,7 @@ int main()
 
             auto append_Ncomp = [&outputs, &Ncomp]() { outputs.back()["Ncomp"] = Ncomp; };
             
-            auto model = build_multifluid_model(fluid_set, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+            auto model = build_multifluid_model(fluid_set, FLUIDDATAPATH, FLUIDDATAPATH + "/dev/mixtures/mixture_binary_pairs.json");
 
             auto build_vdW = [](auto Ncomp) {
                 std::valarray<double> Tc_K(Ncomp), pc_Pa(Ncomp);
