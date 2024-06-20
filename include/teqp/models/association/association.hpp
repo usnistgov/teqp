@@ -143,7 +143,21 @@ private:
         }
         return D;
     }
-    
+    auto toEig(const nlohmann::json& j, const std::string& k) const -> Eigen::ArrayXd{
+        std::vector<double> vec = j.at(k);
+        return Eigen::Map<Eigen::ArrayXd>(&vec[0], vec.size());
+    };
+//    auto get_molecule_sites(const nlohmann::json&j){
+//        std::vector<std::vector<std::string>> molecule_sites; 
+//        return molecule_sites;
+//    }
+    auto get_association_options(const nlohmann::json&j){
+        AssociationOptions opt;
+        if (j.contains("options")){
+            opt = j.at("options").get<AssociationOptions>();
+        }
+        return opt;
+    }
 public:
     const Eigen::ArrayXd b_m3mol, ///< The covolume b, in m^3/mol
             beta, ///< The volume factor, dimensionless
@@ -152,6 +166,8 @@ public:
     const IndexMapper mapper;
     const Eigen::ArrayXXi D;
     const radial_dist m_radial_dist;
+    
+    Association(const nlohmann::json&j) : Association(toEig(j, "b / m^3/mol"), toEig(j, "betaAB"), toEig(j, "epsAB/kB / J/mol"), j.at("molecule_sites"), get_association_options(j)){}
     
     Association(const Eigen::ArrayXd& b_m3mol, const Eigen::ArrayXd& beta, const Eigen::ArrayXd& epsilon_Jmol, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : b_m3mol(b_m3mol), beta(beta), epsilon_Jmol(epsilon_Jmol), options(options), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_radial_dist(options.radial_dist){
     }
