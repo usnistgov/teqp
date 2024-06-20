@@ -12,7 +12,7 @@ RUN mkdir /boost && \
 
 WORKDIR /boost/boost_1_82_0
 RUN mkdir /boost_teqp && \
-	bin.v2/tools/bcp/gcc-9/release/link-static/bcp multiprecision/cpp_bin_float.hpp multiprecision/cpp_complex.hpp multiprecision/eigen.hpp functional/hash.hpp numeric/odeint.hpp typeof/incr_registration_group.hpp mp11.hpp algorithm/string/join.hpp asio/thread_pool.hpp asio/post.hpp /boost_teqp && \
+	bin.v2/tools/bcp/gcc-9/release/link-static/bcp multiprecision/cpp_bin_float.hpp multiprecision/cpp_complex.hpp multiprecision/eigen.hpp functional/hash.hpp numeric/odeint.hpp typeof/incr_registration_group.hpp mp11.hpp algorithm/string/join.hpp asio/thread_pool.hpp asio/post.hpp math/tools/toms748_solve.hpp /boost_teqp && \
 	zip -r /boost_teqp.zip /boost_teqp &&  \
 	tar cJf /boost_teqp.tar.xz /boost_teqp	
 
