@@ -24,6 +24,8 @@ using namespace teqp;
 
 static bool loaded_refprop = false;
 
+#include "tests/test_common.in"
+
 void init_REFPROP() {
 
     if (loaded_refprop) { return; }
@@ -65,7 +67,7 @@ TEST_CASE("Time fugacity coefficient"){
     // Setup teqp model
     std::vector<std::string> component_list = { "Methane","Ethane","n-Propane","n-Butane","n-Pentane","n-Hexane" };
     std::vector<std::string> fluid_set(component_list.begin(), component_list.begin() + Ncomp);
-    auto model = build_multifluid_model(fluid_set, "../mycp", "../mycp/dev/mixtures/mixture_binary_pairs.json");
+    auto model = build_multifluid_model(fluid_set, FLUIDDATAPATH, FLUIDDATAPATH + "/dev/mixtures/mixture_binary_pairs.json");
     using id = IsochoricDerivatives<decltype(model), double>;
     auto rhovec = (D_molm3*Eigen::ArrayXd::Ones(Ncomp)/Ncomp).eval();
 
@@ -95,7 +97,7 @@ TEST_CASE("Time fugacity coefficient"){
     std::valarray<double> u(20); u = 0.0;
     int ierr = 0; char herr[256];
 
-    SECTION("same") {
+    SECTION("check are the same") {
         FUGCOFdll(T, D_moldm3, &(z[0]), &(u[0]), ierr, herr, 255);
         auto phiteqp = id::template get_fugacity_coefficients(model, T, rhovec);
         auto diff = (phiteqp - Eigen::Map<const Eigen::ArrayXd>(&(u[0]), phiteqp.size())).eval();
