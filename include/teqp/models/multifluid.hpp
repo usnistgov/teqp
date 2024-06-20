@@ -90,7 +90,7 @@ public:
 
     template<typename TauType, typename DeltaType, typename MoleFractions>
     auto alphar(const TauType& tau, const DeltaType& delta, const MoleFractions& molefracs) const {
-        using resulttype = std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>; // Type promotion, without the const-ness
+        using resulttype = std::decay_t<std::common_type_t<decltype(tau), decltype(molefracs[0]), decltype(delta)>>; // Type promotion, without the const-ness
         resulttype alphar = 0.0;
         std::size_t N = molefracs.size();
         for (auto i = 0U; i < N; ++i) {
@@ -98,7 +98,7 @@ public:
                 alphar += molefracs[i] * molefracs[j] * F(i, j) * funcs[i][j].alphar(tau, delta);
             }
         }
-        return forceeval(alphar);
+        return alphar;
     }
 
     /// Call a single departure term at i,j 
@@ -186,8 +186,14 @@ public:
         }
         if (molefrac.size() == 1){
             return corr.alphari(tau, delta, 0U);
-    }
+        }
         return forceeval(corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac));
+    }
+    
+    template<typename TType, typename RhoType>
+    inline auto alphar_taudeltai(const TType &tau, const RhoType &delta, const std::size_t i) const
+    {
+        return corr.alphari(tau, delta, i);
     }
 };
 

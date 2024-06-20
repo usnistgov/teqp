@@ -83,6 +83,57 @@ TEST_CASE("Benchmark CO2 with Span and Wagner model", "[CO2bench]"){
     };
 }
 
+TEST_CASE("Benchmark Propane with Lemmon model", "[propanebench]"){
+    auto contents = R"(
+    {
+      "kind": "multifluid",
+      "model": {
+        "components": ["n-Propane"],
+        "root": "???"
+      }
+    }
+    )"_json;
+    contents["model"]["root"] = FLUIDDATAPATH;
+    auto model = teqp::cppinterface::make_model(contents);
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    BENCHMARK("alphar"){
+        return model->get_Ar00(300, 10000, z);
+    };
+    BENCHMARK("Ar11"){
+        return model->get_Ar11(300, 10000, z);
+    };
+    BENCHMARK("Ar02"){
+        return model->get_Ar02(300, 10000, z);
+    };
+    BENCHMARK("Ar20"){
+        return model->get_Ar20(300, 10000, z);
+    };
+    
+    using multifluid_t = decltype(multifluidfactory(std::string("")));
+    const auto& rmodel = teqp::cppinterface::adapter::get_model_cref<multifluid_t>(model.get());
+    
+    BENCHMARK("Tr(z)"){
+        return rmodel.redfunc.get_Tr(z);
+    };
+    BENCHMARK("alphar_taudelta(tau,delta,z)"){
+        return rmodel.alphar_taudelta(0.8, 1.3, z);
+    };
+    BENCHMARK("alphar_taudelta0(tau,delta)"){
+        return rmodel.alphar_taudeltai(0.8, 1.3, 0U);
+    };
+    BENCHMARK("allocate, fill, and index"){
+        Eigen::ArrayXd x(20); x[0] = 1.0; for(auto i = 1; i < x.size(); ++i){ x[i] = 3.3*x[i-1]; } return x[5];
+    };
+    
+    BENCHMARK("pow, double exponent"){
+        return std::pow(3.7, 17.0);
+    };
+    BENCHMARK("pow, int exponent"){
+        return powi(3.7, 17);
+    };
+}
+
 TEST_CASE("Test infinite dilution critical locus derivatives for multifluid with both orders", "[crit]")
 {
     std::string root = FLUIDDATAPATH;
