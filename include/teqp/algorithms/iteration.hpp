@@ -181,14 +181,15 @@ public:
         // Probably the compiler will inline these functions anyhow.
         //
         auto [A00, A10, A01] = get_A00A10A01(T, rho, z);
-        // Derivatives of total alpha; alpha = a/(R*T) = a*R/Trecip
+        // Derivatives of total alpha(Trecip, rho)
         auto alpha = [&](){ return A00; };
         auto dalphadTrecip = [&](){ return A10/Trecip; };
         auto dalphadrho = [&](){ return A01/rho; };
-        // Derivatives of total Helmholtz energy a in terms of derivatives of alpha
+        // Derivatives of total Helmholtz energy a = alpha*R/Trecip in
+        // terms of derivatives of alpha(Trecip, rho)
         auto a = [&](){ return alpha()*R*T; };
-        auto dadTrecip = [&](){ return R/(Trecip*Trecip)*(Trecip*dalphadTrecip()-alpha());};
-        auto dadrho = [&](){return R/Trecip*(dalphadrho());};
+        auto dadTrecip = [&](){ return R/(Trecip*Trecip)*(Trecip*dalphadTrecip()-alpha()); };
+        auto dadrho = [&](){ return R/Trecip*(dalphadrho()); };
         
         for (auto i = 0; i < vars.size(); ++i){
             switch(vars[i]){
