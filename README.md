@@ -45,6 +45,33 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.20.0:
+
+  * Features:
+  
+    * Added the FE-ANN EOS of Chaparro
+    * Added a generic SAFT model with plug and play components
+
+  * Issues closed:
+
+    * [#100](https://github.com/usnistgov/teqp/issues/100) : Enable association for PC-SAFT and SAFT-VR-Mie
+    * [#109](https://github.com/usnistgov/teqp/issues/109) : Add option to set molar gas constant for cubic EOS
+    * [#110](https://github.com/usnistgov/teqp/issues/110) : Wrong alphaig for GERG models
+    * [#113](https://github.com/usnistgov/teqp/issues/113) : Derivatives in multicomponent multiparameter mixtures returning NaN 
+    * [#115](https://github.com/usnistgov/teqp/issues/115) : Implementation of FE-ANN EoS
+    * [#118](https://github.com/usnistgov/teqp/issues/118) : Add ability to disable self-association in association term
+    * [#119](https://github.com/usnistgov/teqp/issues/119) : Fix invariant reducing function
+    * [#121](https://github.com/usnistgov/teqp/issues/121) : Add other EOS as pure fluids in multifluid model
+    * [#122](https://github.com/usnistgov/teqp/issues/122) : The Arn0 methods are missing (like the Ar0n ones)
+    * [#123](https://github.com/usnistgov/teqp/issues/123) : Tau/Delta composition derivatives not available for multifluid_mutant
+    * [#128](https://github.com/usnistgov/teqp/issues/128) : Add a generic SAFT model
+    * [#130](https://github.com/usnistgov/teqp/issues/130) : Better docs for model potential units
+
+  * Pull requests merged:
+
+    * [#127](https://github.com/usnistgov/teqp/pull/127) : Refactor the loading in ideal-gas conversion
+    * [#132](https://github.com/usnistgov/teqp/pull/132) : Generic SAFT implementation
+
 * 0.19.1 :
 
   * A mini bugfix to the Kolafa-Nezbeda to fix the docs; seems like a compiler bug?
