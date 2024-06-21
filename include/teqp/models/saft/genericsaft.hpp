@@ -10,7 +10,7 @@ namespace teqp::genericsaft{
 struct GenericSAFT{
     
 public:
-    using NonPolarTerms = std::variant<PCSAFT::PCSAFTMixture, SAFTVRMie::SAFTVRMieMixture, saft::softsaft::SoftSAFT>;
+    using NonPolarTerms = std::variant<PCSAFT::PCSAFTMixture, SAFTVRMie::SAFTVRMieNonpolarMixture, saft::softsaft::SoftSAFT>;
 //    using PolarTerms = EOSTermContainer<>;
     using AssociationTerms = std::variant<std::unique_ptr<association::Association>>;
     
@@ -21,7 +21,7 @@ private:
             return PCSAFT::PCSAFTfactory(j.at("model"));
         }
         else if (kind == "SAFTVRMie" || kind == "SAFT-VR-Mie"){
-            return SAFTVRMie::SAFTVRMiefactory(j.at("model"));
+            return SAFTVRMie::SAFTVRMieNonpolarfactory(j.at("model"));
         }
         else if (kind == "Johnson+Johnson" || kind == "softSAFT"){
             return saft::softsaft::SoftSAFT(j.at("model"));
@@ -46,7 +46,7 @@ private:
     };
     
 public:
-    GenericSAFT(nlohmann::json&j) : nonpolar(make_nonpolar(j.at("nonpolar"))){
+    GenericSAFT(const nlohmann::json&j) : nonpolar(make_nonpolar(j.at("nonpolar"))){
         if (j.contains("association")){
             association.emplace(make_association(j.at("association")));
         }

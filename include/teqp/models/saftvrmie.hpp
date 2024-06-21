@@ -768,6 +768,151 @@ struct SAFTVRMieChainContributionTerms{
 /**
  \brief A class used to evaluate mixtures using the SAFT-VR-Mie model
 */
+class SAFTVRMieNonpolarMixture {
+private:
+    
+    std::vector<std::string> names, bibtex;
+    const SAFTVRMieChainContributionTerms terms;
+
+    static void check_kmat(const Eigen::ArrayXXd& kmat, Eigen::Index N) {
+        if (kmat.size() == 0){
+            return;
+        }
+        if (kmat.cols() != kmat.rows()) {
+            throw teqp::InvalidArgument("kmat rows and columns are not identical");
+        }
+        if (kmat.cols() != N) {
+            throw teqp::InvalidArgument("kmat needs to be a square matrix the same size as the number of components");
+        }
+    };
+    static auto get_coeffs_from_names(const std::vector<std::string> &names){
+        SAFTVRMieLibrary library;
+        return library.get_coeffs(names);
+    }
+    auto get_names(const std::vector<SAFTVRMieCoeffs> &coeffs){
+        std::vector<std::string> names_;
+        for (auto c : coeffs){
+            names_.push_back(c.name);
+        }
+        return names_;
+    }
+    auto get_bibtex(const std::vector<SAFTVRMieCoeffs> &coeffs){
+        std::vector<std::string> keys_;
+        for (auto c : coeffs){
+            keys_.push_back(c.BibTeXKey);
+        }
+        return keys_;
+    }
+public:
+    static auto build_chain(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat, const std::optional<nlohmann::json>& flags = std::nullopt){
+        if (kmat){
+            check_kmat(kmat.value(), coeffs.size());
+        }
+        const std::size_t N = coeffs.size();
+        Eigen::ArrayXd m(N), epsilon_over_k(N), sigma_m(N), lambda_r(N), lambda_a(N);
+        auto i = 0;
+        for (const auto &coeff : coeffs) {
+            m[i] = coeff.m;
+            epsilon_over_k[i] = coeff.epsilon_over_k;
+            sigma_m[i] = coeff.sigma_m;
+            lambda_r[i] = coeff.lambda_r;
+            lambda_a[i] = coeff.lambda_a;
+            i++;
+        }
+        if (kmat){
+            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(kmat.value()), flags);
+        }
+        else{
+            auto mat = Eigen::ArrayXXd::Zero(N,N);
+            return SAFTVRMieChainContributionTerms(m, epsilon_over_k, sigma_m, lambda_r, lambda_a, std::move(mat), flags);
+        }
+    }
+    
+public:
+    SAFTVRMieNonpolarMixture(const std::vector<std::string> &names, const std::optional<Eigen::ArrayXXd>& kmat = std::nullopt, const std::optional<nlohmann::json>&flags = std::nullopt) : SAFTVRMieNonpolarMixture(get_coeffs_from_names(names), kmat, flags){};
+    SAFTVRMieNonpolarMixture(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd> &kmat = std::nullopt, const std::optional<nlohmann::json>&flags = std::nullopt) : names(get_names(coeffs)), bibtex(get_bibtex(coeffs)), terms(build_chain(coeffs, kmat, flags)) {};
+    SAFTVRMieNonpolarMixture(SAFTVRMieChainContributionTerms&& terms, const std::vector<SAFTVRMieCoeffs> &coeffs) : names(get_names(coeffs)), bibtex(get_bibtex(coeffs)), terms(std::move(terms)) {};
+    
+    SAFTVRMieNonpolarMixture& operator=( const SAFTVRMieNonpolarMixture& ) = delete; // non copyable
+    
+    auto chain_factory(const std::vector<SAFTVRMieCoeffs> &coeffs, const std::optional<Eigen::ArrayXXd>& kmat){
+        return SAFTVRMieNonpolarMixture::build_chain(coeffs, kmat);
+    }
+    
+    const auto& get_terms() const { return terms; }
+    auto get_core_calcs(double T, double rhomolar, const Eigen::ArrayXd& mole_fractions) const {
+        auto val = terms.get_core_calcs(T, rhomolar, mole_fractions);
+        
+        auto fromArrayX = [](const Eigen::ArrayXd &x){std::valarray<double>n(x.size()); for (auto i = 0U; i < n.size(); ++i){ n[i] = x[i];} return n;};
+        auto fromArrayXX = [](const Eigen::ArrayXXd &x){
+            std::size_t N = x.rows();
+            std::vector<std::vector<double>> n; n.resize(N);
+            for (auto i = 0U; i < N; ++i){
+                n[i].resize(N);
+                for (auto j = 0U; j < N; ++j){
+                    n[i][j] = x(i,j);
+                }
+            }
+            return n;
+        };
+        return nlohmann::json{
+            {"dmat", fromArrayXX(val.dmat)},
+            {"rhos", val.rhos},
+            {"rhoN", val.rhoN},
+            {"mbar", val.mbar},
+            {"xs", fromArrayX(val.xs)},
+            {"zeta", fromArrayX(val.zeta)},
+            {"zeta_x", val.zeta_x},
+            {"zeta_x_bar", val.zeta_x_bar},
+            {"alphar_mono", val.alphar_mono},
+            {"a1kB", val.a1kB},
+            {"a2kB2", val.a2kB2},
+            {"a3kB3", val.a3kB3},
+            {"alphar_chain", val.alphar_chain}
+        };
+    }
+    auto get_names() const { return names; }
+    auto get_BibTeXKeys() const { return bibtex; }
+    auto get_m() const { return terms.m; }
+    auto get_sigma_Angstrom() const { return (terms.sigma_A).eval(); }
+    auto get_sigma_m() const { return terms.sigma_A/1e10; }
+    auto get_epsilon_over_k_K() const { return terms.epsilon_over_k; }
+    auto get_kmat() const { return terms.kmat; }
+    auto get_lambda_r() const { return terms.lambda_r; }
+    auto get_lambda_a() const { return terms.lambda_a; }
+    auto get_EPSKIJ_matrix() const { return terms.get_EPSKIJ_K_matrix(); }
+    auto get_SIGMAIJ_matrix() const { return terms.get_SIGMAIJ_m_matrix(); }
+    
+    // template<typename VecType>
+    // double max_rhoN(const double T, const VecType& mole_fractions) const {
+    //     auto N = mole_fractions.size();
+    //     Eigen::ArrayX<double> d(N);
+    //     for (auto i = 0; i < N; ++i) {
+    //         d[i] = sigma_Angstrom[i] * (1.0 - 0.12 * exp(-3.0 * epsilon_over_k[i] / T));
+    //     }
+    //     return 6 * 0.74 / EIGEN_PI / (mole_fractions*m*powvec(d, 3)).sum()*1e30; // particles/m^3
+    // }
+    
+    template<class VecType>
+    auto R(const VecType& molefrac) const {
+        return get_R_gas<decltype(molefrac[0])>();
+    }
+
+    template<typename TTYPE, typename RhoType, typename VecType>
+    auto alphar(const TTYPE& T, const RhoType& rhomolar, const VecType& mole_fractions) const {
+        // First values for the Mie chain with dispersion (always included)
+        error_if_expr(T); error_if_expr(rhomolar);
+        auto vals = terms.get_core_calcs(T, rhomolar, mole_fractions);
+        using type = std::common_type_t<TTYPE, RhoType, decltype(mole_fractions[0])>;
+        type alphar = vals.alphar_mono + vals.alphar_chain;
+        
+        return forceeval(alphar);
+    }
+};
+
+/**
+ \brief A class used to evaluate mixtures using the SAFT-VR-Mie model
+*/
 class SAFTVRMieMixture {
 private:
     
@@ -960,6 +1105,45 @@ public:
         return forceeval(alphar);
     }
 };
+
+inline auto SAFTVRMieNonpolarfactory(const nlohmann::json & spec){
+
+    using klass = SAFTVRMieNonpolarMixture;
+    std::optional<Eigen::ArrayXXd> kmat;
+    if (spec.contains("kmat") && spec.at("kmat").is_array() && spec.at("kmat").size() > 0){
+        kmat = build_square_matrix(spec["kmat"]);
+    }
+    
+    if (spec.contains("names")){
+        std::vector<std::string> names = spec["names"];
+        if (kmat && static_cast<std::size_t>(kmat.value().rows()) != names.size()){
+            throw teqp::InvalidArgument("Provided length of names of " + std::to_string(names.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
+        }
+        return klass(names, kmat);
+    }
+    else if (spec.contains("coeffs")){
+        bool something_polar = false;
+        std::vector<SAFTVRMieCoeffs> coeffs;
+        for (auto j : spec["coeffs"]) {
+            SAFTVRMieCoeffs c;
+            c.name = j.at("name");
+            c.m = j.at("m");
+            c.sigma_m = (j.contains("sigma_m")) ? j.at("sigma_m").get<double>() : j.at("sigma_Angstrom").get<double>()/1e10;
+            c.epsilon_over_k = j.at("epsilon_over_k");
+            c.lambda_r = j.at("lambda_r");
+            c.lambda_a = j.at("lambda_a");
+            c.BibTeXKey = j.at("BibTeXKey");
+            coeffs.push_back(c);
+        }
+        if (kmat && static_cast<std::size_t>(kmat.value().rows()) != coeffs.size()){
+            throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " +  std::to_string(kmat.value().rows()));
+        }
+        return klass(std::move(klass::build_chain(coeffs, kmat)), coeffs);
+    }
+    else{
+        throw std::invalid_argument("you must provide names or coeffs, but not both");
+    }
+}
                                                                                                                                                          
 inline auto SAFTVRMiefactory(const nlohmann::json & spec){
 
