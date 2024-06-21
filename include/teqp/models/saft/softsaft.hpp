@@ -73,12 +73,13 @@ public:
         auto sigmamix3 = num1/den;
         auto epskmix = num2/den/sigmamix3;
         
-        auto rhomolar_monomer = rhomolar*m_mix/N_A; // Effective monomers per volume
+        auto rhoN_monomer = rhomolar*m_mix*N_A; // Effective number density of segments (monomers per volume)
         
         auto Tstar_eff = forceeval(T/epskmix);
-        auto rhostar_monomer_eff = forceeval(rhomolar_monomer*sigmamix3);
+        auto rhostar_monomer_eff = forceeval(rhoN_monomer*sigmamix3);
         
-        // Evaluate the contribution for the monomer
+        // Evaluate the contribution for the monomer based on
+        // reduced temperature & density from vdW-1f mixing rules
         resulttype alphar_ref = m_mix*Johnson.alphar(Tstar_eff, rhostar_monomer_eff, Eigen::ArrayXd{0});
         
         // Evaluate the contribution for the chain
