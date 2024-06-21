@@ -1,7 +1,8 @@
 #pragma once
 
-#include "teqp/models/mie/lennardjones.hpp"
+#include "teqp/models/mie/lennardjones/johnson.hpp"
 #include "teqp/types.hpp"
+#include "teqp/constants.hpp"
 
 namespace teqp::saft::softsaft{
 
@@ -31,7 +32,7 @@ namespace detail{
 class SoftSAFT{
 public:
     Eigen::ArrayXd m, epsilon_over_k, sigma_m, sigma_m3;
-    LJ126Johnson1993 Johnson;
+    mie::lennardjones::Johnson::LJ126Johnson1993 Johnson;
     Eigen::ArrayXd toEig(const std::vector<double>&x){ return Eigen::Map<const Eigen::ArrayXd>(&x[0], x.size()); }
     
     SoftSAFT(const Eigen::ArrayXd&m, const Eigen::ArrayXd&epsilon_over_k, const Eigen::ArrayXd&sigma_m) : m(m), epsilon_over_k(epsilon_over_k), sigma_m(sigma_m), sigma_m3(sigma_m.pow(3)) {}

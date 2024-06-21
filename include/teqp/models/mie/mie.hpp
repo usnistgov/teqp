@@ -1,6 +1,6 @@
 #pragma once
 
-#include "teqp/models/multifluid.hpp"
+#include "teqp/types.hpp"
 #include <Eigen/Dense>
 
 namespace teqp {

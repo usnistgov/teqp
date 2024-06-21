@@ -3,7 +3,7 @@
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
 #include "teqp/models/cubics.hpp"
-#include "teqp/models/pcsaft.hpp"
+#include "teqp/models/saft/pcsaftpure.hpp"
 
 namespace teqp {
 
@@ -405,7 +405,7 @@ public:
 class PCSAFTGrossSadowski2001Term {
 public:
     const double Tred_K, rhored_molm3;
-    const PCSAFT::PCSAFTPureGrossSadowski2001 pcsaft;
+    const saft::PCSAFT::PCSAFTPureGrossSadowski2001 pcsaft;
     
     PCSAFTGrossSadowski2001Term(const nlohmann::json& spec) :
         Tred_K(spec.at("Tred / K")),
