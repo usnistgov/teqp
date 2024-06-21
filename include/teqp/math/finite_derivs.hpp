@@ -1,5 +1,8 @@
 #pragma once
 
+#include <valarray>
+#include <map>
+
 namespace teqp{
 
 /**
