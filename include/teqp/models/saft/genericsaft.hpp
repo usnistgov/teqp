@@ -5,20 +5,20 @@
 #include "teqp/models/association/association.hpp"
 #include "teqp/models/saft/softsaft.hpp"
 
-namespace teqp::genericsaft{
+namespace teqp::saft::genericsaft{
 
 struct GenericSAFT{
     
 public:
-    using NonPolarTerms = std::variant<PCSAFT::PCSAFTMixture, SAFTVRMie::SAFTVRMieNonpolarMixture, saft::softsaft::SoftSAFT>;
+    using NonPolarTerms = std::variant<saft::pcsaft::PCSAFTMixture, SAFTVRMie::SAFTVRMieNonpolarMixture, saft::softsaft::SoftSAFT>;
 //    using PolarTerms = EOSTermContainer<>;
-    using AssociationTerms = std::variant<std::unique_ptr<association::Association>>;
+    using AssociationTerms = std::variant<association::Association>;
     
 private:
     auto make_nonpolar(const nlohmann::json &j) -> NonPolarTerms{
         std::string kind = j.at("kind");
         if (kind == "PCSAFT" || kind == "PC-SAFT"){
-            return PCSAFT::PCSAFTfactory(j.at("model"));
+            return saft::pcsaft::PCSAFTfactory(j.at("model"));
         }
         else if (kind == "SAFTVRMie" || kind == "SAFT-VR-Mie"){
             return SAFTVRMie::SAFTVRMieNonpolarfactory(j.at("model"));
@@ -34,7 +34,7 @@ private:
     auto make_association(const nlohmann::json &j) -> AssociationTerms{
         std::string kind = j.at("kind");
         if (kind == "canonical"){
-            return std::make_unique<association::Association>(j.at("model"));
+            return association::Association(j.at("model"));
         }
         // TODO: Add the new Dufal association term
 //        else if (kind == "Dufal-Mie"){
@@ -52,6 +52,11 @@ public:
         }
     }
     
+    template<class VecType>
+    auto R(const VecType& molefrac) const {
+        return get_R_gas<decltype(molefrac[0])>();
+    }
+    
     NonPolarTerms nonpolar;
 //    std::optional<PolarTerms> polar;
     std::optional<AssociationTerms> association;
@@ -61,7 +66,7 @@ public:
         auto contrib = std::visit([&](auto& t) { return t.alphar(T, rho, molefrac); }, nonpolar);
         if (association){
             const AssociationTerms& at = association.value();
-            contrib += std::visit([&](auto& t) { return t->alphar(T, rho, molefrac); }, at);
+            contrib += std::visit([&](auto& t) { return t.alphar(T, rho, molefrac); }, at);
         }
         return contrib;
     }

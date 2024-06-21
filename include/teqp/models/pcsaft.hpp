@@ -15,8 +15,7 @@
 #include "teqp/models/saft/polar_terms/GrossVrabec.hpp"
 #include <optional>
 
-namespace teqp {
-namespace PCSAFT {
+namespace teqp::saft::pcsaft {
 
 //#define PCSAFTDEBUG
 
@@ -483,5 +482,8 @@ inline auto PCSAFTfactory(const nlohmann::json& spec) {
 }
 using saft::PCSAFT::PCSAFTPureGrossSadowski2001;
 
-} /* namespace PCSAFT */
-}; // namespace teqp
+}; // namespace teqp::saft
+
+namespace teqp::PCSAFT{
+using namespace teqp::saft::pcsaft;
+}

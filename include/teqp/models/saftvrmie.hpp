@@ -1137,7 +1137,7 @@ inline auto SAFTVRMieNonpolarfactory(const nlohmann::json & spec){
         if (kmat && static_cast<std::size_t>(kmat.value().rows()) != coeffs.size()){
             throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " +  std::to_string(kmat.value().rows()));
         }
-        return klass(std::move(klass::build_chain(coeffs, kmat)), coeffs);
+        return klass(klass::build_chain(coeffs, kmat), coeffs);
     }
     else{
         throw std::invalid_argument("you must provide names or coeffs, but not both");
