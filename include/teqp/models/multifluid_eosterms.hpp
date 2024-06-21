@@ -3,7 +3,7 @@
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
 #include "teqp/models/cubics.hpp"
-#include "teqp/models/pcsaft.hpp"
+#include "teqp/models/saft/pcsaftpure.hpp"
 
 namespace teqp {
 
