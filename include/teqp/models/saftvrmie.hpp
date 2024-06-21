@@ -990,7 +990,7 @@ public:
         }
         else{
             // The dispersive and hard chain initialization has already happened at this point
-            return SAFTpolar::MultipolarContributionGrossVrabec(terms.m, terms.sigma_A, terms.epsilon_over_k, mustar2, nmu, Qstar2, nQ);
+            return saft::polar_terms::GrossVrabec::MultipolarContributionGrossVrabec(terms.m, terms.sigma_A, terms.epsilon_over_k, mustar2, nmu, Qstar2, nQ);
         }
     }
     
@@ -1122,7 +1122,6 @@ inline auto SAFTVRMieNonpolarfactory(const nlohmann::json & spec){
         return klass(names, kmat);
     }
     else if (spec.contains("coeffs")){
-        bool something_polar = false;
         std::vector<SAFTVRMieCoeffs> coeffs;
         for (auto j : spec["coeffs"]) {
             SAFTVRMieCoeffs c;
@@ -1274,7 +1273,7 @@ inline auto SAFTVRMiefactory(const nlohmann::json & spec){
             if (polar_model == "GrossVrabec"){
                 auto mustar2 = (mustar2factor*mu_Cm.pow(2)/(ms*epsks*sigma_ms.pow(3))).eval();
                 auto Qstar2 = (Qstar2factor*Q_Cm2.pow(2)/(ms*epsks*sigma_ms.pow(5))).eval();
-                auto polar = MultipolarContributionGrossVrabec(ms, sigma_ms*1e10, epsks, mustar2, nmu, Qstar2, nQ);
+                auto polar = saft::polar_terms::GrossVrabec::MultipolarContributionGrossVrabec(ms, sigma_ms*1e10, epsks, mustar2, nmu, Qstar2, nQ);
                 return SAFTVRMieMixture(std::move(chain), coeffs, std::move(polar));
             }
             if (polar_model == "GubbinsTwu+Luckas"){

@@ -12,7 +12,7 @@
 #include "teqp/constants.hpp"
 #include "teqp/json_tools.hpp"
 #include "teqp/models/saft/pcsaftpure.hpp"
-#include "teqp/models/saft/polar_terms.hpp"
+#include "teqp/models/saft/polar_terms/GrossVrabec.hpp"
 #include <optional>
 
 namespace teqp {
@@ -158,30 +158,6 @@ auto gij_HS(const zVecType& zeta, const dVecType& d,
     return forceeval(1.0 / (Upsilon)+d[i] * d[j] / (d[i] + d[j]) * 3.0 * zeta[2] / pow(Upsilon, 2)
         + pow(d[i] * d[j] / (d[i] + d[j]), 2) * 2.0 * zeta[2]*zeta[2] / pow(Upsilon, 3));
 }
-/// Eqn. A.16, Eqn. A.29
-template <typename Eta, typename MbarType>
-auto get_I1(const Eta& eta, const MbarType& mbar) {
-    auto avec = get_a(mbar);
-    Eta summer_I1 = 0.0, summer_etadI1deta = 0.0;
-    for (std::size_t i = 0; i < 7; ++i) {
-        auto increment = avec(i) * powi(eta, static_cast<int>(i));
-        summer_I1 = summer_I1 + increment;
-        summer_etadI1deta = summer_etadI1deta + increment * (i + 1.0);
-    }
-    return std::make_tuple(forceeval(summer_I1), forceeval(summer_etadI1deta));
-}
-/// Eqn. A.17, Eqn. A.30
-template <typename Eta, typename MbarType>
-auto get_I2(const Eta& eta, const MbarType& mbar) {
-    auto bvec = get_b(mbar);
-    Eta summer_I2 = 0.0 * eta, summer_etadI2deta = 0.0 * eta;
-    for (std::size_t i = 0; i < 7; ++i) {
-        auto increment = bvec(i) * powi(eta, static_cast<int>(i));
-        summer_I2 = summer_I2 + increment;
-        summer_etadI2deta = summer_etadI2deta + increment * (i + 1.0);
-    }
-    return std::make_tuple(forceeval(summer_I2), forceeval(summer_etadI2deta));
-}
 
 /**
 Sum up three array-like objects that can each have different container types and value types
@@ -203,18 +179,6 @@ auto sumproduct(const VecType1& v1, const VecType2& v2, const VecType3& v3) {
     using ResultType = typename std::common_type_t<decltype(v1[0]), decltype(v2[0]), decltype(v3[0])>;
     return forceeval((v1.template cast<ResultType>().array() * v2.template cast<ResultType>().array() * v3.template cast<ResultType>().array()).sum());
 }
-
-/// Parameters for model evaluation
-template<typename NumType, typename ProductType>
-class SAFTCalc {
-public:
-    // Just temperature dependent things
-    Eigen::ArrayX<NumType> d;
-
-    // These things also have composition dependence
-    ProductType m2_epsilon_sigma3_bar, ///< Eq. A. 12
-                m2_epsilon2_sigma3_bar; ///< Eq. A. 13
-};
 
 /***
  * \brief This class provides the evaluation of the hard chain contribution from classic PC-SAFT
@@ -245,18 +209,19 @@ public:
         
         using TRHOType = std::common_type_t<std::decay_t<TTYPE>, std::decay_t<RhoType>, std::decay_t<decltype(mole_fractions[0])>, std::decay_t<decltype(m[0])>>;
         
-        SAFTCalc<TTYPE, TRHOType> c;
-        c.m2_epsilon_sigma3_bar = static_cast<TRHOType>(0.0);
-        c.m2_epsilon2_sigma3_bar = static_cast<TRHOType>(0.0);
-        c.d.resize(N);
+        Eigen::ArrayX<TTYPE> d(N);
+        TRHOType m2_epsilon_sigma3_bar = 0.0;
+        TRHOType m2_epsilon2_sigma3_bar = 0.0;
         for (auto i = 0L; i < N; ++i) {
-            c.d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
+            d[i] = sigma_Angstrom[i]*(1.0 - 0.12 * exp(-3.0*epsilon_over_k[i]/T)); // [A]
             for (auto j = 0; j < N; ++j) {
                 // Eq. A.5
                 auto sigma_ij = 0.5 * sigma_Angstrom[i] + 0.5 * sigma_Angstrom[j];
                 auto eij_over_k = sqrt(epsilon_over_k[i] * epsilon_over_k[j]) * (1.0 - kmat(i,j));
-                c.m2_epsilon_sigma3_bar = c.m2_epsilon_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * eij_over_k / T * pow(sigma_ij, 3);
-                c.m2_epsilon2_sigma3_bar = c.m2_epsilon2_sigma3_bar + mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * pow(eij_over_k / T, 2) * pow(sigma_ij, 3);
+                auto sigmaij3 = sigma_ij*sigma_ij*sigma_ij;
+                auto ekT = eij_over_k/T;
+                m2_epsilon_sigma3_bar += mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * ekT * sigmaij3;
+                m2_epsilon2_sigma3_bar += mole_fractions[i] * mole_fractions[j] * m[i] * m[j] * (ekT*ekT) * sigmaij3;
             }
         }
         auto mbar = (mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()).sum();
@@ -268,11 +233,11 @@ public:
         double pi6 = (MY_PI / 6.0);
         
         /// Evaluate the components of zeta
-        using ta = std::common_type_t<decltype(pi6), decltype(m[0]), decltype(c.d[0]), decltype(rho_A3)>;
+        using ta = std::common_type_t<decltype(m[0]), decltype(d[0]), decltype(rho_A3)>;
         std::vector<ta> zeta(4), D(4);
         for (std::size_t n = 0; n < 4; ++n) {
             // Eqn A.8
-            auto dn = pow(c.d, static_cast<int>(n));
+            auto dn = pow(d, static_cast<int>(n));
             TRHOType xmdn = forceeval((mole_fractions.template cast<TRHOType>().array()*m.template cast<TRHOType>().array()*dn.template cast<TRHOType>().array()).sum());
             D[n] = forceeval(pi6*xmdn);
             zeta[n] = forceeval(D[n]*rho_A3);
@@ -281,21 +246,23 @@ public:
         /// Packing fraction is the 4-th value in zeta, at index 3
         auto eta = zeta[3];
         
-        auto [I1, etadI1deta] = get_I1(eta, mbar);
-        auto [I2, etadI2deta] = get_I2(eta, mbar);
+        Eigen::Array<decltype(eta), 7, 1> etapowers; etapowers(0) = 1.0; for (auto i = 1U; i <= 6; ++i){ etapowers(i) = eta*etapowers(i-1); }
+        auto I1 = (get_a(mbar).array().template cast<decltype(eta)>()*etapowers).sum();
+        auto I2 = (get_b(mbar).array().template cast<decltype(eta)>()*etapowers).sum();
         
         // Hard chain contribution from G&S
-        using tt = std::common_type_t<decltype(zeta[0]), decltype(c.d[0])>;
+        using tt = std::common_type_t<decltype(zeta[0]), decltype(d[0])>;
         Eigen::ArrayX<tt> lngii_hs(mole_fractions.size());
         for (auto i = 0; i < lngii_hs.size(); ++i) {
-            lngii_hs[i] = log(gij_HS(zeta, c.d, i, i));
+            lngii_hs[i] = log(gij_HS(zeta, d, i, i));
         }
         auto alphar_hc = forceeval(mbar * get_alphar_hs(zeta, D) - sumproduct(mole_fractions, mminus1, lngii_hs)); // Eq. A.4
         
         // Dispersive contribution
         auto C1_ = C1(eta, mbar);
-        auto alphar_disp = forceeval(-2 * MY_PI * rho_A3 * I1 * c.m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1_ * I2 * c.m2_epsilon2_sigma3_bar);
-                                    
+        auto alphar_disp = forceeval(-2 * MY_PI * rho_A3 * I1 * m2_epsilon_sigma3_bar - MY_PI * rho_A3 * mbar * C1_ * I2 * m2_epsilon2_sigma3_bar);
+                    
+#if defined(PCSAFTDEBUG)
         if (!std::isfinite(getbaseval(alphar_hc))){
             throw teqp::InvalidValue("An invalid value was obtained for alphar_hc; please investigate");
         }
@@ -311,15 +278,13 @@ public:
         if (!std::isfinite(getbaseval(alphar_disp))){
             throw teqp::InvalidValue("An invalid value was obtained for alphar_disp; please investigate");
         }
-        using eta_t = decltype(eta);
-        using hc_t = decltype(alphar_hc);
-        using disp_t = decltype(alphar_disp);
+#endif
         struct PCSAFTHardChainContributionTerms{
-            eta_t eta;
-            hc_t alphar_hc;
-            disp_t alphar_disp;
+            TRHOType eta;
+            TRHOType alphar_hc;
+            TRHOType alphar_disp;
         };
-        return PCSAFTHardChainContributionTerms{forceeval(eta), alphar_hc, alphar_disp};
+        return PCSAFTHardChainContributionTerms{eta, alphar_hc, alphar_disp};
     }
 };
 
@@ -331,8 +296,8 @@ with the errors fixed as noted in a comment: https://doi.org/10.1021/acs.iecr.9b
 */
 class PCSAFTMixture {
 public:
-    using PCSAFTDipolarContribution = SAFTpolar::DipolarContributionGrossVrabec;
-    using PCSAFTQuadrupolarContribution = SAFTpolar::QuadrupolarContributionGross;
+    using PCSAFTDipolarContribution = teqp::saft::polar_terms::GrossVrabec::DipolarContributionGrossVrabec;
+    using PCSAFTQuadrupolarContribution = teqp::saft::polar_terms::GrossVrabec::QuadrupolarContributionGross;
 protected:
     Eigen::ArrayX<double> m, ///< number of segments
         mminus1, ///< m-1
