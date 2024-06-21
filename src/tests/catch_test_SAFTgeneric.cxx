@@ -3,6 +3,7 @@
 using Catch::Approx;
 #include <catch2/benchmark/catch_benchmark_all.hpp>
 
+#include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/models/saft/genericsaft.hpp"
 
 using namespace teqp;
@@ -30,7 +31,8 @@ TEST_CASE("Benchmark generic PC-SAFT+Association model", "[SAFTgeneric]"){
           "b / m^3/mol": [0.0000145],
           "betaAB": [0.0692],
           "epsAB/kB / J/mol": [2500.7],
-          "molecule_sites": [["e","e","H","H"]]
+          "molecule_sites": [["e","e","H","H"]],
+          "options": {"radial_dist": "CS"}
         }
       }
     }
@@ -55,13 +57,18 @@ TEST_CASE("Benchmark generic PC-SAFT+Association model", "[SAFTgeneric]"){
     }
     )"_json;
     
-    teqp::genericsaft::GenericSAFT saftass(contents);
-    teqp::genericsaft::GenericSAFT saft(contents_PCSAFT);
+    using namespace teqp::saft::genericsaft;
+    GenericSAFT saftass(contents);
+    GenericSAFT saft(contents_PCSAFT);
     teqp::PCSAFT::PCSAFTMixture basesaft = teqp::PCSAFT::PCSAFTfactory(contents_PCSAFT["nonpolar"]["model"]);
     BENCHMARK("Parsing and construction"){
-        return teqp::genericsaft::GenericSAFT(contents);
+        return GenericSAFT(contents);
     };
-//    auto model = teqp::cppinterface::make_model(contents);
+    nlohmann::json maincontents = {
+        {"kind", "genericSAFT"},
+        {"model", contents}
+    };
+    auto model = teqp::cppinterface::make_model(maincontents);
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
     
     BENCHMARK("alphar w/ assoc."){
@@ -73,14 +80,17 @@ TEST_CASE("Benchmark generic PC-SAFT+Association model", "[SAFTgeneric]"){
     BENCHMARK("alphar w/o assoc."){
         return basesaft.alphar(300.0, 10000.0, z);
     };
-//    BENCHMARK("Ar11"){
-//        return model->get_Ar11(300, 10000, z);
-//    };
-//    BENCHMARK("Ar02"){
-//        return model->get_Ar02(300, 10000, z);
-//    };
-//    BENCHMARK("Ar20"){
-//        return model->get_Ar20(300, 10000, z);
-//    };
+    BENCHMARK("Ar00"){
+        return model->get_Ar00(300, 10000, z);
+    };
+    BENCHMARK("Ar11"){
+        return model->get_Ar11(300, 10000, z);
+    };
+    BENCHMARK("Ar02"){
+        return model->get_Ar02(300, 10000, z);
+    };
+    BENCHMARK("Ar20"){
+        return model->get_Ar20(300, 10000, z);
+    };
 }
 
