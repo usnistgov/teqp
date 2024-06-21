@@ -1,9 +1,9 @@
-# This .yml file is used to specify the conda environment that should be loaded into the RTD instance
+# This .yml file is used to specify the conda environment that should be used for building the docs
 name: teqpdocs
 channels:
   - conda-forge
 dependencies:
-  - python=3.10
+  - python=3.12
   - pip
   - doxygen
   - cmake
