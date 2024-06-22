@@ -49,7 +49,7 @@ class DLLCaller():
 
 if __name__ == '__main__':
     # Now load the library
-    c = DLLCaller(full_path = '../../bld/Release/libteqpc.dylib') # or .dll on windows
+    c = DLLCaller(full_path = '../../bld/Debug/libteqpc.dylib') # or .dll on windows
     model = {
       'kind': 'vdW1',
       'model': {'a': 1, 'b': 2}

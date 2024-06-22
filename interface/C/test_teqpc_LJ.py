@@ -75,9 +75,9 @@ class DLLCaller():
     def build_model(self, model):
         f = self._getfcn(self.dll, 'build_model')
         hrf = ct.create_string_buffer(json.dumps(model).encode('utf-8'))
-        uid = ct.create_string_buffer(200)
+        uid = ct.c_longlong(0)
         errmsg = ct.create_string_buffer(1000)
-        errcode = f(hrf, uid, errmsg, len(errmsg))
+        errcode = f(hrf, ct.byref(uid), errmsg, len(errmsg))
         if errcode == 0:
             return uid
         else:
@@ -103,7 +103,7 @@ class DLLCaller():
 
 if __name__ == '__main__':
     # Now load the library
-    c = DLLCaller(full_path = '../../bld/Release/teqpc.dll')
+    c = DLLCaller(full_path = '../../bld/Debug/libteqpc.dylib')
     model = {
       'kind': 'vdW1',
       'model': {'a': 1, 'b': 2}
@@ -127,7 +127,6 @@ if __name__ == '__main__':
       'model': {'components': [json.load(open('ljf.json'))], 'departure': [], 'BIP': []}
     }
     uid = c.build_model(model)
+    os.remove('ljf.json')
     print(c.get_Arxy(uid=uid, NT=0, ND=0,T=1.5,rho=0.3,z=[1.0]))
     print(c.get_Arxy(uid=uid, NT=0, ND=1,T=1.5,rho=0.3,z=[1.0]))
-    print(trim(uid))
-    os.remove('ljf.json')

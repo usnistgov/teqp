@@ -15,18 +15,24 @@
 #define EXPORT_CODE
 #define CONVENTION
 
-#else
+# else
 
-#if defined(EXTERN_C_DLLEXPORT)
-#define EXPORT_CODE extern "C" __declspec(dllexport) 
+#if !defined(EXPORT_CODE)
+#  if defined(EXTERN_C_DLLEXPORT)
+#    define EXPORT_CODE extern "C" __declspec(dllexport)
+#  endif
+#  if defined(EXTERN_C)
+#    define EXPORT_CODE extern "C"
+#  endif
 #endif
-#if defined(EXTERN_C)
-#define EXPORT_CODE extern "C" 
-#endif
-#ifndef CONVENTION
+
+#if !defined(CONVENTION)
 #  define CONVENTION
 #endif
+
 #endif
+
+#include "teqpc.h"
 
 using namespace teqp;
 
