@@ -225,15 +225,19 @@ TEST_CASE("Check PCSAFT with kij and coeffs", "[PCSAFT]")
 
     Eigen::ArrayXXd kij_right(2, 2); kij_right.setZero();
     Eigen::ArrayXXd kij_bad(2, 20); kij_bad.setZero();
+    
+    // By default use the a & b matrices of Gross&Sadowski, IECR, 2001
+    Eigen::Array<double, 3, 7> a = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::a,
+    b = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::b;
 
     SECTION("No kij") {
         CHECK_NOTHROW(PCSAFTMixture(coeffs));
     }
     SECTION("Correctly shaped kij matrix") {
-        CHECK_NOTHROW(PCSAFTMixture(coeffs, kij_right));
+        CHECK_NOTHROW(PCSAFTMixture(coeffs, a, b, kij_right));
     }
     SECTION("Incorrectly shaped kij matrix") {
-        CHECK_THROWS(PCSAFTMixture(coeffs, kij_bad));
+        CHECK_THROWS(PCSAFTMixture(coeffs, a, b, kij_bad));
     }
 }
 
@@ -257,7 +261,7 @@ TEST_CASE("Check PCSAFT with dipole for acetone", "[PCSAFTD]")
         coeffs.push_back(c);
     }
     auto z = (Eigen::ArrayXd(1) << 1.0).finished();
-    auto model = PCSAFT::PCSAFTMixture(coeffs, {});
+    auto model = PCSAFT::PCSAFTMixture(coeffs);
     auto alphar = model.alphar(300.0, 300.0, z);
     
     // Build from JSON
@@ -313,7 +317,7 @@ TEST_CASE("Check PCSAFT with quadrupole for CO2", "[PCSAFTQ]")
         coeffs.push_back(c);
     }
     
-    auto model = PCSAFT::PCSAFTMixture(coeffs, {});
+    auto model = PCSAFT::PCSAFTMixture(coeffs);
     auto alphar = model.alphar(300.0, 300.0, z);
     CHECK(alpharj == Approx(alphar));
     
