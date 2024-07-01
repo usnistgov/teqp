@@ -176,6 +176,7 @@ if (NOT TEQP_NO_TEQPCPP)
   
   # The FEANN data file too
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/FEANN.cpp")
+  target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/PCSAFT.cpp")
 
   # target_compile_options(teqpcpp PRIVATE
   #    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:

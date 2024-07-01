@@ -15,6 +15,19 @@
 #include "teqp/models/saft/polar_terms/GrossVrabec.hpp"
 #include <optional>
 
+// Definitions for the matrices of global constants for the PCSAFT model
+namespace teqp::saft::PCSAFT::PCSAFTMatrices{
+namespace GrossSadowski2001{
+    extern Eigen::Array<double, 3, 7> a, b;
+}
+namespace LiangIECR2012{
+    extern Eigen::Array<double, 3, 7> a, b;
+}
+namespace LiangIECR2014{
+    extern Eigen::Array<double, 3, 7> a, b;
+}
+}
+
 namespace teqp::saft::pcsaft {
 
 //#define PCSAFTDEBUG
@@ -86,23 +99,7 @@ auto C2(const Eta& eta, const Mbar& mbar) {
         + (1.0 - mbar) * (2.0 * eta * eta * eta + 12.0 * eta * eta - 48.0 * eta + 40.0) / pow((1.0 - eta) * (2.0 - eta), 3)
         ));
 }
-/// Eqn. A.18
-template<typename TYPE>
-auto get_a(const TYPE& mbar) {
-    static Eigen::ArrayXd a_0 = (Eigen::ArrayXd(7) << 0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084).finished();
-    static Eigen::ArrayXd a_1 = (Eigen::ArrayXd(7) << -0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930).finished();
-    static Eigen::ArrayXd a_2 = (Eigen::ArrayXd(7) << -0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368).finished();
-    return forceeval(a_0.cast<TYPE>().array() + ((mbar - 1.0) / mbar) * a_1.cast<TYPE>().array() + ((mbar - 1.0) / mbar * (mbar - 2.0) / mbar) * a_2.cast<TYPE>().array()).eval();
-}
-/// Eqn. A.19
-template<typename TYPE>
-auto get_b(const TYPE& mbar) {
-    // See https://stackoverflow.com/a/35170514/1360263
-    static Eigen::ArrayXd b_0 = (Eigen::ArrayXd(7) << 0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612).finished();
-    static Eigen::ArrayXd b_1 = (Eigen::ArrayXd(7) << -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346).finished();
-    static Eigen::ArrayXd b_2 = (Eigen::ArrayXd(7) << 0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585).finished();
-    return forceeval(b_0.cast<TYPE>().array() + (mbar - 1.0) / mbar * b_1.cast<TYPE>().array() + (mbar - 1.0) / mbar * (mbar - 2.0) / mbar * b_2.cast<TYPE>().array()).eval();
-}
+
 /// Residual contribution to alphar from hard-sphere (Eqn. A.6)
 template<typename VecType, typename VecType2>
 auto get_alphar_hs(const VecType& zeta, const VecType2& D) {
@@ -190,10 +187,12 @@ protected:
         sigma_Angstrom, ///<
         epsilon_over_k; ///< depth of pair potential divided by Boltzman constant
     const Eigen::ArrayXXd kmat; ///< binary interaction parameter matrix
+    Eigen::Array<double, 3, 7> a, ///< The universal constants used in Eqn. A.18 of G&S
+                            b; ///< The universal constants used in Eqn. A.19 of G&S
 
 public:
-    PCSAFTHardChainContribution(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &mminus1, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayXXd &kmat)
-    : m(m), mminus1(mminus1), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), kmat(kmat) {}
+    PCSAFTHardChainContribution(const Eigen::ArrayX<double> &m, const Eigen::ArrayX<double> &mminus1, const Eigen::ArrayX<double> &sigma_Angstrom, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayXXd &kmat, const Eigen::Array<double, 3, 7>&a, const Eigen::Array<double, 3,7>&b)
+    : m(m), mminus1(mminus1), sigma_Angstrom(sigma_Angstrom), epsilon_over_k(epsilon_over_k), kmat(kmat), a(a), b(b) {}
     
     PCSAFTHardChainContribution& operator=( const PCSAFTHardChainContribution& ) = delete; // non copyable
     
@@ -246,8 +245,11 @@ public:
         auto eta = zeta[3];
         
         Eigen::Array<decltype(eta), 7, 1> etapowers; etapowers(0) = 1.0; for (auto i = 1U; i <= 6; ++i){ etapowers(i) = eta*etapowers(i-1); }
-        auto I1 = (get_a(mbar).array().template cast<decltype(eta)>()*etapowers).sum();
-        auto I2 = (get_b(mbar).array().template cast<decltype(eta)>()*etapowers).sum();
+        using TYPE = TRHOType;
+        auto abar = (a.row(0).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * a.row(1).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * ((mbar - 2.0) / mbar) * a.row(2).cast<TYPE>().array()).eval();
+        auto bbar = (b.row(0).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * b.row(1).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * ((mbar - 2.0) / mbar) * b.row(2).cast<TYPE>().array()).eval();
+        auto I1 = (abar.array().template cast<decltype(eta)>()*etapowers).sum();
+        auto I2 = (bbar.array().template cast<decltype(eta)>()*etapowers).sum();
         
         // Hard chain contribution from G&S
         using tt = std::common_type_t<decltype(zeta[0]), decltype(d[0])>;
@@ -324,7 +326,7 @@ protected:
         PCSAFTLibrary library;
         return library.get_coeffs(the_names);
     }
-    auto build_hardchain(const std::vector<SAFTCoeffs> &coeffs){
+    auto build_hardchain(const std::vector<SAFTCoeffs> &coeffs, const Eigen::Array<double, 3, 7>& a, const Eigen::Array<double, 3, 7>& b){
         check_kmat(coeffs.size());
 
         m.resize(coeffs.size());
@@ -343,7 +345,7 @@ protected:
             bibtex[i] = coeff.BibTeXKey;
             i++;
         }
-        return PCSAFTHardChainContribution(m, mminus1, sigma_Angstrom, epsilon_over_k, kmat);
+        return PCSAFTHardChainContribution(m, mminus1, sigma_Angstrom, epsilon_over_k, kmat, a, b);
     }
     auto extract_names(const std::vector<SAFTCoeffs> &coeffs){
         std::vector<std::string> names_;
@@ -381,8 +383,8 @@ protected:
         return PCSAFTQuadrupolarContribution(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ);
     }
 public:
-    PCSAFTMixture(const std::vector<std::string> &names, const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), kmat){};
-    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::ArrayXXd &kmat = {}) : names(extract_names(coeffs)), kmat(kmat), hardchain(build_hardchain(coeffs)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
+    PCSAFTMixture(const std::vector<std::string> &names, const Eigen::Array<double, 3, 7>& a, const Eigen::Array<double, 3, 7>& b, const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), kmat, a, b){};
+    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::Array<double, 3, 7>& a, const Eigen::Array<double, 3, 7>& b, const Eigen::ArrayXXd &kmat = {}) : names(extract_names(coeffs)), kmat(kmat), hardchain(build_hardchain(coeffs, a, b)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
     
 //    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
     PCSAFTMixture& operator=( const PCSAFTMixture& ) = delete; // non copyable
@@ -444,13 +446,31 @@ inline auto PCSAFTfactory(const nlohmann::json& spec) {
     if (spec.contains("kmat") && spec.at("kmat").is_array() && spec.at("kmat").size() > 0){
         kmat = build_square_matrix(spec["kmat"]);
     }
+    // By default use the a & b matrices of Gross&Sadowski, IECR, 2001
+    Eigen::Array<double, 3, 7> a = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::a,
+    b = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::b;
+    // Unless overwritten by user selection via the "ab" field
+    if (spec.contains("ab")){
+        std::string source = spec.at("ab");
+        if (source == "Liang-IECR-2012"){
+            a = teqp::saft::PCSAFT::PCSAFTMatrices::LiangIECR2012::a;
+            b = teqp::saft::PCSAFT::PCSAFTMatrices::LiangIECR2012::b;
+        }
+        else if (source == "Liang-IECR-2014"){
+            a = teqp::saft::PCSAFT::PCSAFTMatrices::LiangIECR2014::a;
+            b = teqp::saft::PCSAFT::PCSAFTMatrices::LiangIECR2014::b;
+        }
+        else{
+            throw teqp::InvalidArgument("Don't know what to do with this source for a&b: " + source);
+        }
+    }
     
     if (spec.contains("names")){
         std::vector<std::string> names = spec["names"];
         if (kmat && static_cast<std::size_t>(kmat.value().rows()) != names.size()){
             throw teqp::InvalidArgument("Provided length of names of " + std::to_string(names.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
         }
-        return PCSAFTMixture(names, kmat.value_or(Eigen::ArrayXXd{}));
+        return PCSAFTMixture(names, a, b, kmat.value_or(Eigen::ArrayXXd{}));
     }
     else if (spec.contains("coeffs")){
         std::vector<SAFTCoeffs> coeffs;
@@ -474,7 +494,7 @@ inline auto PCSAFTfactory(const nlohmann::json& spec) {
         if (kmat && static_cast<std::size_t>(kmat.value().rows()) != coeffs.size()){
             throw teqp::InvalidArgument("Provided length of coeffs of " + std::to_string(coeffs.size()) + " does not match the dimension of the kmat of " + std::to_string(kmat.value().rows()));
         }
-        return PCSAFTMixture(coeffs, kmat.value_or(Eigen::ArrayXXd{}));
+        return PCSAFTMixture(coeffs, a, b, kmat.value_or(Eigen::ArrayXXd{}));
     }
     else{
         throw std::invalid_argument("you must provide names or coeffs, but not both");
