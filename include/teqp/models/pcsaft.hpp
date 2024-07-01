@@ -246,8 +246,8 @@ public:
         
         Eigen::Array<decltype(eta), 7, 1> etapowers; etapowers(0) = 1.0; for (auto i = 1U; i <= 6; ++i){ etapowers(i) = eta*etapowers(i-1); }
         using TYPE = TRHOType;
-        auto abar = (a.row(0).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * a.row(1).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * ((mbar - 2.0) / mbar) * a.row(2).cast<TYPE>().array()).eval();
-        auto bbar = (b.row(0).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * b.row(1).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * ((mbar - 2.0) / mbar) * b.row(2).cast<TYPE>().array()).eval();
+        Eigen::Array<TYPE, 7, 1> abar = (a.row(0).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * a.row(1).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * ((mbar - 2.0) / mbar) * a.row(2).cast<TYPE>().array()).eval();
+        Eigen::Array<TYPE, 7, 1> bbar = (b.row(0).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * b.row(1).cast<TYPE>().array() + ((mbar - 1.0) / mbar) * ((mbar - 2.0) / mbar) * b.row(2).cast<TYPE>().array()).eval();
         auto I1 = (abar.array().template cast<decltype(eta)>()*etapowers).sum();
         auto I2 = (bbar.array().template cast<decltype(eta)>()*etapowers).sum();
         
