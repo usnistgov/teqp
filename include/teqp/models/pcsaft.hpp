@@ -383,8 +383,14 @@ protected:
         return PCSAFTQuadrupolarContribution(m, sigma_Angstrom, epsilon_over_k, Qstar2, nQ);
     }
 public:
-    PCSAFTMixture(const std::vector<std::string> &names, const Eigen::Array<double, 3, 7>& a, const Eigen::Array<double, 3, 7>& b, const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), kmat, a, b){};
-    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, const Eigen::Array<double, 3, 7>& a, const Eigen::Array<double, 3, 7>& b, const Eigen::ArrayXXd &kmat = {}) : names(extract_names(coeffs)), kmat(kmat), hardchain(build_hardchain(coeffs, a, b)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
+    PCSAFTMixture(const std::vector<std::string> &names, 
+                  const Eigen::Array<double, 3, 7>& a = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::a,
+                  const Eigen::Array<double, 3, 7>& b = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::b,
+                  const Eigen::ArrayXXd& kmat = {}) : PCSAFTMixture(get_coeffs_from_names(names), a, b, kmat){};
+    PCSAFTMixture(const std::vector<SAFTCoeffs> &coeffs, 
+                  const Eigen::Array<double, 3, 7>& a = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::a,
+                  const Eigen::Array<double, 3, 7>& b = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::b,
+                  const Eigen::ArrayXXd &kmat = {}) : names(extract_names(coeffs)), kmat(kmat), hardchain(build_hardchain(coeffs, a, b)), dipolar(build_dipolar(coeffs)), quadrupolar(build_quadrupolar(coeffs)) {};
     
 //    PCSAFTMixture( const PCSAFTMixture& ) = delete; // non construction-copyable
     PCSAFTMixture& operator=( const PCSAFTMixture& ) = delete; // non copyable
