@@ -11,6 +11,7 @@ Welcome to teqp's documentation!
    models/index
    algorithms/index
    examples/index
+   recipes/index   
    fitting/index
    api/modules
 
