@@ -29,7 +29,7 @@ TEST_CASE("Test ethanol + water association", "[association]"){
     
     std::vector<std::vector<std::string>> molecule_sites = {{"e", "H"}, {"e", "e", "H", "H"}};
     association::AssociationOptions opt;
-    opt.radial_dist = association::radial_dist::CS;
+    opt.radial_dist = association::radial_dists::CS;
     opt.max_iters = 1000;
     opt.interaction_partners = {{"e", {"H",}}, {"H", {"e",}}};
     
