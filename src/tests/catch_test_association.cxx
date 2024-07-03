@@ -194,22 +194,7 @@ TEST_CASE("Trace ethanol + water isobaric VLE with CPA", "[associationVLE]"){
 }
 
 
-TEST_CASE("Benchmark assocation evaluations", "[associationbench]"){
-    nlohmann::json water = {
-        {"a0i / Pa m^6/mol^2", 0.12277}, {"bi / m^3/mol", 0.0000145}, {"c1", 0.6736}, {"Tc / K", 647.13},
-        {"epsABi / J/mol",}, {"betaABi", 0.0692}, {"sites", {"e","e","H","H"}}
-    };
-    nlohmann::json jCPA = {
-        {"cubic", "SRK"},
-        {"radial_dist", "CS"},
-        {"pures", {water}},
-        {"R_gas / J/mol/K", 8.31446261815324}
-    };
-    nlohmann::json j = {
-        {"kind", "CPA"},
-        {"validate", false},
-        {"model", jCPA}
-    };
+TEST_CASE("Benchmark association evaluations", "[associationbench]"){
     
     std::vector<std::vector<std::string>> molecule_sites = {{"e","e","H","H"}};
     
