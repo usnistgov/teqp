@@ -68,7 +68,7 @@ struct DufalData{
                 EPSILONOVERKij_K(i, j) = (1-kmat(i,j))*sqrt(POW3(sigma_m[i]*sigma_m[j]))/SIGMA3ij_m3(i,j)*sqrt(epsilon_Jmol[i]*epsilon_Jmol[j])/constants::R_CODATA2017;
                 LAMBDA_Rij(i, j) = 3 + sqrt((lambda_r[i]-3)*(lambda_r[j]-3));
                 EPSILONOVERK_HBij_K(i, j) = sqrt(epsilon_HB_Jmol[i]*epsilon_HB_Jmol[j])/constants::R_CODATA2017;
-                KHBij_m3(i,j) = POW3((3.0*K_HB_m3[i] + 3.0*K_HB_m3[j])/2.0);
+                KHBij_m3(i,j) = POW3((cbrt(K_HB_m3[i]) + cbrt(K_HB_m3[j]))/2.0); // Published erratum in Dufal: https://doi.org/10.1080/00268976.2017.1402604
             }
         }
     }
