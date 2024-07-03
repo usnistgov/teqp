@@ -338,7 +338,7 @@ inline auto CPAfactory(const nlohmann::json &j){
             // This is the backwards compatible approach
             // with the old style of defining the association class {1,2B...}
             std::vector<association_classes> classes;
-            radial_dist dist = get_radial_dist(j.at("radial_dist"));
+            auto dist = get_radial_dist(j.at("radial_dist"));
             std::valarray<double> epsABi(N), betaABi(N), bi(N);
             std::size_t i = 0;
             for (auto p : j.at("pures")) {
