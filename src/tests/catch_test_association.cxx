@@ -7,6 +7,8 @@ using Catch::Matchers::WithinRel;
 
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/models/association/association.hpp"
+#include "teqp/models/CPA.hpp"
+#include "teqp/cpp/deriv_adapter.hpp"
 
 using namespace teqp;
 
@@ -189,4 +191,63 @@ TEST_CASE("Trace ethanol + water isobaric VLE with CPA", "[associationVLE]"){
     PVLEOptions opt; opt.verbosity = 100;
     auto o = model->trace_VLE_isobar_binary(p, T, rhovecL, rhovecV, opt);
     CHECK(o.size() > 10);
+}
+
+
+TEST_CASE("Benchmark assocation evaluations", "[associationbench]"){
+    nlohmann::json water = {
+        {"a0i / Pa m^6/mol^2", 0.12277}, {"bi / m^3/mol", 0.0000145}, {"c1", 0.6736}, {"Tc / K", 647.13},
+        {"epsABi / J/mol",}, {"betaABi", 0.0692}, {"sites", {"e","e","H","H"}}
+    };
+    nlohmann::json jCPA = {
+        {"cubic", "SRK"},
+        {"radial_dist", "CS"},
+        {"pures", {water}},
+        {"R_gas / J/mol/K", 8.31446261815324}
+    };
+    nlohmann::json j = {
+        {"kind", "CPA"},
+        {"validate", false},
+        {"model", jCPA}
+    };
+    
+    std::vector<std::vector<std::string>> molecule_sites = {{"e","e","H","H"}};
+    
+    auto get_canon = [&](){
+        auto b_m3mol = (Eigen::ArrayXd(1) << 0.0000145).finished();
+        auto beta = (Eigen::ArrayXd(1) << 0.0692).finished();
+        auto epsilon_Jmol = (Eigen::ArrayXd(1) <<  16655.0).finished();
+        association::AssociationOptions options;
+        options.Delta_rule = association::Delta_rules::CR1;
+        return association::Association(b_m3mol, beta, epsilon_Jmol, molecule_sites, options);
+    };
+    auto get_Dufal = [&](){
+        association::AssociationOptions options;
+        options.Delta_rule = association::Delta_rules::Dufal;
+        
+        teqp::association::DufalData data;
+        auto oneeig = [](double x){ return (Eigen::ArrayXd(1) << x).finished(); };
+        double R = constants::R_CODATA2017;
+        data.sigma_m = oneeig(3.055e-10);
+        data.epsilon_Jmol = oneeig(418.0*R);
+        data.lambda_r = oneeig(35.823);
+        data.kmat = build_square_matrix(R"([[0.0]])"_json);
+        // Parameters for the associating part
+        data.epsilon_HB_Jmol = oneeig(1600.0*R);
+        data.K_HB_m3 = oneeig(496.66e-30);
+        data.apply_mixing_rules();
+        return association::Association(data, molecule_sites, options);
+    };
+    auto canon = get_canon();
+    auto Dufal = get_Dufal();
+    
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    BENCHMARK("time Delta with canonical"){
+        return canon.get_Delta(300.0, 1/3e-5, z);
+    };
+    BENCHMARK("time Delta with Dufal"){
+        return Dufal.get_Delta(300.0, 1/3e-5, z);
+    };
+    std::cout << canon.get_Delta(300.0, 1/3e-5, z) << std::endl;
+    std::cout << Dufal.get_Delta(300.0, 1/3e-5, z) << std::endl;
 }
