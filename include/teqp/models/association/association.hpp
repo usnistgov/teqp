@@ -27,7 +27,7 @@ namespace association{
 struct AssociationOptions{
     std::map<std::string, std::vector<std::string>> interaction_partners;
     std::vector<std::string> site_order;
-    association::radial_dist radial_dist;
+    association::radial_dists radial_dist;
     association::Delta_rules Delta_rule = association::Delta_rules::CR1;
     std::vector<bool> self_association_mask;
     double alpha = 0.5;
@@ -229,9 +229,9 @@ public:
             auto bmix = (molefracs*d.b_m3mol).sum();
             auto eta = bmix*rhomolar/4.0;
             switch(d.radial_dist){
-                case radial_dist::CS:
+                case radial_dists::CS:
                     g = (2.0-eta)/(2.0*(1.0-eta)*(1.0-eta)*(1.0-eta)); break;
-                case radial_dist::KG:
+                case radial_dists::KG:
                     g = 1.0 / (1.0 - 1.9*eta); break;
                 default:
                     throw std::invalid_argument("Bad radial distribution");

@@ -17,11 +17,11 @@ inline auto get_association_classes(const std::string& s) {
     }
 }
 
-enum class radial_dist { CS, KG };
+enum class radial_dists { CS, KG };
 
 inline auto get_radial_dist(const std::string& s) {
-    if (s == "CS") { return radial_dist::CS; }
-    else if (s == "KG") { return radial_dist::KG; }
+    if (s == "CS") { return radial_dists::CS; }
+    else if (s == "KG") { return radial_dists::KG; }
     else {
         throw std::invalid_argument("bad radial_dist flag: " + s);
     }
@@ -41,7 +41,7 @@ struct CanonicalData{
     Eigen::ArrayXd b_m3mol, ///< The covolume b, in m^3/mol, one per component
         beta, ///< The volume factor, dimensionless, one per component
         epsilon_Jmol; ///< The association energy of each molecule, in J/mol, one per component
-    radial_dist radial_dist;
+    radial_dists radial_dist;
 };
 
 struct DufalData{

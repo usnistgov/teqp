@@ -17,7 +17,7 @@ namespace CPA {
 template<typename X> auto POW2(X x) { return x * x; };
 template<typename X> auto POW3(X x) { return x * POW2(x); };
 
-using association::radial_dist;
+using radial_dist = association::radial_dists;
 using association::association_classes;
 using association::get_radial_dist;
 using association::get_association_classes;
