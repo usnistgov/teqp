@@ -228,7 +228,7 @@ TEST_CASE("Benchmark assocation evaluations", "[associationbench]"){
         teqp::association::DufalData data;
         auto oneeig = [](double x){ return (Eigen::ArrayXd(1) << x).finished(); };
         double R = constants::R_CODATA2017;
-        data.sigma_m = oneeig(3.055e-10);
+        data.sigma_m = oneeig(3.0555e-10);
         data.epsilon_Jmol = oneeig(418.0*R);
         data.lambda_r = oneeig(35.823);
         data.kmat = build_square_matrix(R"([[0.0]])"_json);
