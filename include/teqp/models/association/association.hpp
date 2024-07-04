@@ -176,6 +176,46 @@ public:
     Association(const decltype(datasidecar)& data, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : options(options), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_Delta_rule(options.Delta_rule), datasidecar(data) {
     }
     static Association factory(const nlohmann::json& j){
+        
+        // Collect the set of unique site types among all the molecules
+        std::set<std::string> unique_site_types;
+        for (auto molsite : j.at("molecule_sites")) {
+            for (auto & s : molsite){
+                unique_site_types.insert(s);
+            }
+        }
+                
+        auto get_interaction_partners = [&](const nlohmann::json& j){
+            std::map<std::string, std::vector<std::string>> interaction_partners;
+            
+            if (j.contains("options") && j.at("options").contains("interaction_partners")){
+                interaction_partners = j.at("options").at("interaction_partners");
+                for (auto [k,partners] : interaction_partners){
+                    if (unique_site_types.count(k) == 0){
+                        throw teqp::InvalidArgument("Site is invalid in interaction_partners: " + k);
+                    }
+                    for (auto& partner : partners){
+                        if (unique_site_types.count(partner) == 0){
+                            throw teqp::InvalidArgument("Partner " + partner + " is invalid for site " + k);
+                        }
+                    }
+                }
+            }
+            else{
+                // Every site type is assumed to interact with every other site type, except for itself
+                for (auto& site1 : unique_site_types){
+                    std::vector<std::string> partners;
+                    for (auto& site2: unique_site_types){
+                        if (site1 != site2){
+                            partners.push_back(site2);
+                        }
+                    }
+                    interaction_partners[site1] = partners;
+                }
+            }
+            return interaction_partners;
+        };
+        
         if (j.contains("Delta_rule")){
             std::string Delta_rule = j.at("Delta_rule");
             if (Delta_rule == "CR1"){
@@ -186,6 +226,7 @@ public:
                 auto options =  get_association_options(j);
                 options.Delta_rule = Delta_rules::CR1;
                 data.radial_dist = options.radial_dist;
+                options.interaction_partners = get_interaction_partners(j);
                 return {data, j.at("molecule_sites"), options};
             }
             else if(Delta_rule == "Dufal"){
@@ -199,14 +240,12 @@ public:
                 // Parameters for the associating part
                 data.epsilon_HB_Jmol = toEig(j, "epsilon_HB / J/mol");
                 data.K_HB_m3 = toEig(j, "K_HB / m^3");
+                data.apply_mixing_rules();
                 
                 auto options =  get_association_options(j);
                 options.Delta_rule = Delta_rules::Dufal;
-                data.apply_mixing_rules();
+                options.interaction_partners = get_interaction_partners(j);
                 return {data, j.at("molecule_sites"), options};
-            }
-            else{
-                
             }
         }
         throw std::invalid_argument("The Delta_rule has not been specified");
