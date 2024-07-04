@@ -182,6 +182,7 @@ public:
                 data.epsilon_Jmol = toEig(j, "epsilon / J/mol");
                 auto options =  get_association_options(j);
                 options.Delta_rule = Delta_rules::CR1;
+                data.radial_dist = options.radial_dist;
                 return {data, j.at("molecule_sites"), options};
             }
             else if(Delta_rule == "Dufal"){

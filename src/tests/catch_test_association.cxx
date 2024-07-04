@@ -204,6 +204,7 @@ TEST_CASE("Benchmark association evaluations", "[associationbench]"){
         auto epsilon_Jmol = (Eigen::ArrayXd(1) <<  16655.0).finished();
         association::AssociationOptions options;
         options.Delta_rule = association::Delta_rules::CR1;
+        options.radial_dist = association::radial_dists::CS;
         return association::Association(b_m3mol, beta, epsilon_Jmol, molecule_sites, options);
     };
     auto get_Dufal = [&](){
