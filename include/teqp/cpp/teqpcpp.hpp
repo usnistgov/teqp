@@ -37,7 +37,6 @@ using REMatrixd = Eigen::Ref<const Eigen::Array<double, Eigen::Dynamic, Eigen::D
     X(2,4)
 
 #define AR0N_args \
-    X(0) \
     X(1) \
     X(2) \
     X(3) \

@@ -17,8 +17,9 @@ The implementation follows the approach of Langenbach for the index compression,
 #include "teqp/exceptions.hpp"
 
 #include <Eigen/Dense>
-
+#include "teqp/math/pow_templates.hpp"
 #include "teqp/models/association/association_types.hpp"
+#include "teqp/json_tools.hpp"
 
 namespace teqp{
 namespace association{
@@ -26,7 +27,8 @@ namespace association{
 struct AssociationOptions{
     std::map<std::string, std::vector<std::string>> interaction_partners;
     std::vector<std::string> site_order;
-    association::radial_dist radial_dist;
+    association::radial_dists radial_dist;
+    association::Delta_rules Delta_rule = association::Delta_rules::CR1;
     std::vector<bool> self_association_mask;
     double alpha = 0.5;
     double rtol = 1e-12, atol = 1e-12;
@@ -37,6 +39,11 @@ inline void from_json(const nlohmann::json& j, AssociationOptions& o) {
     if (j.contains("rtol")){ j.at("rtol").get_to(o.rtol); }
     if (j.contains("atol")){ j.at("atol").get_to(o.atol); }
     if (j.contains("max_iters")){ j.at("max_iters").get_to(o.max_iters); }
+}
+
+
+namespace DufalMatrices{
+    extern const std::unordered_map<int, Eigen::MatrixXd> bcoeffs;
 }
 
 /***
@@ -143,15 +150,11 @@ private:
         }
         return D;
     }
-    auto toEig(const nlohmann::json& j, const std::string& k) const -> Eigen::ArrayXd{
+    static auto toEig(const nlohmann::json& j, const std::string& k) -> Eigen::ArrayXd{
         std::vector<double> vec = j.at(k);
         return Eigen::Map<Eigen::ArrayXd>(&vec[0], vec.size());
     };
-//    auto get_molecule_sites(const nlohmann::json&j){
-//        std::vector<std::vector<std::string>> molecule_sites; 
-//        return molecule_sites;
-//    }
-    auto get_association_options(const nlohmann::json&j){
+    static auto get_association_options(const nlohmann::json&j){
         AssociationOptions opt;
         if (j.contains("options")){
             opt = j.at("options").get<AssociationOptions>();
@@ -159,17 +162,93 @@ private:
         return opt;
     }
 public:
-    const Eigen::ArrayXd b_m3mol, ///< The covolume b, in m^3/mol
-            beta, ///< The volume factor, dimensionless
-            epsilon_Jmol; ///< The association energy of each molecule, in J/mol
     const AssociationOptions options;
     const IndexMapper mapper;
     const Eigen::ArrayXXi D;
-    const radial_dist m_radial_dist;
+    const Delta_rules m_Delta_rule;
+    const std::variant<CanonicalData, DufalData> datasidecar;
     
-    Association(const nlohmann::json&j) : Association(toEig(j, "b / m^3/mol"), toEig(j, "betaAB"), toEig(j, "epsAB/kB / J/mol"), j.at("molecule_sites"), get_association_options(j)){}
-    
-    Association(const Eigen::ArrayXd& b_m3mol, const Eigen::ArrayXd& beta, const Eigen::ArrayXd& epsilon_Jmol, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : b_m3mol(b_m3mol), beta(beta), epsilon_Jmol(epsilon_Jmol), options(options), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_radial_dist(options.radial_dist){
+    Association(const Eigen::ArrayXd& b_m3mol, const Eigen::ArrayXd& beta, const Eigen::ArrayXd& epsilon_Jmol, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : options(options), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_Delta_rule(options.Delta_rule), datasidecar(CanonicalData{b_m3mol, beta, epsilon_Jmol, options.radial_dist}){
+        if (options.Delta_rule != Delta_rules::CR1){
+            throw std::invalid_argument("Delta rule is invalid; options are: {CR1}");
+        }
+    }
+    Association(const decltype(datasidecar)& data, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : options(options), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_Delta_rule(options.Delta_rule), datasidecar(data) {
+    }
+    static Association factory(const nlohmann::json& j){
+        
+        // Collect the set of unique site types among all the molecules
+        std::set<std::string> unique_site_types;
+        for (auto molsite : j.at("molecule_sites")) {
+            for (auto & s : molsite){
+                unique_site_types.insert(s);
+            }
+        }
+                
+        auto get_interaction_partners = [&](const nlohmann::json& j){
+            std::map<std::string, std::vector<std::string>> interaction_partners;
+            
+            if (j.contains("options") && j.at("options").contains("interaction_partners")){
+                interaction_partners = j.at("options").at("interaction_partners");
+                for (auto [k,partners] : interaction_partners){
+                    if (unique_site_types.count(k) == 0){
+                        throw teqp::InvalidArgument("Site is invalid in interaction_partners: " + k);
+                    }
+                    for (auto& partner : partners){
+                        if (unique_site_types.count(partner) == 0){
+                            throw teqp::InvalidArgument("Partner " + partner + " is invalid for site " + k);
+                        }
+                    }
+                }
+            }
+            else{
+                // Every site type is assumed to interact with every other site type, except for itself
+                for (auto& site1 : unique_site_types){
+                    std::vector<std::string> partners;
+                    for (auto& site2: unique_site_types){
+                        if (site1 != site2){
+                            partners.push_back(site2);
+                        }
+                    }
+                    interaction_partners[site1] = partners;
+                }
+            }
+            return interaction_partners;
+        };
+        
+        if (j.contains("Delta_rule")){
+            std::string Delta_rule = j.at("Delta_rule");
+            if (Delta_rule == "CR1"){
+                CanonicalData data;
+                data.b_m3mol = toEig(j, "b / m^3/mol");
+                data.beta = toEig(j, "beta");
+                data.epsilon_Jmol = toEig(j, "epsilon / J/mol");
+                auto options =  get_association_options(j);
+                options.Delta_rule = Delta_rules::CR1;
+                data.radial_dist = options.radial_dist;
+                options.interaction_partners = get_interaction_partners(j);
+                return {data, j.at("molecule_sites"), options};
+            }
+            else if(Delta_rule == "Dufal"){
+                DufalData data;
+                
+                // Parameters for the dispersive part
+                data.sigma_m = toEig(j, "sigma / m");
+                data.epsilon_Jmol = toEig(j, "epsilon / J/mol");
+                data.lambda_r = toEig(j, "lambda_r");
+                data.kmat = build_square_matrix(j.at("kmat"));
+                // Parameters for the associating part
+                data.epsilon_HB_Jmol = toEig(j, "epsilon_HB / J/mol");
+                data.K_HB_m3 = toEig(j, "K_HB / m^3");
+                data.apply_mixing_rules();
+                
+                auto options =  get_association_options(j);
+                options.Delta_rule = Delta_rules::Dufal;
+                options.interaction_partners = get_interaction_partners(j);
+                return {data, j.at("molecule_sites"), options};
+            }
+        }
+        throw std::invalid_argument("The Delta_rule has not been specified");
     }
     
     /**
@@ -184,17 +263,62 @@ public:
         using resulttype = std::common_type_t<decltype(T), decltype(rhomolar), decltype(molefracs[0])>; // Type promotion, without the const-ness
         using Mat = Eigen::Array<resulttype, Eigen::Dynamic, Eigen::Dynamic>;
         auto Ngroups = mapper.to_CompSite.size();
-        auto bmix = (molefracs*b_m3mol).sum();
-        auto eta = bmix*rhomolar/4.0;
         
-        decltype(forceeval(eta)) g;
-        switch(m_radial_dist){
-            case radial_dist::CS:
-                g = (2.0-eta)/(2.0*(1.0-eta)*(1.0-eta)*(1.0-eta)); break;
-            case radial_dist::KG:
-                g = 1.0 / (1.0 - 1.9*eta); break;
-            default:
-                throw std::invalid_argument("Bad radial distribution");
+        // Calculate the radial_dist if it is meaningful
+        using eta_t = std::common_type_t<decltype(rhomolar), decltype(molefracs[0])>; // Type promotion, without the const-ness
+        std::optional<eta_t> g;
+        if (m_Delta_rule == Delta_rules::CR1){
+            const CanonicalData& d = std::get<CanonicalData>(datasidecar);
+            auto bmix = (molefracs*d.b_m3mol).sum();
+            auto eta = bmix*rhomolar/4.0;
+            switch(d.radial_dist){
+                case radial_dists::CS:
+                    g = (2.0-eta)/(2.0*(1.0-eta)*(1.0-eta)*(1.0-eta)); break;
+                case radial_dists::KG:
+                    g = 1.0 / (1.0 - 1.9*eta); break;
+                default:
+                    throw std::invalid_argument("Bad radial distribution");
+            }
+        }
+        
+        /// A helper function for the I integral representation of Dufal (http://dx.doi.org/10.1080/00268976.2015.1029027)
+        auto get_I_Dufal = [](const auto& Tstar, const auto& rhostar, const auto& lambda_r){
+            
+            using result_t = std::decay_t<std::common_type_t<decltype(Tstar), decltype(rhostar), decltype(lambda_r)>>;
+            result_t summer = 0.0;
+            
+            std::decay_t<decltype(rhostar)> rhostar_to_i = 1.0;
+            for (auto i = 0U; i <= 10; ++i){
+                std::decay_t<decltype(Tstar)> Tstar_to_j = 1.0;
+                for (auto j = 0U; i + j <= 10; ++j){
+                    double aij = 0.0, lambdar_to_k = 1.0;
+                    for (auto k = 0; k <= 6; ++k){
+                        double bijk = DufalMatrices::bcoeffs.at(k)(i,j); 
+                        aij += bijk*lambdar_to_k;
+                        lambdar_to_k *= lambda_r;
+                    }
+                    summer += aij*rhostar_to_i*Tstar_to_j;
+                    Tstar_to_j *= Tstar;
+                }
+                rhostar_to_i *= rhostar;
+            }
+            return summer;
+        };
+        
+        using rhostar_t = std::common_type_t<decltype(rhomolar), decltype(molefracs[0])>; // Type promotion, without the const-ness
+        std::optional<rhostar_t> rhostar;
+        if (m_Delta_rule == Delta_rules::Dufal){
+            const DufalData& d = std::get<DufalData>(datasidecar);
+            // Calculate the one-fluid vdW1 sigma from Eq. 40 of Dufal
+            std::decay_t<decltype(molefracs[0])> sigma3_vdW1 = 0.0;
+            auto N = molefracs.size();
+            for (auto i = 0U; i < N; ++i){
+                for (auto j = 0U; j < N; ++j){
+                    double sigma3_ij_m3 = POW3((d.sigma_m[i] + d.sigma_m[j])/2.0);
+                    sigma3_vdW1 += molefracs[i]*molefracs[j]*sigma3_ij_m3;
+                }
+            }
+            rhostar = rhomolar*N_A*sigma3_vdW1;
         }
         
         Mat Delta = Mat::Zero(Ngroups, Ngroups);
@@ -204,12 +328,24 @@ public:
                 auto j = std::get<0>(mapper.to_CompSite.at(J));
                 
                 using namespace teqp::constants;
-                // The CR1 rule is used to calculate the cross contributions
-                if (true){ // Is CR1 // TODO: also allow the other combining rule
-                    auto b_ij = (b_m3mol[i] + b_m3mol[j])/2.0;
-                    auto epsilon_ij_Jmol = (epsilon_Jmol[i] + epsilon_Jmol[j])/2.0;
-                    auto beta_ij = sqrt(beta[i]*beta[j]);
-                    Delta(I, J) = g*b_ij*beta_ij*(exp(epsilon_ij_Jmol/(R_CODATA2017*T))-1.0)/N_A;
+                
+                if (m_Delta_rule == Delta_rules::CR1){
+                    // The CR1 rule is used to calculate the cross contributions
+                    const CanonicalData& d = std::get<CanonicalData>(datasidecar);
+                    auto b_ij = (d.b_m3mol[i] + d.b_m3mol[j])/2.0;
+                    auto epsilon_ij_Jmol = (d.epsilon_Jmol[i] + d.epsilon_Jmol[j])/2.0;
+                    auto beta_ij = sqrt(d.beta[i]*d.beta[j]);
+                    Delta(I, J) = g.value()*b_ij*beta_ij*(exp(epsilon_ij_Jmol/(R_CODATA2017*T))-1.0)/N_A; // m^3
+                }
+                else if (m_Delta_rule == Delta_rules::Dufal){
+                    const DufalData& d = std::get<DufalData>(datasidecar);
+                    auto Tstar = forceeval(T/d.EPSILONOVERKij_K(i,j));
+                    auto _I = get_I_Dufal(Tstar, rhostar.value(), d.LAMBDA_Rij(i, j));
+                    auto F_Meyer = exp(d.EPSILONOVERK_HBij_K(i, j)/T)-1.0;
+                    Delta(I, J) = F_Meyer*d.KHBij_m3(i,j)*_I;
+                }
+                else{
+                    throw std::invalid_argument("Don't know what to do with this Delta rule");
                 }
             }
         }
@@ -218,6 +354,10 @@ public:
     
     template<typename TType, typename RhoType, typename MoleFracsType, typename XType>
     auto successive_substitution(const TType& T, const RhoType& rhomolar, const MoleFracsType& molefracs, const XType& X_init) const {
+        
+        if (X_init.size() != static_cast<long>(mapper.to_siteid.size())){
+            throw teqp::InvalidArgument("Wrong size of X_init; should be "+ std::to_string(mapper.to_siteid.size()));
+        }
         
         using resulttype = std::common_type_t<decltype(T), decltype(rhomolar), decltype(molefracs[0])>; // Type promotion, without the const-ness
         using Mat = Eigen::Array<resulttype, Eigen::Dynamic, Eigen::Dynamic>;

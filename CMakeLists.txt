@@ -174,8 +174,9 @@ if (NOT TEQP_NO_TEQPCPP)
   # Add the schema file
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP/model_schemas.cpp")
   
-  # The FEANN data file too
+  # The data files too
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/FEANN.cpp")
+  target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/Dufal_assoc.cpp")
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/PCSAFT.cpp")
 
   # target_compile_options(teqpcpp PRIVATE

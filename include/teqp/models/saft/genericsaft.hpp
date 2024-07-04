@@ -33,13 +33,9 @@ private:
     };
     auto make_association(const nlohmann::json &j) -> AssociationTerms{
         std::string kind = j.at("kind");
-        if (kind == "canonical"){
-            return association::Association(j.at("model"));
+        if (kind == "canonical" || kind == "Dufal"){
+            return association::Association::factory(j.at("model"));
         }
-        // TODO: Add the new Dufal association term
-//        else if (kind == "Dufal-Mie"){
-//            return std::make_unique<association::DufalMie>(j.at("model"));
-//        }
         else{
             throw std::invalid_argument("Not valid association kind:" + kind);
         }

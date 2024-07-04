@@ -17,7 +17,7 @@ namespace CPA {
 template<typename X> auto POW2(X x) { return x * x; };
 template<typename X> auto POW3(X x) { return x * POW2(x); };
 
-using association::radial_dist;
+using radial_dist = association::radial_dists;
 using association::association_classes;
 using association::get_radial_dist;
 using association::get_association_classes;
@@ -338,7 +338,7 @@ inline auto CPAfactory(const nlohmann::json &j){
             // This is the backwards compatible approach
             // with the old style of defining the association class {1,2B...}
             std::vector<association_classes> classes;
-            radial_dist dist = get_radial_dist(j.at("radial_dist"));
+            auto dist = get_radial_dist(j.at("radial_dist"));
             std::valarray<double> epsABi(N), betaABi(N), bi(N);
             std::size_t i = 0;
             for (auto p : j.at("pures")) {
