@@ -169,6 +169,9 @@ public:
     const std::variant<CanonicalData, DufalData> datasidecar;
     
     Association(const Eigen::ArrayXd& b_m3mol, const Eigen::ArrayXd& beta, const Eigen::ArrayXd& epsilon_Jmol, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : options(options), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_Delta_rule(options.Delta_rule), datasidecar(CanonicalData{b_m3mol, beta, epsilon_Jmol, options.radial_dist}){
+        if (options.Delta_rule != Delta_rules::CR1){
+            throw std::invalid_argument("Delta rule is invalid; options are: {CR1}");
+        }
     }
     Association(const decltype(datasidecar)& data, const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) : options(options), mapper(make_mapper(molecule_sites, options)), D(make_D(mapper, options)), m_Delta_rule(options.Delta_rule), datasidecar(data) {
     }
