@@ -355,6 +355,10 @@ public:
     template<typename TType, typename RhoType, typename MoleFracsType, typename XType>
     auto successive_substitution(const TType& T, const RhoType& rhomolar, const MoleFracsType& molefracs, const XType& X_init) const {
         
+        if (X_init.size() != static_cast<long>(mapper.to_siteid.size())){
+            throw teqp::InvalidArgument("Wrong size of X_init; should be "+ std::to_string(mapper.to_siteid.size()));
+        }
+        
         using resulttype = std::common_type_t<decltype(T), decltype(rhomolar), decltype(molefracs[0])>; // Type promotion, without the const-ness
         using Mat = Eigen::Array<resulttype, Eigen::Dynamic, Eigen::Dynamic>;
         
