@@ -200,14 +200,18 @@ TEST_CASE("Check PCSAFT with kij", "[PCSAFT]")
     Eigen::ArrayXXd kij_right(2, 2); kij_right.setZero();
     Eigen::ArrayXXd kij_bad(2, 20); kij_bad.setZero();
 
+    // By default use the a & b matrices of Gross&Sadowski, IECR, 2001
+    Eigen::Array<double, 3, 7> a = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::a,
+    b = teqp::saft::PCSAFT::PCSAFTMatrices::GrossSadowski2001::b;
+    
     SECTION("No kij") {
         CHECK_NOTHROW(PCSAFTMixture(names));
     }
     SECTION("Correctly shaped kij matrix") {
-        CHECK_NOTHROW(PCSAFTMixture(names, kij_right));
+        CHECK_NOTHROW(PCSAFTMixture(names, a, b, kij_right));
     }
     SECTION("Incorrectly shaped kij matrix") {
-        CHECK_THROWS(PCSAFTMixture(names, kij_bad));
+        CHECK_THROWS(PCSAFTMixture(names, a, b, kij_bad));
     }
 }
 
