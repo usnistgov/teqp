@@ -435,7 +435,8 @@ public:
         
         using Mat = Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>;
         const Mat Delta = get_Delta(T, rhomolar, mole_fractions);
-        Eigen::ArrayXd XAinit = 0.0*mole_fractions + 1.0;
+    
+        Eigen::ArrayXd XAinit = Eigen::ArrayXd::Ones(mapper.to_siteid.size());
         auto XA = successive_substitution(T, rhomolar, mole_fractions, XAinit);
         
         auto fromArrayXd = [](const Eigen::ArrayXd &x){std::valarray<double>n(x.size()); for (auto i = 0U; i < n.size(); ++i){ n[i] = x[i];} return n;};
