@@ -18,13 +18,13 @@
 // Definitions for the matrices of global constants for the PCSAFT model
 namespace teqp::saft::PCSAFT::PCSAFTMatrices{
 namespace GrossSadowski2001{
-    extern Eigen::Array<double, 3, 7> a, b;
+    extern const Eigen::Array<double, 3, 7> a, b;
 }
 namespace LiangIECR2012{
-    extern Eigen::Array<double, 3, 7> a, b;
+    extern const Eigen::Array<double, 3, 7> a, b;
 }
 namespace LiangIECR2014{
-    extern Eigen::Array<double, 3, 7> a, b;
+    extern const Eigen::Array<double, 3, 7> a, b;
 }
 }
 
