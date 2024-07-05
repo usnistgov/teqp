@@ -9,6 +9,8 @@ using Catch::Matchers::WithinAbs;
 #include "teqp/algorithms/critical_pure.hpp"
 #include "teqp/derivs.hpp"
 
+#include "catch_fixtures.hpp"
+
 using namespace teqp;
 
 TEST_CASE("Test for critical point of Kolafa-Nezbeda", "[LJ126]")
@@ -107,6 +109,16 @@ TEST_CASE("Test single point values from S. Pohl", "[Mien6]")
         CHECK_THAT(Ar01rcalc, WithinAbs(A01r, 1e-14));
     }
 }
+TEST_CASE("Test virial coefficients", "[Mien6virial]")
+{
+    // Also test virial coefficients
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    auto model = make_model({ {"kind", "Mie_Pohl2023"}, {"model", {{"lambda_r", 12}}} });
+    double rhotest = 1e-8, Tspec = 1.3;
+    VirialTestFixture fix(model, z);
+    fix.test_virial(2, Tspec, rhotest, 1e-6);
+    fix.test_virial(3, Tspec, rhotest, 1e-6);
+}
 
 TEST_CASE("Test LJChain models", "[LJChain]"){
     auto Johnson = LJ126Johnson1993();
@@ -120,17 +132,25 @@ TEST_CASE("Test LJChain models", "[LJChain]"){
     CHECK_THAT(std::get<0>(crit2), WithinAbs(1.82, 0.1));
 }
 
-TEST_CASE("Test critical points", "[LJ126]"){
+TEST_CASE("Check virial coefficients", "[LJ126]"){
 
     std::vector<std::tuple<std::string, std::tuple<double, double> >> data = {
         {"LJ126_TholJPCRD2016", {1.3035125549100017, 0.3103860327864468}}, // Note the true critical point was not used
         {"LJ126_KolafaNezbeda1994", {1.3396478193468193, 0.3108038977722935}},
-        {"LJ126_Johnson1993", {1.313, 0.310}}
+        {"LJ126_Johnson1993", {1.313, 0.310}},
     };
     
     for (auto& [kind, expected] : data){
         auto model = make_model({ {"kind", kind}, {"model", {}} });
         auto crit = model->solve_pure_critical(1.3, 0.3);
         CHECK_THAT(std::get<0>(expected), WithinRel(std::get<0>(crit), 1e-6) );
+        
+        Eigen::ArrayXd z(1); z = 1.0;
+        double rhotest = 1e-6, Tspec = 1.3;
+        VirialTestFixture fix(model, z);
+        fix.test_virial(2, Tspec, rhotest, 1e-6);
+        fix.test_virial(3, Tspec, rhotest, 1e-6);
     }
 }
+
+

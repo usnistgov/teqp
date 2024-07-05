@@ -3,6 +3,8 @@
 
 using Catch::Approx;
 
+#include "catch_fixtures.hpp"
+
 #include "teqp/types.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/models/pcsaft.hpp"
@@ -375,7 +377,7 @@ TEST_CASE("Check PCSAFT with kmat options", "[PCSAFT],[kmat]")
 }
 
 
-TEST_CASE("Check B and its temperature derivatives", "[PCSAFT],[B]")
+TEST_CASE("Check virials and temperature derivatives", "[PCSAFT],[B]")
 {
     auto j = nlohmann::json::parse(R"({
         "kind": "PCSAFT",
@@ -388,26 +390,45 @@ TEST_CASE("Check B and its temperature derivatives", "[PCSAFT],[B]")
     double rhotest = 1e-6; double Tspec = 100;
     Eigen::ArrayXd z(1); z[0] = 1.0;
     
-    auto Bnondilute = model->get_Ar00(Tspec, rhotest, z)/rhotest;
+    auto Bnondilute = model->get_Ar01(Tspec, rhotest, z)/rhotest;
     auto B = model->get_dmBnvirdTm(2, 0, Tspec, z);
-    CHECK(B == Approx(Bnondilute));
+    CHECK_THAT(B, WithinRel(Bnondilute, 1e-8));
 
     auto TdBdTnondilute = -model->get_Ar10(Tspec, rhotest, z)/rhotest;
     auto TdBdT = Tspec*model->get_dmBnvirdTm(2, 1, Tspec, z);
-    CHECK(TdBdT == Approx(TdBdTnondilute));
+    CHECK_THAT(TdBdT, WithinRel(TdBdTnondilute, 1e-8));
     
     auto tau2d2Bdtau2nondilute = model->get_Ar20(Tspec, rhotest, z)/rhotest;
     auto T2d2BdT2 = Tspec*Tspec*model->get_dmBnvirdTm(2, 2, Tspec, z);
     auto tau2d2Bdtau2 = T2d2BdT2 + 2*TdBdT;
-    CHECK(tau2d2Bdtau2 == Approx(tau2d2Bdtau2nondilute));
+    CHECK_THAT(tau2d2Bdtau2, WithinRel(tau2d2Bdtau2nondilute, 1e-8));
     
     auto Cnondilute = model->get_Ar02(Tspec, rhotest, z)/(rhotest*rhotest);
     auto C = model->get_dmBnvirdTm(3, 0, Tspec, z);
-    CHECK(C == Approx(Cnondilute));
+    CHECK_THAT(C, WithinRel(Cnondilute, 1e-6));
     
     auto dCdTnondilute = -model->get_Ar12(Tspec, rhotest, z)/(rhotest*rhotest);
     auto dCdT = Tspec*model->get_dmBnvirdTm(3, 1, Tspec, z);
-    CHECK(dCdT == Approx(dCdTnondilute));
+    CHECK_THAT(dCdT, WithinRel(dCdTnondilute, 1e-6));
     
     CHECK(std::isfinite(model->get_dmBnvirdTm(3, 2, Tspec, z)));
+}
+
+TEST_CASE("Check B and its temperature derivatives with fixture", "[PCSAFT],[B]"){
+    
+    auto j = nlohmann::json::parse(R"({
+        "kind": "PCSAFT",
+        "model": {
+            "names": ["Methane"]
+        }
+    })");
+    CHECK_NOTHROW(teqp::cppinterface::make_model(j));
+    auto model = teqp::cppinterface::make_model(j);
+    double rhotest = 1e-6; double Tspec = 100;
+    Eigen::ArrayXd z(1); z[0] = 1.0;
+    
+    VirialTestFixture fix(model, z);
+    fix.test_virial(2, Tspec, rhotest, 1e-6);
+    fix.test_virial(3, Tspec, rhotest, 1e-6);
+//    fix.test_virial(4, Tspec, rhotest, 1e-8);
 }
