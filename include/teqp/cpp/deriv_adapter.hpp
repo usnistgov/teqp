@@ -4,6 +4,13 @@
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/exceptions.hpp"
 
+#if defined(TEQP_MULTIPRECISION_ENABLED)
+// Imports from boost
+#include <boost/multiprecision/cpp_bin_float.hpp>
+using namespace boost::multiprecision;
+#include "teqp/finite_derivs.hpp"
+#endif
+
 namespace teqp{
 namespace cppinterface{
 namespace adapter{
@@ -127,6 +134,28 @@ public:
 #define X(i) virtual EArrayd get_Ar ## i ## 0n(const double T, const double rho, const REArrayd& molefrac) const  override { auto vals = TDXDerivatives<decltype(mp.get_cref()), double, EArrayd>::template get_Arn0<i>(mp.get_cref(), T, rho, molefrac); return Eigen::Map<Eigen::ArrayXd>(&(vals[0]), vals.size()); };
     ARN0_args
 #undef X
+    
+    virtual double get_Ar01ep(const double T, const double rho, const EArrayd& molefrac) const  override {
+        using my_float_t = number<cpp_bin_float<100U>>;
+        auto f = [&](const auto& rhoep){
+            return mp.get_cref().alphar(T, rhoep, molefrac);
+        };
+        return rho*static_cast<double>(centered_diff<1,4>(f, static_cast<my_float_t>(rho), 1e-16*static_cast<my_float_t>(rho)));
+    }
+    virtual double get_Ar02ep(const double T, const double rho, const EArrayd& molefrac) const  override {
+        using my_float_t = number<cpp_bin_float<100U>>;
+        auto f = [&](const auto& rhoep){
+            return mp.get_cref().alphar(T, rhoep, molefrac);
+        };
+        return rho*rho*static_cast<double>(centered_diff<2,4>(f, static_cast<my_float_t>(rho), 1e-16*static_cast<my_float_t>(rho)));
+    }
+    virtual double get_Ar03ep(const double T, const double rho, const EArrayd& molefrac) const  override {
+        using my_float_t = number<cpp_bin_float<100U>>;
+        auto f = [&](const auto& rhoep){
+            return mp.get_cref().alphar(T, rhoep, molefrac);
+        };
+        return rho*rho*rho*static_cast<double>(centered_diff<3,4>(f, static_cast<my_float_t>(rho), 1e-16*static_cast<my_float_t>(rho)));
+    }
     
     // Virial derivatives
     virtual double get_B2vir(const double T, const EArrayd& z) const override {

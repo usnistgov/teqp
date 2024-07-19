@@ -681,15 +681,20 @@ struct SAFTVRMieChainContributionTerms{
              for Nderiv in [1, 2, 3, 4, 5]:
                  display(simplify((simplify(diff(alpha, rho, Nderiv)).subs(rho,0)*rho**Nderiv/factorial(Nderiv)).subs(D_0, zeta_0/rho).subs(D_1, zeta_1/rho).subs(D_2, zeta_2/rho).subs(D_3, zeta_3/rho)))
             </sympy>
+             
+             The updated approach is simpler; start off with the expression for alphar_hs, and simplify
+             ratios where 0/0 for which the l'hopital limit would be ok until you remove all the terms
+             in the denominator, allowing it to be evaluated. All terms have a zeta_x/zeta_0 and a few
+             have zeta_3*zeta_0 in the denominator
+             
             */
+            auto Upsilon = 1.0 - zeta[3];
             return forceeval(
-                 0.0 // 0-th order term, the limit of the function at zero density is zero
-                 + zeta[3] + 3.0*D[1]*zeta[2]/D[0] // 1st order term f'(x=0)*x/1!
-                 + (zeta[3]*zeta[3] + 6.0*D[1]/D[0]*zeta[2]*zeta[3] + 3.0*zeta[2]*zeta[2]*D[2]/D[0])/2.0 // 2nd order term f''(x=0)*x^2/2!
-                 + D[3]/D[0]*(zeta[0]*zeta[3]*zeta[3] + 9.0*zeta[1]*zeta[2]*zeta[3] + 8.0*zeta[2]*zeta[2]*zeta[2])/3.0 // 3rd order term f'''(x=0)*x^3/3!
-                 + zeta[3]*D[3]/D[0]*(zeta[0]*zeta[3]*zeta[3] + 12.0*zeta[1]*zeta[2]*zeta[3] + 15.0*zeta[2]*zeta[2]*zeta[2])/4.0 // 4th order term f''''(x=0)*x^4/4!
-                 // ... and so on
-             );
+                 3.0*D[1]/D[0]*zeta[2]/Upsilon
+                 + D[2]*D[2]*zeta[2]/(D[3]*D[0]*Upsilon*Upsilon)
+                 - log(Upsilon)
+                 + (D[2]*D[2]*D[2])/(D[3]*D[3]*D[0])*log(Upsilon)
+            );
         }
         else{
             return forceeval(6.0/(MY_PI*rhos)*(3.0*zeta[1]*zeta[2]/(1.0-zeta[3]) + POW3(zeta[2])/(zeta[3]*POW2(1.0-zeta[3])) + (POW3(zeta[2])/POW2(zeta[3])-zeta[0])*log(1.0-zeta[3])));

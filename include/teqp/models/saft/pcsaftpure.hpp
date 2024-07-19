@@ -41,7 +41,8 @@ public:
         
         auto d = forceeval(sigma_A*(1.0-0.12*exp(-3.0*eps_k/T)));
         Eigen::Array<decltype(d), 4, 1> dpowers; dpowers(0) = 1.0; for (auto i = 1U; i <= 3; ++i){ dpowers(i) = d*dpowers(i-1); }
-        auto zeta = pi/6.0*rhoN_A3*m*dpowers;
+        auto D = pi/6.0*m*dpowers;
+        auto zeta = rhoN_A3*D.template cast<std::common_type_t<TTYPE, RhoType>>();
         
         auto zeta2_to2 = zeta[2]*zeta[2];
         auto zeta2_to3 = zeta2_to2*zeta[2];
@@ -51,9 +52,18 @@ public:
         auto onemineta_to3 = onemineta*onemineta_to2;
         auto onemineta_to4 = onemineta*onemineta_to3;
         
-        auto alpha_hs = (3.0*zeta[1]*zeta[2]/onemineta
+        std::decay_t<decltype(zeta[0])> alpha_hs = forceeval((3.0*zeta[1]*zeta[2]/onemineta
                          + zeta2_to3/(zeta[3]*onemineta_to2)
-                         + (zeta2_to3/zeta3_to2-zeta[0])*log(1.0-zeta[3]))/zeta[0];
+                         + (zeta2_to3/zeta3_to2-zeta[0])*log(1.0-zeta[3]))/zeta[0]);
+        if (getbaseval(zeta[0]) == 0){
+            auto Upsilon = 1.0-zeta[3];
+            alpha_hs = forceeval(
+                3.0*D[1]/D[0]*zeta[2]/Upsilon
+                + D[2]*D[2]*zeta[2]/(D[3]*D[0]*Upsilon*Upsilon)
+                - log(Upsilon)
+                + (D[2]*D[2]*D[2])/(D[3]*D[3]*D[0])*log(Upsilon)
+            );
+        }
         
         auto fac_g_hs = d/2.0; // d*d/(2*d)
         auto gii = (1.0/onemineta

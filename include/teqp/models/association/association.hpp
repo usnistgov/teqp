@@ -374,11 +374,11 @@ public:
         using rDDXtype = std::decay_t<std::common_type_t<typename decltype(Delta)::Scalar, decltype(rhomolar), decltype(molefracs[0])>>; // Type promotion, without the const-ness
         Eigen::MatrixX<rDDXtype> rDDX = rhomolar*N_A*(Delta.array()*D.cast<resulttype>().array()).matrix();
         for (auto j = 0; j < rDDX.rows(); ++j){
-            rDDX.row(j).array() = rDDX.row(j).array()*xj.array();
+            rDDX.row(j).array() = rDDX.row(j).array()*xj.array().template cast<rDDXtype>();
         }
 //        rDDX.rowwise() *= xj;
         
-        Eigen::ArrayX<std::decay_t<rDDXtype>> X = X_init, Xnew;
+        Eigen::ArrayX<std::decay_t<rDDXtype>> X = X_init.template cast<rDDXtype>(), Xnew;
         
         for (auto counter = 0; counter < options.max_iters; ++counter){
             // calculate the new array of non-bonded site fractions X

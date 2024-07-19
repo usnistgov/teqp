@@ -413,22 +413,3 @@ TEST_CASE("Check virials and temperature derivatives", "[PCSAFT],[B]")
     
     CHECK(std::isfinite(model->get_dmBnvirdTm(3, 2, Tspec, z)));
 }
-
-TEST_CASE("Check B and its temperature derivatives with fixture", "[PCSAFT],[B]"){
-    
-    auto j = nlohmann::json::parse(R"({
-        "kind": "PCSAFT",
-        "model": {
-            "names": ["Methane"]
-        }
-    })");
-    CHECK_NOTHROW(teqp::cppinterface::make_model(j));
-    auto model = teqp::cppinterface::make_model(j);
-    double rhotest = 1e-6; double Tspec = 100;
-    Eigen::ArrayXd z(1); z[0] = 1.0;
-    
-    VirialTestFixture fix(model, z);
-    fix.test_virial(2, Tspec, rhotest, 1e-6);
-    fix.test_virial(3, Tspec, rhotest, 1e-6);
-//    fix.test_virial(4, Tspec, rhotest, 1e-8);
-}

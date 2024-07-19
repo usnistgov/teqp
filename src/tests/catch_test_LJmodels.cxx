@@ -144,9 +144,10 @@ TEST_CASE("Check virial coefficients", "[LJ126]"){
         auto model = make_model({ {"kind", kind}, {"model", {}} });
         auto crit = model->solve_pure_critical(1.3, 0.3);
         CHECK_THAT(std::get<0>(expected), WithinRel(std::get<0>(crit), 1e-6) );
+        CAPTURE(kind);
         
         Eigen::ArrayXd z(1); z = 1.0;
-        double rhotest = 1e-6, Tspec = 1.3;
+        double rhotest = 1e-12, Tspec = 1.3;
         VirialTestFixture fix(model, z);
         fix.test_virial(2, Tspec, rhotest, 1e-6);
         fix.test_virial(3, Tspec, rhotest, 1e-6);

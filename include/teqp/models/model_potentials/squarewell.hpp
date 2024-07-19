@@ -127,7 +127,7 @@ private:
         for (auto n = 1; n < 5; ++n){
             num += thetai[n]*pow(lambda_, n);
         }
-        num *= pow(rhostar, 2);
+        num *= powi(rhostar, 2);
         RhoType den = 0;
         for (auto n = 5; n < 8; ++n){
             den += thetai[n]*pow(lambda_, n-4);
@@ -137,25 +137,25 @@ private:
     }
     
     template<typename RhoType>
-    auto Chi(const RhoType & rhostar, double lambda_) const { return forceeval(a2i(2, lambda_)*rhostar*(1.0-pow(rhostar,2)/1.5129)); }
+    auto Chi(const RhoType & rhostar, double lambda_) const { return forceeval(a2i(2, lambda_)*rhostar*(1.0-powi(rhostar,2)/1.5129)); }
     
     template<typename RhoType>
     auto aHS(const RhoType & rhostar) const{
-        return forceeval(-3.0*m_pi*rhostar*(m_pi*rhostar-8.0)/pow(m_pi*rhostar-6.0, 2));
+        return forceeval(-3.0*m_pi*rhostar*(m_pi*rhostar-8.0)/powi(forceeval(m_pi*rhostar-6.0), 2));
     }
     
     template<typename RhoType>
     auto get_a1(const RhoType & rhostar, double lambda_) const{
-        RhoType o = a2i(1, lambda_)*pow(rhostar, 2-1) + a31(lambda_)*pow(rhostar, 3-1);
+        RhoType o = a2i(1, lambda_)*powi(rhostar, 2-1) + a31(lambda_)*powi(rhostar, 3-1);
         for (auto i = 1; i < 5; ++i){
-            o = o + gamman(i, lambda_)*pow(rhostar, i+2);
+            o = o + gamman(i, lambda_)*powi(rhostar, i+2);
         }
         return forceeval(o);
     }
     
     template<typename RhoType>
     auto get_a2(const RhoType & rhostar, double lambda_) const{
-        return forceeval(Chi(rhostar, lambda_)*exp(xi2(lambda_)*rhostar + phii(1, lambda_)*pow(rhostar,3) + phii(2,lambda_)*pow(rhostar,4)));
+        return forceeval(Chi(rhostar, lambda_)*exp(xi2(lambda_)*rhostar + phii(1, lambda_)*powi(rhostar,3) + phii(2,lambda_)*powi(rhostar,4)));
     }
     
     template<typename RhoType>

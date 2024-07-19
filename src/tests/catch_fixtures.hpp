@@ -19,25 +19,34 @@ public:
      \f[
      B^n = \frac{\Lambda^r_{0(n-1)}}{\rho^{n-1}(n-2)!}
      \f]
+     
+     \note The calculations of the non-dilute part have to be done in extended precision to have enough precision to calculate high-order virial coefficients
      */
-    auto test_virial(auto n, auto T, auto rhotest = 1e-8, auto reltol = 1e-6){
+    auto test_virial(auto n, auto T, auto rhotest, auto reltol = 1e-6){
         auto B_n = model->get_dmBnvirdTm(n, 0, T, molefrac);
         CAPTURE(n);
+        CAPTURE(B_n);
+        
         REQUIRE(std::isfinite(B_n));
         if (n == 2){
             // B
-            auto B_n_nondilute = model->get_Ar01(T, rhotest, molefrac)/rhotest;
-            CHECK_THAT(B_n, WithinRel(B_n_nondilute, reltol));
+            auto B_n_nondilute_ep = model->get_Ar01ep(T, rhotest, molefrac)/rhotest; // and divided by (n-2)! or 0! = 1
+            CAPTURE(B_n_nondilute_ep);
+            CHECK_THAT(B_n, WithinRel(B_n_nondilute_ep, reltol));
         }
         if (n == 3){
             // C
-            auto B_n_nondilute = model->get_Ar02(T, rhotest, molefrac)/rhotest/rhotest;
-            CHECK_THAT(B_n, WithinRel(B_n_nondilute, reltol));
+            auto B_n_nondilute_ep = model->get_Ar02ep(T, rhotest, molefrac)/(rhotest*rhotest); // and divided by (n-2)! or 1! = 1
+            CAPTURE(B_n_nondilute_ep);
+            CHECK_THAT(B_n, WithinRel(B_n_nondilute_ep, reltol));
         }
         if (n == 4){
             // D
-            auto B_n_nondilute = model->get_Ar03(T, rhotest, molefrac)/(rhotest/rhotest/rhotest)/2.0;
-            CHECK_THAT(B_n, WithinRel(B_n_nondilute, reltol));
+            auto B_n_nondilute_ep = model->get_Ar03ep(T, rhotest, molefrac)/(rhotest*rhotest*rhotest)/2.0; // and divided by (n-2)! or 2! = 2
+            CAPTURE(B_n_nondilute_ep);
+//            auto B_n_nondilute = model->get_Ar03(T, rhotest, molefrac)/(rhotest*rhotest*rhotest)/2.0; // and divided by (n-2)! or 2! = 2
+//            CAPTURE(B_n_nondilute);
+            CHECK_THAT(B_n, WithinRel(B_n_nondilute_ep, reltol));
         }
     }
 };
