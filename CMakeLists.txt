@@ -179,7 +179,7 @@ if (NOT TEQP_NO_TEQPCPP)
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/Dufal_assoc.cpp")
   target_sources(teqpcpp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/data/PCSAFT.cpp")
   
-  target_compile_definitions(teqpcpp PRIVATE -DTEQP_MULTIPRECISION_ENABLED)
+  target_compile_definitions(teqpcpp PUBLIC -DTEQP_MULTIPRECISION_ENABLED)
 
   # target_compile_options(teqpcpp PRIVATE
   #    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
