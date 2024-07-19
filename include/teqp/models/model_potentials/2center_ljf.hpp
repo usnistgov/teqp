@@ -258,7 +258,7 @@ namespace teqp {
 
                 result r = 0.0;
                 for (auto i = 0U; i < c.size(); ++i) {
-                    r = r + c[i] * pow(tau, m[i]) * powi(delta, n[i]) * pow(alpha, o[i]) * exp(p[i] * powi(delta, q[i]));
+                    r = r + c[i] * pow(tau, m[i]) * powi(delta, static_cast<int>(n[i])) * pow(alpha, o[i]) * exp(p[i] * powi(delta, static_cast<int>(q[i])));
                 }
                 return forceeval(r);
             }
