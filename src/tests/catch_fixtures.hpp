@@ -46,7 +46,12 @@ public:
             CAPTURE(B_n_nondilute_ep);
 //            auto B_n_nondilute = model->get_Ar03(T, rhotest, molefrac)/(rhotest*rhotest*rhotest)/2.0; // and divided by (n-2)! or 2! = 2
 //            CAPTURE(B_n_nondilute);
-            CHECK_THAT(B_n, WithinRel(B_n_nondilute_ep, reltol));
+            if (std::abs(B_n_nondilute_ep) > 1e-12){
+                CHECK_THAT(B_n, WithinRel(B_n_nondilute_ep, reltol));
+            }
+            else{
+                CHECK_THAT(B_n, WithinAbs(B_n_nondilute_ep, reltol));
+            }
         }
     }
 };

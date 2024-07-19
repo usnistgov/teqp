@@ -106,8 +106,8 @@ std::map<std::string, std::pair<nlohmann::json, std::vector<evalpoint>>> PureFlu
     {"SW_EspindolaHeredia2009",{ { {"kind", "SW_EspindolaHeredia2009"}, {"model", {{"lambda", 1.3}}} }, {VirialReference{1.3, 1e-10} } }},
     {"EXP6_Kataoka1992",{ { {"kind", "EXP6_Kataoka1992"}, {"model", {{"alpha", 12}}} }, {VirialReference{1.3, 1e-10} } }},
     
-    {"2CLJF_Dipole",{ TwoLJFDip(), {VirialReference{1.3, 1e-10} } }},
-    {"2CLJF_Quad",{ TwoLJFQuad(), {VirialReference{1.3, 1e-10} } }},
+    {"2CLJF_Dipole",{ TwoLJFDip(), {} }}, // Virials are not valid because non-integer density exponents
+    {"2CLJF_Quad",{ TwoLJFQuad(), {} }}, // Virials are not valid because non-integer density exponents
     
     {"LKPMethane", {LKPmethane(), {VirialReference{200.0, 1e-10} } }},
     {"PCSAFT", {PCSAFT_(), {VirialReference{200.0, 1e-6} } }},
