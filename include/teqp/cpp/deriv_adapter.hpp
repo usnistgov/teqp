@@ -136,6 +136,7 @@ public:
 #undef X
     
     virtual double get_Ar01ep(const double T, const double rho, const EArrayd& molefrac) const  override {
+        using namespace boost::multiprecision;
         using my_float_t = number<cpp_bin_float<100U>>;
         auto f = [&](const auto& rhoep){
             return mp.get_cref().alphar(T, rhoep, molefrac);
@@ -143,6 +144,7 @@ public:
         return rho*static_cast<double>(centered_diff<1,4>(f, static_cast<my_float_t>(rho), 1e-16*static_cast<my_float_t>(rho)));
     }
     virtual double get_Ar02ep(const double T, const double rho, const EArrayd& molefrac) const  override {
+        using namespace boost::multiprecision;
         using my_float_t = number<cpp_bin_float<100U>>;
         auto f = [&](const auto& rhoep){
             return mp.get_cref().alphar(T, rhoep, molefrac);
@@ -150,6 +152,7 @@ public:
         return rho*rho*static_cast<double>(centered_diff<2,4>(f, static_cast<my_float_t>(rho), 1e-16*static_cast<my_float_t>(rho)));
     }
     virtual double get_Ar03ep(const double T, const double rho, const EArrayd& molefrac) const  override {
+        using namespace boost::multiprecision;
         using my_float_t = number<cpp_bin_float<100U>>;
         auto f = [&](const auto& rhoep){
             return mp.get_cref().alphar(T, rhoep, molefrac);
