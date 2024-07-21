@@ -275,7 +275,7 @@ namespace teqp {
             auto alphar(const TauType& tau, const DeltaType& delta, const double& alpha) const {
 
                 auto eta = forceeval((delta / (a + (1.0 - a) * pow(tau, g))));
-                auto r = (pow(alpha, 2) - 1.0) * log(1.0 - eta) + ((pow(alpha, 2) + 3 * alpha) * eta - 3 * alpha * pow(eta, 2)) / (pow(1.0 - eta, 2));
+                auto r = (pow(alpha, 2) - 1.0) * log(1.0 - eta) + ((pow(alpha, 2) + 3 * alpha) * eta - 3 * alpha * powi(eta, 2)) / (pow(1.0 - eta, 2));
                 return forceeval(r);
             }
         };
@@ -337,7 +337,7 @@ namespace teqp {
                 auto delta_eta = forceeval(rho_dimer_star * eta_red);
                 auto alphar_1 = Hard.alphar(tau, delta_eta, alpha);
                 auto alphar_2 = Attr.alphar(tau, delta, alpha);
-                auto val = alphar_1 + alphar_2;
+                auto val = forceeval(alphar_1 + alphar_2);
                 if (mu_sq != 0.0){
                     val += Pole.alphar(tau, delta, mu_sq);
                 }
@@ -406,7 +406,7 @@ namespace teqp {
             return eos;
         }
 
-        // build the 2-center Lennard-Jones model with dipole
+        // build the 2-center Lennard-Jones model without dipole
         inline auto build_two_center_model(const std::string& model_version, const double& L = 0.0) {
 
             // Get reducing for temperature and density
