@@ -120,6 +120,19 @@ TEST_CASE("Test virial coefficients", "[Mien6virial]")
     fix.test_virial(3, Tspec, rhotest, 1e-6);
 }
 
+TEST_CASE("Test s^+ ", "[Mien6]")
+{
+    // Also test virial coefficients
+    auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+    auto model = make_model({ {"kind", "Mie_Pohl2023"}, {"model", {{"lambda_r", 12}}} });
+    double rho = 0.31;
+    auto rhovec = (Eigen::ArrayXd(1) << rho).finished();
+    auto splus = model->get_splus(1.32, rhovec);
+    auto splus_normal = model->get_Ar00(1.32, rho, z)-model->get_Ar10(1.32, rho, z);
+    CHECK(splus == splus_normal);
+}
+
+
 TEST_CASE("Test LJChain models", "[LJChain]"){
     auto Johnson = LJ126Johnson1993();
     auto m1 = LJChain::LJChain(std::move(Johnson), 1);
