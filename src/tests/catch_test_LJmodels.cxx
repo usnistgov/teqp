@@ -129,7 +129,7 @@ TEST_CASE("Test s^+ ", "[Mien6]")
     auto rhovec = (Eigen::ArrayXd(1) << rho).finished();
     auto splus = model->get_splus(1.32, rhovec);
     auto splus_normal = model->get_Ar00(1.32, rho, z)-model->get_Ar10(1.32, rho, z);
-    CHECK(splus == splus_normal);
+    CHECK_THAT(splus, WithinRel(splus_normal, 1e-8));
 }
 
 
