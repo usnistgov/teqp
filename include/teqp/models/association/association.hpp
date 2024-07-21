@@ -141,14 +141,14 @@ private:
             throw teqp::InvalidArgument("self_association_mask is of the wrong size");
         }
         int Ngroups = static_cast<int>(ind.to_siteid.size());
-        Eigen::ArrayXXi D(Ngroups, Ngroups);
+        Eigen::ArrayXXi Dmat(Ngroups, Ngroups);
         // I and J are the numerical indices of the sites
         for (int I = 0; I < Ngroups; ++I){
             for (int J = 0; J < Ngroups; ++J){
-                D(I, J) = get_DIJ(I, J);
+                Dmat(I, J) = get_DIJ(I, J);
             }
         }
-        return D;
+        return Dmat;
     }
     static auto toEig(const nlohmann::json& j, const std::string& k) -> Eigen::ArrayXd{
         std::vector<double> vec = j.at(k);
