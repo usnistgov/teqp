@@ -4,13 +4,15 @@
 #include "teqp/models/saftvrmie.hpp"
 #include "teqp/models/association/association.hpp"
 #include "teqp/models/saft/softsaft.hpp"
+#include "teqp/models/model_potentials/2center_ljf.hpp"
 
 namespace teqp::saft::genericsaft{
 
 struct GenericSAFT{
     
 public:
-    using NonPolarTerms = std::variant<saft::pcsaft::PCSAFTMixture, SAFTVRMie::SAFTVRMieNonpolarMixture, saft::softsaft::SoftSAFT>;
+    using TwoCLJ = twocenterljf::Twocenterljf<twocenterljf::DipolarContribution>;
+    using NonPolarTerms = std::variant<saft::pcsaft::PCSAFTMixture, SAFTVRMie::SAFTVRMieNonpolarMixture, saft::softsaft::SoftSAFT, TwoCLJ>;
 //    using PolarTerms = EOSTermContainer<>;
     using AssociationTerms = std::variant<association::Association>;
     
@@ -26,7 +28,9 @@ private:
         else if (kind == "Johnson+Johnson" || kind == "softSAFT"){
             return saft::softsaft::SoftSAFT(j.at("model"));
         }
-        // TODO: 2CLJ
+        else if (kind == "2CLJF"){
+            return twocenterljf::build_two_center_model(j.at("author"), j.at("L^*"));
+        }
         else{
             throw std::invalid_argument("Not valid nonpolar kind:" + kind);
         }
