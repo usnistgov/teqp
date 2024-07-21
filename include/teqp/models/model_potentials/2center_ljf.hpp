@@ -258,7 +258,7 @@ namespace teqp {
 
                 result r = 0.0;
                 for (auto i = 0U; i < c.size(); ++i) {
-                    r = r + c[i] * pow(tau, m[i]) * pow(delta, n[i]) * pow(alpha, o[i]) * exp(p[i] * pow(delta, q[i]));
+                    r = r + c[i] * pow(tau, m[i]) * powi(delta, static_cast<int>(n[i])) * pow(alpha, o[i]) * exp(p[i] * powi(delta, static_cast<int>(q[i])));
                 }
                 return forceeval(r);
             }
@@ -275,7 +275,7 @@ namespace teqp {
             auto alphar(const TauType& tau, const DeltaType& delta, const double& alpha) const {
 
                 auto eta = forceeval((delta / (a + (1.0 - a) * pow(tau, g))));
-                auto r = (pow(alpha, 2) - 1.0) * log(1.0 - eta) + ((pow(alpha, 2) + 3 * alpha) * eta - 3 * alpha * pow(eta, 2)) / (pow(1.0 - eta, 2));
+                auto r = (pow(alpha, 2) - 1.0) * log(1.0 - eta) + ((pow(alpha, 2) + 3 * alpha) * eta - 3 * alpha * powi(eta, 2)) / (pow(1.0 - eta, 2));
                 return forceeval(r);
             }
         };
@@ -337,8 +337,10 @@ namespace teqp {
                 auto delta_eta = forceeval(rho_dimer_star * eta_red);
                 auto alphar_1 = Hard.alphar(tau, delta_eta, alpha);
                 auto alphar_2 = Attr.alphar(tau, delta, alpha);
-                auto alphar_3 = Pole.alphar(tau, delta, mu_sq);
-                auto val = alphar_1 + alphar_2 + alphar_3;
+                auto val = forceeval(alphar_1 + alphar_2);
+                if (mu_sq != 0.0){
+                    val += Pole.alphar(tau, delta, mu_sq);
+                }
                 return forceeval(val);
             }
 
@@ -404,6 +406,25 @@ namespace teqp {
             return eos;
         }
 
+        // build the 2-center Lennard-Jones model without dipole
+        inline auto build_two_center_model(const std::string& model_version, const double& L = 0.0) {
+
+            // Get reducing for temperature and density
+            auto DC_funcs = get_density_reducing(model_version);
+            auto TC_func = get_temperature_reducing(model_version);
+
+            //// Get contributions to EOS ( Attractive and regular part)
+            auto EOS_hard = get_HardSphere_contribution();
+            auto EOS_att = get_Attractive_contribution(model_version);
+            auto EOS_dipolar = get_Dipolar_contribution(model_version);
+            double mu_sq = 0.0;
+
+            // Build the 2-center Lennard-Jones model
+            auto model = Twocenterljf(std::move(DC_funcs), std::move(TC_func), std::move(EOS_hard), std::move(EOS_att), std::move(EOS_dipolar), L, mu_sq);
+
+            return model;
+        }
+    
         // build the 2-center Lennard-Jones model with dipole
         inline auto build_two_center_model_dipole(const std::string& model_version, const double& L = 0.0, const double& mu_sq = 0.0) {
 

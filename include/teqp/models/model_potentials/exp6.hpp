@@ -124,8 +124,9 @@ public:
     {
         std::common_type_t<TType, RhoType> o = 0.0;
         for (auto el : c){
-            auto p = el[0], q = el[1], r = el[2], Apqr = el[3];
-            o = o + Apqr * pow(rhostar, p) * pow(Tstar, -q) * pow(alphastar, r);
+            int p = static_cast<int>(el[0]);
+            auto q = el[1], r = el[2], Apqr = el[3];
+            o = o + Apqr * powi(rhostar, p) * pow(Tstar, -q) * pow(alphastar, r);
         }
         return forceeval(o);
     }

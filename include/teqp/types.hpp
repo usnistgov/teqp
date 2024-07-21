@@ -179,6 +179,11 @@ namespace teqp {
         //return e.cast<T>().unaryExpr([&x](const auto& e_) {return powi(x, e_); }).eval();
     }
 
+    template<typename T>
+    inline auto powIVd(const T& x, const Eigen::ArrayXd& e) {
+        return e.cast<T>().unaryExpr([&x](const auto& e_) {return forceeval(pow(x, e_)); }).eval();
+    }
+
     //template<typename T>
     //auto powIV(const T& x, const Eigen::ArrayXd& e) {
     //    Eigen::Array<T, Eigen::Dynamic, 1> o = e.cast<T>();

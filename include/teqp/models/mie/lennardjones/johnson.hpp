@@ -111,7 +111,7 @@ private:
     auto get_a(const TTYPE& Tstar, const RHOTYPE& rhostar) const{
         std::common_type_t<TTYPE, RHOTYPE> summer = 0.0;
         for (auto [i, j, Cij] : c_Cij){
-            summer += Cij*pow(Tstar, i/2.0)*pow(rhostar, j);
+            summer += Cij*pow(Tstar, i/2.0)*powi(rhostar, j);
         }
         return forceeval(get_ahs(Tstar, rhostar) + exp(-gamma*POW2(rhostar))*rhostar*Tstar*get_DeltaB2hBH(Tstar)+summer);
     }

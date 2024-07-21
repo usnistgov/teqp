@@ -59,9 +59,9 @@ namespace Mie{
         auto alphar(const TTYPE& Tstar, const RHOTYPE& rhostar, const MoleFracType& /*molefrac*/) const {
             auto tau = forceeval(Tc / Tstar); auto delta = forceeval(rhostar / rhoc);
             using _t = std::decay_t<std::common_type_t<TTYPE, RHOTYPE>>;
-            _t s1 = 0; for (auto i = 0; i < n_pol.size(); ++i){ s1 += n_pol[i] * pow(tau, t_pol[i]) * powi(delta, d_pol[i]); }
-            _t s2 = 0; for (auto i = 0; i < n_exp.size(); ++i){ s2 += n_exp[i] * pow(tau, t_exp[i]) * powi(delta, d_exp[i]) * exp(-powi(delta, p[i])); }
-            _t s3 = 0; for (auto i = 0; i < n_gbs.size(); ++i){ s3 += n_gbs[i] * pow(tau, t_gbs[i]) * powi(delta, d_gbs[i]) * exp(-eta[i] * powi(forceeval(delta - eps[i]), 2) - beta[i] * powi(forceeval(tau - gam[i]), 2)); }
+            _t s1 = 0; for (auto i = 0; i < n_pol.size(); ++i){ s1 += n_pol[i] * pow(tau, t_pol[i]) * powi(delta, static_cast<int>(d_pol[i])); }
+            _t s2 = 0; for (auto i = 0; i < n_exp.size(); ++i){ s2 += n_exp[i] * pow(tau, t_exp[i]) * powi(delta, static_cast<int>(d_exp[i])) * exp(-powi(delta, static_cast<int>(p[i]))); }
+            _t s3 = 0; for (auto i = 0; i < n_gbs.size(); ++i){ s3 += n_gbs[i] * pow(tau, t_gbs[i]) * powi(delta, static_cast<int>(d_gbs[i])) * exp(-eta[i] * powi(forceeval(delta - eps[i]), 2) - beta[i] * powi(forceeval(tau - gam[i]), 2)); }
             return forceeval(s1 + s2 + s3);
         }
 

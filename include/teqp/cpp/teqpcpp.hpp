@@ -116,6 +116,10 @@ namespace teqp {
                 ARN0_args
             #undef X
             
+            // Extended precision evaluations
+            virtual double get_Ar01ep(const double, const double, const EArrayd&) const = 0;
+            virtual double get_Ar02ep(const double, const double, const EArrayd&) const = 0;
+            virtual double get_Ar03ep(const double, const double, const EArrayd&) const = 0;
             
             // Virial derivatives
             virtual double get_B2vir(const double T, const EArrayd& z) const = 0;

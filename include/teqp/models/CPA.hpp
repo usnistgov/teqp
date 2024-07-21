@@ -131,7 +131,7 @@ public:
     CPACubic(cubic_flag flag, const std::valarray<double> &a0, const std::valarray<double> &bi, const std::valarray<double> &c1, const std::valarray<double> &Tc, const double R_gas, const std::optional<std::vector<std::vector<double>>> & kmat = std::nullopt) : a0(a0), bi(bi), c1(c1), Tc(Tc), R_gas(R_gas), kmat(kmat) {
         switch (flag) {
         case cubic_flag::PR:
-        { delta_1 = 1 + sqrt(2); delta_2 = 1 - sqrt(2); break; }
+        { delta_1 = 1 + sqrt(2.0); delta_2 = 1 - sqrt(2.0); break; }
         case cubic_flag::SRK:
         { delta_1 = 1; delta_2 = 0; break; }
         default:
