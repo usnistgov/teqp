@@ -96,7 +96,7 @@ TEST_CASE("Benchmark generic PC-SAFT+Association model", "[SAFTgeneric]"){
 }
 
 
-auto Dufal_contents = R"(
+static auto Dufal_contents = R"(
 {
   "nonpolar": {
     "kind": "SAFT-VR-Mie",
