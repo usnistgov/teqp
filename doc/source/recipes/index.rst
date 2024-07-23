@@ -1,5 +1,5 @@
-Examples
-========
+Recipes
+=======
 
 The examples here demonstrate various capabilities of teqp to solve practical problems in a "show your work" fashion
 
