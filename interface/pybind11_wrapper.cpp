@@ -16,6 +16,7 @@
 #include "teqp/models/fwd.hpp"
 #include "teqp/algorithms/ancillary_builder.hpp"
 #include "teqp/models/multifluid_ecs_mutant.hpp"
+#include "teqp/models/saft/genericsaft.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -144,6 +145,7 @@ const std::type_index GERG2004ResidualModel_i{std::type_index(typeid(GERG2004::G
 const std::type_index GERG2008ResidualModel_i{std::type_index(typeid(GERG2008::GERG2008ResidualModel))};
 using CPA_t = decltype(teqp::CPA::CPAfactory(""));
 const std::type_index CPA_i{std::type_index(typeid(CPA_t))};
+const std::type_index genericSAFT_i{std::type_index(typeid(teqp::saft::genericsaft::GenericSAFT))};
 
 /**
  At runtime we can add additional model-specific methods that only apply for a particular model.  We take in a Python-wrapped
@@ -296,6 +298,15 @@ void attach_model_specific_methods(py::object& obj){
     }
     else if (index == CPA_i){
         setattr("get_assoc_calcs", MethodType(py::cpp_function([](py::object& o, double T, double rhomolar, REArrayd& molefrac){ return get_typed<CPA_t>(o).assoc.get_assoc_calcs(T, rhomolar, molefrac); }, "self"_a, "T"_a, "rhomolar"_a, "molefrac"_a), obj));
+    }
+    else if (index == genericSAFT_i){
+        setattr("get_assoc_calcs", MethodType(py::cpp_function([](py::object& o, double T, double rhomolar, REArrayd& molefrac){
+            const auto& assocoptvariant = get_typed<teqp::saft::genericsaft::GenericSAFT>(o).association;
+            if (!assocoptvariant){
+                throw teqp::InvalidArgument("No association term is available");
+            }
+            return std::visit([&](const auto& a){ return a.get_assoc_calcs(T, rhomolar, molefrac); }, assocoptvariant.value());
+        }, "self"_a, "T"_a, "rhomolar"_a, "molefrac"_a), obj));
     }
 };
 
