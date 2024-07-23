@@ -234,7 +234,15 @@ public:
                 
                 // Parameters for the dispersive part
                 data.sigma_m = toEig(j, "sigma / m");
-                data.epsilon_Jmol = toEig(j, "epsilon / J/mol");
+                if (j.contains("epsilon / J/mol")){
+                    data.epsilon_Jmol = toEig(j, "epsilon / J/mol");
+                }
+                else if (j.contains("epsilon/kB / K")){
+                    data.epsilon_Jmol = toEig(j, "epsilon/kB / K")*constants::R_CODATA2017;
+                }
+                else{
+                    throw teqp::InvalidArgument("One of the epsilon variables must be provided");
+                }
                 data.lambda_r = toEig(j, "lambda_r");
                 data.kmat = build_square_matrix(j.at("kmat"));
                 // Parameters for the associating part
