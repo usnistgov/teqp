@@ -65,6 +65,36 @@ auto build_vdW() {
     return vdWEOS(Tc_K, pc_Pa);
 }
 
+TEST_CASE("autodiff derivs at x=0", "[autodiffbugs][!mayfail]"){
+    double c = 4.3;
+    auto f1 = [c](const auto& rho__) { return forceeval(c*rho__*rho__); };
+    auto f2 = [c](const auto& rho__) { return forceeval(c*pow(rho__, 2.0)); };
+    double xdouble = 0.0;
+    SECTION("real"){
+        autodiff::Real<2, double> x = xdouble;
+        SECTION("x*x"){
+            auto d1 = derivatives(f1, along(1), at(x));
+            CHECK(d1[2] == c*2);
+        }
+        SECTION("pow(x,2)"){
+            auto d2 = derivatives(f2, along(1), at(x));
+            CHECK(d2[2] == c*2);
+        }
+    }
+    SECTION("dual"){
+        using adtype = autodiff::HigherOrderDual<2, double>;
+        adtype x = xdouble;
+        SECTION("x*x"){
+            auto der1 = derivatives(f1, wrt(x), at(x));
+            CHECK(der1[der1.size() - 1] == c*2);
+        }
+        SECTION("pow(x,2)"){
+            auto der2 = derivatives(f1, wrt(x,x), at(x));
+            CHECK(der2[der2.size() - 1] == c*2);
+        }
+    }
+}
+
 TEST_CASE("Check virial coefficients for vdW", "[virial]")
 {
     auto vdW = build_vdW_argon();
