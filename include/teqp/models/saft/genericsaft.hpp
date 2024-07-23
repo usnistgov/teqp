@@ -28,8 +28,9 @@ private:
         else if (kind == "Johnson+Johnson" || kind == "softSAFT"){
             return saft::softsaft::SoftSAFT(j.at("model"));
         }
-        else if (kind == "2CLJF"){
-            return twocenterljf::build_two_center_model(j.at("author"), j.at("L^*"));
+        else if (kind == "2CLJF" || kind == "2CLJ"){
+            const auto& model = j.at("model");
+            return twocenterljf::build_two_center_model(model.at("author"), model.at("L^*"));
         }
         else{
             throw std::invalid_argument("Not valid nonpolar kind:" + kind);
