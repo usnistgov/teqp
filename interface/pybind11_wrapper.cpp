@@ -18,6 +18,9 @@
 #include "teqp/models/multifluid_ecs_mutant.hpp"
 #include "teqp/models/saft/genericsaft.hpp"
 
+#include "teqp/algorithms/pure_param_optimization.hpp"
+using namespace teqp::algorithms::pure_param_optimization;
+
 namespace py = pybind11;
 using namespace py::literals;
 
@@ -566,6 +569,49 @@ void init_teqp(py::module& m) {
         .def("get_molefrac", &NRIterator::get_molefrac)
         .def("get_T", &NRIterator::get_T)
         .def("get_rho", &NRIterator::get_rho)
+        ;
+    
+    py::class_<SatRhoLPoint>(m, "SatRhoLPoint")
+        .def(py::init<>())
+        .def_readwrite("T", &SatRhoLPoint::T)
+        .def_readwrite("rhoL_exp", &SatRhoLPoint::rhoL_exp)
+        .def_readwrite("rhoL_guess", &SatRhoLPoint::rhoL_guess)
+        .def_readwrite("rhoV_guess", &SatRhoLPoint::rhoV_guess)
+        .def_readwrite("weight", &SatRhoLPoint::weight)
+    ;
+    py::class_<SatRhoLPPoint>(m, "SatRhoLPPoint")
+        .def(py::init<>())
+        .def_readwrite("T", &SatRhoLPPoint::T)
+        .def_readwrite("rhoL_exp", &SatRhoLPPoint::rhoL_exp)
+        .def_readwrite("p_exp", &SatRhoLPPoint::p_exp)
+        .def_readwrite("rhoL_guess", &SatRhoLPPoint::rhoL_guess)
+        .def_readwrite("rhoV_guess", &SatRhoLPPoint::rhoV_guess)
+        .def_readwrite("weight_rho", &SatRhoLPPoint::weight_rho)
+        .def_readwrite("weight_p", &SatRhoLPPoint::weight_p)
+        .def_readwrite("R", &SatRhoLPPoint::R)
+    ;
+    py::class_<SatRhoLPWPoint>(m, "SatRhoLPWPoint")
+        .def(py::init<>())
+        .def_readwrite("T", &SatRhoLPWPoint::T)
+        .def_readwrite("rhoL_exp", &SatRhoLPWPoint::rhoL_exp)
+        .def_readwrite("p_exp", &SatRhoLPWPoint::p_exp)
+        .def_readwrite("w_exp", &SatRhoLPWPoint::w_exp)
+        .def_readwrite("R", &SatRhoLPWPoint::R)
+        .def_readwrite("Ao20", &SatRhoLPWPoint::Ao20)
+        .def_readwrite("M", &SatRhoLPWPoint::M)
+        .def_readwrite("rhoL_guess", &SatRhoLPWPoint::rhoL_guess)
+        .def_readwrite("rhoV_guess", &SatRhoLPWPoint::rhoV_guess)
+        .def_readwrite("weight_rho", &SatRhoLPWPoint::weight_rho)
+        .def_readwrite("weight_p", &SatRhoLPWPoint::weight_p)
+        .def_readwrite("weight_w", &SatRhoLPWPoint::weight_w)
+    ;
+    
+    py::class_<PureParameterOptimizer>(m, "PureParameterOptimizer")
+        .def(py::init<const nlohmann::json&, const std::vector<std::variant<std::string, std::vector<std::string>>>&>())
+        .def("cost_function", &PureParameterOptimizer::cost_function<Eigen::ArrayXd>)
+        .def("cost_function_threaded", &PureParameterOptimizer::cost_function_threaded<Eigen::ArrayXd>)
+        .def("build_JSON", &PureParameterOptimizer::build_JSON<Eigen::ArrayXd>)
+        .def("add_one_contribution", &PureParameterOptimizer::add_one_contribution)
         ;
     
 //    // Some functions for timing overhead of interface

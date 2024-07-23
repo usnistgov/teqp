@@ -57,7 +57,7 @@ int evaluation() {
     auto rhovecV = (Eigen::ArrayXd(2) << 0.0, 2.20225704).finished();
     
     using MultiFluid = decltype(teqp::build_multifluid_model(std::vector<std::string>{"", ""}, "", ""));
-    std::vector<MultiFluid> models(60, teqp::build_multifluid_model({ "CarbonDioxide", "Water" }, "../mycp"));
+    std::vector<MultiFluid> models(40, teqp::build_multifluid_model({ "CarbonDioxide", "Water" }, "../teqp/fluiddata"));
     std::vector<std::string> outputs(models.size());
 
     auto serial = [&]() {
@@ -70,15 +70,16 @@ int evaluation() {
     };
     auto parallel = [&]() {
         // Launch the pool with four threads.
-        boost::asio::thread_pool pool(4);
+        boost::asio::thread_pool pool(40);
 
         std::size_t i = 0;
         for (auto& model : models) {
+            auto &model_ = models[0];
             auto& o = outputs[i];
             // Submit a lambda object to the pool.
-            boost::asio::post(pool, [&model, &o, &T, &rhovecL, &rhovecV]() {
-                using TDX = teqp::TDXDerivatives<decltype(model)>;
-                o = teqp::trace_VLE_isotherm_binary(model, T, rhovecL, rhovecV).dump();
+            boost::asio::post(pool, [&model_, &o, &T, &rhovecL, &rhovecV]() {
+                using TDX = teqp::TDXDerivatives<decltype(model_)>;
+                o = teqp::trace_VLE_isotherm_binary(model_, T, rhovecL, rhovecV).dump();
             });
             i++;
         }
@@ -100,6 +101,6 @@ int evaluation() {
 
 
 int main() {
-    simple();
+//    simple();
     evaluation();
 }
