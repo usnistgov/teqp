@@ -259,7 +259,6 @@ struct TDXDerivatives {
     }
     
     #define get_ATrhoXi_runtime_combinations \
-        X(0,0,0) \
         X(0,0,1) \
         X(0,0,2) \
         X(0,0,3) \
@@ -389,6 +388,9 @@ struct TDXDerivatives {
 
     template<typename AlphaWrapper>
     static auto get_AtaudeltaXi_runtime(const AlphaWrapper& w, const Scalar& tau, const int iT, const Scalar& delta, const int iD, const VectorType& molefrac, const int i, const int iXi){
+        if (iT == 0 && iD == 0 && iXi == 0){
+            return AlpharTauDeltaCaller(w, tau, delta, molefrac);
+        }
         #define X(a,b,c) if (iT == a && iD == b && iXi == c) { return get_AtaudeltaXi<a,b,c>(w, tau, delta, molefrac, i); }
         get_ATrhoXi_runtime_combinations
         #undef X
