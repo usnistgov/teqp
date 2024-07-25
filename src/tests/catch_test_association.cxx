@@ -237,3 +237,45 @@ TEST_CASE("Benchmark association evaluations", "[associationbench]"){
     std::cout << canon.get_Delta(300.0, 1/3e-5, z) << std::endl;
     std::cout << Dufal.get_Delta(300.0, 1/3e-5, z) << std::endl;
 }
+
+TEST_CASE("Check explicit solutions for association fractions from old and new code","[XA]"){
+    double T = 298.15, rhomolar = 1000/0.01813;
+    double epsABi = 16655.0, betaABi = 0.0692, bcubic = 0.0000145, RT = 8.31446261815324*T;
+    auto molefrac = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    // Explicit solution from Huang & Radosz (old-school method)
+    auto X_Huang = teqp::CPA::XA_calc_pure(4, teqp::CPA::association_classes::a4C, teqp::CPA::radial_dist::CS, epsABi, betaABi, bcubic, RT, rhomolar, molefrac);
+    
+    auto b_m3mol = (Eigen::ArrayXd(1) << 0.0145/1e3).finished();
+    auto beta = (Eigen::ArrayXd(1) << 69.2e-3).finished();
+    auto epsilon_Jmol = (Eigen::ArrayXd(1) << 166.55*100).finished();
+    
+    std::vector<std::vector<std::string>> molecule_sites = {{"e", "e", "H", "H"}};
+    association::AssociationOptions opt;
+    opt.radial_dist = association::radial_dists::CS;
+    opt.max_iters = 1000;
+    opt.allow_explicit_fractions = true;
+    opt.interaction_partners = {{"e", {"H",}}, {"H", {"e",}}};
+    association::Association aexplicit(b_m3mol, beta, epsilon_Jmol, molecule_sites, opt);
+    
+    opt.allow_explicit_fractions = false;
+    association::Association anotexplicit(b_m3mol, beta, epsilon_Jmol, molecule_sites, opt);
+    
+    Eigen::ArrayXd X_init = Eigen::ArrayXd::Ones(2);
+    
+    // Could be short-circuited solution from new derivation, and should be equal to Huang & Radosz
+    auto X_newderiv = aexplicit.successive_substitution(T, rhomolar, molefrac, X_init);
+    
+    // Force the iterative routines to be used as a further sanity check
+    auto X_newderiv_iterative = anotexplicit.successive_substitution(T, rhomolar, molefrac, X_init);
+    
+    CHECK_THAT(X_Huang(0), WithinRel(X_newderiv(0), 1e-10));
+    CHECK_THAT(X_Huang(0), WithinRel(X_newderiv_iterative(0), 1e-10));
+    
+    BENCHMARK("Calling explicit solution"){
+        return aexplicit.successive_substitution(T, rhomolar, molefrac, X_init);
+    };
+    BENCHMARK("Calling non-explicit solution"){
+        return anotexplicit.successive_substitution(T, rhomolar, molefrac, X_init);
+    };
+}

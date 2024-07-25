@@ -30,6 +30,7 @@ struct AssociationOptions{
     association::radial_dists radial_dist;
     association::Delta_rules Delta_rule = association::Delta_rules::CR1;
     std::vector<bool> self_association_mask;
+    bool allow_explicit_fractions=true;
     double alpha = 0.5;
     double rtol = 1e-12, atol = 1e-12;
     int max_iters = 100;
@@ -380,13 +381,35 @@ public:
         }
         
         using rDDXtype = std::decay_t<std::common_type_t<typename decltype(Delta)::Scalar, decltype(rhomolar), decltype(molefracs[0])>>; // Type promotion, without the const-ness
+        Eigen::ArrayX<std::decay_t<rDDXtype>> X = X_init.template cast<rDDXtype>(), Xnew;
+        
         Eigen::MatrixX<rDDXtype> rDDX = rhomolar*N_A*(Delta.array()*D.cast<resulttype>().array()).matrix();
         for (auto j = 0; j < rDDX.rows(); ++j){
             rDDX.row(j).array() = rDDX.row(j).array()*xj.array().template cast<rDDXtype>();
         }
 //        rDDX.rowwise() *= xj;
         
-        Eigen::ArrayX<std::decay_t<rDDXtype>> X = X_init.template cast<rDDXtype>(), Xnew;
+        // Use explicit solutions in the case that there is a pure
+        // fluid with two kinds of sites, and no self-self interactions
+        // between sites
+        if (options.allow_explicit_fractions && molefracs.size() == 1 && mapper.counts.size() == 2 && (rDDX.matrix().diagonal().unaryExpr([](const auto&x){return getbaseval(x); }).array() == 0.0).all()){
+            auto Delta_ = Delta(0, 1);
+            auto kappa_A = rhomolar*N_A*static_cast<double>(mapper.counts[0])*Delta_;
+            auto kappa_B = rhomolar*N_A*static_cast<double>(mapper.counts[1])*Delta_;
+            // See the derivation in the docs in the association page; see also https://github.com/ClapeyronThermo/Clapeyron.jl/blob/494a75e8a2093a4b48ca54b872ff77428a780bb6/src/models/SAFT/association.jl#L463
+            auto X_A1 = (kappa_A-kappa_B-sqrt(kappa_A*kappa_A-2.0*kappa_A*kappa_B + 2.0*kappa_A + kappa_B*kappa_B + 2.0*kappa_B+1.0)-1.0)/(2.0*kappa_A);
+            auto X_A2 = (kappa_A-kappa_B+sqrt(kappa_A*kappa_A-2.0*kappa_A*kappa_B + 2.0*kappa_A + kappa_B*kappa_B + 2.0*kappa_B+1.0)-1.0)/(2.0*kappa_A);
+            // Keep the positive solution, likely to be X_A2
+            if (getbaseval(X_A1) < 0 && getbaseval(X_A2) > 0){
+                X(0) = X_A2;
+            }
+            else if (getbaseval(X_A1) > 0 && getbaseval(X_A2) < 0){
+                X(0) = X_A1;
+            }
+            auto X_B = 1.0/(1.0+kappa_A*X(0)); // From the law of mass-action
+            X(1) = X_B;
+            return X;
+        }
         
         for (auto counter = 0; counter < options.max_iters; ++counter){
             // calculate the new array of non-bonded site fractions X
