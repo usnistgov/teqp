@@ -61,7 +61,7 @@ class CMakeBuild(build_ext):
             build_args += ['--', '/m:4', '/p:CL_MPCount=4']
         else:
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-            build_args += ['--', '-j6']
+            build_args += ['--', '-j2']
 
         if sys.platform.startswith("darwin"):
             # Cross-compile support for macOS - respect ARCHFLAGS if set
