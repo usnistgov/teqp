@@ -478,7 +478,7 @@ class JIntegral{
     const JSidecar sidecar;
 public:
     
-    JIntegral(const JSidecar& sidecar) : sidecar(sidecar) {};
+    JIntegral(const auto& sidecar) : sidecar(sidecar) {};
     
     template<typename TType, typename RhoType>
     auto get_J(const TType& Tstar, const RhoType& rhostar) const -> std::common_type_t<TType, RhoType>{
@@ -529,7 +529,7 @@ class KIntegral{
     const KSidecar sidecar;
 public:
     
-    KIntegral(const KSidecar& sidecar) : sidecar(sidecar) {};
+    KIntegral(const auto& sidecar) : sidecar(sidecar) {};
     
     template<typename TType, typename RhoType>
     auto get_K(const TType& Tstar, const RhoType& rhostar) const -> std::common_type_t<TType, RhoType>{
