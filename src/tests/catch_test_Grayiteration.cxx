@@ -180,7 +180,7 @@ TEST_CASE("Test calculation of polarized dipole moment with polarizable Lennard-
             }
         }
         
-        GrayGubbins<JGubbinsTwuSidecar, GubbinsTwuKIntegral> GG{sigma_m_, epsilon_over_kB_, SIGMAIJ, EPSKBIJ, mu_, Q_, alpha_symm_, alpha_asymm_, {}};
+        GrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral> GG{sigma_m_, epsilon_over_kB_, SIGMAIJ, EPSKBIJ, mu_, Q_, alpha_symm_, alpha_asymm_, {}};
         
         // Successive substitution to update mu^*_eff
         Eigen::ArrayXd muprime = mu_;
