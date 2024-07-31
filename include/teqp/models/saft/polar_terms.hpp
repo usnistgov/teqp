@@ -38,36 +38,30 @@ auto get_Kijk_334445(const KType& Kint, const RhoType& rhostar, const Txy &Tstar
 };
 
 /**
- \tparam KIntegral A type that can be indexed with a two integers a and b to give the K(a,b) integral
- 
- The flexibility was added to include J and K integrals from either Luckas et al. or Gubbins and Twu (or any others following the interface)
+The flexibility was added to include J and K integrals from either Luckas et al. or Gubbins and Twu (or any others following the interface)
  */
-template<class JSidecar, class KIntegral>
+
 class MultipolarContributionGubbinsTwu {
 public:
     static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_rhostar_molefractions;
 private:
+    const JIntegral J6, J8, J10, J11, J13, J15;
+    const KIntegral K222_333, K233_344, K334_445, K444_555;
+    
     const Eigen::ArrayXd sigma_m, epsilon_over_k, mubar2, Qbar2;
     const bool has_a_polar;
     const Eigen::ArrayXd sigma_m3, sigma_m5;
     
-    const JIntegral J6{JSidecar{6}};
-    const JIntegral J8{JSidecar{8}};
-    const JIntegral J10{JSidecar{10}};
-    const JIntegral J11{JSidecar{11}};
-    const JIntegral J13{JSidecar{13}};
-    const JIntegral J15{JSidecar{15}};
-    const KIntegral K222_333{222, 333};
-    const KIntegral K233_344{233, 344};
-    const KIntegral K334_445{334, 445};
-    const KIntegral K444_555{444, 555};
-    const double epsilon_0 = 8.8541878128e-12; // https://en.wikipedia.org/wiki/Vacuum_permittivity, in F/m, or C^2⋅N^−1⋅m^−2
     const double PI_ = static_cast<double>(EIGEN_PI);
     Eigen::MatrixXd SIGMAIJ, EPSKIJ;
     multipolar_rhostar_approach approach = multipolar_rhostar_approach::use_packing_fraction;
     
 public:
-    MultipolarContributionGubbinsTwu(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2, multipolar_rhostar_approach approach) : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2), has_a_polar(mubar2.cwiseAbs().sum() > 0 || Qbar2.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(approach) {
+    
+    MultipolarContributionGubbinsTwu(const auto& sidecarJ, const auto& sidecarK, const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::ArrayX<double> &mubar2, const Eigen::ArrayX<double> &Qbar2, multipolar_rhostar_approach approach) :
+     J6(decltype(sidecarJ){6}), J8(decltype(sidecarJ){8}), J10(decltype(sidecarJ){10}), J11(decltype(sidecarJ){11}), J13(decltype(sidecarJ){13}), J15(decltype(sidecarJ){15}),
+     K222_333(decltype(sidecarK){222,333}), K233_344(decltype(sidecarK){233,344}), K334_445(decltype(sidecarK){334,445}), K444_555(decltype(sidecarK){444,555}),
+    sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), mubar2(mubar2), Qbar2(Qbar2), has_a_polar(mubar2.cwiseAbs().sum() > 0 || Qbar2.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(approach) {
         // Check lengths match
         if (sigma_m.size() != mubar2.size()){
             throw teqp::InvalidArgument("bad size of mubar2");
@@ -111,15 +105,15 @@ public:
                 double sigmaij = SIGMAIJ(i,j);
                 {
                     double dbl = sigma_m3[i]*sigma_m3[j]/powi(sigmaij,3)*mubar2[i]*mubar2[j];
-                    alpha2_112 += leading*dbl*J6.call(Tstarij, rhostar);
+                    alpha2_112 += leading*dbl*J6.get_J(Tstarij, rhostar);
                 }
                 {
                     double dbl = sigma_m3[i]*sigma_m5[j]/powi(sigmaij,5)*mubar2[i]*Qbar2[j];
-                    alpha2_123 += leading*dbl*J8.call(Tstarij, rhostar);
+                    alpha2_123 += leading*dbl*J8.get_J(Tstarij, rhostar);
                 }
                 {
                     double dbl = sigma_m5[i]*sigma_m5[j]/powi(sigmaij,7)*Qbar2[i]*Qbar2[j];
-                    alpha2_224 += leading*dbl*J10.call(Tstarij, rhostar);
+                    alpha2_224 += leading*dbl*J10.get_J(Tstarij, rhostar);
                 }
             }
         }
@@ -274,31 +268,21 @@ struct PolarizableArrays{
  
  The flexibility was added to include J and K integrals from either Luckas et al. or Gubbins and Twu (or any others following the interface)
  */
-template<class JSidecar, class KIntegral>
 class MultipolarContributionGrayGubbins {
 public:
     static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_rhostar_molefractions;
 private:
+    const JIntegral J6, J8, J10, J11, J13, J15;
+    const KIntegral K222_333, K233_344, K334_445, K444_555;
+    
     const Eigen::ArrayXd sigma_m, epsilon_over_k;
     Eigen::MatrixXd SIGMAIJ, EPSKIJ;
     const Eigen::ArrayXd mu, Q, mu2, Q2, Q3;
     const bool has_a_polar;
     const Eigen::ArrayXd sigma_m3, sigma_m5;
     
-    const JIntegral J6{JSidecar{6}};
-    const JIntegral J8{JSidecar{8}};
-    const JIntegral J10{JSidecar{10}};
-    const JIntegral J11{JSidecar{11}};
-    const JIntegral J13{JSidecar{13}};
-    const JIntegral J15{JSidecar{15}};
-    const KIntegral K222_333{222, 333};
-    const KIntegral K233_344{233, 344};
-    const KIntegral K334_445{334, 445};
-    const KIntegral K444_555{444, 555};
-    
     const double PI_ = static_cast<double>(EIGEN_PI);
     const double PI3 = PI_*PI_*PI_;
-    const double epsilon_0 = 8.8541878128e-12; // https://en.wikipedia.org/wiki/Vacuum_permittivity, in F/m, or C^2⋅N^−1⋅m^−2
     const double k_e = teqp::constants::k_e; // coulomb constant, with units of N m^2 / C^2
     const double k_B = teqp::constants::k_B; // Boltzmann constant, with units of J/K
     
@@ -337,9 +321,12 @@ private:
     }
     
 public:
-    MultipolarContributionGrayGubbins(const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::MatrixXd& SIGMAIJ, const Eigen::MatrixXd& EPSKIJ, const Eigen::ArrayX<double> &mu, const Eigen::ArrayX<double> &Q, const std::optional<nlohmann::json>& flags)
+    MultipolarContributionGrayGubbins(const auto& sidecarJ, const auto& sidecarK, const Eigen::ArrayX<double> &sigma_m, const Eigen::ArrayX<double> &epsilon_over_k, const Eigen::MatrixXd& SIGMAIJ, const Eigen::MatrixXd& EPSKIJ, const Eigen::ArrayX<double> &mu, const Eigen::ArrayX<double> &Q, const std::optional<nlohmann::json>& flags)
     
-    : sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), SIGMAIJ(SIGMAIJ), EPSKIJ(EPSKIJ), mu(mu), Q(Q), mu2(mu.pow(2)), Q2(Q.pow(2)), Q3(Q.pow(3)), has_a_polar(Q.cwiseAbs().sum() > 0 || mu.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(get_approach(flags)), C3(get_C3(flags)), C3b(get_C3b(flags)), polarizable(get_polarizable(flags)) {
+    : 
+    J6(decltype(sidecarJ){6}), J8(decltype(sidecarJ){8}), J10(decltype(sidecarJ){10}), J11(decltype(sidecarJ){11}), J13(decltype(sidecarJ){13}), J15(decltype(sidecarJ){15}),
+    K222_333(decltype(sidecarK){222,333}), K233_344(decltype(sidecarK){233,344}), K334_445(decltype(sidecarK){334,445}), K444_555(decltype(sidecarK){444,555}),
+    sigma_m(sigma_m), epsilon_over_k(epsilon_over_k), SIGMAIJ(SIGMAIJ), EPSKIJ(EPSKIJ), mu(mu), Q(Q), mu2(mu.pow(2)), Q2(Q.pow(2)), Q3(Q.pow(3)), has_a_polar(Q.cwiseAbs().sum() > 0 || mu.cwiseAbs().sum() > 0), sigma_m3(sigma_m.pow(3)), sigma_m5(sigma_m.pow(5)), approach(get_approach(flags)), C3(get_C3(flags)), C3b(get_C3b(flags)), polarizable(get_polarizable(flags)) {
         // Check lengths match
         if (sigma_m.size() != mu.size()){
             throw teqp::InvalidArgument("bad size of mu");
@@ -685,13 +672,8 @@ public:
 /// The variant containing the multipolar types that can be provided
 using multipolar_contributions_variant = std::variant<
     teqp::saft::polar_terms::GrossVrabec::MultipolarContributionGrossVrabec,
-    MultipolarContributionGrayGubbins<JGubbinsTwuSidecar, GubbinsTwuKIntegral>,
-    MultipolarContributionGrayGubbins<JGottschalkSidecar, GottschalkKIntegral>,
-    MultipolarContributionGrayGubbins<JLuckasSidecar, LuckasKIntegral>,
-
-    MultipolarContributionGubbinsTwu<JLuckasSidecar, LuckasKIntegral>,
-    MultipolarContributionGubbinsTwu<JGubbinsTwuSidecar, GubbinsTwuKIntegral>,
-    MultipolarContributionGubbinsTwu<JGottschalkSidecar, GottschalkKIntegral>
+    MultipolarContributionGrayGubbins,
+    MultipolarContributionGubbinsTwu
 >;
 
 }

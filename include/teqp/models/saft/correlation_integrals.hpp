@@ -105,6 +105,21 @@ public:
     }
 };
 
+class KLuckasSidecar{
+public:
+    
+    const int n1, n2;
+    const std::array<double, 16> a;
+    double a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33;
+    
+    KLuckasSidecar(const int n1, const int n2) : n1(n1), n2(n2), a(Luckas_K_coeffs.at({n1, n2})){
+        a00 = a[0]; a01 = a[1]; a02 = a[2]; a03 = a[3];
+        a10 = a[4]; a11 = a[5]; a12 = a[6]; a13 = a[7];
+        a20 = a[8]; a21 = a[9]; a22 = a[10]; a23 = a[11];
+        a30 = a[12]; a31 = a[13]; a32 = a[14]; a33 = a[15];
+    }
+};
+
 static const std::map<int, std::array<double, 6>> GubbinsTwu_J_coeffs = {
     {4, {-0.257431, 0.439229, 0.414783, -0.457019, -0.145520,  0.299666}},
     {5, {-0.396724, 0.690721, 0.628935, -0.652622, -0.201462, -0.231635}},
@@ -197,7 +212,21 @@ public:
     }
 };
 
-
+class KGubbinsTwuSidecar{
+public:
+    
+    const int n1, n2;
+    const std::array<double, 6> a;
+    double A, B, C, D, E, F;
+    double sign_term;
+    
+    KGubbinsTwuSidecar(const int n1, const int n2) : n1(n1), n2(n2), a(GubbinsTwu_K_coeffs.at({n1, n2})){
+        A = a[0]; B = a[1]; C = a[2]; D = a[3]; E = a[4]; F = a[5];
+        
+        // The {334, 445} term has opposite sign to the others
+        sign_term = ((n1==334) && (n2==445) ? -1 : 1);
+    }
+};
 
 //Type    R^2    a[0, 0]    a[0, 1]    a[0,2]    a[0,3]    a[1, 0]    a[1, 1]    a[1,2]    a[1,3]    a[2, 0]    a[2, 1]    a[2,2]    a[2,3]    a[3, 0]    a[3, 1]    a[3,2]    a[3,3]    a[4, 0]    a[4, 1]    a[4,2]    a[4,3]    b[0, 0]    b[0, 1]    b[0,2]    b[1, 0]    b[1, 1]    b[1,2]    b[2, 0]    b[2, 1]    b[2,2]    b[3, 0]    b[3, 1]    b[3,2]    b[4, 0]    b[4, 1]    b[4,2]
 static const std::map<int, std::array<double, 35>> Gottschalk_J_coeffs = {
@@ -421,6 +450,28 @@ public:
     }
 };
 
+
+class KGottschalkSidecar{
+private:
+    std::tuple<int,int,int> int2key(int i){
+        if (i < 222){
+            throw teqp::InvalidArgument("");
+        }
+        if (i > 999){
+            throw teqp::InvalidArgument("");
+        }
+        return std::make_tuple(i / 100 % 10, i / 10 % 10, i % 10);
+    }
+public:
+    const std::tuple<int,int,int> k1, k2;
+    const std::array<double, 40> abc;
+    
+    /// Constructor taking two tuples of ints
+    KGottschalkSidecar(std::tuple<int,int,int> k1, std::tuple<int,int,int> k2) : k1(k1), k2(k2), abc(Gottschalk_K_coeffs.at({k1, k2})){}
+    /// Constructor taking two three digit integers, each of which are split into tuples of ints
+    KGottschalkSidecar(int k1, int k2) : k1(int2key(k1)), k2(int2key(k2)), abc(Gottschalk_K_coeffs.at({this->k1, this->k2})){}
+};
+
 using JSidecar = std::variant<JLuckasSidecar, JGubbinsTwuSidecar, JGottschalkSidecar>;
 
 class JIntegral{
@@ -430,7 +481,7 @@ public:
     JIntegral(const JSidecar& sidecar) : sidecar(sidecar) {};
     
     template<typename TType, typename RhoType>
-    auto call(const TType& Tstar, const RhoType& rhostar) const -> std::common_type_t<TType, RhoType>{
+    auto get_J(const TType& Tstar, const RhoType& rhostar) const -> std::common_type_t<TType, RhoType>{
         
         // Runtime type switching
         if (std::holds_alternative<JLuckasSidecar>(sidecar)){
@@ -470,12 +521,67 @@ public:
             throw teqp::InvalidArgument("don't know what to do with this sidecar");
         }
     }
+};
+
+using KSidecar = std::variant<KLuckasSidecar, KGubbinsTwuSidecar, KGottschalkSidecar>;
+
+class KIntegral{
+    const KSidecar sidecar;
+public:
+    
+    KIntegral(const KSidecar& sidecar) : sidecar(sidecar) {};
     
     template<typename TType, typename RhoType>
-    auto get_J(const TType& Tstar, const RhoType& rhostar) const -> std::common_type_t<TType, RhoType>{
-        return call(Tstar, rhostar);
+    auto get_K(const TType& Tstar, const RhoType& rhostar) const -> std::common_type_t<TType, RhoType>{
+        
+        // Runtime type switching
+        if (std::holds_alternative<KLuckasSidecar>(sidecar)){
+            const auto& d = std::get<KLuckasSidecar>(sidecar);
+            double Z_1 = 2.0;
+            double Z_2 = 3.0;
+            double Z_3 = 4.0;
+            RhoType b_0 = d.a00 + d.a10*rhostar + d.a20*rhostar*rhostar + d.a30*rhostar*rhostar*rhostar;
+            RhoType b_1 = d.a01 + d.a11*rhostar + d.a21*rhostar*rhostar + d.a31*rhostar*rhostar*rhostar;
+            RhoType b_2 = d.a02 + d.a12*rhostar + d.a22*rhostar*rhostar + d.a32*rhostar*rhostar*rhostar;
+            RhoType b_3 = d.a03 + d.a13*rhostar + d.a23*rhostar*rhostar + d.a33*rhostar*rhostar*rhostar;
+            std::common_type_t<TType, RhoType> out = b_0 + b_1*Tstar + b_2*pow(exp(pow(1.0-rhostar/sqrt(2.0),Z_3)), Z_1) + b_3*pow(exp(pow(1.0-rhostar/sqrt(2.0),Z_3)), Z_2);
+            return out;
+        }
+        else if (std::holds_alternative<KGubbinsTwuSidecar>(sidecar)){
+            const auto& d = std::get<KGubbinsTwuSidecar>(sidecar);
+            std::common_type_t<TType, RhoType> out = d.sign_term*exp(d.A*rhostar*rhostar*log(Tstar) + d.B*rhostar*rhostar + d.C*rhostar*log(Tstar) + d.D*rhostar + d.E*log(Tstar) + d.F);
+            return out;
+        }
+        else if (std::holds_alternative<KGottschalkSidecar>(sidecar)){
+            const auto& d = std::get<KGottschalkSidecar>(sidecar);
+            const auto& abc = d.abc;
+            std::common_type_t<TType, RhoType> summer = 0.0;
+            int N1 = 8, N2 = 8; // N3 = 24
+            
+            for (auto i = 0; i <= 3; ++i){
+                for (auto j = 1; j <= 2; ++j){
+                    auto I = 2*i + (j-1); // 2 entries in j for each i
+                    summer += abc[I]*pow(rhostar, i)*pow(exp((1.0-rhostar/3.0)/Tstar), j);
+                }
+            }
+            for (auto i = 0; i <= 3; ++i){
+                for (auto j = 1; j <= 2; ++j){
+                    auto I = N1 + 2*i + (j-1); // 2 entries in j for each i
+                    summer += abc[I]*pow(rhostar, i)*pow(exp((1.0-rhostar/3.0)*(1.0-rhostar/3.0)/Tstar), j);
+                }
+            }
+            for (auto i = 0; i <= 5; ++i){
+                for (auto j = 0; j <= 3; ++j){
+                    auto I = N1 + N2 + 4*i + j; // 4 entries in j for each i
+                    summer += abc[I]*pow(rhostar, i)*pow(Tstar, j);
+                }
+            }
+            return summer;
+        }
+        else{
+            throw teqp::InvalidArgument("don't know what to do with this sidecar");
+        }
     }
-    
 };
 
 }
