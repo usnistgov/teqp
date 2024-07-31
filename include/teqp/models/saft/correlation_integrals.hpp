@@ -3,6 +3,7 @@
 #include <map>
 #include <array>
 #include <cmath>
+#include <variant>
 
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
