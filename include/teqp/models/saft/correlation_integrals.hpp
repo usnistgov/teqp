@@ -466,6 +466,9 @@ public:
             }
             return pow(summer, d.n-2);
         }
+        else{
+            throw teqp::InvalidArgument("don't know what to do with this sidecar");
+        }
     }
     
     template<typename TType, typename RhoType>
