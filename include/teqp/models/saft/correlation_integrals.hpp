@@ -57,6 +57,19 @@ public:
     }
 };
 
+struct JLuckasSidecar{
+    const int n;
+    const std::array<double, 12> a;
+    double a00,a01,a02,a10,a11,a12,a20,a21,a22,a30,a31,a32;
+    
+    JLuckasSidecar(int n) : n(n), a(Luckas_J_coeffs.at(n)){
+        a00 = a[0]; a01 = a[1]; a02 = a[2];
+        a10 = a[3]; a11 = a[4]; a12 = a[5];
+        a20 = a[6]; a21 = a[7]; a22 = a[8];
+        a30 = a[9]; a31 = a[10]; a32 = a[11];
+    }
+};
+
 static const std::map<std::tuple<int, int>, std::array<double, 16>> Luckas_K_coeffs = {
     {{222,333},{  1.23746712e-02,  1.90127007e-04,  5.92861480e-03,  1.88387469e-04,  1.51499090e-01, -4.03661304e-03, -1.71653218e-01,  7.44958473e-02,  4.61939219e-01,  7.61527540e-03, -1.30641988e00,   7.63483402e-01,  7.36061418e-03, -3.14115085e-03, -2.62332295e-01,  2.99061150e-01}},
     {{233,344},{  3.51281055e-03,  2.12654833e-04,  3.26699985e-03,  1.71420492e-04,  9.78591707e-02, -3.24426472e-03, -9.85906322e-02,  4.31053752e-02,  2.68515490e-01,  6.25909413e-03, -7.46179517e-01,  4.10644114e-01,  1.28223189e-01, -2.54348393e-03, -5.40215100e-01,  4.50896967e-01}},
@@ -145,6 +158,15 @@ public:
     }
 };
 
+struct JGubbinsTwuSidecar{
+    const int n;
+    const std::array<double, 6> a;
+    double A, B, C, D, E, F;
+    JGubbinsTwuSidecar(int n) : n(n), a(GubbinsTwu_J_coeffs.at(n)) {
+        A = a[0]; B = a[1]; C = a[2]; D = a[3]; E = a[4]; F = a[5];
+    };
+};
+
 static const std::map<std::tuple<int, int>, std::array<double, 6>> GubbinsTwu_K_coeffs = {
     {{222,333}, {-1.050534, 1.747476, 1.749366, -1.999227, -0.661046, -3.028720}},
     {{233,344}, {-1.309550, 2.249120, 2.135877, -2.278530, -0.773166, -3.704690}},
@@ -212,7 +234,7 @@ static const std::map<int, std::array<double, 35>> Gottschalk_J_coeffs = {
     {{34}, {1.90423814720649E+00, 4.18787207261050E+00, 7.22045067661610E+00, 7.85586627942804E-06, 3.07794923553951E+01, 1.52003423758102E+02, 2.77703605524606E+02, -4.39784072668470E-05, -6.66087092417203E+01, -3.20810306371066E+02, -5.78396258386096E+02, 1.26846524468003E-04, 3.11664819048377E+01, 1.31704676007628E+02, 2.20458683574026E+02, -1.25660820862988E-04, 7.40117498521146E+00, 5.07735308154137E+01, 1.05604694471574E+02, 3.86727947804182E-05, -3.74401276091243E-01, 3.04730201372642E+00, -7.22094854107547E+00, -1.73269442871869E+01, 1.25656981825138E+02, -2.77701317999835E+02, 3.41761779100406E+01, -2.57466539374381E+02, 5.78389744578777E+02, -8.89658848016163E+00, 8.86403029377190E+01, -2.20452318322644E+02, -9.64181317756529E+00, 5.48637732161057E+01, -1.05606607466567E+02}},
     {{35}, {1.92281533717408E+00, 4.24910272760302E+00, 7.32172334231576E+00, 7.95020113544135E-06, 3.10315462895189E+01, 1.53374595594571E+02, 2.80332458984096E+02, -4.45565817457419E-05, -6.71377178976899E+01, -3.23727756240385E+02, -5.84068658984735E+02, 1.28477066707980E-04, 3.13126741835308E+01, 1.32688536867639E+02, 2.22574407829969E+02, -1.27254409666895E-04, 7.54344375669761E+00, 5.14068370367179E+01, 1.06668425782242E+02, 3.91555262336584E-05, -3.79084181011374E-01, 3.08747499419120E+00, -7.32222655477679E+00, -1.75202588700289E+01, 1.26914182016175E+02, -2.80330142989896E+02, 3.46144386399448E+01, -2.60220152375735E+02, 5.84062065161257E+02, -9.10859312110460E+00, 8.97709538200545E+01, -2.22567966162972E+02, -9.68438822092394E+00, 5.52945154697470E+01, -1.06670360957778E+02}},
     {{36}, {1.94071903395404E+00, 4.30815630128459E+00, 7.41945486225346E+00, 8.04129819154619E-06, 3.12795677114849E+01, 1.54720456662477E+02, 2.82910138946970E+02, -4.51185370132462E-05, -6.76623878561680E+01, -3.26610593605394E+02, -5.89663763708538E+02, 1.30064679999137E-04, 3.14642018299911E+01, 1.33685768145537E+02, 2.24699835988089E+02, -1.28806673892190E-04, 7.67986766874738E+00, 5.20159122266596E+01, 1.07693298076419E+02, 3.96257342166686E-05, -3.83611089495781E-01, 3.12627897732626E+00, -7.41996323155748E+00, -1.77092249651606E+01, 1.28145532684806E+02, -2.82907795262461E+02, 3.50443877287770E+01, -2.62931112874138E+02, 5.89657091847996E+02, -9.31746233172336E+00, 9.08979636154349E+01, -2.24693319725730E+02, -9.72592470392138E+00, 5.57106237961232E+01, -1.07695254916667E+02}},
-
+    
 };
 
 /**
@@ -244,6 +266,13 @@ public:
         }
         return pow(summer, n-2);
     }
+};
+
+struct JGottschalkSidecar{
+    const int n;
+    const std::array<double, 35> ab;
+    
+    JGottschalkSidecar(int n) : n(n), ab(Gottschalk_J_coeffs.at(n)){}
 };
 
 
@@ -390,6 +419,60 @@ public:
         }
         return summer;
     }
+};
+
+using JSidecar = std::variant<JLuckasSidecar, JGubbinsTwuSidecar, JGottschalkSidecar>;
+
+class JIntegral{
+    const JSidecar sidecar;
+public:
+    
+    JIntegral(const JSidecar& sidecar) : sidecar(sidecar) {};
+    
+    template<typename TType, typename RhoType>
+    auto call(const TType& Tstar, const RhoType& rhostar) const -> std::common_type_t<TType, RhoType>{
+        
+        // Runtime type switching
+        if (std::holds_alternative<JLuckasSidecar>(sidecar)){
+            const auto& d = std::get<JLuckasSidecar>(sidecar);
+            double Z_1 = 0.3 + 0.05*d.n;
+            double Z_2 = 1.0/d.n;
+            RhoType A_0 = d.a00 + d.a10*rhostar + d.a20*rhostar*rhostar + d.a30*rhostar*rhostar*rhostar;
+            RhoType A_1 = d.a01 + d.a11*rhostar + d.a21*rhostar*rhostar + d.a31*rhostar*rhostar*rhostar;
+            RhoType A_2 = d.a02 + d.a12*rhostar + d.a22*rhostar*rhostar + d.a32*rhostar*rhostar*rhostar;
+            std::common_type_t<TType, RhoType> out = (A_0 + A_1*pow(Tstar, Z_1) + A_2*pow(Tstar, Z_2))*exp(1.0/(Tstar + 4.0/pow(differentiable_abs(log(forceeval(rhostar/sqrt(2.0)))), 3.0)));
+            return out;
+        }
+        else if (std::holds_alternative<JGubbinsTwuSidecar>(sidecar)){
+            const auto& d = std::get<JGubbinsTwuSidecar>(sidecar);
+            std::common_type_t<TType, RhoType> out = exp(d.A*rhostar*rhostar*log(Tstar) + d.B*rhostar*rhostar + d.C*rhostar*log(Tstar) + d.D*rhostar + d.E*log(Tstar) + d.F);
+            return out;
+        }
+        else if (std::holds_alternative<JGottschalkSidecar>(sidecar)){
+            const auto& d = std::get<JGottschalkSidecar>(sidecar);
+            const auto& ab = d.ab;
+            std::common_type_t<TType, RhoType> summer = 0.0;
+            for (auto i = 0; i <= 4; ++i){
+                for (auto j = 0; j <= 3; ++j){
+                    auto I = 4*i + j;
+                    summer += ab[I]*pow(rhostar, i)*pow(Tstar, j);
+                }
+            }
+            for (auto i = 0; i <= 4; ++i){
+                for (auto j = 0; j <= 2; ++j){
+                    auto I = 20 + 3*i + j;
+                    summer += ab[I]*pow(rhostar, i)*pow(Tstar, j)*exp(1.0/Tstar);
+                }
+            }
+            return pow(summer, d.n-2);
+        }
+    }
+    
+    template<typename TType, typename RhoType>
+    auto get_J(const TType& Tstar, const RhoType& rhostar) const -> std::common_type_t<TType, RhoType>{
+        return call(Tstar, rhostar);
+    }
+    
 };
 
 }

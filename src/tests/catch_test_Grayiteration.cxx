@@ -180,7 +180,7 @@ TEST_CASE("Test calculation of polarized dipole moment with polarizable Lennard-
             }
         }
         
-        GrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral> GG{sigma_m_, epsilon_over_kB_, SIGMAIJ, EPSKBIJ, mu_, Q_, alpha_symm_, alpha_asymm_, {}};
+        GrayGubbins<JGubbinsTwuSidecar, GubbinsTwuKIntegral> GG{sigma_m_, epsilon_over_kB_, SIGMAIJ, EPSKBIJ, mu_, Q_, alpha_symm_, alpha_asymm_, {}};
         
         // Successive substitution to update mu^*_eff
         Eigen::ArrayXd muprime = mu_;
@@ -212,7 +212,7 @@ TEST_CASE("Test calculation of polarized dipole moment with polarizable Lennard-
             }
             )"_json;
             flags["polarizable"]["alpha_symm / m^3"][0] = alpha_symm;
-            MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral> GG{sigma_m_, epsilon_over_kB_, SIGMAIJ, EPSKBIJ, mu_, Q_, flags};
+            MultipolarContributionGrayGubbins<JGubbinsTwuSidecar, GubbinsTwuKIntegral> GG{sigma_m_, epsilon_over_kB_, SIGMAIJ, EPSKBIJ, mu_, Q_, flags};
             double muprime = GG.iterate_muprime_SS(T, rhoN, rhostar, molefracs_, mu_, 20)[0];
             double mustareffcalc = muprime/(sqrt(epsilon_over_kB*k_B*pow(sigma_m,3))/sqrt(k_e));
             CAPTURE(ref);

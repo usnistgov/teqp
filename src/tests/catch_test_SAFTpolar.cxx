@@ -114,8 +114,8 @@ TEST_CASE("Evaluate higher derivatives of K", "[GTK]")
 }
 
 
-using MCGTL = MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>;
-using MCGG = MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>;
+using MCGTL = MultipolarContributionGubbinsTwu<JLuckasSidecar, LuckasKIntegral>;
+using MCGG = MultipolarContributionGubbinsTwu<JGubbinsTwuSidecar, GubbinsTwuKIntegral>;
 
 TEST_CASE("Evaluation of Gubbins and Twu combos ", "[GTLPolar]")
 {

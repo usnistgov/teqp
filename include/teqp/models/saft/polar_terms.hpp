@@ -38,12 +38,11 @@ auto get_Kijk_334445(const KType& Kint, const RhoType& rhostar, const Txy &Tstar
 };
 
 /**
- \tparam JIntegral A type that can be indexed with a single integer n to give the J^{(n)} integral
  \tparam KIntegral A type that can be indexed with a two integers a and b to give the K(a,b) integral
  
  The flexibility was added to include J and K integrals from either Luckas et al. or Gubbins and Twu (or any others following the interface)
  */
-template<class JIntegral, class KIntegral>
+template<class JSidecar, class KIntegral>
 class MultipolarContributionGubbinsTwu {
 public:
     static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_rhostar_molefractions;
@@ -52,12 +51,12 @@ private:
     const bool has_a_polar;
     const Eigen::ArrayXd sigma_m3, sigma_m5;
     
-    const JIntegral J6{6};
-    const JIntegral J8{8};
-    const JIntegral J10{10};
-    const JIntegral J11{11};
-    const JIntegral J13{13};
-    const JIntegral J15{15};
+    const JIntegral J6{JSidecar{6}};
+    const JIntegral J8{JSidecar{8}};
+    const JIntegral J10{JSidecar{10}};
+    const JIntegral J11{JSidecar{11}};
+    const JIntegral J13{JSidecar{13}};
+    const JIntegral J15{JSidecar{15}};
     const KIntegral K222_333{222, 333};
     const KIntegral K233_344{233, 344};
     const KIntegral K334_445{334, 445};
@@ -112,15 +111,15 @@ public:
                 double sigmaij = SIGMAIJ(i,j);
                 {
                     double dbl = sigma_m3[i]*sigma_m3[j]/powi(sigmaij,3)*mubar2[i]*mubar2[j];
-                    alpha2_112 += leading*dbl*J6.get_J(Tstarij, rhostar);
+                    alpha2_112 += leading*dbl*J6.call(Tstarij, rhostar);
                 }
                 {
                     double dbl = sigma_m3[i]*sigma_m5[j]/powi(sigmaij,5)*mubar2[i]*Qbar2[j];
-                    alpha2_123 += leading*dbl*J8.get_J(Tstarij, rhostar);
+                    alpha2_123 += leading*dbl*J8.call(Tstarij, rhostar);
                 }
                 {
                     double dbl = sigma_m5[i]*sigma_m5[j]/powi(sigmaij,7)*Qbar2[i]*Qbar2[j];
-                    alpha2_224 += leading*dbl*J10.get_J(Tstarij, rhostar);
+                    alpha2_224 += leading*dbl*J10.call(Tstarij, rhostar);
                 }
             }
         }
@@ -275,7 +274,7 @@ struct PolarizableArrays{
  
  The flexibility was added to include J and K integrals from either Luckas et al. or Gubbins and Twu (or any others following the interface)
  */
-template<class JIntegral, class KIntegral>
+template<class JSidecar, class KIntegral>
 class MultipolarContributionGrayGubbins {
 public:
     static constexpr multipolar_argument_spec arg_spec = multipolar_argument_spec::TK_rhoNm3_rhostar_molefractions;
@@ -286,12 +285,12 @@ private:
     const bool has_a_polar;
     const Eigen::ArrayXd sigma_m3, sigma_m5;
     
-    const JIntegral J6{6};
-    const JIntegral J8{8};
-    const JIntegral J10{10};
-    const JIntegral J11{11};
-    const JIntegral J13{13};
-    const JIntegral J15{15};
+    const JIntegral J6{JSidecar{6}};
+    const JIntegral J8{JSidecar{8}};
+    const JIntegral J10{JSidecar{10}};
+    const JIntegral J11{JSidecar{11}};
+    const JIntegral J13{JSidecar{13}};
+    const JIntegral J15{JSidecar{15}};
     const KIntegral K222_333{222, 333};
     const KIntegral K233_344{233, 344};
     const KIntegral K334_445{334, 445};
@@ -686,12 +685,13 @@ public:
 /// The variant containing the multipolar types that can be provided
 using multipolar_contributions_variant = std::variant<
     teqp::saft::polar_terms::GrossVrabec::MultipolarContributionGrossVrabec,
-    MultipolarContributionGrayGubbins<GubbinsTwuJIntegral, GubbinsTwuKIntegral>,
-    MultipolarContributionGrayGubbins<GottschalkJIntegral, GottschalkKIntegral>,
-    MultipolarContributionGrayGubbins<LuckasJIntegral, LuckasKIntegral>,
-    MultipolarContributionGubbinsTwu<LuckasJIntegral, LuckasKIntegral>,
-    MultipolarContributionGubbinsTwu<GubbinsTwuJIntegral, GubbinsTwuKIntegral>,
-    MultipolarContributionGubbinsTwu<GottschalkJIntegral, GottschalkKIntegral>
+    MultipolarContributionGrayGubbins<JGubbinsTwuSidecar, GubbinsTwuKIntegral>,
+    MultipolarContributionGrayGubbins<JGottschalkSidecar, GottschalkKIntegral>,
+    MultipolarContributionGrayGubbins<JLuckasSidecar, LuckasKIntegral>,
+
+    MultipolarContributionGubbinsTwu<JLuckasSidecar, LuckasKIntegral>,
+    MultipolarContributionGubbinsTwu<JGubbinsTwuSidecar, GubbinsTwuKIntegral>,
+    MultipolarContributionGubbinsTwu<JGottschalkSidecar, GottschalkKIntegral>
 >;
 
 }
