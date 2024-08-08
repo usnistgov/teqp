@@ -90,7 +90,7 @@ struct SatRhoLPWPoint{
         double cost_rhoL = std::abs(rhoL-rhoL_exp.value())/rhoL_exp.value()*weight_rho;
         double cost_p = std::abs(p-p_exp.value())/p_exp.value()*weight_p;
         double cost_w = std::abs(w-w_exp.value())/w_exp.value()*weight_w;
-        return cost_rhoL + cost_p + cost_w;
+        return ((weight_rho != 0) ? cost_rhoL : 0) + ((weight_p != 0) ? cost_p : 0) + ((weight_w != 0) ? cost_w : 0);
     }
 };
 using PureOptimizationContribution = std::variant<SatRhoLPoint, SatRhoLPPoint, SatRhoLPWPoint>;
