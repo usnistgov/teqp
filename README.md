@@ -19,8 +19,8 @@ So far the following EOS are implemented:
     * Soave-Redlich-Kwong
     * quantum-corrected Peng-Robinson for cryogens
 * SAFT*ish*:
-    * PC-SAFT (+dipoles, +quadrupoles, but no association)
-    * SAFT-VR-Mie (mixtures, but no association)
+    * PC-SAFT (+dipoles, +quadrupoles) and association
+    * SAFT-VR-Mie and association
     * cubic plus association (CPA)
 * model fluids
     * Exp-6 (modified Buckingham) from Kataoka
@@ -44,6 +44,34 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 ## Changelog
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
+
+* 0.21.0:
+
+  * Features:
+
+    * Added tools for fitting pure fluid models more easily
+    * Added other parameter matrices for PC-SAFT
+    * Added Dufal (Mie-based) association model
+
+  * Issues closed:
+
+    * [#129](https://github.com/usnistgov/teqp/issues/129) : Add header file for C interface
+    * [#131](https://github.com/usnistgov/teqp/issues/131) : Add association term of Dufal
+    * [#133](https://github.com/usnistgov/teqp/issues/133) : PCSAFT correction from Liang
+    * [#137](https://github.com/usnistgov/teqp/issues/137) : Implement Simple association model for single interaction pair
+    * [#138](https://github.com/usnistgov/teqp/issues/138) : ifluid cannot be specified for some superanc for cubics 
+    * [#139](https://github.com/usnistgov/teqp/issues/139) : Virial coefficients are all zero in Mie n-6 model of Pohl
+    * [#140](https://github.com/usnistgov/teqp/issues/140) : Fix/test virial coefficients for all models
+    * [#141](https://github.com/usnistgov/teqp/issues/141) : Show how to find the true critical points for 32/yf binary mixtures
+    * [#144](https://github.com/usnistgov/teqp/issues/144) : Allow no composition derivatives in get_ATrhoXi_runtime
+    * [#145](https://github.com/usnistgov/teqp/issues/145) : Expose/document the derivatives needed in PHIDERV
+
+  * Pull requests merged:
+
+    * [#134](https://github.com/usnistgov/teqp/pull/134) : Add a and b parameters from the papers of Liang for PC-SAFT
+    * [#136](https://github.com/usnistgov/teqp/pull/136) : Implement the association model of Dufal
+    * [#143](https://github.com/usnistgov/teqp/pull/143) : Virialsfixtest
+    * [#146](https://github.com/usnistgov/teqp/pull/146) : Pure Parameter Optimization
 
 * 0.20.0:
 
