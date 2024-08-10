@@ -1,6 +1,6 @@
 ## Just use docker-compose up to run
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 RUN apt-get -y -m update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake g++ git zip nano valgrind ninja-build python3
 
@@ -12,7 +12,7 @@ RUN git clone --recursive --shallow-submodules https://github.com/usnistgov/teqp
 # Build the catch exe
 WORKDIR /teqp
 RUN mkdir build && cd build && \
-    cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTEQP_NO_PYTHON=ON && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTEQP_NO_PYTHON=ON && \
     cmake --build . --target catch_tests
 
 COPY run_valgrind.py /
