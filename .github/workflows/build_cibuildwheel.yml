@@ -41,7 +41,7 @@ jobs:
           CIBW_SKIP: "*pypy* *pp* *cp36* *cp37* *musl*"
 
       - name: Check the wheels are valid for PyPI upload
-        run: twine check ./wheelhouse/*
+        run: python -m twine check ./wheelhouse/*
 
       - name: Upload Files
         uses: actions/upload-artifact@v4
