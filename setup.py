@@ -86,13 +86,18 @@ class CMakeBuild(build_ext):
         print('cmake build command:', ' '.join(build_elements))
         subprocess.check_call(build_elements, cwd=self.build_temp)
 
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 setup(
     name='teqp',
     version=VERSION,
     author='Ian Bell and friends',
     author_email='ian.bell@nist.gov',
     description='Templated EQuation of state Package',
-    long_description='',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     ext_modules=[CMakeExtension('teqp.teqp')], # teqp.teqp is the extension module that lives inside the teqp package
     packages=['teqp','teqp.fluiddata.dev.fluids','teqp.fluiddata.dev.mixtures'],
     include_package_data=True,
