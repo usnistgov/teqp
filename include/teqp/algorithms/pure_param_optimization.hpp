@@ -93,7 +93,63 @@ struct SatRhoLPWPoint{
         return ((weight_rho != 0) ? cost_rhoL : 0) + ((weight_p != 0) ? cost_p : 0) + ((weight_w != 0) ? cost_w : 0);
     }
 };
-using PureOptimizationContribution = std::variant<SatRhoLPoint, SatRhoLPPoint, SatRhoLPWPoint>;
+
+#define SOSPoint_fields X(T) X(p_exp) X(rho_guess) X(w_exp) X(Ao20) X(M) X(R)
+struct SOSPoint{
+    
+    #define X(field) std::optional<double> field;
+    SOSPoint_fields
+    #undef X
+    
+    double weight_w=1.0;
+    Eigen::ArrayXd z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    auto check_fields() const{
+        #define X(field) if (!field){ throw teqp::InvalidArgument("A field [" + stdstringify(field) + "] has not been initialized"); }
+        SOSPoint_fields
+        #undef X
+    }
+    
+    template<typename Model>
+    auto calculate_contribution(const Model& model) const{
+        
+        double rho = rho_guess.value();
+        double R_ = R.value();
+        double T_K_ = T.value();
+        
+        // First part, iterate for density
+        // ...
+        for (auto step = 0; step < 10; ++step){
+            auto Ar0n = model->get_Ar02n(T_K_, rho, z);
+            double Ar01 = Ar0n[1], Ar02 = Ar0n[2];
+            double pEOS = rho*R_*T_K_*(1+Ar01);
+            double dpdrho = R_*T_K_*(1 + 2*Ar0n[1] + Ar0n[2]);
+            double res = (pEOS-p_exp.value())/p_exp.value();
+            double dresdrho = dpdrho/p_exp.value();
+            double change = -res/dresdrho;
+            if (std::abs(change/rho-1) < 1e-10 || abs(res) < 1e-12){
+                break;
+            }
+            rho += change;
+        }
+
+        // Second part, speed of sound
+        //
+        auto Ar0n = model->get_Ar02n(T_K_, rho, z);
+        double Ar01 = Ar0n[1], Ar02 = Ar0n[2];
+        auto Ar11 = model->get_Ar11(T_K_, rho, z);
+        auto Ar20 = model->get_Ar20(T_K_, rho, z);
+        
+        // M*w^2/(R*T) where w is the speed of sound
+        // from the definition w = sqrt(dp/drho|s)
+        double Mw2RT = 1.0 + 2.0*Ar01 + Ar02 - POW2(1.0 + Ar01 - Ar11)/(Ao20.value() + Ar20);
+        double w = sqrt(Mw2RT*R_*T_K_/M.value());
+        double cost_w = std::abs(w-w_exp.value())/w_exp.value()*weight_w;
+        return cost_w;
+    }
+};
+
+using PureOptimizationContribution = std::variant<SatRhoLPoint, SatRhoLPPoint, SatRhoLPWPoint, SOSPoint>;
 
 class PureParameterOptimizer{
 private:
