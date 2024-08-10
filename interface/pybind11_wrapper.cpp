@@ -605,9 +605,17 @@ void init_teqp(py::module& m) {
         .def_readwrite("weight_p", &SatRhoLPWPoint::weight_p)
         .def_readwrite("weight_w", &SatRhoLPWPoint::weight_w)
     ;
+    py::class_<SOSPoint>(m, "SOSPoint")
+        .def(py::init<>())
+        .def_readwrite("weight_w", &SOSPoint::weight_w)
+#define X(field) .def_readwrite(stringify(field), &SOSPoint::field)
+SOSPoint_fields
+#undef X
+    ;
     
     py::class_<PureParameterOptimizer>(m, "PureParameterOptimizer")
         .def(py::init<const nlohmann::json&, const std::vector<std::variant<std::string, std::vector<std::string>>>&>())
+        .def_readonly("contributions", &PureParameterOptimizer::contributions, py::return_value_policy::copy)
         .def("cost_function", &PureParameterOptimizer::cost_function<Eigen::ArrayXd>)
         .def("cost_function_threaded", &PureParameterOptimizer::cost_function_threaded<Eigen::ArrayXd>)
         .def("build_JSON", &PureParameterOptimizer::build_JSON<Eigen::ArrayXd>)
