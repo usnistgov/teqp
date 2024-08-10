@@ -20,6 +20,7 @@ Models
    SAFT-VR-Mie
    SAFT-VR-Mie-Polar
    Association
+   Check_Dufal_Water
    
    multifluid
    multifluid_mutant
