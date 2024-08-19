@@ -11,6 +11,7 @@ The implementation follows the approach of Langenbach for the index compression,
 
 #include <map>
 #include <set>
+#include <variant>
 
 #include "teqp/constants.hpp"
 #include "teqp/types.hpp"
