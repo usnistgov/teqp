@@ -71,7 +71,6 @@ jobs:
          name: dist
          pattern: dist-*
 
-
   testpypi-publish:
     name: Upload to TestPyPI
     needs: [merge_wheels]
@@ -105,9 +104,11 @@ jobs:
     name: Upload to PyPI if release
     needs: [merge_wheels]
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
-      
+
     # Run if release and either published or edited actions are fired
     if: github.event_name == 'release' && contains(fromJSON('["published", "edited"]'), github.event.action)
 
