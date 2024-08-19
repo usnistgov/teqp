@@ -13,7 +13,7 @@ jobs:
         shell: bash -el {0}
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: checkout submodules
         run: git submodule update --init --recursive
       - uses: conda-incubator/setup-miniconda@v3
@@ -35,7 +35,7 @@ jobs:
           make html
       - name: archive docs 
         run: cd doc && python -c "import shutil; shutil.make_archive('teqpdocs', 'xztar', 'build')"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: |
             ./doc/*.tar.xz
