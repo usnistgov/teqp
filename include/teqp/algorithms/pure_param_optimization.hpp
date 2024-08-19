@@ -212,7 +212,9 @@ public:
     
     template<typename T>
     auto cost_function(const T& x) const{
-        auto [model, helpers] = prepare(x);
+        const auto [_model, _helpers] = prepare(x);
+        const auto& model = _model;
+        const auto& helpers = _helpers;
         double cost = 0.0;
         for (const auto& contrib : contributions){
             cost += std::visit([&model](const auto& c){ return c.calculate_contribution(model); }, contrib);
@@ -226,7 +228,9 @@ public:
     template<typename T>
     auto cost_function_threaded(const T& x, std::size_t Nthreads) {
         boost::asio::thread_pool pool{Nthreads}; // Nthreads in the pool
-        const auto [model, helpers] = prepare(x);
+        const auto [_model, _helpers] = prepare(x);
+        const auto& model = _model;
+        const auto& helpers = _helpers;
         std::valarray<double> buffer(contributions.size());
         std::size_t i = 0;
         for (const auto& contrib : contributions){
