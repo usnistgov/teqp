@@ -51,12 +51,53 @@ jobs:
             ./wheelhouse/*.whl
             ./wheelhouse/*.tar.gz
 
-  merge:
+  merge_wheels:
    runs-on: ubuntu-latest
    needs: build_wheels
    steps:
      - name: Merge Artifacts
        uses: actions/upload-artifact/merge@v4
        with:
-         name: artifact
+         name: dist
          pattern: artifact-*
+
+
+  testpypi-publish:
+    name: Upload release to TestPyPI
+    needs: [merge_wheels]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+    - name: Download ALL wheels
+      uses: actions/download-artifact@v4
+      with:
+        path: dist
+
+    - name: Publish package distributions to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        password: ${{ secrets.TESTPYPI_TOKEN }}
+        skip-existing: true
+
+  pypi-publish:
+    name: Upload to pypi if release
+    needs: [merge_wheels]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' 
+    #&& (github.event.action == 'published' || github.event.action == 'edited')
+
+    steps:
+    - uses: actions/setup-python@v5
+
+    - uses: actions/download-artifact@v4
+      with:
+        path: dist
+
+    - uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_TOKEN }}
+        skip-existing: false
