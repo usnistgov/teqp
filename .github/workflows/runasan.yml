@@ -9,8 +9,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest]
-        python-version: [3.9]  # Could add more here, but it just makes the build matrix bigger
+        os: [ubuntu-latest]
+        python-version: [3.12]  # Could add more here, but it just makes the build matrix bigger
     steps:
       - name: checkout
         uses: actions/checkout@v4
