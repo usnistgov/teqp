@@ -1,6 +1,14 @@
 name: cibuildwheel
 
-on: [push, pull_request]
+on:
+  # workflow_dispatch:
+  pull_request:
+  push:
+  release:
+    types:
+      - published
+      - edited
+      - released
 
 jobs:
   build_wheels:
@@ -74,6 +82,8 @@ jobs:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
     - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
 
     - uses: actions/download-artifact@v4
       with:
@@ -97,11 +107,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
-    if: github.event_name == 'release' 
-    #&& (github.event.action == 'published' || github.event.action == 'edited')
+      
+    # Run if release and either published or edited actions are fired
+    if: github.event_name == 'release' && contains(fromJSON('["published", "edited"]'), github.event.action)
 
     steps:
     - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
 
     - uses: actions/download-artifact@v4
       with:
