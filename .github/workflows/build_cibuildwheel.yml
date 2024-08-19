@@ -40,13 +40,13 @@ jobs:
           CIBW_BUILD_VERBOSITY_WINDOWS: 2
           CIBW_SKIP: "*pypy* *pp* *cp36* *cp37* *musl*"
 
-      - name: Check the wheels are valid for PyPI upload
-        run: python -m twine check ./wheelhouse/*
+      - name: Check wheels
+        run: python -m twine check wheelhouse/*.whl
 
       - name: Upload Files
         uses: actions/upload-artifact@v4
         with:
-          name: artifact-${{ matrix.os }}
+          name: dist-${{ matrix.os }}
           path: |
             ./wheelhouse/*.whl
             ./wheelhouse/*.tar.gz
@@ -59,11 +59,11 @@ jobs:
        uses: actions/upload-artifact/merge@v4
        with:
          name: dist
-         pattern: artifact-*
+         pattern: dist-*
 
 
   testpypi-publish:
-    name: Upload release to TestPyPI
+    name: Upload to TestPyPI
     needs: [merge_wheels]
     runs-on: ubuntu-latest
     environment:
@@ -71,22 +71,29 @@ jobs:
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-    - name: Download ALL wheels
-      uses: actions/download-artifact@v4
+    - uses: actions/setup-python@v5
+
+    - uses: actions/download-artifact@v4
       with:
         path: dist
 
-    - name: Publish package distributions to TestPyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+    - run: |
+        set -x
+        ls -R
+        du -sh
+
+    - uses: pypa/gh-action-pypi-publish@release/v1.9
       with:
         repository-url: https://test.pypi.org/legacy/
         password: ${{ secrets.TESTPYPI_TOKEN }}
         skip-existing: true
 
   pypi-publish:
-    name: Upload to pypi if release
+    name: Upload to PyPI if release
     needs: [merge_wheels]
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     if: github.event_name == 'release' 
     #&& (github.event.action == 'published' || github.event.action == 'edited')
 
@@ -97,7 +104,13 @@ jobs:
       with:
         path: dist
 
-    - uses: pypa/gh-action-pypi-publish@release/v1
+    - name: Display structure of downloaded files
+      run: |
+        set -x
+        ls -R
+        du -sh
+
+    - uses: pypa/gh-action-pypi-publish@release/v1.9
       with:
         password: ${{ secrets.PYPI_TOKEN }}
         skip-existing: false
