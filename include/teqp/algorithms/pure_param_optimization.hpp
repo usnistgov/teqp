@@ -1,5 +1,8 @@
 #pragma once
 
+#include <tuple>
+#include <variant>
+
 #include "nlohmann/json.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/exceptions.hpp"
@@ -7,8 +10,6 @@
 
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
-
-#include <tuple>
 
 namespace teqp::algorithms::pure_param_optimization {
 
