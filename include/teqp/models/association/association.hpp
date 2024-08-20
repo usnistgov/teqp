@@ -501,6 +501,7 @@ public:
             {"D", fromArrayXXi(D.array())},
             {"Delta", fromArrayXXd(Delta.array())},
             {"X_A", fromArrayXd(XA.array())},
+            {"self_association_mask", options.self_association_mask},
             {"note", "X_A is the fraction of non-bonded sites for each siteid"}
         };
     }
