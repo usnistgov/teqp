@@ -27,5 +27,6 @@ Models
    REFPROP_conversion
    GERG
    ECS
+   MultifluidPlusAssociation
    
    IdealGas
