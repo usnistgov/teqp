@@ -160,6 +160,10 @@ private:
         AssociationOptions opt;
         if (j.contains("options")){
             opt = j.at("options").get<AssociationOptions>();
+            // Copy over the self-association mask
+            if (j.contains("/options/self_association_mask"_json_pointer)){
+                opt.self_association_mask = j.at("/options/self_association_mask"_json_pointer).template get<std::vector<bool>>();
+            }
         }
         return opt;
     }
