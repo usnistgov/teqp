@@ -432,6 +432,9 @@ public:
      */
     template<typename TType, typename RhoType, typename MoleFracsType>
     auto alphar(const TType& T, const RhoType& rhomolar, const MoleFracsType& molefracs) const {
+        if (molefracs.size() != mapper.N_sites.size()){
+            throw teqp::InvalidArgument("Wrong size of molefracs; should be "+ std::to_string(mapper.N_sites.size()));
+        }
         
         // Do the sucessive substitution to obtain the non-bonded fractions for each unique site
         Eigen::ArrayXd X_init = Eigen::ArrayXd::Ones(mapper.to_siteid.size());
