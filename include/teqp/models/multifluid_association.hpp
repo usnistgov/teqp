@@ -14,7 +14,7 @@ private:
 public:
     MultifluidPlusAssociation(const nlohmann::json &spec) :
         m_multifluid(multifluidfactory(spec.at("multifluid"))),
-        m_association(association::Association::factory(spec.at("association"))){}
+        m_association(association::Association::factory(spec.at("association").at("model"))){}
     
     template<class VecType>
     auto R(const VecType& molefrac) const {
