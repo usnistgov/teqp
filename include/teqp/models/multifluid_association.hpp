@@ -16,6 +16,8 @@ public:
         m_multifluid(multifluidfactory(spec.at("multifluid"))),
         m_association(association::Association::factory(spec.at("association").at("model"))){}
     
+    const auto& get_association() const { return m_association; }
+    
     template<class VecType>
     auto R(const VecType& molefrac) const {
         return get_R_gas<decltype(molefrac[0])>();
