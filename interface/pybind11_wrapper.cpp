@@ -17,6 +17,7 @@
 #include "teqp/algorithms/ancillary_builder.hpp"
 #include "teqp/models/multifluid_ecs_mutant.hpp"
 #include "teqp/models/saft/genericsaft.hpp"
+#include "teqp/algorithms/phase_equil.hpp"
 
 #include "teqp/algorithms/pure_param_optimization.hpp"
 using namespace teqp::algorithms::pure_param_optimization;
@@ -556,6 +557,41 @@ void init_teqp(py::module& m) {
     m.def("convert_FLD", [](const std::string& component, const std::string& name){ return RPinterop::FLDfile(component).make_json(name); },
           "component"_a, "name"_a);
     m.def("convert_HMXBNC", [](const std::string& path){ return RPinterop::HMXBNCfile(path).make_jsons(); }, "path"_a);
+    
+    {
+    using namespace teqp::algorithms::phase_equil;
+    auto m_phaseequil = m.def_submodule("phaseequil", "Routines for phase equilibrium");
+    
+    // Specification options
+    py::class_<AbstractSpecification, std::shared_ptr<AbstractSpecification>>(m_phaseequil, "AbstractSpecification");
+    py::class_<TSpecification, AbstractSpecification, std::shared_ptr<TSpecification>>(m_phaseequil, "TSpecification").def(py::init<double>());
+    py::class_<PSpecification, AbstractSpecification, std::shared_ptr<PSpecification>>(m_phaseequil, "PSpecification").def(py::init<double>());
+    py::class_<BetaSpecification, AbstractSpecification, std::shared_ptr<BetaSpecification>>(m_phaseequil, "BetaSpecification").def(py::init<double, std::size_t>());
+    py::class_<MolarVolumeSpecification, AbstractSpecification, std::shared_ptr<MolarVolumeSpecification>>(m_phaseequil, "MolarVolumeSpecification").def(py::init<double>());
+    // TODO: H,S,U as specifications
+        
+    using CallResult = GeneralizedPhaseEquilibrium::CallResult;
+    py::class_<CallResult>(m_phaseequil, "CallResult")
+        .def_readonly("r", &CallResult::r, "r")
+        .def_readonly("J", &CallResult::J, "J")
+        ;
+    
+    using UnpackedVariables = GeneralizedPhaseEquilibrium::UnpackedVariables;
+    py::class_<UnpackedVariables>(m_phaseequil, "UnpackedVariables")
+        .def(py::init<const double, const std::vector<Eigen::ArrayXd>&, const Eigen::ArrayXd&>())
+        .def_readonly("T", &UnpackedVariables::T, "Temperature")
+        .def_readonly("rhovecs", &UnpackedVariables::rhovecs, "Vectors of molar concentrations for each phase")
+        .def_readonly("betas", &UnpackedVariables::betas, "Vector of molar phase fractions for each phase")
+        .def("pack", &UnpackedVariables::pack, "Convenience function to generate the array of independent variables")
+    ;
+    
+    py::class_<GeneralizedPhaseEquilibrium>(m_phaseequil, "GeneralizedPhaseEquilibrium")
+        .def(py::init<const AbstractModel&, const Eigen::ArrayXd&, const UnpackedVariables&, const std::vector<std::shared_ptr<AbstractSpecification>>&>())
+        .def("call", &GeneralizedPhaseEquilibrium::call, "Call the function to build the residuals and Jacobian matrix", "x"_a)
+        .def("num_Jacobian", &GeneralizedPhaseEquilibrium::num_Jacobian, "A testing function to build the Jacobian with centered differences")
+        .def_readonly("res", &GeneralizedPhaseEquilibrium::res, "The data structure containing r and J")
+    ;
+    }
     
     using namespace teqp::iteration;
     py::class_<NRIterator>(m, "NRIterator")
