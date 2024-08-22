@@ -5,6 +5,7 @@ Algorithms
    :maxdepth: 2
    :caption: Contents:
 
+   GeneralizedPhaseEquilibria
    VLE
    VLLE
    VLLE-p
