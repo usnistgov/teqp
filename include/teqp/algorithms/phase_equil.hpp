@@ -53,6 +53,26 @@ struct CaloricPhaseDerivatives{
     Eigen::ArrayXd dsdrhovec(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
         return -1/rho*(d_gradient_Psiig_dT + resid.d_gradient_Psir_dT) + 1/rho/rho*(d_Psiig_dT + resid.d_Psir_dT);
     }
+    
+    double a(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return (Psiig + resid.Psir)/rho;
+    }
+    double dadT(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return 1/rho*(d_Psiig_dT + resid.d_Psir_dT);
+    }
+    Eigen::ArrayXd dadrhovec(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return 1/rho*(gradient_Psiig + resid.gradient_Psir) - 1/rho/rho*(Psiig + resid.Psir);
+    }
+    
+    double u(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return a(T, rhovec, resid) + T*s(T, rhovec, resid);
+    }
+    double dudT(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return dadT(T, rhovec, resid) + s(T, rhovec, resid) + T*dsdT(T, rhovec, resid);
+    }
+    Eigen::ArrayXd dudrhovec(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return dadrhovec(T, rhovec, resid) + T*dsdrhovec(T, rhovec, resid);
+    }
 };
 
 struct SpecificationSidecar{
@@ -156,7 +176,7 @@ public:
 };
 
 /**
- \brief Specification equation for molar volume
+ \brief Specification equation for molar entropy
  */
 struct MolarEntropySpecification : public AbstractSpecification{
 private:
@@ -188,6 +208,44 @@ public:
             Jrow.segment(1+iphase*sidecar.Ncomponents, sidecar.Ncomponents) = betas[iphase]*cal.dsdrhovec(T, rho_phase[iphase], der);
         }
         double r = s - m_s_JmolK;
+        return std::make_tuple(r, Jrow);
+    };
+};
+
+/**
+ \brief Specification equation for molar internal energy
+ */
+struct MolarInternalEnergySpecification : public AbstractSpecification{
+private:
+    const double m_u_Jmol;
+public:
+    MolarInternalEnergySpecification(double u_Jmol) : m_u_Jmol(u_Jmol) {};
+    
+    virtual std::tuple<double, Eigen::ArrayXd> r_Jacobian(const Eigen::ArrayXd& x, const SpecificationSidecar& sidecar) const override {
+        double T = x[0];
+        std::vector<Eigen::Map<const Eigen::ArrayXd>> rhovecs;
+        std::vector<double> rho_phase;
+        for (auto iphase_ = 0; iphase_ < sidecar.Nphases; ++iphase_){
+            rhovecs.push_back(Eigen::Map<const Eigen::ArrayXd>(&x[1 + iphase_*sidecar.Ncomponents], sidecar.Ncomponents));
+            rho_phase.push_back(rhovecs.back().sum());
+        }
+        const Eigen::Map<const Eigen::ArrayXd> betas(&x[x.size()-sidecar.Nphases], sidecar.Nphases);
+        if (sidecar.caloricderivatives == nullptr){
+            throw teqp::InvalidArgument("Must have connected the ideal gas pointer");
+        }
+        
+        Eigen::ArrayXd Jrow(x.size()); Jrow.setZero();
+        double u = 0.0;
+        for (auto iphase = 0; iphase < sidecar.Nphases; ++iphase){
+            const auto& cal = (*sidecar.caloricderivatives)[iphase];
+            const RequiredPhaseDerivatives& der = (*sidecar.derivatives)[iphase];
+            auto u_phase = cal.u(T, rho_phase[iphase], der);
+            u += betas[iphase]*u_phase;
+            Jrow(0) += betas[iphase]*cal.dudT(T, rho_phase[iphase], der); // Temperature derivative, all phases
+            Jrow(x.size()-sidecar.Nphases+iphase) = u_phase;
+            Jrow.segment(1+iphase*sidecar.Ncomponents, sidecar.Ncomponents) = betas[iphase]*cal.dudrhovec(T, rho_phase[iphase], der);
+        }
+        double r = u - m_u_Jmol;
         return std::make_tuple(r, Jrow);
     };
 };
