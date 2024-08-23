@@ -7,6 +7,7 @@ using Catch::Approx;
 #include "teqp/models/multifluid.hpp"
 #include "teqp/models/multifluid_ancillaries.hpp"
 #include "teqp/algorithms/phase_equil.hpp"
+#include "teqp/ideal_eosterms.hpp"
 
 using namespace teqp;
 using namespace teqp::algorithms::phase_equil;
@@ -23,6 +24,19 @@ TEST_CASE("Test new VLE routines", "[VLEgen]")
     std::vector<decltype(model)> pures;
     pures.emplace_back(make_multifluid_model({names[0]}, root));
     pures.emplace_back(make_multifluid_model({names[1]}, root));
+    
+    nlohmann::json jaig = nlohmann::json::array();
+    for (auto name : names){
+        auto jig = convert_CoolProp_idealgas(root+"/dev/fluids/"+name+".json", 0 /* index of EOS */);
+        jaig.push_back(jig);
+    }
+    CHECK(jaig.is_array());
+    
+    std::cout << jaig.dump() << std::endl;
+    
+    // Check that converted structures can be loaded
+    auto aig = make_model(nlohmann::json{{"kind", "IdealHelmholtz"}, {"model",jaig}});
+    std::shared_ptr<AbstractModel> aig_shared(std::move(aig));
 
     double T = 118.0;
     std::vector<nlohmann::json> traces;
@@ -59,9 +73,11 @@ TEST_CASE("Test new VLE routines", "[VLEgen]")
 //        specs.push_back(std::make_shared<TSpecification>(init.T));
 //        specs.push_back(std::make_shared<BetaSpecification>(0.99, 0));
         specs.push_back(std::make_shared<PSpecification>(el.at("pL / Pa").get<double>()/1.01));
-        specs.push_back(std::make_shared<MolarVolumeSpecification>(1/rhovecs[0].sum()));
-//        std::shared_ptr<AbstractModel> shared_model(std::move(model));
+//        specs.push_back(std::make_shared<MolarVolumeSpecification>(1/rhovecs[0].sum()));
+        specs.push_back(std::make_shared<MolarEntropySpecification>(98));
+
         GeneralizedPhaseEquilibrium gpe(*model, zbulk, init, specs);
+        gpe.attach_ideal_gas(aig_shared);
         
         Eigen::ArrayXd x = init.pack();
         gpe.call(x);

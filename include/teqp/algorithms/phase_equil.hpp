@@ -10,11 +10,58 @@ using namespace teqp::cppinterface;
 
 namespace teqp::algorithms::phase_equil{
 
+struct RequiredPhaseDerivatives{
+    double rho;
+    double R;
+    
+    // Calculated parameters
+    double Psir;
+    Eigen::ArrayXd gradient_Psir;
+    Eigen::ArrayXXd Hessian_Psir;
+    double d_Psir_dT;
+    Eigen::ArrayXd d_gradient_Psir_dT;
+    
+    double p(const double T, const auto& rhovec) const{
+        return rho*R*T - Psir + (rhovec*gradient_Psir).sum();
+    }
+    double dpdT(const double T, const auto& rhovec) const{
+        return rho*R - d_Psir_dT + (rhovec*d_gradient_Psir_dT).sum();
+    }
+    Eigen::ArrayXd dpdrhovec(const double T, const auto& rhovec) const{
+        return (R*T + (rhovec.matrix().transpose()*Hessian_Psir.matrix()).array()).eval();
+    }
+};
+
+struct CaloricPhaseDerivatives{
+    double rho;
+    double R;
+    
+    // Calculated parameters
+    double Psiig;          // --]
+    double d_Psiig_dT;     //   ] All obtained in one call, needed for all h,s,u
+    double d2_Psiig_dT2;   // --]
+    double d2_Psir_dT2;    // Needed for entropy, not needed for any standard specifications
+    Eigen::ArrayXd gradient_Psiig;        // This is only not used by s, needed for h and u
+    Eigen::ArrayXd d_gradient_Psiig_dT;   // Needed for h, s, u
+    
+    double s(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return -1/rho*(d_Psiig_dT + resid.d_Psir_dT);
+    }
+    double dsdT(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return -1/rho*(d2_Psiig_dT2 + d2_Psir_dT2);
+    }
+    Eigen::ArrayXd dsdrhovec(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+        return -1/rho*(d_gradient_Psiig_dT + resid.d_gradient_Psir_dT) + 1/rho/rho*(d_Psiig_dT + resid.d_Psir_dT);
+    }
+};
+
 struct SpecificationSidecar{
     std::size_t Nphases, Ncomponents, Nindependent;
-    double* ptr_p_phase0;
-    double* ptr_dpdT_phase0;
-    Eigen::ArrayXd* ptr_dpdrho_phase0;
+    double* ptr_p_phase0 = nullptr;
+    double* ptr_dpdT_phase0 = nullptr;
+    Eigen::ArrayXd* ptr_dpdrho_phase0 = nullptr;
+    std::vector<RequiredPhaseDerivatives>* derivatives = nullptr;
+    std::vector<CaloricPhaseDerivatives>* caloricderivatives = nullptr;
 };
 
 struct AbstractSpecification{
@@ -108,23 +155,41 @@ public:
     };
 };
 
-struct RequiredPhaseDerivatives{
-    double rho;
-    double R;
-    double Psir;
-    Eigen::ArrayXd gradient_Psir;
-    Eigen::ArrayXXd Hessian_Psir;
-    double d_Psir_dT;
-    Eigen::ArrayXd d_gradient_Psir_dT;
-    double p(double T, const auto& rhovec){
-        return rho*R*T - Psir + (rhovec*gradient_Psir).sum();
-    }
-    double dpdT(double T, const auto& rhovec){
-        return rho*R - d_Psir_dT + (rhovec*d_gradient_Psir_dT).sum();
-    }
-    Eigen::ArrayXd dpdrhovec(double T, const auto& rhovec){
-        return (R*T + (rhovec.matrix().transpose()*Hessian_Psir.matrix()).array()).eval();
-    }
+/**
+ \brief Specification equation for molar volume
+ */
+struct MolarEntropySpecification : public AbstractSpecification{
+private:
+    const double m_s_JmolK;
+public:
+    MolarEntropySpecification(double s_JmolK) : m_s_JmolK(s_JmolK) {};
+    
+    virtual std::tuple<double, Eigen::ArrayXd> r_Jacobian(const Eigen::ArrayXd& x, const SpecificationSidecar& sidecar) const override {
+        double T = x[0];
+        std::vector<Eigen::Map<const Eigen::ArrayXd>> rhovecs;
+        std::vector<double> rho_phase;
+        for (auto iphase_ = 0; iphase_ < sidecar.Nphases; ++iphase_){
+            rhovecs.push_back(Eigen::Map<const Eigen::ArrayXd>(&x[1 + iphase_*sidecar.Ncomponents], sidecar.Ncomponents));
+            rho_phase.push_back(rhovecs.back().sum());
+        }
+        const Eigen::Map<const Eigen::ArrayXd> betas(&x[x.size()-sidecar.Nphases], sidecar.Nphases);
+        if (sidecar.caloricderivatives == nullptr){
+            throw teqp::InvalidArgument("Must have connected the ideal gas pointer");
+        }
+        
+        Eigen::ArrayXd Jrow(x.size()); Jrow.setZero();
+        double s = 0.0;
+        for (auto iphase = 0; iphase < sidecar.Nphases; ++iphase){
+            const auto& cal = (*sidecar.caloricderivatives)[iphase];
+            const RequiredPhaseDerivatives& der = (*sidecar.derivatives)[iphase];
+            s += betas[iphase]*cal.s(T, rho_phase[iphase], der);
+            Jrow(0) += betas[iphase]*cal.dsdT(T, rho_phase[iphase], der); // Temperature derivative, all phases
+            Jrow(x.size()-sidecar.Nphases+iphase) = cal.s(T, rho_phase[iphase], der);
+            Jrow.segment(1+iphase*sidecar.Ncomponents, sidecar.Ncomponents) = betas[iphase]*cal.dsdrhovec(T, rho_phase[iphase], der);
+        }
+        double r = s - m_s_JmolK;
+        return std::make_tuple(r, Jrow);
+    };
 };
 
 /**
@@ -176,7 +241,7 @@ public:
         }
     };
     const AbstractModel& residptr; ///< The pointer for the residual portion of \f$\alpha\f$
-//    std::optional<std::unique_ptr<AbstractModel>&> idealgasptr; ///< The pointer for the ideal-gas portion of \f$\alpha\f$
+    std::optional<std::shared_ptr<const AbstractModel>> idealgasptr; ///< The pointer for the ideal-gas portion of \f$\alpha\f$
     const Eigen::ArrayXd zbulk; ///< The bulk composition of the mixture
     const std::size_t Ncomponents, ///< The number of components in each phase
                       Nphases, ///< The number of phases
@@ -214,9 +279,9 @@ public:
         res.r.resize(Nindependent);
         res.J.resize(Nindependent, Nindependent);
     }
-    //    auto attach_ideal_gas(std::unique_ptr<AbstractModel>&ptr){
-    //        idealgasptr = ptr;
-    //    }
+    auto attach_ideal_gas(const std::shared_ptr<const AbstractModel>& ptr){
+        idealgasptr = ptr;
+    }
     
     /**
      \brief Call the routines to build the vector of residuals and Jacobian and cache it internally
@@ -250,9 +315,8 @@ public:
             std::tie(der.Psir, der.gradient_Psir, der.Hessian_Psir) = modelref.build_Psir_fgradHessian_autodiff(T, rhovec);
             // And then the temperature derivatives
             // Psir = ar*R*T*rho
-            // d(Psir)/dT = d(rho*alphar*R*T)/dT = rho*R*d(alphar*T)/dT = rho*R*(T*dalphar/dT + alphar)
+            // d(Psir)/dT = d(rho*alphar*R*T)/dT = rho*R*d(alphar*T)/dT = rho*R*(T*dalphar/dT + alphar) = rho*R*(T*dalphar/dT) + Psir/T
             // and T*dalphar/dT = -Ar10 so
-            
             der.d_Psir_dT = der.rho*R*(-modelref.get_Ar10(T, der.rho, rhovec/der.rho)) + der.Psir/T;
             der.d_gradient_Psir_dT = modelref.build_d2PsirdTdrhoi_autodiff(T, rhovec);
             return der;
@@ -352,6 +416,37 @@ public:
         sidecar.ptr_p_phase0 = &p_phase0;
         sidecar.ptr_dpdT_phase0 = &dpdT_phase0;
         sidecar.ptr_dpdrho_phase0 = &dpdrho_phase0;
+        
+        // If any of the specification equations require caloric properties, calculate them
+        // for all phases
+        auto calculate_caloric_derivatives = [this, R](auto& modelref, auto& modelresid, double T, const Eigen::ArrayXd& rhovec) -> CaloricPhaseDerivatives{
+            CaloricPhaseDerivatives der;
+            der.rho = rhovec.sum();
+            der.R = R;
+            auto molefracs = (rhovec/der.rho).eval();
+            der.Psiig = modelref.get_Ar00(T, der.rho, molefracs)*R*T*der.rho;
+            // And then the temperature derivatives
+            // Psir = ar*R*T*rho
+            // d(Psir)/dT = d(rho*alphar*R*T)/dT = rho*R*d(alphar*T)/dT = rho*R*(T*dalphar/dT + alphar)
+            // and T*dalphar/dT = -Ar10 so
+            der.d_Psiig_dT = der.rho*R*(-modelref.get_Ar10(T, der.rho, molefracs)) + der.Psiig/T;
+            // d^2(Psir)/dT^2 = rho*R*(T*d2alphar/dT2 + dalphar/dT + dalphar/dT) = rho*R*(T*d2alphar/dT2 + 2*dalphar/dT) = rho*R/T*(T^2*d2alphar/dT2 + 2*T*dalphar/dT)
+            // And from Eqs. 3.46 and 3.47 from Span we get A20 for the term in (...)
+            der.d2_Psiig_dT2 = der.rho*R/T*modelref.get_Ar20(T, der.rho, molefracs);
+            der.d2_Psir_dT2 = der.rho*R/T*modelresid.get_Ar20(T, der.rho, molefracs);
+            der.gradient_Psiig = modelref.build_Psir_gradient_autodiff(T, rhovec);
+            der.d_gradient_Psiig_dT = modelref.build_d2PsirdTdrhoi_autodiff(T, rhovec);
+            return der;
+        };
+        std::vector<CaloricPhaseDerivatives> caloricderivatives;
+        if (this->idealgasptr){
+            for (auto iphase_ = 0; iphase_ < Nphases; ++iphase_){
+                caloricderivatives.emplace_back(calculate_caloric_derivatives(*this->idealgasptr->get(), residptr,  T, rhovecs[iphase_]));
+            }
+            sidecar.derivatives = &derivatives;
+            sidecar.caloricderivatives = &caloricderivatives;
+        }
+        
         for (auto& spec: specifications){
             auto [r_, J_] = spec->r_Jacobian(x, sidecar);
             r[irow] = r_;
