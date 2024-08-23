@@ -74,7 +74,7 @@ TEST_CASE("Test new VLE routines", "[VLEgen]")
 //        specs.push_back(std::make_shared<BetaSpecification>(0.99, 0));
         specs.push_back(std::make_shared<PSpecification>(el.at("pL / Pa").get<double>()/1.01));
 //        specs.push_back(std::make_shared<MolarVolumeSpecification>(1/rhovecs[0].sum()));
-        specs.push_back(std::make_shared<MolarEntropySpecification>(98));
+        specs.push_back(std::make_shared<MolarEnthalpySpecification>(0));
 
         GeneralizedPhaseEquilibrium gpe(*model, zbulk, init, specs);
         gpe.attach_ideal_gas(aig_shared);
