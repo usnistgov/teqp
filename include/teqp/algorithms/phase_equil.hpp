@@ -21,13 +21,13 @@ struct RequiredPhaseDerivatives{
     double d_Psir_dT;
     Eigen::ArrayXd d_gradient_Psir_dT;
     
-    double p(const double T, const auto& rhovec) const{
+    double p(const double T, const Eigen::ArrayXd& rhovec) const{
         return rho*R*T - Psir + (rhovec*gradient_Psir).sum();
     }
-    double dpdT(const double T, const auto& rhovec) const{
+    double dpdT(const double T, const Eigen::ArrayXd& rhovec) const{
         return rho*R - d_Psir_dT + (rhovec*d_gradient_Psir_dT).sum();
     }
-    Eigen::ArrayXd dpdrhovec(const double T, const auto& rhovec) const{
+    Eigen::ArrayXd dpdrhovec(const double T, const Eigen::ArrayXd& rhovec) const{
         return (R*T + (rhovec.matrix().transpose()*Hessian_Psir.matrix()).array()).eval();
     }
 };
@@ -44,33 +44,33 @@ struct CaloricPhaseDerivatives{
     Eigen::ArrayXd gradient_Psiig;        // This is only not used by s, needed for h and u
     Eigen::ArrayXd d_gradient_Psiig_dT;   // Needed for h, s, u
     
-    double s(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    double s(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return -1/rho*(d_Psiig_dT + resid.d_Psir_dT);
     }
-    double dsdT(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    double dsdT(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return -1/rho*(d2_Psiig_dT2 + d2_Psir_dT2);
     }
-    Eigen::ArrayXd dsdrhovec(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    Eigen::ArrayXd dsdrhovec(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return -1/rho*(d_gradient_Psiig_dT + resid.d_gradient_Psir_dT) + 1/rho/rho*(d_Psiig_dT + resid.d_Psir_dT);
     }
     
-    double a(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    double a(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return (Psiig + resid.Psir)/rho;
     }
-    double dadT(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    double dadT(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return 1/rho*(d_Psiig_dT + resid.d_Psir_dT);
     }
-    Eigen::ArrayXd dadrhovec(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    Eigen::ArrayXd dadrhovec(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return 1/rho*(gradient_Psiig + resid.gradient_Psir) - 1/rho/rho*(Psiig + resid.Psir);
     }
     
-    double u(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    double u(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return a(T, rhovec, resid) + T*s(T, rhovec, resid);
     }
-    double dudT(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    double dudT(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return dadT(T, rhovec, resid) + s(T, rhovec, resid) + T*dsdT(T, rhovec, resid);
     }
-    Eigen::ArrayXd dudrhovec(const double T, const auto& rhovec, const RequiredPhaseDerivatives& resid) const{
+    Eigen::ArrayXd dudrhovec(const double T, const Eigen::ArrayXd& rhovec, const RequiredPhaseDerivatives& resid) const{
         return dadrhovec(T, rhovec, resid) + T*dsdrhovec(T, rhovec, resid);
     }
     
@@ -212,10 +212,10 @@ public:
         for (auto iphase = 0; iphase < sidecar.Nphases; ++iphase){
             const auto& cal = (*sidecar.caloricderivatives)[iphase];
             const RequiredPhaseDerivatives& der = (*sidecar.derivatives)[iphase];
-            s += betas[iphase]*cal.s(T, rho_phase[iphase], der);
-            Jrow(0) += betas[iphase]*cal.dsdT(T, rho_phase[iphase], der); // Temperature derivative, all phases
-            Jrow(x.size()-sidecar.Nphases+iphase) = cal.s(T, rho_phase[iphase], der);
-            Jrow.segment(1+iphase*sidecar.Ncomponents, sidecar.Ncomponents) = betas[iphase]*cal.dsdrhovec(T, rho_phase[iphase], der);
+            s += betas[iphase]*cal.s(T, rhovecs[iphase], der);
+            Jrow(0) += betas[iphase]*cal.dsdT(T, rhovecs[iphase], der); // Temperature derivative, all phases
+            Jrow(x.size()-sidecar.Nphases+iphase) = cal.s(T, rhovecs[iphase], der);
+            Jrow.segment(1+iphase*sidecar.Ncomponents, sidecar.Ncomponents) = betas[iphase]*cal.dsdrhovec(T, rhovecs[iphase], der);
         }
         double r = s - m_s_JmolK;
         return std::make_tuple(r, Jrow);
@@ -249,11 +249,11 @@ public:
         for (auto iphase = 0; iphase < sidecar.Nphases; ++iphase){
             const auto& cal = (*sidecar.caloricderivatives)[iphase];
             const RequiredPhaseDerivatives& der = (*sidecar.derivatives)[iphase];
-            auto u_phase = cal.u(T, rho_phase[iphase], der);
+            auto u_phase = cal.u(T, rhovecs[iphase], der);
             u += betas[iphase]*u_phase;
-            Jrow(0) += betas[iphase]*cal.dudT(T, rho_phase[iphase], der); // Temperature derivative, all phases
+            Jrow(0) += betas[iphase]*cal.dudT(T, rhovecs[iphase], der); // Temperature derivative, all phases
             Jrow(x.size()-sidecar.Nphases+iphase) = u_phase;
-            Jrow.segment(1+iphase*sidecar.Ncomponents, sidecar.Ncomponents) = betas[iphase]*cal.dudrhovec(T, rho_phase[iphase], der);
+            Jrow.segment(1+iphase*sidecar.Ncomponents, sidecar.Ncomponents) = betas[iphase]*cal.dudrhovec(T, rhovecs[iphase], der);
         }
         double r = u - m_u_Jmol;
         return std::make_tuple(r, Jrow);
