@@ -108,6 +108,24 @@ public:
     };
 };
 
+struct RequiredPhaseDerivatives{
+    double rho;
+    double R;
+    double Psir;
+    Eigen::ArrayXd gradient_Psir;
+    Eigen::ArrayXXd Hessian_Psir;
+    double d_Psir_dT;
+    Eigen::ArrayXd d_gradient_Psir_dT;
+    double p(double T, const auto& rhovec){
+        return rho*R*T - Psir + (rhovec*gradient_Psir).sum();
+    }
+    double dpdT(double T, const auto& rhovec){
+        return rho*R - d_Psir_dT + (rhovec*d_gradient_Psir_dT).sum();
+    }
+    Eigen::ArrayXd dpdrhovec(double T, const auto& rhovec){
+        return (R*T + (rhovec.matrix().transpose()*Hessian_Psir.matrix()).array()).eval();
+    }
+};
 
 /**
  
@@ -222,31 +240,26 @@ public:
         const Eigen::Map<const Eigen::ArrayXd> betas(&x[x.size()-Nphases], Nphases);
         double R = residptr.get_R(zbulk); // TODO: think about what to do when the phases have different R values and dR/drho_i is nonzero
         
-        struct RequiredPhaseDerivatives{
-            double Psir;
-            Eigen::ArrayXd gradient_Psir;
-            Eigen::ArrayXXd Hessian_Psir;
-            double d_Psir_dT;
-            Eigen::ArrayXd d_gradient_Psir_dT;
-        };
         // Calculate the required derivatives for each phase
         // based on its temperature and molar concentrations
-        auto calculate_required_derivatives = [this, R](double T, const Eigen::ArrayXd& rhovec) -> RequiredPhaseDerivatives{
+        auto calculate_required_derivatives = [this, R](auto& modelref, double T, const Eigen::ArrayXd& rhovec) -> RequiredPhaseDerivatives{
             RequiredPhaseDerivatives der;
+            der.rho = rhovec.sum();
+            der.R = R;
             // Three in one via tuple unpacking
-            std::tie(der.Psir, der.gradient_Psir, der.Hessian_Psir) = this->residptr.build_Psir_fgradHessian_autodiff(T, rhovec);
+            std::tie(der.Psir, der.gradient_Psir, der.Hessian_Psir) = modelref.build_Psir_fgradHessian_autodiff(T, rhovec);
             // And then the temperature derivatives
             // Psir = ar*R*T*rho
             // d(Psir)/dT = d(rho*alphar*R*T)/dT = rho*R*d(alphar*T)/dT = rho*R*(T*dalphar/dT + alphar)
             // and T*dalphar/dT = -Ar10 so
-            double rho = rhovec.sum();
-            der.d_Psir_dT = rho*R*(-this->residptr.get_Ar10(T, rho, rhovec/rho)) + der.Psir/T;
-            der.d_gradient_Psir_dT = this->residptr.build_d2PsirdTdrhoi_autodiff(T, rhovec);
+            
+            der.d_Psir_dT = der.rho*R*(-modelref.get_Ar10(T, der.rho, rhovec/der.rho)) + der.Psir/T;
+            der.d_gradient_Psir_dT = modelref.build_d2PsirdTdrhoi_autodiff(T, rhovec);
             return der;
         };
         std::vector<RequiredPhaseDerivatives> derivatives;
         for (auto iphase_ = 0; iphase_ < Nphases; ++iphase_){
-            derivatives.emplace_back(calculate_required_derivatives(T, rhovecs[iphase_]));
+            derivatives.emplace_back(calculate_required_derivatives(this->residptr, T, rhovecs[iphase_]));
         }
         
         // First we have the equalities in (natural) logarithm of fugacity coefficient (always present)
@@ -288,13 +301,13 @@ public:
         
         // Then we have the equality of pressure between all the phases (always present)
         iphase = 0;
-        double p_phase0 = rhovecs[iphase].sum()*R*T - derivatives[iphase].Psir + (rhovecs[iphase]*derivatives[iphase].gradient_Psir).sum();
-        double dpdT_phase0 = rhovecs[iphase].sum()*R - derivatives[iphase].d_Psir_dT + (rhovecs[iphase]*derivatives[iphase].d_gradient_Psir_dT).sum();
-        Eigen::ArrayXd dpdrho_phase0 = (R*T + (rhovecs[iphase].matrix().transpose()*derivatives[iphase].Hessian_Psir.matrix()).array()).eval();
+        double p_phase0 = derivatives[iphase].p(T, rhovecs[iphase]);
+        double dpdT_phase0 = derivatives[iphase].dpdT(T, rhovecs[iphase]);
+        Eigen::ArrayXd dpdrho_phase0 = derivatives[iphase].dpdrhovec(T, rhovecs[iphase]);
         for (auto iphasei = 1; iphasei < Nphases; ++iphasei){
-            double p_phasei = rhovecs[iphasei].sum()*R*T - derivatives[iphasei].Psir + (rhovecs[iphasei]*derivatives[iphasei].gradient_Psir).sum();
-            double dpdT_phasei = rhovecs[iphasei].sum()*R - derivatives[iphasei].d_Psir_dT + (rhovecs[iphasei]*derivatives[iphasei].d_gradient_Psir_dT).sum();
-            Eigen::ArrayXd dpdrho_phasei = (R*T + (rhovecs[iphasei].matrix().transpose()*derivatives[iphasei].Hessian_Psir.matrix()).array()).eval();
+            double p_phasei = derivatives[iphasei].p(T, rhovecs[iphasei]);
+            double dpdT_phasei = derivatives[iphasei].dpdT(T, rhovecs[iphasei]);
+            Eigen::ArrayXd dpdrho_phasei = derivatives[iphasei].dpdrhovec(T, rhovecs[iphasei]);
             r[irow] = p_phase0 - p_phasei;
             J(irow, 0) = dpdT_phase0 - dpdT_phasei;
             for (auto iphasej = 0; iphasej < Nphases; ++iphasej){
