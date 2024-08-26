@@ -236,7 +236,7 @@ namespace teqp {
         using x_t = std::decay_t<decltype(x[0])>;
         using y_t = std::decay_t<decltype(y[0])>;
         using ret_t = std::common_type_t<x_t, y_t>;
-        if (x.size() != y.size()){
+        if (static_cast<long>(x.size()) != y.size()){
             throw teqp::InvalidArgument("Arguments to contiguous_dotproduct are not the same size");
         }
         ret_t summer = 0.0;
