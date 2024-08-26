@@ -27,7 +27,10 @@ public:
         b(spec.at("activity").at("options").at("b")),
         u(spec.at("activity").at("options").at("u")){}
     
-//    const auto& get_activity() const { return m_activity; }
+    /// Calculate the dimensionless value of \f$g_{\rm GE}^{\rm E,R}/RT\f$ from the AC model
+    auto calc_gER_over_RT(double T, const Eigen::ArrayXd& molefrac) const {
+        return std::visit([T, &molefrac](const auto& mod){return mod(T, molefrac); }, m_activity);
+    }
     
     template<class VecType>
     auto R(const VecType& molefrac) const {
