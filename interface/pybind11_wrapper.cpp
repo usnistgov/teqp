@@ -575,7 +575,9 @@ void init_teqp(py::module& m) {
     py::class_<PSpecification, AbstractSpecification, std::shared_ptr<PSpecification>>(m_phaseequil, "PSpecification").def(py::init<double>());
     py::class_<BetaSpecification, AbstractSpecification, std::shared_ptr<BetaSpecification>>(m_phaseequil, "BetaSpecification").def(py::init<double, std::size_t>());
     py::class_<MolarVolumeSpecification, AbstractSpecification, std::shared_ptr<MolarVolumeSpecification>>(m_phaseequil, "MolarVolumeSpecification").def(py::init<double>());
-    // TODO: H,S,U as specifications
+    py::class_<MolarEntropySpecification, AbstractSpecification, std::shared_ptr<MolarEntropySpecification>>(m_phaseequil, "MolarEntropySpecification").def(py::init<double>());
+    py::class_<MolarEnthalpySpecification, AbstractSpecification, std::shared_ptr<MolarEnthalpySpecification>>(m_phaseequil, "MolarEnthalpySpecification").def(py::init<double>());
+    py::class_<MolarInternalEnergySpecification, AbstractSpecification, std::shared_ptr<MolarInternalEnergySpecification>>(m_phaseequil, "MolarInternalEnergySpecification").def(py::init<double>());
         
     using CallResult = GeneralizedPhaseEquilibrium::CallResult;
     py::class_<CallResult>(m_phaseequil, "CallResult")
