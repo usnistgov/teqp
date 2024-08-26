@@ -225,6 +225,41 @@ namespace teqp {
     }
 #endif
 
+    /**
+     \brief Take the dot-product of two vector-like objects that have contiguous memory and support the .size() method
+     
+     This allows to mix and match 1D Eigen arrays and vectors and STL vectors
+     */
+    auto contiguous_dotproduct(const auto& x, const auto&y){
+        using x_t = std::decay_t<decltype(x[0])>;
+        using y_t = std::decay_t<decltype(y[0])>;
+        using ret_t = std::common_type_t<x_t, y_t>;
+        if (x.size() != y.size()){
+            throw teqp::InvalidArgument("Arguments to contiguous_dotproduct are not the same size");
+        }
+        ret_t summer = 0.0;
+        for (auto i = 0U; i < x.size(); ++i){
+            summer += x[i]*y[i];
+        }
+        return summer;
+//        auto get_ptr = [](auto& x){
+//            using x_t = std::decay_t<decltype(x[0])>;
+//            const x_t* x_0_ptr;
+//            if constexpr (is_eigen_impl<decltype(x)>::value){
+//                x_0_ptr = x.data();
+//            }
+//            else{
+//                x_0_ptr = &(x[0]);
+//            }
+//            return x_0_ptr;
+//        };
+//        // element-wise product and then a sum
+//        return (
+//            Eigen::Map<const Eigen::ArrayX<x_t>>(get_ptr(x), x.size()).template cast<ret_t>()
+//            * Eigen::Map<const Eigen::ArrayX<y_t>>(get_ptr(y), y.size()).template cast<ret_t>()
+//        ).sum();
+    }
+
 }; // namespace teqp
 
 #endif
