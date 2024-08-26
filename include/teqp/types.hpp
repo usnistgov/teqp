@@ -26,6 +26,8 @@ namespace teqp {
 #include "boost/multiprecision/cpp_bin_float.hpp"
 #endif
 
+#include "teqp/exceptions.hpp"
+
 // autodiff include
 #include <autodiff/forward/dual.hpp>
 #include <autodiff/forward/real.hpp>
