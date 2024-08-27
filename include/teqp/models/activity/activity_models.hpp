@@ -101,7 +101,46 @@ public:
     }
 };
 
-using ResidualHelmholtzOverRTVariant = std::variant<NullResidualHelmholtzOverRT<double>, WilsonResidualHelmholtzOverRT<double>>;
+///**
+// \note This approach works well except that... the derivatives at the pure fluid endpoints don't. So this is more a record as a failed idea
+// */
+//template<typename NumType>
+//class BinaryBetaResidualHelmholtzOverRT {
+//    
+//public:
+//    const std::vector<double> c;
+//    BinaryBetaResidualHelmholtzOverRT(const std::vector<double>& c) : c(c) {};
+//    
+//    // Returns ares/RT
+//    template<typename TType, typename MoleFractions>
+//    auto operator () (const TType& /*T*/, const MoleFractions& molefracs) const {
+//        if (molefracs.size() != 2){
+//            throw teqp::InvalidArgument("Must be size of 2");
+//        }
+//        std::decay_t<std::common_type_t<TType, decltype(molefracs[0])>> out = c[0]*pow(molefracs[0], c[1])*pow(molefracs[1], c[2]);
+//        return out;
+//    }
+//};
+
+template<typename NumType>
+class BinaryInvariantResidualHelmholtzOverRT {
+    
+public:
+    const std::vector<double> c;
+    BinaryInvariantResidualHelmholtzOverRT(const std::vector<double>& c) : c(c) {};
+    
+    // Returns ares/RT
+    template<typename TType, typename MoleFractions>
+    auto operator () (const TType& /*T*/, const MoleFractions& molefracs) const {
+        if (molefracs.size() != 2){
+            throw teqp::InvalidArgument("Must be size of 2");
+        }
+        std::decay_t<std::common_type_t<TType, decltype(molefracs[0])>> out = c[0]*molefracs[0]*molefracs[1]*(c[1] + c[2]*molefracs[1]);
+        return out;
+    }
+};
+
+using ResidualHelmholtzOverRTVariant = std::variant<NullResidualHelmholtzOverRT<double>, WilsonResidualHelmholtzOverRT<double>, BinaryInvariantResidualHelmholtzOverRT<double>>;
 
 inline ResidualHelmholtzOverRTVariant ares_model_factory(const nlohmann::json& armodel) {
     
@@ -111,6 +150,14 @@ inline ResidualHelmholtzOverRTVariant ares_model_factory(const nlohmann::json& a
         auto mWilson = build_square_matrix(armodel.at("m"));
         auto nWilson = build_square_matrix(armodel.at("n"));
         return WilsonResidualHelmholtzOverRT<double>(b, mWilson, nWilson);
+    }
+//    else if (type == "binaryBeta"){
+//        std::vector<double> c = armodel.at("c");
+//        return BinaryBetaResidualHelmholtzOverRT<double>(c);
+//    }
+    else if (type == "binaryInvariant"){
+        std::vector<double> c = armodel.at("c");
+        return BinaryInvariantResidualHelmholtzOverRT<double>(c);
     }
     else{
         throw teqp::InvalidArgument("bad type of ares model: " + type);
