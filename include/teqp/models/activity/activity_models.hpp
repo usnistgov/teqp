@@ -1,5 +1,6 @@
 #pragma once
 
+#include "teqp/models/activity/COSMOSAC.hpp"
 
 namespace teqp::activity::activity_models{
 
@@ -140,7 +141,7 @@ public:
     }
 };
 
-using ResidualHelmholtzOverRTVariant = std::variant<NullResidualHelmholtzOverRT<double>, WilsonResidualHelmholtzOverRT<double>, BinaryInvariantResidualHelmholtzOverRT<double>>;
+using ResidualHelmholtzOverRTVariant = std::variant<NullResidualHelmholtzOverRT<double>, WilsonResidualHelmholtzOverRT<double>, BinaryInvariantResidualHelmholtzOverRT<double>, COSMOSAC::COSMO3>;
 
 inline ResidualHelmholtzOverRTVariant ares_model_factory(const nlohmann::json& armodel) {
     
@@ -158,6 +159,24 @@ inline ResidualHelmholtzOverRTVariant ares_model_factory(const nlohmann::json& a
     else if (type == "binaryInvariant"){
         std::vector<double> c = armodel.at("c");
         return BinaryInvariantResidualHelmholtzOverRT<double>(c);
+    }
+    else if (type == "COSMO-SAC-2010"){
+        std::vector<double> A_COSMOSAC_A2 = armodel.at("A_COSMOSAC / A^2");
+        std::vector<COSMOSAC::FluidSigmaProfiles> profiles;
+        for (auto& el : armodel.at("profiles")){
+            COSMOSAC::FluidSigmaProfiles prof;
+            auto get_ = [](const auto& j){
+                return COSMOSAC::SigmaProfile{
+                    j.at("sigma / e/A^2").template get<std::vector<double>>(),
+                    j.at("p(sigma)*A / A^2").template get<std::vector<double>>()
+                };
+            };
+            prof.nhb = get_(el.at("nhb"));
+            prof.oh = get_(el.at("oh"));
+            prof.ot = get_(el.at("ot"));
+            profiles.push_back(prof);
+        }
+        return COSMOSAC::COSMO3(A_COSMOSAC_A2, profiles);
     }
     else{
         throw teqp::InvalidArgument("bad type of ares model: " + type);
