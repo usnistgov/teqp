@@ -24,6 +24,7 @@ namespace teqp {
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_LKP(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_multifluid(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_multifluid_association(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_multifluid_activity(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_multifluid_ECS_HuberEly1994(const nlohmann::json &);
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_AmmoniaWaterTillnerRoth();
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_LJ126_TholJPCRD2016();
@@ -78,6 +79,7 @@ namespace teqp {
             {"multifluid", [](const nlohmann::json& spec){ return make_multifluid(spec);}},
             {"multifluid-ECS-HuberEly1994", [](const nlohmann::json& spec){ return make_multifluid_ECS_HuberEly1994(spec);}},
             {"multifluid-association", [](const nlohmann::json& spec){ return make_multifluid_association(spec);}},
+            {"multifluid-activity", [](const nlohmann::json& spec){ return make_multifluid_activity(spec);}},
             {"AmmoniaWaterTillnerRoth", [](const nlohmann::json& /*spec*/){ return make_AmmoniaWaterTillnerRoth();}},
             
             {"LJ126_TholJPCRD2016", [](const nlohmann::json& /*spec*/){ return make_LJ126_TholJPCRD2016();}},

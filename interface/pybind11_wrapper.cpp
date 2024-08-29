@@ -17,6 +17,7 @@
 #include "teqp/algorithms/ancillary_builder.hpp"
 #include "teqp/models/multifluid_ecs_mutant.hpp"
 #include "teqp/models/multifluid_association.hpp"
+#include "teqp/models/multifluid/multifluid_activity.hpp"
 #include "teqp/models/saft/genericsaft.hpp"
 #include "teqp/algorithms/phase_equil.hpp"
 
@@ -152,6 +153,7 @@ using CPA_t = decltype(teqp::CPA::CPAfactory(""));
 const std::type_index CPA_i{std::type_index(typeid(CPA_t))};
 const std::type_index genericSAFT_i{std::type_index(typeid(teqp::saft::genericsaft::GenericSAFT))};
 const std::type_index MultiFluidAssociation_i{std::type_index(typeid(MultifluidPlusAssociation))};
+const std::type_index MultiFluidActivity_i{std::type_index(typeid(teqp::multifluid::multifluid_activity::MultifluidPlusActivity))};
 
 /**
  At runtime we can add additional model-specific methods that only apply for a particular model.  We take in a Python-wrapped
@@ -318,6 +320,11 @@ void attach_model_specific_methods(py::object& obj){
         setattr("get_assoc_calcs", MethodType(py::cpp_function([](py::object& o, double T, double rhomolar, REArrayd& molefrac){
             return get_typed<MultifluidPlusAssociation>(o).get_association().get_assoc_calcs(T, rhomolar, molefrac);
         }, "self"_a, "T"_a, "rhomolar"_a, "molefrac"_a), obj));
+    }
+    else if (index == MultiFluidActivity_i){
+        setattr("calc_gER_over_RT", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){
+            return get_typed<teqp::multifluid::multifluid_activity::MultifluidPlusActivity>(o).calc_gER_over_RT(T, molefrac);
+        }, "self"_a, "T"_a, "molefrac"_a), obj));
     }
 };
 
