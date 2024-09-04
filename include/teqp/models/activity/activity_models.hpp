@@ -162,6 +162,7 @@ inline ResidualHelmholtzOverRTVariant ares_model_factory(const nlohmann::json& a
     }
     else if (type == "COSMO-SAC-2010"){
         std::vector<double> A_COSMOSAC_A2 = armodel.at("A_COSMOSAC / A^2");
+        std::vector<double> V_COSMOSAC_A3 = armodel.at("V_COSMOSAC / A^3");
         std::vector<COSMOSAC::FluidSigmaProfiles> profiles;
         for (auto& el : armodel.at("profiles")){
             COSMOSAC::FluidSigmaProfiles prof;
@@ -176,7 +177,7 @@ inline ResidualHelmholtzOverRTVariant ares_model_factory(const nlohmann::json& a
             prof.ot = get_(el.at("ot"));
             profiles.push_back(prof);
         }
-        return COSMOSAC::COSMO3(A_COSMOSAC_A2, profiles);
+        return COSMOSAC::COSMO3(A_COSMOSAC_A2, V_COSMOSAC_A3, profiles);
     }
     else{
         throw teqp::InvalidArgument("bad type of ares model: " + type);

@@ -7,6 +7,21 @@
 
 namespace teqp::multifluid::multifluid_activity {
 
+template<typename M, typename T, typename U>
+concept CallableLnGammaResid = requires(M m, T t, U u) {
+    { m.calc_lngamma_resid(t,u) } -> std::same_as<Eigen::ArrayXd>;
+};
+template<typename M, typename T, typename U>
+concept CallableLnGammaComb = requires(M m, T t, U u) {
+    { m.calc_lngamma_comb(t,u) }  -> std::same_as<Eigen::ArrayXd>;
+};
+
+static_assert(!CallableLnGammaResid<NullResidualHelmholtzOverRT<double>, double, Eigen::ArrayXd>);
+static_assert(!CallableLnGammaComb<NullResidualHelmholtzOverRT<double>, double, Eigen::ArrayXd>);
+
+static_assert(CallableLnGammaComb<COSMOSAC::COSMO3, double, Eigen::ArrayXd>);
+static_assert(CallableLnGammaResid<COSMOSAC::COSMO3, double, Eigen::ArrayXd>);
+
 /**
  Implementing the general approach of:
  Jaeger et al.,
@@ -30,6 +45,28 @@ public:
     /// Calculate the dimensionless value of \f$g_{\rm GE}^{\rm E,R}/RT\f$ from the AC model
     auto calc_gER_over_RT(double T, const Eigen::ArrayXd& molefrac) const {
         return std::visit([T, &molefrac](const auto& mod){return mod(T, molefrac); }, m_activity);
+    }
+    /// Calculate the value of array \f$\ln\gamma^{\rm R}\f$ from the AC model without any of the AD types
+    auto calc_lngamma_resid(const double T, const Eigen::ArrayXd& molefrac) const {
+        return std::visit([T, &molefrac](const auto& mod) -> Eigen::ArrayXd {
+            if constexpr (CallableLnGammaResid<decltype(mod), decltype(T), decltype(molefrac)>){
+                return mod.calc_lngamma_resid(T, molefrac);
+            }
+            else{
+                throw teqp::NotImplementedError("this method is not implemented");
+            }
+        }, m_activity);
+    }
+    /// Calculate the value of array \f$\ln\gamma^{\rm comb}\f$ from the AC model without any of the AD types
+    Eigen::ArrayXd calc_lngamma_comb(const double T, const Eigen::ArrayXd& molefrac) const {
+        return std::visit([T, &molefrac](const auto& mod) -> Eigen::ArrayXd{
+            if constexpr (CallableLnGammaComb<decltype(mod), decltype(T), decltype(molefrac)>){
+                return mod.calc_lngamma_comb(T, molefrac);
+            }
+            else{
+                throw teqp::NotImplementedError("this method is not implemented");
+            }
+        }, m_activity);
     }
     
     template<class VecType>

@@ -36,6 +36,17 @@ struct FluidSigmaProfiles {
     ot; ///< The profile for the "other" segments
 };
 
+struct CombinatorialConstants {
+    double q0 = 79.53, // [A^2]
+        r0 = 66.69, // [A^3]
+        z_coordination = 10.0;
+    std::string to_string() {
+        return "q0: " + std::to_string(q0) + " A^2 \nr0: " + std::to_string(r0) + " A^3\nz_coordination: " + std::to_string(z_coordination);
+    }
+};
+
+
+
 struct COSMO3Constants {
     double
     AEFFPRIME = 7.25, // [A^2]
@@ -60,12 +71,14 @@ enum class profile_type { NHB_PROFILE, OH_PROFILE, OT_PROFILE };
 class COSMO3 {
 private:
     std::vector<double> A_COSMO_A2; ///< The area per fluid, in \AA^2
+    std::vector<double> V_COSMO_A3; ///< The volume per fluid, in \AA^3
     std::vector<FluidSigmaProfiles> profiles; ///< The vector of profiles, one per fluid
     COSMO3Constants m_consts;
+    COSMOSAC::CombinatorialConstants m_comb_consts;
     Eigen::Index ileft, w;
 public:
-    COSMO3(const std::vector<double>& A_COSMO_A2, const std::vector<FluidSigmaProfiles> &SigmaProfiles, const COSMO3Constants &constants = COSMO3Constants())
-    : A_COSMO_A2(A_COSMO_A2), profiles(SigmaProfiles), m_consts(constants) {
+    COSMO3(const std::vector<double>& A_COSMO_A2, const std::vector<double>& V_COSMO_A3, const std::vector<FluidSigmaProfiles> &SigmaProfiles, const COSMO3Constants &constants = COSMO3Constants(), const CombinatorialConstants &comb_constants = CombinatorialConstants())
+    : A_COSMO_A2(A_COSMO_A2), V_COSMO_A3(V_COSMO_A3), profiles(SigmaProfiles), m_consts(constants), m_comb_consts(comb_constants) {
         Eigen::Index iL, iR;
         std::tie(iL, iR) = get_nonzero_bounds();
         this->ileft = iL; this->w = iR - iL + 1;
@@ -316,6 +329,32 @@ public:
             lngamma(i) = get_lngamma_resid(i, T, lnGamma_mix);
         }
         return lngamma;
+    }
+    template<typename TType, typename MoleFracs>
+    auto calc_lngamma_resid(TType T, const MoleFracs& molefracs) const
+    {
+        return get_lngamma_resid(T, molefracs);
+    }
+    
+    /**
+    The combinatorial part of ln(γ_i)
+    */
+    template<typename TType, typename MoleFractions>
+    auto calc_lngamma_comb(const TType& /*T*/, const MoleFractions &x) const {
+        double q0 = m_comb_consts.q0,
+               r0 = m_comb_consts.r0,
+               z_coordination = m_comb_consts.z_coordination;
+        std::decay_t<MoleFractions> q = Eigen::Map<const Eigen::ArrayXd>(&(A_COSMO_A2[0]), A_COSMO_A2.size()) / q0,
+            r = Eigen::Map<const Eigen::ArrayXd>(&(V_COSMO_A3[0]), V_COSMO_A3.size()) / r0,
+            l = z_coordination / 2 * (r - q) - (r - 1),
+            phi_over_x = r / contiguous_dotproduct(x, r),
+            phi = x * phi_over_x,
+            theta_over_x = q / contiguous_dotproduct(x, q),
+            theta = x * theta_over_x,
+            theta_over_phi = theta_over_x/phi_over_x;
+            
+        // Eq. 15 from Bell, JCTC, 2020
+        return ((log(phi_over_x) + z_coordination / 2 * q * log(theta_over_phi) + l - phi_over_x * contiguous_dotproduct(x, l))).eval();
     }
     
     //    EigenArray get_lngamma_disp(const EigenArray &x) const {

@@ -325,6 +325,12 @@ void attach_model_specific_methods(py::object& obj){
         setattr("calc_gER_over_RT", MethodType(py::cpp_function([](py::object& o, double T, REArrayd& molefrac){
             return get_typed<teqp::multifluid::multifluid_activity::MultifluidPlusActivity>(o).calc_gER_over_RT(T, molefrac);
         }, "self"_a, "T"_a, "molefrac"_a), obj));
+        setattr("calc_lngamma_resid", MethodType(py::cpp_function([](py::object& o, double T, EArrayd& molefrac){
+            return get_typed<teqp::multifluid::multifluid_activity::MultifluidPlusActivity>(o).calc_lngamma_resid(T, molefrac);
+        }, "self"_a, "T"_a, "molefrac"_a), obj));
+        setattr("calc_lngamma_comb", MethodType(py::cpp_function([](py::object& o, double T, EArrayd& molefrac) -> EArrayd{
+            return get_typed<teqp::multifluid::multifluid_activity::MultifluidPlusActivity>(o).calc_lngamma_comb(T, molefrac);
+        }, "self"_a, "T"_a, "molefrac"_a), obj));
     }
 };
 
