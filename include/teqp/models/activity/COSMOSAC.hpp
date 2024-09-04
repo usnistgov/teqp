@@ -201,7 +201,7 @@ public:
      */
     template<typename TType, typename PSigmaType>
     auto get_Gamma(const TType& T, PSigmaType psigmas) const {
-        auto startTime = std::chrono::high_resolution_clock::now();
+        //auto startTime = std::chrono::high_resolution_clock::now();
         
         using TXType = std::decay_t<std::common_type_t<TType, decltype(psigmas[0])>>;
         
@@ -248,7 +248,7 @@ public:
             // ----------------
             
             // Build the massive AA matrix that is 153*153 in size
-            auto midTime = std::chrono::high_resolution_clock::now();
+            //auto midTime = std::chrono::high_resolution_clock::now();
             std::vector<profile_type> types = { profile_type::NHB_PROFILE, profile_type::OH_PROFILE, profile_type::OT_PROFILE };
             std::vector<Eigen::Index> offsets = {0*51, 1*51, 2*51};
             Eigen::ArrayXX<TXType> AA(153, 153);
@@ -258,7 +258,7 @@ public:
                     AA.matrix().block(rowoffset + ileft, coloffset + ileft, w, w) = Eigen::exp(-get_DELTAW_fast(T, types[i], types[j]).block(ileft, ileft, w, w).array() / (R*T)).template cast<TXType>().rowwise()*psigmas.template cast<TXType>().segment(coloffset+ileft,w).transpose();
                 }
             }
-            auto midTime2 = std::chrono::high_resolution_clock::now();
+            //auto midTime2 = std::chrono::high_resolution_clock::now();
             
             for (auto counter = 0; counter <= max_iter; ++counter) {
                 for (Eigen::Index offset : {51*0, 51*1, 51*2}){
@@ -284,7 +284,7 @@ public:
                                                 + to_scientific(maxdiff));
                 }
             }
-            auto endTime = std::chrono::high_resolution_clock::now();
+            //auto endTime = std::chrono::high_resolution_clock::now();
             //std::cout << std::chrono::duration<double>(midTime - startTime).count() << " s elapsed (DELTAW)\n";
             //std::cout << std::chrono::duration<double>(midTime2 - midTime).count() << " s elapsed (AA)\n";
             //std::cout << std::chrono::duration<double>(endTime - midTime2).count() << " s elapsed (comps)\n";
