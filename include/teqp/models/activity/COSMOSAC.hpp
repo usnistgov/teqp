@@ -59,7 +59,7 @@ struct COSMO3Constants {
     k_B = 1.38064903e-23, // [J K^{-1}]
     R = k_B*N_A/4184, // [kcal/(mol*K)]; Universal gas constant of new redefinition of 2018, https://doi.org/10.1088/1681-7575/aa99bc
     Gamma_rel_tol = 1e-8; // relative tolerance for Gamma in iterative loop
-    bool fast_Gamma = false;
+    bool fast_Gamma = true;
     std::string to_string() {
         return "NOT IMPLEMENTED YET";
         //return "c_hb: " + std::to_string(c_hb) + " kcal A^4 /(mol*e^2) \nsigma_hb: " + std::to_string(sigma_hb) + " e/A^2\nalpha_prime: " + std::to_string(alpha_prime) + " kcal A^4 /(mol*e^2)\nAEFFPRIME: " + std::to_string(AEFFPRIME) + " A\nR: " + std::to_string(R) + " kcal/(mol*K)";
@@ -211,7 +211,7 @@ public:
         // A convenience function to convert double values to string in scientific format
         auto to_scientific = [](double val) { std::ostringstream out; out << std::scientific << val; return out.str(); };
         
-        auto max_iter = 2000;
+        auto max_iter = 500;
         if (!m_consts.fast_Gamma){
             // The slow and simple branch
             
@@ -275,6 +275,9 @@ public:
                 if (maxdiff < m_consts.Gamma_rel_tol) {
                     break;
                 }
+                if (!std::isfinite(maxdiff)){
+                    throw teqp::InvalidArgument("Gammas are not finite");
+                }
                 if (counter == max_iter){
                     throw std::invalid_argument("Could not obtain the desired tolerance of "
                                                 + to_scientific(m_consts.Gamma_rel_tol)
@@ -307,6 +310,7 @@ public:
         auto lnGammai = get_Gamma(T, psigmas).log().eval();
         return A_i/AEFFPRIME*(psigmas*(lnGamma_mix - lnGammai)).sum();
     }
+    
     /**
      This overload is a convenience overload, less computationally
      efficient, but simpler to use and more in keeping with the other
