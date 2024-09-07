@@ -39,7 +39,7 @@ public:
     MultifluidPlusActivity(const nlohmann::json &spec) :
         m_multifluid(multifluidfactory(spec.at("multifluid"))),
         m_activity(ares_model_factory(spec.at("activity").at("aresmodel"))),
-        b(spec.at("activity").at("options").at("b")),
+        b(spec.at("activity").at("options").at("b").get<std::vector<double>>()),
         u(spec.at("activity").at("options").at("u")){}
     
     /// Calculate the dimensionless value of \f$g_{\rm GE}^{\rm E,R}/RT\f$ from the AC model
