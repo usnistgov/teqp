@@ -177,7 +177,16 @@ inline ResidualHelmholtzOverRTVariant ares_model_factory(const nlohmann::json& a
             prof.ot = get_(el.at("ot"));
             profiles.push_back(prof);
         }
-        return COSMOSAC::COSMO3(A_COSMOSAC_A2, V_COSMOSAC_A3, profiles);
+        COSMOSAC::COSMO3Constants constants;
+        if (armodel.contains("constants")){
+            const auto &jconstants = armodel.at("constants");
+            constants.A_ES = jconstants.value("A_ES / kcal A^4 /(mol e^2)", constants.A_ES);
+            constants.B_ES = jconstants.value("B_ES / kcal A^4 K^2/(mol e^2)", constants.B_ES);
+            constants.fast_Gamma = jconstants.value("fast_Gamma", constants.fast_Gamma);
+        }
+        std::cout << constants.A_ES << std::endl;
+        std::cout << constants.B_ES << std::endl;
+        return COSMOSAC::COSMO3(A_COSMOSAC_A2, V_COSMOSAC_A3, profiles, constants);
     }
     else{
         throw teqp::InvalidArgument("bad type of ares model: " + type);
