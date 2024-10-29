@@ -45,6 +45,24 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.22.0:
+
+  * Features:
+
+    * Addition of generalized multiphase equilibria routinews
+    * Add the capability to combine AC models and the multifluid model as proposed in the works of A. Jaeger
+
+  * Issues closed:
+
+    * [#142](https://github.com/usnistgov/teqp/issues/142) : Ph for known to be two-phase mixtures
+    * [#148](https://github.com/usnistgov/teqp/issues/148) : Bubble/Dew point calculation for mixtures of three or more components
+    * [#149](https://github.com/usnistgov/teqp/issues/149) : Multifluid + assoc implementation
+
+  * Pull requests merged:
+
+    * [#154](https://github.com/usnistgov/teqp/pull/154) : Generalized multiphase equilibrium
+    * [#155](https://github.com/usnistgov/teqp/pull/155) : Add combination of multifluid and AC models (Wilson, COSMO-SAC)
+
 * 0.21.0:
 
   * Features:
