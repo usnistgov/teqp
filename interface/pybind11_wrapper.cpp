@@ -336,7 +336,7 @@ void attach_model_specific_methods(py::object& obj){
 
 /// Instantiate "instances" of models (really wrapped Python versions of the models), and then attach all derivative methods
 void init_teqp(py::module& m) {
-
+    
     // The options class for critical tracer, not tied to a particular model
     py::class_<TCABOptions>(m, "TCABOptions")
         .def(py::init<>())
@@ -358,8 +358,8 @@ void init_teqp(py::module& m) {
         .def_readwrite("polish_reltol_T", &TCABOptions::polish_reltol_T)
         .def_readwrite("pure_endpoint_polish", &TCABOptions::pure_endpoint_polish)
         .def_readwrite("polish_exception_on_fail", &TCABOptions::polish_exception_on_fail)
-        ;
-
+    ;
+    
     // The options class for isotherm tracer, not tied to a particular model
     py::class_<TVLEOptions>(m, "TVLEOptions")
         .def(py::init<>())
@@ -378,8 +378,8 @@ void init_teqp(py::module& m) {
         .def_readwrite("verbosity", &TVLEOptions::verbosity)
         .def_readwrite("calc_criticality", &TVLEOptions::calc_criticality)
         .def_readwrite("terminate_unstable", &TVLEOptions::terminate_unstable)
-        ;
-
+    ;
+    
     // The options class for isobar tracer, not tied to a particular model
     py::class_<PVLEOptions>(m, "PVLEOptions")
         .def(py::init<>())
@@ -397,14 +397,14 @@ void init_teqp(py::module& m) {
         .def_readwrite("verbosity", &PVLEOptions::verbosity)
         .def_readwrite("calc_criticality", &PVLEOptions::calc_criticality)
         .def_readwrite("terminate_unstable", &PVLEOptions::terminate_unstable)
-        ;
-
+    ;
+    
     // The options class for the finder of VLLE solutions from VLE tracing, not tied to a particular model
     py::class_<VLLE::VLLEFinderOptions>(m, "VLLEFinderOptions")
         .def(py::init<>())
         .def_readwrite("max_steps", &VLLE::VLLEFinderOptions::max_steps)
         .def_readwrite("rho_trivial_threshold", &VLLE::VLLEFinderOptions::rho_trivial_threshold)
-        ;
+    ;
     
     // The options class for the finder of VLLE solutions from VLE tracing, not tied to a particular model
     py::class_<VLLE::VLLETracerOptions>(m, "VLLETracerOptions")
@@ -421,8 +421,8 @@ void init_teqp(py::module& m) {
         .def_readwrite("terminate_composition_tol", &VLLE::VLLETracerOptions::terminate_composition_tol)
         .def_readwrite("T_limit", &VLLE::VLLETracerOptions::T_limit)
         .def_readwrite("max_step_retries", &VLLE::VLLETracerOptions::max_step_retries)
-        ;
-
+    ;
+    
     py::class_<MixVLETpFlags>(m, "MixVLETpFlags")
         .def(py::init<>())
         .def_readwrite("atol", &MixVLETpFlags::atol)
@@ -430,8 +430,8 @@ void init_teqp(py::module& m) {
         .def_readwrite("axtol", &MixVLETpFlags::axtol)
         .def_readwrite("relxtol", &MixVLETpFlags::relxtol)
         .def_readwrite("maxiter", &MixVLETpFlags::maxiter)
-        ;
-
+    ;
+    
     py::class_<MixVLEpxFlags>(m, "MixVLEpxFlags")
         .def(py::init<>())
         .def_readwrite("atol", &MixVLEpxFlags::atol)
@@ -439,7 +439,7 @@ void init_teqp(py::module& m) {
         .def_readwrite("axtol", &MixVLEpxFlags::axtol)
         .def_readwrite("relxtol", &MixVLEpxFlags::relxtol)
         .def_readwrite("maxiter", &MixVLEpxFlags::maxiter)
-        ;
+    ;
     
     using namespace teqp::cppinterface;
     // The Jacobian and value matrices for Newton-Raphson
@@ -448,8 +448,8 @@ void init_teqp(py::module& m) {
         .def_readonly("J", &IterationMatrices::J)
         .def_readonly("v", &IterationMatrices::v)
         .def_readonly("vars", &IterationMatrices::vars)
-        ;
-
+    ;
+    
     py::enum_<VLE_return_code>(m, "VLE_return_code")
         .value("unset", VLE_return_code::unset)
         .value("xtol_satisfied", VLE_return_code::xtol_satisfied)
@@ -457,8 +457,8 @@ void init_teqp(py::module& m) {
         .value("maxiter_met", VLE_return_code::maxiter_met)
         .value("maxfev_met", VLE_return_code::maxfev_met)
         .value("notfinite_step", VLE_return_code::notfinite_step)
-        ;
-
+    ;
+    
     py::class_<MixVLEReturn>(m, "MixVLEReturn")
         .def(py::init<>())
         .def_readonly("success", &MixVLEReturn::success)
@@ -471,24 +471,24 @@ void init_teqp(py::module& m) {
         .def_readonly("num_fev", &MixVLEReturn::num_fev)
         .def_readonly("r", &MixVLEReturn::r)
         .def_readonly("initial_r", &MixVLEReturn::initial_r)
-        ;
+    ;
     
     using namespace teqp::PCSAFT;
     py::class_<SAFTCoeffs>(m, "SAFTCoeffs")
-    .def(py::init<>())
-    .def_readwrite("name", &SAFTCoeffs::name)
-    .def_readwrite("m", &SAFTCoeffs::m)
-    .def_readwrite("sigma_Angstrom", &SAFTCoeffs::sigma_Angstrom)
-    .def_readwrite("epsilon_over_k", &SAFTCoeffs::epsilon_over_k)
-    .def_readwrite("BibTeXKey", &SAFTCoeffs::BibTeXKey)
-    .def_readwrite("mustar2", &SAFTCoeffs::mustar2)
-    .def_readwrite("nmu", &SAFTCoeffs::nmu)
-    .def_readwrite("Qstar2", &SAFTCoeffs::Qstar2)
-    .def_readwrite("nQ", &SAFTCoeffs::nQ)
+        .def(py::init<>())
+        .def_readwrite("name", &SAFTCoeffs::name)
+        .def_readwrite("m", &SAFTCoeffs::m)
+        .def_readwrite("sigma_Angstrom", &SAFTCoeffs::sigma_Angstrom)
+        .def_readwrite("epsilon_over_k", &SAFTCoeffs::epsilon_over_k)
+        .def_readwrite("BibTeXKey", &SAFTCoeffs::BibTeXKey)
+        .def_readwrite("mustar2", &SAFTCoeffs::mustar2)
+        .def_readwrite("nmu", &SAFTCoeffs::nmu)
+        .def_readwrite("Qstar2", &SAFTCoeffs::Qstar2)
+        .def_readwrite("nQ", &SAFTCoeffs::nQ)
     ;
-
+    
     m.def("convert_CoolProp_idealgas", [](const std::string &path, int index){return convert_CoolProp_idealgas(path, index);});
-
+    
     add_multifluid(m);
     add_multifluid_mutant(m);
     add_multifluid_ecs_mutant(m);
@@ -511,21 +511,21 @@ void init_teqp(py::module& m) {
         .def("get_AtaudeltaXiXjXk", &am::get_AtaudeltaXiXjXk, "tau"_a, "Ntau"_a, "delta"_a, "Ndelta"_a, "molefrac"_a.noconvert(), "i"_a, "NXi"_a, "j"_a, "NXj"_a, "k"_a, "NXk"_a)
     
         .def("get_Arxy", &am::get_Arxy, "NT"_a, "ND"_a, "T"_a, "rho"_a, "molefrac"_a.noconvert())
-        // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
-        #define X(i,j) .def(stringify(get_Ar ## i ## j), &am::get_Ar ## i ## j, "T"_a, "rho"_a, "molefrac"_a.noconvert())
-            ARXY_args
-        #undef X
-        // And like get_Ar01n, get_Ar02n, ....
-        #define X(i) .def(stringify(get_Ar0 ## i ## n), &am::get_Ar0 ## i ## n, "T"_a, "rho"_a, "molefrac"_a.noconvert())
-            AR0N_args
-        #undef X
-        // And like get_Ar10n, get_Ar20n, ....
-        #define X(i) .def(stringify(get_Ar ## i ## 0n), &am::get_Ar ## i ## 0n, "T"_a, "rho"_a, "molefrac"_a.noconvert())
-            ARN0_args
-        #undef X
+    // Here X-Macros are used to create functions like get_Ar00, get_Ar01, ....
+#define X(i,j) .def(stringify(get_Ar ## i ## j), &am::get_Ar ## i ## j, "T"_a, "rho"_a, "molefrac"_a.noconvert())
+    ARXY_args
+#undef X
+    // And like get_Ar01n, get_Ar02n, ....
+#define X(i) .def(stringify(get_Ar0 ## i ## n), &am::get_Ar0 ## i ## n, "T"_a, "rho"_a, "molefrac"_a.noconvert())
+    AR0N_args
+#undef X
+    // And like get_Ar10n, get_Ar20n, ....
+#define X(i) .def(stringify(get_Ar ## i ## 0n), &am::get_Ar ## i ## 0n, "T"_a, "rho"_a, "molefrac"_a.noconvert())
+    ARN0_args
+#undef X
         .def("get_neff", &am::get_neff, "T"_a, "rho"_a, "molefrac"_a.noconvert())
     
-        // Methods that come from the isochoric derivatives formalism
+    // Methods that come from the isochoric derivatives formalism
         .def("get_pr", &am::get_pr, "T"_a, "rhovec"_a.noconvert())
         .def("get_splus", &am::get_splus, "T"_a, "rhovec"_a.noconvert())
         .def("build_Psir_Hessian_autodiff", &am::build_Psir_Hessian_autodiff, "T"_a, "rhovec"_a.noconvert())
@@ -539,22 +539,22 @@ void init_teqp(py::module& m) {
     
         .def("get_deriv_mat2", &am::get_deriv_mat2, "T"_a, "rho"_a, "molefrac"_a.noconvert())
     
-        // Routines related to pure fluid critical point calculation
+    // Routines related to pure fluid critical point calculation
         .def("get_pure_critical_conditions_Jacobian", &am::get_pure_critical_conditions_Jacobian, "T"_a, "rho"_a, py::arg_v("alternative_pure_index", std::nullopt, "None"), py::arg_v("alternative_length", std::nullopt, "None"))
         .def("solve_pure_critical", &am::solve_pure_critical, "T"_a, "rho"_a, py::arg_v("flags", std::nullopt, "None"))
         .def("extrapolate_from_critical", &am::extrapolate_from_critical, "Tc"_a, "rhoc"_a, "T"_a, py::arg_v("molefrac", std::nullopt, "None"))
     
-        // Routines related to binary mixture critical curve tracing
+    // Routines related to binary mixture critical curve tracing
         .def("trace_critical_arclength_binary", &am::trace_critical_arclength_binary, "T0"_a, "rhovec0"_a, py::arg_v("path", std::nullopt, "None"), py::arg_v("options", std::nullopt, "None"))
         .def("get_criticality_conditions", &am::get_criticality_conditions, "T"_a, "rhovec"_a.noconvert())
         .def("eigen_problem", &am::eigen_problem, "T"_a, "rhovec"_a, py::arg_v("alignment_v0", std::nullopt, "None"))
         .def("get_minimum_eigenvalue_Psi_Hessian", &am::get_minimum_eigenvalue_Psi_Hessian, "T"_a, "rhovec"_a.noconvert())
         .def("get_drhovec_dT_crit", &am::get_drhovec_dT_crit, "T"_a, "rhovec"_a.noconvert())
         .def("get_dp_dT_crit", &am::get_dp_dT_crit, "T"_a, "rhovec"_a.noconvert())
-
+    
         .def("pure_VLE_T", &am::pure_VLE_T, "T"_a, "rhoL"_a, "rhoV"_a, "max_iter"_a, py::arg_v("molefrac", std::nullopt, "None"))
         .def("dpsatdT_pure", &am::dpsatdT_pure, "T"_a, "rhoL"_a, "rhoV"_a)
-
+    
         .def("get_drhovecdp_Tsat", &am::get_drhovecdp_Tsat, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
         .def("get_drhovecdT_psat", &am::get_drhovecdT_psat, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
         .def("get_dpsat_dTsat_isopleth", &am::get_dpsat_dTsat_isopleth, "T"_a, "rhovecL"_a.noconvert(), "rhovecV"_a.noconvert())
@@ -579,106 +579,120 @@ void init_teqp(py::module& m) {
     m.def("convert_HMXBNC", [](const std::string& path){ return RPinterop::HMXBNCfile(path).make_jsons(); }, "path"_a);
     
     {
-    using namespace teqp::algorithms::phase_equil;
-    auto m_phaseequil = m.def_submodule("phaseequil", "Routines for phase equilibrium");
-    
-    // Specification options
-    py::class_<AbstractSpecification, std::shared_ptr<AbstractSpecification>>(m_phaseequil, "AbstractSpecification");
-    py::class_<TSpecification, AbstractSpecification, std::shared_ptr<TSpecification>>(m_phaseequil, "TSpecification").def(py::init<double>());
-    py::class_<PSpecification, AbstractSpecification, std::shared_ptr<PSpecification>>(m_phaseequil, "PSpecification").def(py::init<double>());
-    py::class_<BetaSpecification, AbstractSpecification, std::shared_ptr<BetaSpecification>>(m_phaseequil, "BetaSpecification").def(py::init<double, std::size_t>());
-    py::class_<MolarVolumeSpecification, AbstractSpecification, std::shared_ptr<MolarVolumeSpecification>>(m_phaseequil, "MolarVolumeSpecification").def(py::init<double>());
-    py::class_<MolarEntropySpecification, AbstractSpecification, std::shared_ptr<MolarEntropySpecification>>(m_phaseequil, "MolarEntropySpecification").def(py::init<double>());
-    py::class_<MolarEnthalpySpecification, AbstractSpecification, std::shared_ptr<MolarEnthalpySpecification>>(m_phaseequil, "MolarEnthalpySpecification").def(py::init<double>());
-    py::class_<MolarInternalEnergySpecification, AbstractSpecification, std::shared_ptr<MolarInternalEnergySpecification>>(m_phaseequil, "MolarInternalEnergySpecification").def(py::init<double>());
+        using namespace teqp::algorithms::phase_equil;
+        auto m_phaseequil = m.def_submodule("phaseequil", "Routines for phase equilibrium");
         
-    using CallResult = GeneralizedPhaseEquilibrium::CallResult;
-    py::class_<CallResult>(m_phaseequil, "CallResult")
-        .def_readonly("r", &CallResult::r, "r")
-        .def_readonly("J", &CallResult::J, "J")
+        // Specification options
+        py::class_<AbstractSpecification, std::shared_ptr<AbstractSpecification>>(m_phaseequil, "AbstractSpecification");
+        py::class_<TSpecification, AbstractSpecification, std::shared_ptr<TSpecification>>(m_phaseequil, "TSpecification").def(py::init<double>());
+        py::class_<PSpecification, AbstractSpecification, std::shared_ptr<PSpecification>>(m_phaseequil, "PSpecification").def(py::init<double>());
+        py::class_<BetaSpecification, AbstractSpecification, std::shared_ptr<BetaSpecification>>(m_phaseequil, "BetaSpecification").def(py::init<double, std::size_t>());
+        py::class_<MolarVolumeSpecification, AbstractSpecification, std::shared_ptr<MolarVolumeSpecification>>(m_phaseequil, "MolarVolumeSpecification").def(py::init<double>());
+        py::class_<MolarEntropySpecification, AbstractSpecification, std::shared_ptr<MolarEntropySpecification>>(m_phaseequil, "MolarEntropySpecification").def(py::init<double>());
+        py::class_<MolarEnthalpySpecification, AbstractSpecification, std::shared_ptr<MolarEnthalpySpecification>>(m_phaseequil, "MolarEnthalpySpecification").def(py::init<double>());
+        py::class_<MolarInternalEnergySpecification, AbstractSpecification, std::shared_ptr<MolarInternalEnergySpecification>>(m_phaseequil, "MolarInternalEnergySpecification").def(py::init<double>());
+        
+        using CallResult = GeneralizedPhaseEquilibrium::CallResult;
+        py::class_<CallResult>(m_phaseequil, "CallResult")
+            .def_readonly("r", &CallResult::r, "r")
+            .def_readonly("J", &CallResult::J, "J")
         ;
-    
-    using UnpackedVariables = GeneralizedPhaseEquilibrium::UnpackedVariables;
-    py::class_<UnpackedVariables>(m_phaseequil, "UnpackedVariables")
-        .def(py::init<const double, const std::vector<Eigen::ArrayXd>&, const Eigen::ArrayXd&>())
-        .def_readonly("T", &UnpackedVariables::T, "Temperature")
-        .def_readonly("rhovecs", &UnpackedVariables::rhovecs, "Vectors of molar concentrations for each phase")
-        .def_readonly("betas", &UnpackedVariables::betas, "Vector of molar phase fractions for each phase")
-        .def("pack", &UnpackedVariables::pack, "Convenience function to generate the array of independent variables")
-    ;
-    
-    py::class_<GeneralizedPhaseEquilibrium>(m_phaseequil, "GeneralizedPhaseEquilibrium")
-        .def(py::init<const AbstractModel&, const Eigen::ArrayXd&, const UnpackedVariables&, const std::vector<std::shared_ptr<AbstractSpecification>>&>())
-        .def("call", &GeneralizedPhaseEquilibrium::call, "Call the function to build the residuals and Jacobian matrix", "x"_a)
-        .def("num_Jacobian", &GeneralizedPhaseEquilibrium::num_Jacobian, "A testing function to build the Jacobian with centered differences")
-        .def_readonly("res", &GeneralizedPhaseEquilibrium::res, "The data structure containing r and J")
-    ;
+        
+        using UnpackedVariables = GeneralizedPhaseEquilibrium::UnpackedVariables;
+        py::class_<UnpackedVariables>(m_phaseequil, "UnpackedVariables")
+            .def(py::init<const double, const std::vector<Eigen::ArrayXd>&, const Eigen::ArrayXd&>())
+            .def_readonly("T", &UnpackedVariables::T, "Temperature")
+            .def_readonly("rhovecs", &UnpackedVariables::rhovecs, "Vectors of molar concentrations for each phase")
+            .def_readonly("betas", &UnpackedVariables::betas, "Vector of molar phase fractions for each phase")
+            .def("pack", &UnpackedVariables::pack, "Convenience function to generate the array of independent variables")
+        ;
+        
+        py::class_<GeneralizedPhaseEquilibrium>(m_phaseequil, "GeneralizedPhaseEquilibrium")
+            .def(py::init<const AbstractModel&, const Eigen::ArrayXd&, const UnpackedVariables&, const std::vector<std::shared_ptr<AbstractSpecification>>&>())
+            .def("call", &GeneralizedPhaseEquilibrium::call, "Call the function to build the residuals and Jacobian matrix", "x"_a)
+            .def("num_Jacobian", &GeneralizedPhaseEquilibrium::num_Jacobian, "A testing function to build the Jacobian with centered differences")
+            .def_readonly("res", &GeneralizedPhaseEquilibrium::res, "The data structure containing r and J")
+        ;
     }
     
     using namespace teqp::iteration;
     py::class_<NRIterator>(m, "NRIterator")
         .def(py::init<const AlphaModel&, const std::vector<char>&, const Eigen::ArrayXd&, double, double, const Eigen::Ref<const Eigen::ArrayXd>&, const std::tuple<bool, bool>&, const std::vector<std::shared_ptr<StoppingCondition>>>())
         .def("calc_step", &NRIterator::calc_step)
-//        .def("take_step", &NRIterator::take_step)
-//        .def("take_step_getmaxabsr", &NRIterator::take_step_getmaxabsr)
+    //        .def("take_step", &NRIterator::take_step)
+    //        .def("take_step_getmaxabsr", &NRIterator::take_step_getmaxabsr)
         .def("take_steps", &NRIterator::take_steps)
         .def("get_vars", &NRIterator::get_vars)
         .def("get_vals", &NRIterator::get_vals)
         .def("get_molefrac", &NRIterator::get_molefrac)
         .def("get_T", &NRIterator::get_T)
         .def("get_rho", &NRIterator::get_rho)
+    ;
+    auto add_paramoptimizermodule = [](auto & m)
+    {
+        
+        
+        py::class_<SatRhoLPoint>(m, "SatRhoLPoint")
+            .def(py::init<>())
+            .def_readwrite("T", &SatRhoLPoint::T)
+            .def_readwrite("rhoL_exp", &SatRhoLPoint::rhoL_exp)
+            .def_readwrite("rhoL_guess", &SatRhoLPoint::rhoL_guess)
+            .def_readwrite("rhoV_guess", &SatRhoLPoint::rhoV_guess)
+            .def_readwrite("weight", &SatRhoLPoint::weight)
         ;
-    
-    py::class_<SatRhoLPoint>(m, "SatRhoLPoint")
-        .def(py::init<>())
-        .def_readwrite("T", &SatRhoLPoint::T)
-        .def_readwrite("rhoL_exp", &SatRhoLPoint::rhoL_exp)
-        .def_readwrite("rhoL_guess", &SatRhoLPoint::rhoL_guess)
-        .def_readwrite("rhoV_guess", &SatRhoLPoint::rhoV_guess)
-        .def_readwrite("weight", &SatRhoLPoint::weight)
-    ;
-    py::class_<SatRhoLPPoint>(m, "SatRhoLPPoint")
-        .def(py::init<>())
-        .def_readwrite("T", &SatRhoLPPoint::T)
-        .def_readwrite("rhoL_exp", &SatRhoLPPoint::rhoL_exp)
-        .def_readwrite("p_exp", &SatRhoLPPoint::p_exp)
-        .def_readwrite("rhoL_guess", &SatRhoLPPoint::rhoL_guess)
-        .def_readwrite("rhoV_guess", &SatRhoLPPoint::rhoV_guess)
-        .def_readwrite("weight_rho", &SatRhoLPPoint::weight_rho)
-        .def_readwrite("weight_p", &SatRhoLPPoint::weight_p)
-        .def_readwrite("R", &SatRhoLPPoint::R)
-    ;
-    py::class_<SatRhoLPWPoint>(m, "SatRhoLPWPoint")
-        .def(py::init<>())
-        .def_readwrite("T", &SatRhoLPWPoint::T)
-        .def_readwrite("rhoL_exp", &SatRhoLPWPoint::rhoL_exp)
-        .def_readwrite("p_exp", &SatRhoLPWPoint::p_exp)
-        .def_readwrite("w_exp", &SatRhoLPWPoint::w_exp)
-        .def_readwrite("R", &SatRhoLPWPoint::R)
-        .def_readwrite("Ao20", &SatRhoLPWPoint::Ao20)
-        .def_readwrite("M", &SatRhoLPWPoint::M)
-        .def_readwrite("rhoL_guess", &SatRhoLPWPoint::rhoL_guess)
-        .def_readwrite("rhoV_guess", &SatRhoLPWPoint::rhoV_guess)
-        .def_readwrite("weight_rho", &SatRhoLPWPoint::weight_rho)
-        .def_readwrite("weight_p", &SatRhoLPWPoint::weight_p)
-        .def_readwrite("weight_w", &SatRhoLPWPoint::weight_w)
-    ;
-    py::class_<SOSPoint>(m, "SOSPoint")
-        .def(py::init<>())
-        .def_readwrite("weight_w", &SOSPoint::weight_w)
-#define X(field) .def_readwrite(stringify(field), &SOSPoint::field)
-SOSPoint_fields
-#undef X
-    ;
-    
-    py::class_<PureParameterOptimizer>(m, "PureParameterOptimizer")
-        .def(py::init<const nlohmann::json&, const std::vector<std::variant<std::string, std::vector<std::string>>>&>())
-        .def_readonly("contributions", &PureParameterOptimizer::contributions, py::return_value_policy::copy)
-        .def("cost_function", &PureParameterOptimizer::cost_function<Eigen::ArrayXd>)
-        .def("cost_function_threaded", &PureParameterOptimizer::cost_function_threaded<Eigen::ArrayXd>)
-        .def("build_JSON", &PureParameterOptimizer::build_JSON<Eigen::ArrayXd>)
-        .def("add_one_contribution", &PureParameterOptimizer::add_one_contribution)
+        py::class_<SatRhoLPPoint>(m, "SatRhoLPPoint")
+            .def(py::init<>())
+            .def_readwrite("T", &SatRhoLPPoint::T)
+            .def_readwrite("rhoL_exp", &SatRhoLPPoint::rhoL_exp)
+            .def_readwrite("p_exp", &SatRhoLPPoint::p_exp)
+            .def_readwrite("rhoL_guess", &SatRhoLPPoint::rhoL_guess)
+            .def_readwrite("rhoV_guess", &SatRhoLPPoint::rhoV_guess)
+            .def_readwrite("weight_rho", &SatRhoLPPoint::weight_rho)
+            .def_readwrite("weight_p", &SatRhoLPPoint::weight_p)
+            .def_readwrite("R", &SatRhoLPPoint::R)
         ;
+        py::class_<SatRhoLPWPoint>(m, "SatRhoLPWPoint")
+            .def(py::init<>())
+            .def_readwrite("T", &SatRhoLPWPoint::T)
+            .def_readwrite("rhoL_exp", &SatRhoLPWPoint::rhoL_exp)
+            .def_readwrite("p_exp", &SatRhoLPWPoint::p_exp)
+            .def_readwrite("w_exp", &SatRhoLPWPoint::w_exp)
+            .def_readwrite("R", &SatRhoLPWPoint::R)
+            .def_readwrite("Ao20", &SatRhoLPWPoint::Ao20)
+            .def_readwrite("M", &SatRhoLPWPoint::M)
+            .def_readwrite("rhoL_guess", &SatRhoLPWPoint::rhoL_guess)
+            .def_readwrite("rhoV_guess", &SatRhoLPWPoint::rhoV_guess)
+            .def_readwrite("weight_rho", &SatRhoLPWPoint::weight_rho)
+            .def_readwrite("weight_p", &SatRhoLPWPoint::weight_p)
+            .def_readwrite("weight_w", &SatRhoLPWPoint::weight_w)
+        ;
+        py::class_<PVTNoniterativePoint>(m, "PVTNoniterativePoint")
+            .def(py::init<>())
+            .def_readwrite("T", &PVTNoniterativePoint::T)
+            .def_readwrite("rho_exp", &PVTNoniterativePoint::rho_exp)
+            .def_readwrite("p_exp", &PVTNoniterativePoint::p_exp)
+            .def_readwrite("weight", &PVTNoniterativePoint::weight)
+            .def_readwrite("R", &PVTNoniterativePoint::R)
+        ;
+        py::class_<SOSPoint>(m, "SOSPoint")
+            .def(py::init<>())
+            .def_readwrite("weight_w", &SOSPoint::weight_w)
+    #define X(field) .def_readwrite(stringify(field), &SOSPoint::field)
+        SOSPoint_fields
+    #undef X
+        ;
+        
+        py::class_<PureParameterOptimizer>(m, "PureParameterOptimizer")
+            .def(py::init<const nlohmann::json&, const std::vector<std::variant<std::string, std::vector<std::string>>>&>())
+            .def_readonly("contributions", &PureParameterOptimizer::contributions, py::return_value_policy::copy)
+            .def("cost_function", &PureParameterOptimizer::cost_function<Eigen::ArrayXd>)
+            .def("cost_function_threaded", &PureParameterOptimizer::cost_function_threaded<Eigen::ArrayXd>)
+            .def("build_JSON", &PureParameterOptimizer::build_JSON<Eigen::ArrayXd>)
+            .def("add_one_contribution", &PureParameterOptimizer::add_one_contribution)
+        ;
+    };
+    auto m_paramopt = m.def_submodule("paramopt", "Tools for doing parameter optimization");
+    add_paramoptimizermodule(m_paramopt);
     
 //    // Some functions for timing overhead of interface
 //    m.def("___mysummer", [](const double &c, const Eigen::ArrayXd &x) { return c*x.sum(); });

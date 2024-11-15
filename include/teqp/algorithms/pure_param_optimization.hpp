@@ -25,6 +25,31 @@ struct SatRhoLPoint{
 
 #define stdstringify(s) std::string(#s)
 
+#define PVTNoniterativePoint_optionalfields X(T) X(rho_exp) X(p_exp)
+struct PVTNoniterativePoint{
+    #define X(field) std::optional<double> field;
+    PVTNoniterativePoint_optionalfields
+    #undef X
+    double weight=1.0, R=8.31446261815324;
+    Eigen::ArrayXd z = (Eigen::ArrayXd(1) << 1.0).finished();
+    
+    auto check_fields() const{
+        #define X(field) if (!field){ throw teqp::InvalidArgument("A field [" + stdstringify(field) + "] has not been initialized"); }
+        PVTNoniterativePoint_optionalfields
+        #undef X
+    }
+    
+    template<typename Model>
+    auto calculate_contribution(const Model& model) const{
+        // See for instance Eq. 17 in https://doi.org/10.1063/5.0086060
+        double T_ = T.value(), rho_ = rho_exp.value();
+        auto Ar0n = model->get_Ar02n(T_, rho_, z);
+        auto p = rho_*R*T_*(1+Ar0n[1]);
+        auto dpdrho = R*T_*(1 + 2*Ar0n[1] + Ar0n[2]);
+        return std::abs((p-p_exp.value())/rho_exp.value()/dpdrho)*weight;
+    }
+};
+
 #define SatRhoLPPoint_optionalfields X(T) X(p_exp) X(rhoL_exp) X(rhoL_guess) X(rhoV_guess)
 struct SatRhoLPPoint{
     #define X(field) std::optional<double> field;
@@ -150,7 +175,7 @@ struct SOSPoint{
     }
 };
 
-using PureOptimizationContribution = std::variant<SatRhoLPoint, SatRhoLPPoint, SatRhoLPWPoint, SOSPoint>;
+using PureOptimizationContribution = std::variant<SatRhoLPoint, SatRhoLPPoint, SatRhoLPWPoint, SOSPoint, PVTNoniterativePoint>;
 
 class PureParameterOptimizer{
 private:
