@@ -304,7 +304,7 @@ inline auto CPAfactory(const nlohmann::json &j){
         std::valarray<double> a0i(N), bi(N), c1(N), Tc(N);
         std::vector<std::vector<double>> kmat;
         if (j.contains("kmat")){
-            kmat = j.at("kmat");
+            kmat = j.at("kmat").template get<std::vector<std::vector<double>>>();
             std::string kmaterr = "The kmat is the wrong size. It should be square with dimension " + std::to_string(N);
             if (kmat.size() != N){
                 throw teqp::InvalidArgument(kmaterr);
@@ -377,7 +377,7 @@ inline auto CPAfactory(const nlohmann::json &j){
                 i++;
             }
             if (j.contains("options") && j.at("options").contains("interaction_partners")){
-                opt.interaction_partners = j.at("options").at("interaction_partners");
+                opt.interaction_partners = j.at("options").at("interaction_partners").template get<std::map<std::string, std::vector<std::string>>>();
                 for (auto [k,partners] : opt.interaction_partners){
                     if (unique_site_types.count(k) == 0){
                         throw teqp::InvalidArgument("Site is invalid in interaction_partners: " + k);
