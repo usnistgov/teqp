@@ -5,7 +5,6 @@
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
 
-#include "teqpversion.hpp"
 #include "teqp/ideal_eosterms.hpp"
 #include "teqp/cpp/derivs.hpp"
 #include "teqp/derivs.hpp"

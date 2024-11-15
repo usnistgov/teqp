@@ -152,9 +152,21 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff")
 # Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
 set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
 
-
-
-
+# Single-source the version, either from scikit, or from parsing the pyproject.toml
+if (SKBUILD)
+    add_definitions("-DTEQPVERSION=\"${SKBUILD_PROJECT_VERSION_FULL}\"")
+else()
+    file(READ "pyproject.toml" TOML_CONTENT)
+    set(REG "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\"")
+    string(REGEX MATCH "${REG}" VERSION_MATCH "${TOML_CONTENT}")
+    if (NOT VERSION_MATCH)
+        message(FATAL_ERROR "Can't parse the version")
+    else()
+        string(REGEX REPLACE "${REG}" "\\1" PROJECT_VERSION_FULL "${VERSION_MATCH}")
+        message(STATUS "Version: ${PROJECT_VERSION_FULL}")
+        add_definitions("-DTEQPVERSION=\"${PROJECT_VERSION_FULL}\"")
+    endif()
+endif()
 
 if (NOT TEQP_NO_TEQPCPP)
   # Add a static library with the C++ interface that uses only STL
@@ -240,6 +252,7 @@ if (NOT TEQP_NO_PYTHON)
     if (MSVC)
       target_compile_options(teqp PRIVATE "/Zm1000")
     endif()
+    install(TARGETS teqp LIBRARY DESTINATION teqp)
 endif()
 
 if (NOT TEQP_NO_TESTS)
