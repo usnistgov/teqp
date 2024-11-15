@@ -187,7 +187,7 @@ public:
         std::set<std::string> unique_site_types;
         for (auto molsite : j.at("molecule_sites")) {
             for (auto & s : molsite){
-                unique_site_types.insert(s.get<std::string>());
+                unique_site_types.insert(s);
             }
         }
                 
@@ -195,7 +195,7 @@ public:
             std::map<std::string, std::vector<std::string>> interaction_partners;
             
             if (j.contains("options") && j.at("options").contains("interaction_partners")){
-                interaction_partners = j.at("options").at("interaction_partners").get<std::map<std::string, std::vector<std::string>>>();
+                interaction_partners = j.at("options").at("interaction_partners");
                 for (auto [k,partners] : interaction_partners){
                     if (unique_site_types.count(k) == 0){
                         throw teqp::InvalidArgument("Site is invalid in interaction_partners: " + k);
