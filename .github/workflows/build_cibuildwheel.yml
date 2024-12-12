@@ -36,7 +36,7 @@ jobs:
       #   if: runner.os == 'Windows'
 
       - name: Build sdist
-        run: python -m build --no-isolation --sdist --outdir wheelhouse
+        run: pipx run build --sdist --outdir wheelhouse
         if: runner.os == 'Windows'
 
       - name: Build wheels
