@@ -116,7 +116,7 @@ namespace teqp {
                 ARN0_args
             #undef X
             
-            // Extended precision evaluations
+            // Extended precision evaluations, for testing of virial coefficients
             virtual double get_Ar01ep(const double, const double, const EArrayd&) const = 0;
             virtual double get_Ar02ep(const double, const double, const EArrayd&) const = 0;
             virtual double get_Ar03ep(const double, const double, const EArrayd&) const = 0;
