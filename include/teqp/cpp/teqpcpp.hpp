@@ -121,6 +121,11 @@ namespace teqp {
             virtual double get_Ar02ep(const double, const double, const EArrayd&) const = 0;
             virtual double get_Ar03ep(const double, const double, const EArrayd&) const = 0;
             
+            // Pass-through functions to give access to reducing function evaluations
+            // for multi-fluid models in the corresponding-states formulation
+            virtual double get_reducing_density(const EArrayd&) const = 0;
+            virtual double get_reducing_temperature(const EArrayd&) const = 0;
+            
             // Virial derivatives
             virtual double get_B2vir(const double T, const EArrayd& z) const = 0;
             virtual std::map<int, double> get_Bnvir(const int Nderiv, const double T, const EArrayd& z) const = 0;

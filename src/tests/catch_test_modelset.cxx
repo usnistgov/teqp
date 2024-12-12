@@ -11,6 +11,8 @@ using Catch::Matchers::WithinAbs;
 
 #include "catch_fixtures.hpp"
 
+#include "test_common.in"
+
 auto LKPmethane = [](){
     // methane, check values from TREND
     std::vector<double> Tc_K = {190.564};
@@ -144,5 +146,69 @@ TEST_CASE("virials", "[virials]"){
                 fix.test_virial(4, pt.T, pt.rho, 1e-6);
             }
         }
+    }
+}
+
+auto GERG2004metheth_ = [](){
+    return R"({"kind":"GERG2004resid", "model":{"names": ["methane", "ethane"]}} )"_json;
+};
+auto GERG2008metheth_ = [](){
+    return R"({"kind":"GERG2008resid", "model":{"names": ["methane", "ethane"]}} )"_json;
+};
+auto PCSAFTmetheth_ = [](){
+    return  R"({
+      "kind": "PCSAFT",
+      "model": {
+          "names": ["Methane", "Ethane"]
+      }
+    })"_json;
+};
+
+auto multifluidmetheth_ = [](){
+    auto j = R"({
+      "kind": "multifluid",
+      "model": {
+          "components": ["Methane", "Ethane"]
+      }
+    })"_json;
+    j["model"]["root"] = FLUIDDATAPATH;
+    j["model"]["BIP"] = FLUIDDATAPATH+"/dev/mixtures/mixture_binary_pairs.json";
+    j["model"]["departure"] = FLUIDDATAPATH+"/dev/mixtures/mixture_departure_functions.json";
+    return j;
+};
+
+auto AmmoniaWaterTillerRoth_ = [](){
+    return R"({ "kind": "AmmoniaWaterTillnerRoth", "model": {} })"_json;
+};
+
+
+// Add a little static_assert to make sure the concept is working properly
+#include "teqp/cpp/deriv_adapter.hpp"
+#include "teqp/models/GERG/GERG.hpp"
+static_assert(teqp::cppinterface::adapter::CallableReducingTemperature<teqp::GERG2008::GERG2008ResidualModel, Eigen::ArrayXd>);
+static_assert(teqp::cppinterface::adapter::CallableReducingDensity<teqp::GERG2008::GERG2008ResidualModel, Eigen::ArrayXd>);
+
+// Binary multi-fluid models
+std::map<std::string, std::pair<nlohmann::json, std::vector<evalpoint>>> MultifluidBinaryTestSet = {
+    {"GERG2004", {GERG2004metheth_(), {}}},
+    {"GERG2008", {GERG2008metheth_(), {}}},
+    {"multifluid", {multifluidmetheth_(), {}}},
+    {"AmmoniaWater", {AmmoniaWaterTillerRoth_(), {}}},
+};
+
+TEST_CASE("reducing", "[MFreducing]"){
+    Eigen::ArrayXd z(2); z(0) = 0.4; z(1) = 0.6;
+    for (const auto& [kind, specdata] : MultifluidBinaryTestSet){
+        auto [spec, points] = specdata;
+        auto model = teqp::cppinterface::make_model(spec);
+        
+        CAPTURE(kind);
+        CHECK_NOTHROW(model->get_reducing_density(z));
+        CHECK_NOTHROW(model->get_reducing_temperature(z));
+    }
+    
+    SECTION("PCSAFT"){ // this is test that SHOULD throw, to prove the negative
+        auto model = teqp::cppinterface::make_model(PCSAFTmetheth_());
+        CHECK_THROWS(model->get_reducing_density(z));
     }
 }

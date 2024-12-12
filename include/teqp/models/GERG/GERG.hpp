@@ -922,6 +922,17 @@ public:
         auto val = forceeval(corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac));
         return val;
     }
+    
+    template<typename MoleFracType>
+    auto get_reducing_temperature(const MoleFracType& molefrac) const {
+        return forceeval(red.get_Tr(molefrac));
+    }
+    
+    template<typename MoleFracType>
+    auto get_reducing_density(const MoleFracType& molefrac) const {
+        return forceeval(red.get_rhor(molefrac));
+    }
+    
 };
 
 
@@ -1177,6 +1188,16 @@ public:
         auto tau = forceeval(Tred / T);
         auto val = forceeval(corr.alphar(tau, delta, molefrac) + dep.alphar(tau, delta, molefrac));
         return val;
+    }
+    
+    template<typename MoleFracType>
+    auto get_reducing_temperature(const MoleFracType& molefrac) const {
+        return forceeval(red.get_Tr(molefrac));
+    }
+    
+    template<typename MoleFracType>
+    auto get_reducing_density(const MoleFracType& molefrac) const {
+        return forceeval(red.get_rhor(molefrac));
     }
 };
 

@@ -195,6 +195,16 @@ public:
     {
         return corr.alphari(tau, delta, i);
     }
+    
+    template<typename MoleFracType>
+    auto get_reducing_temperature(const MoleFracType& molefrac) const {
+        return forceeval(redfunc.get_Tr(molefrac));
+    }
+    
+    template<typename MoleFracType>
+    auto get_reducing_density(const MoleFracType& molefrac) const {
+        return forceeval(redfunc.get_rhor(molefrac));
+    }
 };
 
 

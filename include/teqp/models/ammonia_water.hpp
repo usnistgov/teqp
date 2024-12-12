@@ -57,6 +57,10 @@ namespace teqp{
             auto Tred = forceeval(TcNH3*xNH3*xNH3 + TcH2O*(1-xNH3)*(1-xNH3) + 2.0*xNH3*(1.0-pow(xNH3, alpha))*k_T/2.0*(TcNH3 + TcH2O));
             return Tred;
         }
+        template<typename MoleFracType>
+        auto get_reducing_temperature(const MoleFracType& molefrac) const {
+            return get_Treducing(molefrac);
+        }
         
         template<typename MoleFracType>
         auto get_rhoreducing(const MoleFracType& molefrac) const {
@@ -70,6 +74,10 @@ namespace teqp{
             }
             auto vred = forceeval(vcNH3*xNH3*xNH3 + vcH2O*(1-xNH3)*(1-xNH3) + 2.0*xNH3*(1.0-pow(xNH3, beta))*k_V/2.0*(vcNH3 + vcH2O));
             return forceeval(1/vred);
+        }
+        template<typename MoleFracType>
+        auto get_reducing_density(const MoleFracType& molefrac) const {
+            return get_rhoreducing(molefrac);
         }
 
         template<typename TType, typename RhoType, typename MoleFracType>

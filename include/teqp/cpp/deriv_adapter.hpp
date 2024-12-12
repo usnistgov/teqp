@@ -86,6 +86,16 @@ namespace internal{
     template<class T>struct tag{using type=T;};
 }
 
+template<typename T, typename U>
+concept CallableReducingDensity = requires(T t, U u) {
+    { t.get_reducing_density(u) };
+};
+
+template<typename T, typename U>
+concept CallableReducingTemperature = requires(T t, U u) {
+    { t.get_reducing_temperature(u) };
+};
+
 /**
  This class holds a const reference to a class, and exposes an interface that matches that used in AbstractModel
  
@@ -158,6 +168,25 @@ public:
             return mp.get_cref().alphar(T, rhoep, molefrac);
         };
         return rho*rho*rho*static_cast<double>(centered_diff<3,4>(f, static_cast<my_float_t>(rho), 1e-16*static_cast<my_float_t>(rho)));
+    }
+    
+    virtual double get_reducing_density(const EArrayd& molefrac) const  override {
+        using Model = std::decay_t<decltype(mp.get_cref())>;
+        if constexpr(CallableReducingDensity<Model, EArrayd>){
+            return mp.get_cref().get_reducing_density(molefrac);
+        }
+        else{
+            throw teqp::NotImplementedError("Cannot call get_reducing_density of a class that doesn't define it");
+        }
+    }
+    virtual double get_reducing_temperature(const EArrayd& molefrac) const  override {
+        using Model = std::decay_t<decltype(mp.get_cref())>;
+        if constexpr(CallableReducingTemperature<Model, EArrayd>){
+            return mp.get_cref().get_reducing_temperature(molefrac);
+        }
+        else{
+            throw teqp::NotImplementedError("Cannot call get_reducing_temperature of a class that doesn't define it");
+        }
     }
     
     // Virial derivatives

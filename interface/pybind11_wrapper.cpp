@@ -497,6 +497,9 @@ void init_teqp(py::module& m) {
     
         .def("get_R", &am::get_R, "molefrac"_a.noconvert())
     
+        .def("get_reducing_density", &am::get_reducing_density,  "molefrac"_a.noconvert())
+        .def("get_reducing_temperature", &am::get_reducing_temperature,  "molefrac"_a.noconvert())
+    
         .def("get_B2vir", &am::get_B2vir, "T"_a, "molefrac"_a.noconvert())
         .def("get_Bnvir", &am::get_Bnvir, "Nderiv"_a, "T"_a, "molefrac"_a.noconvert())
         .def("get_dmBnvirdTm", &am::get_dmBnvirdTm, "Nderiv"_a, "NTderiv"_a, "T"_a, "molefrac"_a.noconvert())
