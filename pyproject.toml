@@ -3,6 +3,10 @@ select = "*-musllinux*"
 before-all = "apk add clang"
 environment = { CXX="clang++" }
 
+[[tool.cibuildwheel.overrides]]
+select = "*linux*"
+environment = { CMAKE_BUILD_PARALLEL_LEVEL="1" }
+
 [build-system]
 requires = ["scikit-build-core >=0.4.3", "pybind11 >=2.13", "typing_extensions"]
 build-backend = "scikit_build_core.build"
