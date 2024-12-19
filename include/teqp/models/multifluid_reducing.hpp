@@ -139,7 +139,7 @@ namespace teqp {
             Eigen::ArrayXd Tc(pureJSON.size()), vc(pureJSON.size());
             auto i = 0;
             for (auto& j : pureJSON) {
-                auto red = j["EOS"][0]["STATES"]["reducing"];
+                auto red = j.at("EOS")[0].at("STATES").at("reducing");
                 double Tc_ = red.at("T");
                 double rhoc_ = red.at("rhomolar");
                 Tc[i] = Tc_;
