@@ -19,6 +19,7 @@ using Catch::Matchers::WithinRel;
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 #include "teqp/filesystem.hpp"
+#include "teqp/constants.hpp"
 #include "teqp/ideal_eosterms.hpp"
 #include "teqp/math/finite_derivs.hpp"
 
@@ -663,7 +664,7 @@ TEST_CASE("Check composition derivatives for ternary with all one component", "[
 }
 
 
-TEST_CASE("Check adding cubic EOS as pure fluid contribution in multifluid approach", "[multifluidpuremodels]") {
+TEST_CASE("Check adding simpler EOS as pure fluid contribution in multifluid approach", "[multifluidpuremodels]") {
     std::string root = FLUIDDATAPATH;
     
     SECTION("cubic EOS"){
@@ -740,5 +741,61 @@ TEST_CASE("Check adding cubic EOS as pure fluid contribution in multifluid appro
             {"model", model}
         };
         auto model_ = cppinterface::make_model(j);
+    }
+    SECTION("PC-SAFT cyclopentane+water explicit"){
+        
+        double Tred_K = 511.72, rhored_molm3=3920;
+        // Build the residual portion with the PC-SAFT EOS
+        nlohmann::json alphar = {
+            // Reducing state variables are taken from critical point
+            {"Tred / K", Tred_K},
+            {"rhored / mol/m^3", rhored_molm3},
+            {"m", 2.3655}, // placeholder value for testing
+            {"sigma / A", 3.7114}, // placeholder value for testing
+            {"epsilon_over_k", 265.83}, // placeholder value for testing
+            {"type", "ResidualHelmholtzPCSAFTGrossSadowski2001"}
+        };
+        
+        nlohmann::json alphars; alphars.push_back(alphar);
+        
+        // The reducing state is needed for mixture models
+        nlohmann::json reducing = {
+            {"T", Tred_K},
+            {"rhomolar", rhored_molm3},
+        };
+        nlohmann::json states = {{"reducing", reducing}};
+        nlohmann::json EOS = {
+            {"alphar", alphars},
+            {"STATES", states},
+            {"gas_constant", constants::R_CODATA2017}
+        };
+        
+        // And we need to store some identifiers for use in mixtures
+        nlohmann::json info = {
+            {"NAME", "Cyclopentane"},
+            {"CAS", "287-92-3"},
+            {"REFPROP_NAME", "CYCLOPEN"},
+            {"HASH", "43ab1810"}
+        };
+        nlohmann::json EOSlist; EOSlist = nlohmann::json::array(); EOSlist.push_back(EOS);
+        nlohmann::json f = {{"EOS", EOSlist}, {"INFO", info}};
+        
+        nlohmann::json model = {
+            {"components", {f, "Water"}},
+            {"BIP", ""},
+            {"departure", ""},
+            {"flags", {{"force-estimate", "yes"},{"estimate","Lorentz-Berthelot"}}}
+        };
+        nlohmann::json j = {
+            {"kind", "multifluid"},
+            {"model", model}
+        };
+        
+        j["model"]["root"] = FLUIDDATAPATH;
+        std::string as_str = j.dump(2);
+        CAPTURE(as_str);
+        
+        auto model_ = cppinterface::make_model(j);
+//        CHECK(0==1);
     }
 }
