@@ -47,7 +47,7 @@ jobs:
           # CIBW_ARCHS_MACOS: "universal2"
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
           CIBW_TEST_COMMAND: python -c "import teqp"
-          CIBW_ENVIRONMENT_LINUX: CXXFLAGS='-fconcepts'
+          CIBW_ENVIRONMENT_LINUX: CXXFLAGS='-fconcepts' CMAKE_BUILD_PARALLEL_LEVEL='1'
           CIBW_BUILD_VERBOSITY_WINDOWS: 2
           CIBW_SKIP: "*pypy* *pp* *cp36* *cp37* *cp38* *musl*"
 
