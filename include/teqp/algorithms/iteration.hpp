@@ -232,7 +232,7 @@ private:
     const Eigen::Array2d vals;
     
     const Eigen::ArrayXd z;
-    Eigen::Array2d Trho;
+    Eigen::Array2d Trho, r;
     double R;
     
     std::tuple<bool, bool> relative_error;
@@ -312,6 +312,10 @@ public:
         if (std::get<1>(relative_error)){ r(1) /= vals(1);}
         return r.abs().maxCoeff();
     }
+    /// Get the maximum absolute value of residual vector, using the cached value for r
+    auto get_maxabsr() const{
+        return r.abs().maxCoeff();
+    }
     
     /** Take a given number of steps
      * \param N The number of steps to take
@@ -324,7 +328,7 @@ public:
         StoppingConditionReason reason = StoppingConditionReason::fatal;
         for (auto K = 0; K < N; ++K){
             auto im = calc_matrices(Trho(0), Trho(1));
-            Eigen::Array2d r = im.v-vals;
+            r = im.v-vals;
             
             if (std::get<0>(relative_error)){ r(0) /= vals(0); im.J.row(0) /= vals(0); }
             if (std::get<1>(relative_error)){ r(1) /= vals(1); im.J.row(1) /= vals(1); }
@@ -373,7 +377,7 @@ public:
         
         for (auto K = 0; K < N; ++K){
             auto im = calc_matrices(Trho(0), Trho(1));
-            Eigen::Array2d r = im.v-vals;
+            r = im.v-vals;
             
             im.J.col(1) *= Trho(1); // This will make the step be [dT, dln(rho)] instead of [dT, drho]
             if (std::get<0>(relative_error)){ r(0) /= vals(0); im.J.row(0) /= vals(0); }
