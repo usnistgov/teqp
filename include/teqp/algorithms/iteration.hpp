@@ -344,7 +344,7 @@ public:
             
             // Check whether a stopping condition (either good[complete] or bad[error])
             bool stop = false;
-            const StoppingData data{N, Trho, dTrho, r, nonconstant_indices};
+            const StoppingData data{K, Trho, dTrho, r, nonconstant_indices};
             for (auto& condition : stopping_conditions){
                 using s = StoppingConditionReason;
                 auto this_reason = condition->stop(data);
@@ -409,7 +409,7 @@ public:
             
             // Check whether a stopping condition (either good[complete] or bad[error])
             bool stop = false;
-            const StoppingData data{N, Trho, dTrho, r, nonconstant_indices};
+            const StoppingData data{K, Trho, dTrho, r, nonconstant_indices};
             for (auto& condition : stopping_conditions){
                 using s = StoppingConditionReason;
                 auto this_reason = condition->stop(data);
