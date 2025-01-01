@@ -101,7 +101,13 @@ class NegativeXErrorCondition : public StoppingCondition{
 public:
     StoppingConditionReason stop(const StoppingData& data) override{
         using s = StoppingConditionReason;
-        return ((data.x(data.nonconstant_indices) < 0).any()) ? s::fatal : s::keep_going;
+        bool allpositive = true;
+        for (auto idx : data.nonconstant_indices){
+            if (data.x(idx) < 0){
+                allpositive = false; break;
+            }
+        }
+        return (!allpositive) ? s::fatal : s::keep_going;
     };
     std::string desc() override{
         return "NegativeXErrorCondition";
