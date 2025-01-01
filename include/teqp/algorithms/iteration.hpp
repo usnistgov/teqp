@@ -25,7 +25,7 @@ struct StoppingData{
     const Eigen::Array2d& x; ///< The complete set of independent variables
     const Eigen::Array2d& dx; ///< The complete set of steps in independent variables
     const Eigen::Array2d& r; ///< The set of residual functions
-    const std::vector<int>& nonconstant_indices; ///< The indices where the independent variable can be varied (not T or rho)
+    const std::vector<int>& nonconstant_indices; ///< The indices where the independent variable can be varied (are not T or rho)
 };
 
 /**
@@ -371,7 +371,7 @@ public:
     }
     
     
-    /** Take a given number of steps
+    /** Take a given number of steps, with log(rho) as the density variable rather than rho, which helps when rho is VERY small to ensure that you can't have negative density
      * \param N The number of steps to take
      */
     auto take_steps_logrho(int N){
