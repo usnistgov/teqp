@@ -290,7 +290,7 @@ public:
     }
     auto calc_step(double T, double rho) const{
         auto im = calc_matrices(T, rho);
-        return std::make_tuple((im.J.matrix().colPivHouseholderQr().solve((-(im.v-vals)).matrix())).eval(), im);
+        return std::make_tuple((im.J.matrix().fullPivLu().solve((-(im.v-vals)).matrix())).eval(), im);
     }
     auto calc_just_step(double T, double rho) const {
         return std::get<0>(calc_step(T, rho));
@@ -325,13 +325,28 @@ public:
     
     /** Take a given number of steps
      * \param N The number of steps to take
+     * \param apply_stopping True to apply the stopping conditions
      */
-    auto take_steps(int N){
+    auto take_steps(int N, bool apply_stopping=true){
         if (N <= 0){
             throw teqp::InvalidArgument("N must be greater than 0");
         }
-        auto tic = std::chrono::steady_clock::now();
         StoppingConditionReason reason = StoppingConditionReason::fatal;
+        if(isTD){
+            /// Special-case temperature-density inputs, which require only one step
+            auto im = calc_matrices(Trho(0), Trho(1));
+            r = im.v-vals;
+            
+            if (std::get<0>(relative_error)){ r(0) /= vals(0); im.J.row(0) /= vals(0); }
+            if (std::get<1>(relative_error)){ r(1) /= vals(1); im.J.row(1) /= vals(1); }
+            
+            Eigen::Array2d dTrho = im.J.matrix().fullPivLu().solve((-r).matrix());
+            Trho += dTrho;
+            step_counter++;
+            reason = StoppingConditionReason::success; msg = "Only one step is needed for DT inputs";
+            return reason;
+        }
+        
         for (auto K = 0; K < N; ++K){
             auto im = calc_matrices(Trho(0), Trho(1));
             r = im.v-vals;
@@ -341,21 +356,16 @@ public:
             
             Eigen::Array2d dTrho = im.J.matrix().fullPivLu().solve((-r).matrix());
             
-            if(isTD){
-                Trho += dTrho;
-                step_counter++;
-                reason = StoppingConditionReason::success; msg = "Only one step is needed for DT inputs";
-                break;
-            }
-            
-            // Check whether a stopping condition (either good[complete] or bad[error])
             bool stop = false;
-            const StoppingData data{K, Trho, dTrho, r, nonconstant_indices};
-            for (auto& condition : stopping_conditions){
-                using s = StoppingConditionReason;
-                auto this_reason = condition->stop(data);
-                if (this_reason != s::keep_going){
-                    stop = true; reason = this_reason; msg = condition->desc(); break;
+            if (apply_stopping){
+                // Check whether a stopping condition (either good[complete] or bad[error])
+                const StoppingData data{K, Trho, dTrho, r, nonconstant_indices};
+                for (auto& condition : stopping_conditions){
+                    using s = StoppingConditionReason;
+                    auto this_reason = condition->stop(data);
+                    if (this_reason != s::keep_going){
+                        stop = true; reason = this_reason; msg = condition->desc(); break;
+                    }
                 }
             }
             
@@ -365,8 +375,6 @@ public:
                 break;
             }
         }
-        auto toc = std::chrono::steady_clock::now();
-//        std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds>(toc - tic).count()/1e3/step_counter << "[µs/call]" << std::endl;
         return reason;
     }
     

@@ -39,6 +39,7 @@ TEST_CASE("multifluid derivatives", "[mf]")
     stopping_conditions.emplace_back(std::make_shared<teqp::iteration::MaxAbsErrorCondition>(1e-16));
     stopping_conditions.emplace_back(std::make_shared<teqp::iteration::StepCountErrorCondition>(20));
     stopping_conditions.emplace_back(std::make_shared<teqp::iteration::NanXDXErrorCondition>());
+    stopping_conditions.emplace_back(std::make_shared<teqp::iteration::NegativeXErrorCondition>());
     stopping_conditions.emplace_back(std::make_shared<teqp::iteration::MinRelStepsizeCondition>(1e-16));
     
     teqp::iteration::NRIterator NR(alpha, vars, rvals, T, rho, rz, relative_error, stopping_conditions);
@@ -74,15 +75,28 @@ TEST_CASE("multifluid derivatives", "[mf]")
     BENCHMARK("Newton-Raphson construction") {
         return teqp::iteration::NRIterator(alpha, vars, rvals, T, rho, rz, relative_error, stopping_conditions);
     };
+    BENCHMARK("Inefficient Newton-Raphson construction") {
+        return teqp::iteration::NRIterator(alpha, vars, (Eigen::Array2d() << vals[0], vals[1]).finished(), T, rho, rz, relative_error, stopping_conditions);
+    };
+    BENCHMARK("Newton-Raphson calc_matrices") {
+        return NR.calc_matrices(T, rho);
+    };
     BENCHMARK("Newton-Raphson calc_step") {
         return NR.calc_step(T, rho);
     };
-    BENCHMARK("Newton-Raphson take_step") {
+    BENCHMARK("Newton-Raphson take_steps(1)") {
+        teqp::iteration::NRIterator NR(alpha, vars, rvals, T, rho, rz, relative_error, stopping_conditions);
         return NR.take_steps(1);
     };
-    BENCHMARK("Newton-Raphson take_steps") {
+    BENCHMARK("Newton-Raphson take_steps(4)") {
         teqp::iteration::NRIterator NR(alpha, vars, rvals, T, rho, rz, relative_error, stopping_conditions);
-        return NR.take_steps(5);
+        auto steps = NR.take_steps(4);
+        return steps;
+    };
+    BENCHMARK("Newton-Raphson take_steps(4) without stopping conditions") {
+        teqp::iteration::NRIterator NR(alpha, vars, rvals, T, rho, rz, relative_error, stopping_conditions);
+        auto steps = NR.take_steps(4, false);
+        return steps;
     };
 }
 
