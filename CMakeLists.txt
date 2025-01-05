@@ -10,7 +10,7 @@ enable_testing()
 if (MSVC)
     add_compile_options(/bigobj)
     add_compile_options(/permissive-)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 
 get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
