@@ -241,7 +241,7 @@ if (TEQP_MULTICOMPLEX_ENABLED)
 endif()
 
 
-if (NOT TEQP_NO_PYTHON)
+if (NOT TEQP_NO_PYTHON AND PROJECT_IS_TOP_LEVEL)
     
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11" "pybind11")
     file(GLOB pybind11_files "${CMAKE_CURRENT_SOURCE_DIR}/interface/*.cpp")
@@ -255,7 +255,7 @@ if (NOT TEQP_NO_PYTHON)
     install(TARGETS teqp LIBRARY DESTINATION teqp)
 endif()
 
-if (NOT TEQP_NO_TESTS)
+if (NOT TEQP_NO_TESTS AND PROJECT_IS_TOP_LEVEL)
   file(GLOB catch_tests_files "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/*.cxx")
 
   # Make all the catch and benchmarking tests
@@ -309,7 +309,7 @@ if (TEQP_TEQPC)
 endif()
 
 ### TARGETS from src folder
-if (TEQP_SNIPPETS)
+if (TEQP_SNIPPETS AND PROJECT_IS_TOP_LEVEL)
   add_definitions(-DUSE_TEQP_HMX)
   # Collect all the snippets
   file(GLOB_RECURSE snippets "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -378,7 +378,7 @@ if (TEQP_EMBIND_MODULARIZE_ES6)
 endif()
 
 
-if (TEQP_COVERAGE)
+if (TEQP_COVERAGE AND PROJECT_IS_TOP_LEVEL)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "This path")
   # See also http://stackoverflow.com/a/16536401 (a detailed guide on using gcov with cmake)
   include(CodeCoverage)
