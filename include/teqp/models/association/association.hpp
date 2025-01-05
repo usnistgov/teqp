@@ -72,7 +72,7 @@ public:
         std::vector<std::vector<std::string>> molecule_sites;
     };
 private:
-    IndexMapper make_mapper(const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options) const {
+    IndexMapper make_mapper(const std::vector<std::vector<std::string>>& molecule_sites, const AssociationOptions& options_in) const {
         IndexMapper ind;
         ind.counts.resize(1000);
         ind.comp_index.resize(1000);
@@ -90,7 +90,7 @@ private:
                 ++site_counts[site];
             }
             auto unique_sites_on_molecule = std::set(molecule.begin(), molecule.end());
-            if (!options.site_order.empty()){
+            if (!options_in.site_order.empty()){
                 // TODO: enforce sites to appear in the order matching the specification
                 // TODO: this would be required to for instance check the D matrix of Langenbach and Enders
             }
@@ -118,9 +118,9 @@ private:
     /***
     Construct the counting matrix \f$ D_{IJ} \f$ as given by Langenbach and Enders
     */
-    auto make_D(const IndexMapper& ind, const AssociationOptions& options ) const{
+    auto make_D(const IndexMapper& ind, const AssociationOptions& options_in ) const{
         
-        auto get_DIJ = [&ind, &options](std::size_t I, std::size_t J) -> int {
+        auto get_DIJ = [&ind, &options_in](std::size_t I, std::size_t J) -> int {
             /** Return the value of an entry in the D_{IJ} matrix
             
             For a given unique site, look at all other sites on all other molecules
@@ -129,17 +129,17 @@ private:
             auto [ph2, typej] = ind.to_CompSite.at(J);
             
             // If self-association is disabled for this site, then return zero for the D matrix
-            if (!options.self_association_mask.empty() && ph1 == ph2 && !options.self_association_mask[ph1]){
+            if (!options_in.self_association_mask.empty() && ph1 == ph2 && !options_in.self_association_mask[ph1]){
                 return 0;
             }
             auto contains = [](auto& container, const auto& val){ return std::find(container.begin(), container.end(), val) != container.end(); };
             /// If interaction parameters are not provided, assume conservatively that all sites can interact with all other sites
-            if (options.interaction_partners.empty() || (contains(options.interaction_partners.at(typei), typej))){
+            if (options_in.interaction_partners.empty() || (contains(options_in.interaction_partners.at(typei), typej))){
                 return ind.counts[J];
             }
             return 0;
         };
-        if (!options.self_association_mask.empty() && options.self_association_mask.size() != static_cast<std::size_t>(ind.N_sites.size())){
+        if (!options_in.self_association_mask.empty() && options_in.self_association_mask.size() != static_cast<std::size_t>(ind.N_sites.size())){
             throw teqp::InvalidArgument("self_association_mask is of the wrong size");
         }
         int Ngroups = static_cast<int>(ind.to_siteid.size());

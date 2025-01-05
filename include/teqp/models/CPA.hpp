@@ -318,7 +318,7 @@ inline auto CPAfactory(const nlohmann::json &j){
             }
         }
         else{
-            kmat.resize(N); for (auto i = 0U; i < N; ++i){ kmat[i].resize(N); for (auto j = 0U; j < N; ++j){kmat[i][j] = 0.0;} }
+            kmat.resize(N); for (auto i = 0U; i < N; ++i){ kmat[i].resize(N); for (auto k = 0U; k < N; ++k){kmat[i][k] = 0.0;} }
         }
         
         std::size_t i = 0;

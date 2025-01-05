@@ -91,11 +91,11 @@ public:
         Eigen::Index min_ileft = 51, max_iright = 0;
         for (auto i = 0U; i < profiles.size(); ++i) {
             const Eigen::ArrayXd psigma = profiles[i].nhb.psigma(A_COSMO_A2[i]);
-            Eigen::Index ileft = 0, iright = psigma.size();
-            for (auto ii = 0; ii < psigma.size(); ++ii) { if (std::abs(psigma(ii)) > 1e-16) { ileft = ii; break; } }
-            for (auto ii = psigma.size() - 1; ii > ileft; --ii) { if (std::abs(psigma(ii)) > 1e-16) { iright = ii; break; } }
-            if (ileft < min_ileft) { min_ileft = ileft; }
-            if (iright > max_iright) { max_iright = iright; }
+            Eigen::Index ileft_ = 0, iright_ = psigma.size();
+            for (auto ii = 0; ii < psigma.size(); ++ii) { if (std::abs(psigma(ii)) > 1e-16) { ileft_ = ii; break; } }
+            for (auto ii = psigma.size() - 1; ii > ileft_; --ii) { if (std::abs(psigma(ii)) > 1e-16) { iright_ = ii; break; } }
+            if (ileft_ < min_ileft) { min_ileft = ileft_; }
+            if (iright_ > max_iright) { max_iright = iright_; }
         }
         return std::make_tuple(min_ileft, max_iright);
     }
