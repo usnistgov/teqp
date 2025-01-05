@@ -193,6 +193,13 @@ if (NOT TEQP_NO_TEQPCPP)
   
   target_compile_definitions(teqpcpp PUBLIC -DTEQP_MULTIPRECISION_ENABLED)
 
+  if (WIN32)
+    target_compile_options(teqpcpp PUBLIC
+       $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+          -Wno-deprecated-anon-enum-enum-conversion -Wno-deprecated-enum-enum-conversion -Wno-parentheses -Wno-c++98-compat -Wno-c++98-compat-pedantic>
+       $<$<CXX_COMPILER_ID:MSVC>:>)
+  endif()
+
   # target_compile_options(teqpcpp PRIVATE
   #    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
   #       -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic>
