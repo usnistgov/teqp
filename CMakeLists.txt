@@ -133,7 +133,7 @@ target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-interop/include")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/stbrumme-hashing/include")
 
-if (NOT TEQP_NO_TESTS)
+if ((NOT TEQP_NO_TESTS) AND PROJECT_IS_TOP_LEVEL)
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2")
 endif()
 
