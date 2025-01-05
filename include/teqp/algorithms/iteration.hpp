@@ -38,6 +38,7 @@ class StoppingCondition{
 public:
     virtual StoppingConditionReason stop(const StoppingData&) = 0;
     virtual std::string desc() = 0;
+    virtual ~StoppingCondition = default;
 };
 
 class MaxAbsErrorCondition : public StoppingCondition{
