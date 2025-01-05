@@ -241,7 +241,7 @@ if (TEQP_MULTICOMPLEX_ENABLED)
 endif()
 
 
-if (NOT TEQP_NO_PYTHON AND PROJECT_IS_TOP_LEVEL)
+if ((NOT TEQP_NO_PYTHON) AND PROJECT_IS_TOP_LEVEL)
     
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/pybind11" "pybind11")
     file(GLOB pybind11_files "${CMAKE_CURRENT_SOURCE_DIR}/interface/*.cpp")
@@ -255,7 +255,7 @@ if (NOT TEQP_NO_PYTHON AND PROJECT_IS_TOP_LEVEL)
     install(TARGETS teqp LIBRARY DESTINATION teqp)
 endif()
 
-if (NOT TEQP_NO_TESTS AND PROJECT_IS_TOP_LEVEL)
+if ((NOT TEQP_NO_TESTS) AND PROJECT_IS_TOP_LEVEL)
   file(GLOB catch_tests_files "${CMAKE_CURRENT_SOURCE_DIR}/src/tests/*.cxx")
 
   # Make all the catch and benchmarking tests
