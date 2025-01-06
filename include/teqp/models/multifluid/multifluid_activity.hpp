@@ -7,6 +7,8 @@
 
 namespace teqp::multifluid::multifluid_activity {
 
+using namespace teqp::activity::activity_models;
+
 template<typename M, typename T, typename U>
 concept CallableLnGammaResid = requires(M m, T t, U u) {
     { m.calc_lngamma_resid(t,u) } -> std::same_as<Eigen::ArrayXd>;
