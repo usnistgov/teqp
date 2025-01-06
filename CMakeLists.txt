@@ -152,6 +152,23 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff" EXCLUDE_FROM_A
 # Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
 set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
 
+# Prepare preprocessor macros
+set(preprocessors)
+# A comma-delimited, case-insensitive, set of factories to disable"
+## set(TEQP_DISABLED_FACTORIES "CPA,SAFTVRMIE") # as an example
+if (TEQP_DISABLED_FACTORIES)
+    string(REGEX MATCHALL "[^,]+" disabled_factories "${TEQP_DISABLED_FACTORIES}")
+    message(STATUS "${disabled_factories}")
+    foreach (factory ${disabled_factories})
+      string(TOUPPER "${factory}" factory)
+      list(APPEND preprocessors "#define DISABLE_${factory}")
+    endforeach()
+    string (REPLACE ";" "\n" preprocessors "${preprocessors}")
+    message(STATUS "Generated this ${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp:\n${preprocessors}")
+endif()
+# Generate the model_flags.hpp header
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp" "${preprocessors}")
+
 # Single-source the version, either from scikit, or from parsing the pyproject.toml
 if (SKBUILD)
     add_definitions("-DTEQPVERSION=\"${SKBUILD_PROJECT_VERSION_FULL}\"")
@@ -178,6 +195,7 @@ if (NOT TEQP_NO_TEQPCPP)
   target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/interface/CPP")
   target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
   target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
+  target_include_directories(teqpcpp PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/generated_headers")
 
   set_property(TARGET teqpcpp PROPERTY POSITION_INDEPENDENT_CODE ON)
   target_compile_definitions(teqpcpp PRIVATE -DMULTICOMPLEX_NO_MULTIPRECISION)
