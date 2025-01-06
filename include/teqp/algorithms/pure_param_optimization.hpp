@@ -70,7 +70,10 @@ struct SatRhoLPPoint{
         auto rhoL = rhoLrhoV[0];
         auto p = rhoL*R*T.value()*(1+model->get_Ar01(T.value(), rhoL, z));
 //        std::cout << p << "," << p_exp << "," << (p_exp-p)/p_exp << std::endl;
-        return std::abs(rhoL-rhoL_exp.value())/rhoL_exp.value()*weight_rho + std::abs(p-p_exp.value())/p_exp.value()*weight_p;
+        
+        double cost_rhoL = std::abs(rhoL-rhoL_exp.value())/rhoL_exp.value()*weight_rho;
+        double cost_p = std::abs(p-p_exp.value())/p_exp.value()*weight_p;
+        return ((weight_rho != 0) ? cost_rhoL : 0) + ((weight_p != 0) ? cost_p : 0);
     }
 };
 
