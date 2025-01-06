@@ -6,7 +6,7 @@
 
 using Catch::Approx;
 
-#include "teqp/models/cubics/cubics.hpp"
+#include "teqp/models/cubics/simple_cubics.hpp"
 #include "teqp/derivs.hpp"
 #include "teqp/algorithms/VLE.hpp"
 #include "teqp/cpp/teqpcpp.hpp"
