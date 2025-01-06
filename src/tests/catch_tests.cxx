@@ -22,7 +22,7 @@ public:
 };
 CATCH_REGISTER_LISTENER(testRunListener)
 
-#include "teqp/models/cubicsuperancillary.hpp"
+#include "teqp/models/cubics/cubicsuperancillary.hpp"
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/vdW.hpp"
 

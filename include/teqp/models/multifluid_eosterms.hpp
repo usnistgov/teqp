@@ -2,7 +2,7 @@
 
 #include "teqp/types.hpp"
 #include "teqp/exceptions.hpp"
-#include "teqp/models/cubics.hpp"
+#include "teqp/models/cubics/simple_cubics.hpp"
 #include "teqp/models/saft/pcsaftpure.hpp"
 
 namespace teqp {
