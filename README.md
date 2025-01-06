@@ -426,3 +426,13 @@ cmake --build . --target multifluid_crit
 
     pip install scikit-build-core[pyproject]
     pip install --no-build-isolation -ve .
+
+## Deployment to PYPI
+
+Wheels are build on a github action for all platforms. The wheels are merged into one archive, and that archive is pushed to PyPI, automatically on a release. To get this to all work:
+
+* The first time you push to PyPI, there is no project to assign secrets to, so you need to push a wheel/sdist to PyPI using the PyPI-wide scope (which is generally not recommended due to the fact that if the token is compromised, an attacker could push artifacts to any project linked with the user)
+* After the first push, log into PyPI, go to Account Settings -> API tokens, make a scoped token for the project, tied only to ``teqp`` scope. Make sure you store that token somewhere secret.
+* Go to settings for the repository on GitHub. In there, Go to "Settings"->"Secrets and variables"->"Actions"
+* In there, add a repository secret with the name "PYPI_TOKEN" and token that you obtained from PyPI
+* Make a release on GitHub. The wheels should build and push to PyPI with no further intervention
