@@ -1,7 +1,7 @@
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 
-#include "model_flags.hpp"
+#include "model_flags.hpp" // Contains (optionally) macros to disable various models
 
 #ifndef DISABLE_MULTIFLUIDASSOCIATION
 #include "teqp/models/multifluid_association.hpp"

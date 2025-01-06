@@ -1,7 +1,7 @@
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 
-#include "model_flags.hpp"
+#include "model_flags.hpp" // Contains (optionally) macros to disable various models
 
 #ifndef DISABLE_SQUAREWELL
 #include "teqp/models/model_potentials/squarewell.hpp"
