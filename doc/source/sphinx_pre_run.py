@@ -20,12 +20,11 @@ def run():
     subprocess.check_call('doxygen Doxyfile.injected', cwd=here+'/../..', shell=True)
     os.remove(newDoxyfile)
 
-
     # Execute all the notebooks
     for path, dirs, files in os.walk('.'):
         for file in files:
             if file.endswith('.ipynb') and '.ipynb_checkpoints' not in path:
-                subprocess.check_output(f'jupyter nbconvert --allow-errors --to notebook --output {file} --execute {file}', shell=True, cwd=path)
+                subprocess.check_output(f'jupyter nbconvert --allow-errors --to notebook --output "{file}" --execute "{file}"', shell=True, cwd=path)
 
 if __name__ == '__main__':
     print('running sphinx_pre_run.py...')
