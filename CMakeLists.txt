@@ -155,7 +155,7 @@ set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohma
 # Prepare preprocessor macros
 set(preprocessors)
 # A comma-delimited, case-insensitive, set of factories to disable"
-## set(TEQP_DISABLED_FACTORIES "CPA,SAFTVRMIE") # as an example
+## set(TEQP_DISABLED_FACTORIES "CPA,SAFTVRMIE,GENERICSAFT,SQUAREWELL,EXP6,2CLJF,MIE,MULTIFLUIDACTIVITY") # as an example
 if (TEQP_DISABLED_FACTORIES)
     string(REGEX MATCHALL "[^,]+" disabled_factories "${TEQP_DISABLED_FACTORIES}")
     message(STATUS "${disabled_factories}")
