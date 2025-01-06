@@ -16,6 +16,7 @@
 
 #include <Eigen/Dense>
 
+#include "teqp/models/cubics/simple_cubics.hpp"
 #include "teqp/models/activity/activity_models.hpp"
 using namespace teqp::activity::activity_models;
 

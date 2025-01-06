@@ -1,7 +1,7 @@
 #include "teqp/cpp/teqpcpp.hpp"
 
 #include "teqp/models/vdW.hpp"
-#include "teqp/models/cubics.hpp"
+#include "teqp/models/cubics/simple_cubics.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 
 // This large block of schema definitions is populated by cmake
@@ -40,6 +40,8 @@ namespace teqp {
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_2CLJF_Quadrupole(const nlohmann::json &);
     
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_CPA(const nlohmann::json &);
+        std::unique_ptr<teqp::cppinterface::AbstractModel> make_advancedPRaEres(const nlohmann::json &);
+    
         std::unique_ptr<teqp::cppinterface::AbstractModel> make_IdealHelmholtz(const nlohmann::json &);
     
         using makefunc = ModelPointerFactoryFunction;
@@ -56,8 +58,9 @@ namespace teqp {
             {"SRK", [](const nlohmann::json& spec){ return make_owned(make_canonicalSRK(spec));}},
             {"cubic", [](const nlohmann::json& spec){ return make_owned(make_generalizedcubic(spec));}},
             {"QCPRAasen", [](const nlohmann::json& spec){ return make_owned(QuantumCorrectedPR(spec));}},
-            {"advancedPRaEres", [](const nlohmann::json& spec){ return make_owned(make_AdvancedPRaEres(spec));}},
             {"RKPRCismondi2005", [](const nlohmann::json& spec){ return make_owned(RKPRCismondi2005(spec));}},
+            
+            {"advancedPRaEres", [](const nlohmann::json& spec){ return make_advancedPRaEres(spec);}},
             
             // Implemented in their own compilation units to help with compilation time and memory
             // use. Having all the template instantations in one file is handy, but requires a huge amount of RAM
