@@ -152,10 +152,10 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/autodiff" EXCLUDE_FROM_A
 # Turn on more useful diagnostic messages in nlohmann::json, for instance if you are accessing a field that doesn't exist
 set(JSON_Diagnostics TRUE CACHE BOOL "Turn on more helpful diagnostics in nlohmann::json")
 
-# Prepare preprocessor macros
+# Prepare preprocessor macros to disable models
 set(preprocessors)
 # A comma-delimited, case-insensitive, set of factories to disable"
-## set(TEQP_DISABLED_FACTORIES "CPA,SAFTVRMIE,GENERICSAFT,SQUAREWELL,EXP6,2CLJF,MIE,MULTIFLUIDACTIVITY") # as an example
+#set(TEQP_DISABLED_FACTORIES "CPA,SAFTVRMIE,GENERICSAFT,SQUAREWELL,EXP6,2CLJF,MIE,MULTIFLUIDACTIVITY") # as an example
 if (TEQP_DISABLED_FACTORIES)
     string(REGEX MATCHALL "[^,]+" disabled_factories "${TEQP_DISABLED_FACTORIES}")
     message(STATUS "${disabled_factories}")
@@ -165,9 +165,16 @@ if (TEQP_DISABLED_FACTORIES)
     endforeach()
     string (REPLACE ";" "\n" preprocessors "${preprocessors}")
     message(STATUS "Generated this ${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp:\n${preprocessors}")
+    # Generate the model_flags.hpp header
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp" "${preprocessors}")
+else()
+    # Only write the HPP file the if it doesn't exist; thereafter, do nothing
+    if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp")
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp" "// No models have been disabled; see the flag TEQP_DISABLED_FACTORIES in CMakeLists.txt for more information")
+            message(STATUS "Writing no-op disabling header to ${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp")
+    endif()
 endif()
-# Generate the model_flags.hpp header
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp" "${preprocessors}")
+
 
 # Single-source the version, either from scikit, or from parsing the pyproject.toml
 if (SKBUILD)
