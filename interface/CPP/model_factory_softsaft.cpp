@@ -1,13 +1,11 @@
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/cpp/deriv_adapter.hpp"
 
-
 #include "model_flags.hpp" // Contains (optionally) macros to disable various models
 
 #ifndef DISABLE_SOFTSAFT
 #include "teqp/models/saft/softsaft.hpp"
 #endif
-
 
 namespace teqp{
     namespace cppinterface{
