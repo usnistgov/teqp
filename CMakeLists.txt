@@ -158,16 +158,20 @@ set(preprocessors)
 ## set(TEQP_DISABLED_FACTORIES "CPA,SAFTVRMIE,GENERICSAFT,SQUAREWELL,EXP6,2CLJF,MIE,MULTIFLUIDACTIVITY,PCSAFT,GERG200X,MULTIFLUIDASSOCIATION,LKP") # as an example
 if (TEQP_DISABLED_FACTORIES)
     string(REGEX MATCHALL "[^,]+" disabled_factories "${TEQP_DISABLED_FACTORIES}")
-    message(STATUS "${disabled_factories}")
+    message(STATUS "These model factories are disabled: ${disabled_factories}")
     foreach (factory ${disabled_factories})
       string(TOUPPER "${factory}" factory)
       string(STRIP "${factory}" factory)
       list(APPEND preprocessors "#define DISABLE_${factory}")
     endforeach()
+    set(PREPROCESSORS_SEMICOLON "${preprocessors}") # CMake requires strings to not contain newlines, so we store with ; instead of newlines
     string (REPLACE ";" "\n" preprocessors "${preprocessors}")
-    message(STATUS "Generated this ${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp:\n${preprocessors}")
-    # Generate the model_flags.hpp header
-    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp" "${preprocessors}")
+    if (NOT ("${PREPROCESSORS_SEMICOLON}" STREQUAL "$CACHE{TEQP_DISABLED_FACTORIES_PREPROCESSORS}"))
+      # Generate the model_flags.hpp header
+      message(STATUS "Writing to ${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp:\n${preprocessors}")
+      file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp" "${preprocessors}")
+    endif()
+    SET(TEQP_DISABLED_FACTORIES_PREPROCESSORS ${PREPROCESSORS_SEMICOLON} CACHE INTERNAL "" FORCE)
 else()
     # Only write the HPP file the if it doesn't exist; thereafter, do nothing
     if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/generated_headers/model_flags.hpp")
