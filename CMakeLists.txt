@@ -333,16 +333,19 @@ if (TEQP_TEQPC)
       COMMAND dumpbin /EXPORTS $<TARGET_FILE:teqpc> > ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
   endif()
 
-  # And a little testing harness for extern "C" library
-  add_executable(teqpc_demo "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/demo.cpp")
-  target_link_libraries(teqpc_demo PRIVATE teqpc PRIVATE teqpinterface)
+  if (PROJECT_IS_TOP_LEVEL)
 
-  # And a little benchmarking harness for extern "C" library
-  add_executable(teqpc_bench "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc_bench.cpp")
-  target_link_libraries(teqpc_bench PRIVATE Catch2WithMain PRIVATE teqpc)
-  if(UNIX)
-      target_link_libraries (teqpc_bench PRIVATE ${CMAKE_DL_LIBS})
+    # And a little testing harness for extern "C" library
+    add_executable(teqpc_demo "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/demo.cpp")
+    target_link_libraries(teqpc_demo PRIVATE teqpc PRIVATE teqpinterface)
+
+    # And a little benchmarking harness for extern "C" library
+    add_executable(teqpc_bench "${CMAKE_CURRENT_SOURCE_DIR}/interface/C/teqpc_bench.cpp")
+    target_link_libraries(teqpc_bench PRIVATE Catch2WithMain PRIVATE teqpc)
+    if(UNIX)
+        target_link_libraries (teqpc_bench PRIVATE ${CMAKE_DL_LIBS})
     endif()
+  endif()
 endif()
 
 ### TARGETS from src folder
