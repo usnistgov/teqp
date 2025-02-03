@@ -12,7 +12,8 @@
 #include <variant>
 
 #include "teqp/models/vdW.hpp"
-#include "teqp/models/cubics.hpp"
+#include "teqp/models/cubics/simple_cubics.hpp"
+#include "teqp/models/cubics/advancedmixing_cubics.hpp"
 #include "teqp/models/CPA.hpp"
 #include "teqp/models/pcsaft.hpp"
 #include "teqp/models/saftvrmie.hpp"
