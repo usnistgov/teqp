@@ -1,0 +1,99 @@
+HMX               !Mnemonic for mixture model, must match hfmix on call to SETUP.
+4                 !Version number
+
+!
+!KWR KWS KWT KWQ KWI KWK KWE KW0 KW1 KW2 KW3 KW4 KW5 KW6 KW7 KW8
+!KWB KWC KWD KWG KWL KWN BAA BAW BCC BHA
+
+#BNC              !Binary mixing coefficients
+BNC
+?
+!
+?Helium/Neon
+?J. Tkaczuk, I.H. Bell, E.W. Lemmon, F. Millet, N. Luchier (2020)
+  3b8eed30/b912fce0
+    BHN     0.793       0.728       1.142       0.750       1.       0.        0. 0. 0. 0. 0. 0.
+!
+?Helium/Argon
+?J. Tkaczuk, I.H. Bell, E.W. Lemmon, F. Millet, N. Luchier (2020)
+  3b8eed30/ed016370
+    BEA     1.031       1.113       1.048       0.862       1.        0.        0. 0. 0. 0. 0. 0.
+!
+?Neon/Argon
+?J. Tkaczuk, I.H. Bell, E.W. Lemmon, F. Millet, N. Luchier (2020)
+  b912fce0/ed016370
+    BNA     1.033       0.967       0.919       1.035       1.        0.        0. 0. 0. 0. 0. 0.
+!
+
+#MXM              !Mixture model specification
+BHN   Tkaczuk et al. (2020) model for helium + neon
+?
+?```````````````````````````````````````````````````````````````````````````````
+?J. Tkaczuk, I.H. Bell, E.W. Lemmon, F. Millet, N. Luchier
+? Equations of state for the thermodynamic properties of cryogenic
+? mixtures for helium, neon and argon
+? Journal of Physical and Chemical Reference Data, 2020.
+?
+!```````````````````````````````````````````````````````````````````````````````
+ BetaT    GammaT   BetaV    GammaV    Fij    not used      !Descriptors for binary-specific parameters
+  1.0      1.0      1.0      1.0      0.0      0.0         !Default values (i.e. ideal-solution)
+  3 4      0        0 0      5 12     0 0      0 0         !# terms and # coefs/term for normal terms, Kunz-Wagner terms, and Gaussian terms.  3rd column is not used.
+ -4.346849   1.195   1.  0.0                               !a(i),t(i),d(i),eta(i),beta(i),gamma(i),epsilon(i)
+ -0.884378   1.587   2.  0.0
+  0.258416   1.434   3.  0.0
+  3.502188   1.341   1.  2.0  2.0  -0.157  -0.173   1.310   1.032  0.0  0.0  0.0
+  0.831330   1.189   2.  2.0  2.0  -0.931  -1.070   1.356   1.978  0.0  0.0  0.0
+  2.740495   1.169   3.  2.0  2.0  -0.882  -0.695   1.596   1.966  0.0  0.0  0.0
+ -1.582230   0.944   4.  2.0  2.0  -0.868  -0.862   1.632   1.709  0.0  0.0  0.0
+ -0.304897   1.874   4.  2.0  2.0  -0.543  -0.971   0.766   0.583  0.0  0.0  0.0
+
+
+#MXM              !Mixture model specification
+BEA   Tkaczuk et al. (2020) model for helium + argon
+?
+?```````````````````````````````````````````````````````````````````````````````
+?J. Tkaczuk, I.H. Bell, E.W. Lemmon, F. Millet, N. Luchier
+? Equations of state for the thermodynamic properties of cryogenic
+? mixtures for helium, neon and argon
+? Journal of Physical and Chemical Reference Data, 2020.
+?
+!```````````````````````````````````````````````````````````````````````````````
+ BetaT    GammaT   BetaV    GammaV    Fij    not used      !Descriptors for binary-specific parameters
+  1.0      1.0      1.0      1.0      0.0      0.0         !Default values (i.e. ideal-solution)
+  3 4      0        0 0      5 12     0 0      0 0         !# terms and # coefs/term for normal terms, Kunz-Wagner terms, and Gaussian terms.  3rd column is not used.
+ -2.643654   1.030   1.  0.0                               !a(i),t(i),d(i),eta(i),beta(i),gamma(i),epsilon(i)
+ -0.347501   0.288   2.  0.0
+  0.201207   0.572   3.  0.0
+  1.171326   1.425   1.  2.0  2.0  -0.371  -0.320   1.409   0.378  0.0  0.0  0.0
+  0.216379   1.987   1.  2.0  2.0  -0.081  -1.247   1.709   0.741  0.0  0.0  0.0
+  0.561370   0.024   2.  2.0  2.0  -0.375  -1.152   0.705   0.322  0.0  0.0  0.0
+  0.182570   1.434   3.  2.0  2.0  -0.978  -0.245   1.162   1.427  0.0  0.0  0.0
+  0.017879   0.270   4.  2.0  2.0  -0.971  -1.030   0.869   2.088  0.0  0.0  0.0
+
+
+#MXM              !Mixture model specification
+BNA   Tkaczuk et al. (2020) model for neon + argon
+?
+?```````````````````````````````````````````````````````````````````````````````
+?J. Tkaczuk, I.H. Bell, E.W. Lemmon, F. Millet, N. Luchier
+? Equations of state for the thermodynamic properties of cryogenic
+? mixtures for helium, neon and argon
+? Journal of Physical and Chemical Reference Data, 2020.
+?
+!```````````````````````````````````````````````````````````````````````````````
+ BetaT    GammaT   BetaV    GammaV    Fij    not used      !Descriptors for binary-specific parameters
+  1.0      1.0      1.0      1.0      0.0      0.0         !Default values (i.e. ideal-solution)
+  3 4      0        0 0      5 12     0 0      0 0         !# terms and # coefs/term for normal terms, Kunz-Wagner terms, and Gaussian terms.  3rd column is not used.
+ -1.039686   0.723   1.  0.0                               !a(i),t(i),d(i),eta(i),beta(i),gamma(i),epsilon(i)
+  0.593776   1.689   2.  0.0
+ -0.186531   1.365   3.  0.0
+ -0.223315   0.201   1.  2.0  2.0  -1.018  -0.360   1.119   2.490  0.0  0.0  0.0
+  0.160847   0.164   2.  2.0  2.0  -0.556  -0.373   1.395   1.202  0.0  0.0  0.0
+  0.405228   0.939   2.  2.0  2.0  -0.221  -0.582   1.010   2.468  0.0  0.0  0.0
+ -0.264563   1.690   3.  2.0  2.0  -0.862  -0.319   1.227   0.837  0.0  0.0  0.0
+ -0.033569   1.545   4.  2.0  2.0  -0.809  -0.560   1.321   2.144  0.0  0.0  0.0
+
+
+@END
+c        1         2         3         4         5         6         7         8
+c2345678901234567890123456789012345678901234567890123456789012345678901234567890
