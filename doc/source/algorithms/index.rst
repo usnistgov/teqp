@@ -7,6 +7,7 @@ Algorithms
 
    GeneralizedPhaseEquilibria
    VLE
+   TracingforGGE
    VLLE
    VLLE-p
    critical_curves
