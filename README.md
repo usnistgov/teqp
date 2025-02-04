@@ -45,6 +45,12 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.23.1:
+
+  * Issues closed:
+
+    * [#164](https://github.com/usnistgov/teqp/issues/164) : Improper conversion for BAW and BAA models
+
 * 0.23.0:
 
   * Features:
