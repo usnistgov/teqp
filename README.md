@@ -45,6 +45,19 @@ Written by Ian Bell, NIST, with the help of colleagues and collaborators
 
 [![PyPI version](https://badge.fury.io/py/teqp.svg)](https://badge.fury.io/py/teqp)
 
+* 0.23.0:
+
+  * Features:
+  
+    * Builds are now all via scikit-build-core
+    * Added ability to disable models at compile time for much faster builds. There is still an issue with scikit-build-core with projects that embed teqp in that the CMake cache gets wiped at each build invocation and the build times are thus still a bit slower than they could be. Already a huge improvement 
+    * Fixed a lot(!) of issues with conversion of REFPROP models to teqp/CoolProp format in REFPROP-interop
+
+  * Issues closed:
+
+    * [#158](https://github.com/usnistgov/teqp/issues/158) : Expose ReducingFunctions to public interface for all applicable EOS models
+    * [#163](https://github.com/usnistgov/teqp/issues/163) : No error if z passed to get_Tr(z) is wrong size
+
 * 0.22.0:
 
   * Features:
