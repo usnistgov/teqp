@@ -202,8 +202,11 @@ namespace teqp {
 
         template <typename MoleFractions>
         auto Y(const MoleFractions& z, const Eigen::ArrayXd& Yc, const Eigen::MatrixXd& beta, const Eigen::MatrixXd& Yij) const {
-
+            
             auto N = z.size();
+            if (N != Yc.size()){
+                throw teqp::InvalidArgument("Length of fractions of " + std::to_string(N) + " does not equal # of components of " + std::to_string(Yc.size()));
+            }
             typename MoleFractions::value_type sum1 = 0.0;
             for (auto i = 0U; i < N; ++i) {
                 sum1 = sum1 + pow2(z[i]) * Yc[i];
