@@ -31,6 +31,7 @@ jobs:
 
       - uses: vapier/coverity-scan-action@v1.8.0
         with:
+          project: teqp
           email: ${{ secrets.COVERITY_SCAN_EMAIL }}
           token: ${{ secrets.COVERITY_SCAN_TOKEN }}
           command: cmake --build ${{github.workspace}}/build --config Release --target catch_tests
