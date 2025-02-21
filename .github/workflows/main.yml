@@ -9,6 +9,12 @@ on:
   #  branches: [ 'master', 'main', 'develop' ]
   schedule:
     - cron: '15 8 * * 0,4' # Run twice a week
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch or tag to retrieve the binaries from'
+        required: false
+        default: 'main'
 
 jobs:
   build:
