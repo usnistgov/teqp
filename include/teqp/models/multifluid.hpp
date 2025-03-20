@@ -640,7 +640,11 @@ inline auto get_EOS_terms(const nlohmann::json& j)
         }
     };
 
-    auto build_Lemmon2005 = [&](auto term) {
+    auto build_Lemmon2005 = [&](auto term, auto & container) {
+        if (!all_same_length(term, { "n","t","d","m","l" })) {
+            throw std::invalid_argument("Lengths are not all identical in Lemmon2005 term");
+        }
+        
         Lemmon2005EOSTerm eos;
         eos.n = toeig(term["n"]);
         eos.t = toeig(term["t"]);
@@ -648,13 +652,52 @@ inline auto get_EOS_terms(const nlohmann::json& j)
         eos.m = toeig(term["m"]);
         eos.l = toeig(term["l"]);
         eos.l_i = eos.l.cast<int>();
-        if (!all_same_length(term, { "n","t","d","m","l" })) {
-            throw std::invalid_argument("Lengths are not all identical in Lemmon2005 term");
-        }
         if (((eos.l_i.cast<double>() - eos.l).cwiseAbs() > 0.0).any()) {
             throw std::invalid_argument("Non-integer entry in l found");
         }
-        return eos;
+        
+        auto getindices = [](const auto& mask){
+            std::vector<int> indices;
+            for (auto i = 0; i < mask.size(); ++i){
+                if (mask[i]){ indices.push_back(i); }
+            }
+            return indices;
+        };
+        auto pow_indices = getindices((eos.m == 0 ) && (eos.l == 0));
+        auto mzerolpos_indices = getindices((eos.m == 0) && (eos.l > 0));
+        auto mzero_indices = getindices((eos.m > 0) && (eos.l > 0));
+        
+        if (pow_indices.size() + mzerolpos_indices.size() + mzero_indices.size() != static_cast<std::size_t>(eos.m.size())) {
+            throw std::invalid_argument("Term subdivision failed in Lemmon2005 term");
+        }
+        
+        if (!pow_indices.empty()){
+            JustPowerEOSTerm poly;
+            poly.n = eos.n(pow_indices);
+            poly.t = eos.t(pow_indices);
+            poly.d = eos.d(pow_indices);
+            container.add_term(poly);
+        }
+        if (!mzerolpos_indices.empty()){
+            PowerEOSTerm::PowerEOSTermCoeffs e;
+            e.n = eos.n(mzerolpos_indices);
+            e.t = eos.t(mzerolpos_indices);
+            e.d = eos.d(mzerolpos_indices);
+            e.l = eos.l(mzerolpos_indices);
+            e.c = (1 + 0*eos.l).cast<double>();
+            e.l_i = eos.l_i(mzerolpos_indices);
+            container.add_term(PowerEOSTerm(e));
+        }
+        if (!mzero_indices.empty()){
+            Lemmon2005EOSTerm e;
+            e.n = eos.n(mzero_indices);
+            e.t = eos.t(mzero_indices);
+            e.d = eos.d(mzero_indices);
+            e.m = eos.m(mzero_indices);
+            e.l = eos.l(mzero_indices);
+            e.l_i = e.l.cast<int>();
+            container.add_term(e);
+        }
     };
 
     auto build_gaussian = [&](auto term) {
@@ -747,7 +790,7 @@ inline auto get_EOS_terms(const nlohmann::json& j)
             container.add_term(build_na(term));
         }
         else if (type == "ResidualHelmholtzLemmon2005") {
-            container.add_term(build_Lemmon2005(term));
+            build_Lemmon2005(term, container);
         }
         else if (type == "ResidualHelmholtzGaoB") {
             container.add_term(build_GaoB(term));
