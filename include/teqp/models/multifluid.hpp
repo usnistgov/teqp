@@ -276,16 +276,16 @@ inline auto build_departure_function(const nlohmann::json& j) {
                 throw std::invalid_argument("Lengths are not all identical in exponential term");
             }
             l = toeig(term["l"]);
-			if (term.contains("c")){
-				c = eigorzero("c");
-				if (!all_same_length(term, { "n","t","d","l","c"})) {
-					throw std::invalid_argument("Lengths are not all identical in exponential term");
-				}
-			}
-			else{
-				// l is included, use it to build c; c_i = 1 if l_i > 0, zero otherwise
-				c = (l > 0).cast<double>();
-			}
+            if (term.contains("c")){
+                c = eigorzero("c");
+                if (!all_same_length(term, { "n","t","d","l","c"})) {
+                    throw std::invalid_argument("Lengths are not all identical in exponential term");
+                }
+            }
+            else{
+                // l is included, use it to build c; c_i = 1 if l_i > 0, zero otherwise
+                c = (l > 0).cast<double>();
+            }
 
             // See how many of the first entries have zero values for l_i
             contiguous_lzero = (l[0] == 0);
