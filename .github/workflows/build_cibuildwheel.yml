@@ -19,12 +19,12 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-13, macos-14]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: checkout submodules
         run: git submodule update --init --recursive
 
       # Used to host cibuildwheel
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -82,11 +82,11 @@ jobs:
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: '3.12'
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v5
       with:
         name: dist
         path: dist
@@ -96,7 +96,7 @@ jobs:
         ls -R
         du -sh
 
-    - uses: pypa/gh-action-pypi-publish@release/v1.12
+    - uses: pypa/gh-action-pypi-publish@release/v1.13
       with:
         repository-url: https://test.pypi.org/legacy/
         password: ${{ secrets.TESTPYPI_TOKEN }}
@@ -115,11 +115,11 @@ jobs:
     if: github.event_name == 'release' && contains(fromJSON('["published", "edited"]'), github.event.action)
 
     steps:
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: '3.12'
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v5
       with:
         name: dist
         path: dist
@@ -130,7 +130,7 @@ jobs:
         ls -R
         du -sh
 
-    - uses: pypa/gh-action-pypi-publish@release/v1.12
+    - uses: pypa/gh-action-pypi-publish@release/v1.13
       with:
         password: ${{ secrets.PYPI_TOKEN }}
         skip-existing: false
