@@ -448,7 +448,15 @@ void init_teqp(py::module& m) {
         .def_readonly("v", &IterationMatrices::v)
         .def_readonly("vars", &IterationMatrices::vars)
     ;
-    
+
+    py::class_<EigenData>(m, "EigenData")
+        .def(py::init<>())
+        .def_readonly("v0", &EigenData::v0)
+        .def_readonly("v1", &EigenData::v1)
+        .def_readonly("eigenvalues", &EigenData::eigenvalues)
+        .def_readonly("eigenvectorscols", &EigenData::eigenvectorscols)
+    ;
+
     py::enum_<VLE_return_code>(m, "VLE_return_code")
         .value("unset", VLE_return_code::unset)
         .value("xtol_satisfied", VLE_return_code::xtol_satisfied)
