@@ -16,7 +16,7 @@ name = "teqp"
 version = "0.23.1"
 description = "teqp: Templated EQuation of state Package"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 authors = [
     { name = "Ian Bell", email = "ian.bell@nist.gov" },
 ]
