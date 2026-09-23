@@ -146,6 +146,49 @@ TEST_CASE("Test construction of mutant with invariant departure function", "[mut
     CHECK(Ar02base != Ar02mut);
 }
 
+TEST_CASE("Invariant reducing function keeps its pure-component limits", "[mutant][invariant]")
+{
+    std::string coolprop_root = FLUIDDATAPATH;
+    auto BIPcollection = coolprop_root + "/dev/mixtures/mixture_binary_pairs.json";
+    auto model = build_multifluid_model({ "Nitrogen", "Ethane" }, coolprop_root, BIPcollection);
+
+    auto invariant = [&](double phiT, double lambdaT, double phiV, double lambdaV) {
+        nlohmann::json j = nlohmann::json::parse(R"({"0": {"1": {"BIP": {"type": "invariant",
+            "phiT": 1.0, "lambdaT": 0.0, "phiV": 1.0, "lambdaV": 0.0, "Fij": 0.0},
+            "departure": {"type": "none"}}}})");
+        j["0"]["1"]["BIP"]["phiT"] = phiT;
+        j["0"]["1"]["BIP"]["lambdaT"] = lambdaT;
+        j["0"]["1"]["BIP"]["phiV"] = phiV;
+        j["0"]["1"]["BIP"]["lambdaV"] = lambdaV;
+        return build_multifluid_mutant(model, j);
+    };
+
+    // At a pure composition the reducing function must return that fluid's own critical values,
+    // whatever the interaction parameters are. Before the diagonal of phi was set, every one of
+    // these returned zero, because only the off-diagonal entries were ever written.
+    const double cases[3][4] = {{1.0, 0.0, 1.0, 0.0}, {1.1, 0.05, 0.95, -0.05}, {1.4, -0.1, 1.2, 0.1}};
+    for (auto k = 0; k < 3; ++k) {
+        auto mut = invariant(cases[k][0], cases[k][1], cases[k][2], cases[k][3]);
+        for (auto i = 0; i < 2; ++i) {
+            Eigen::ArrayXd z(2); z.setZero(); z[i] = 1.0;
+            CHECK(mut.redfunc.get_Tr(z) == Approx(model.redfunc.Tc[i]));
+            CHECK(1.0 / mut.redfunc.get_rhor(z) == Approx(model.redfunc.vc[i]));
+        }
+    }
+
+    // phi = 1, lambda = 0 is the GERG reducing function at beta = gamma = 1: both are
+    // sum_i z_i^2 Yc_i + 2 z_0 z_1 Y_01.
+    nlohmann::json jg = nlohmann::json::parse(R"({"0": {"1": {"BIP": {"betaT": 1.0, "gammaT": 1.0,
+        "betaV": 1.0, "gammaV": 1.0, "Fij": 0.0}, "departure": {"type": "none"}}}})");
+    auto gerg = build_multifluid_mutant(model, jg);
+    auto inv = invariant(1.0, 0.0, 1.0, 0.0);
+    for (double x0 = 0.0; x0 <= 1.0; x0 += 0.1) {
+        Eigen::ArrayXd z(2); z[0] = x0; z[1] = 1.0 - x0;
+        CHECK(inv.redfunc.get_Tr(z) == Approx(gerg.redfunc.get_Tr(z)));
+        CHECK(inv.redfunc.get_rhor(z) == Approx(gerg.redfunc.get_rhor(z)));
+    }
+}
+
 TEST_CASE("Test infinite dilution critical locus derivatives for multifluid mutant with both orders", "[crit],[multifluid],[xxx]")
 {
     std::string root = FLUIDDATAPATH;
