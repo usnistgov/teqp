@@ -89,6 +89,26 @@ TEST_CASE("Mutant with none departure function (ok)", "[mutant]") {
     CHECK_NOTHROW(build_multifluid_mutant(model, j));
 }
 
+TEST_CASE("Mutant reducing function type must agree for all pairs", "[mutant][invariant]") {
+    std::string root = FLUIDDATAPATH;
+    auto BIPcollection = root + "/dev/mixtures/mixture_binary_pairs.json";
+    auto model = build_multifluid_model({ "Nitrogen", "Ethane", "Methane" }, root, BIPcollection);
+
+    nlohmann::json gerg = nlohmann::json::parse(R"({"BIP": {"betaT": 1.0, "gammaT": 1.0, "betaV": 1.0, "gammaV": 1.0, "Fij": 0.0}, "departure": {"type": "none"}})");
+    nlohmann::json inv = nlohmann::json::parse(R"({"BIP": {"type": "invariant", "phiT": 1.0, "lambdaT": 0.0, "phiV": 1.0, "lambdaV": 0.0, "Fij": 0.0}, "departure": {"type": "none"}})");
+    auto build = [&](const nlohmann::json& p01, const nlohmann::json& p02, const nlohmann::json& p12) {
+        nlohmann::json j;
+        j["0"]["1"] = p01; j["0"]["2"] = p02; j["1"]["2"] = p12;
+        return build_multifluid_mutant(model, j);
+    };
+
+    CHECK_NOTHROW(build(gerg, gerg, gerg));
+    CHECK_NOTHROW(build(inv, inv, inv));
+    // Previously only pair 0-1 was consulted, so these silently used the family of pair 0-1
+    CHECK_THROWS_AS(build(gerg, inv, gerg), std::invalid_argument);
+    CHECK_THROWS_AS(build(inv, inv, gerg), std::invalid_argument);
+}
+
 TEST_CASE("Test construction of mutant with invariant departure function", "[mutant][invariant]")
 {
 
