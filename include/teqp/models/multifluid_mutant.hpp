@@ -142,7 +142,23 @@ namespace teqp {
                 return ReducingFunctions(MultiFluidReducingFunction(betaT, gammaT, betaV, gammaV, Tc, vc));
             }
         };
-        std::string deptype = (jj.at("0").at("1").at("BIP").contains("type")) ? jj.at("0").at("1").at("BIP")["type"] : "";
+        // A single reducing function family is used for the whole mixture, so every pair
+        // must declare the same one; otherwise the pairs after 0-1 would have their
+        // declared "type" silently ignored
+        auto get_type = [&](std::size_t i, std::size_t j) -> std::string {
+            const auto& BIP = jj.at(std::to_string(i)).at(std::to_string(j)).at("BIP");
+            return BIP.contains("type") ? BIP.at("type").get<std::string>() : "";
+        };
+        std::string deptype = get_type(0, 1);
+        for (auto i = 0; i < N; ++i) {
+            for (auto j = i + 1; j < N; ++j) {
+                auto pairtype = get_type(i, j);
+                if ((pairtype == "invariant") != (deptype == "invariant")) {
+                    auto describe = [](const std::string& t) { return t.empty() ? std::string("default (GERG)") : "\"" + t + "\""; };
+                    throw std::invalid_argument("The reducing function type of pair " + std::to_string(i) + "-" + std::to_string(j) + " (" + describe(pairtype) + ") does not match that of pair 0-1 (" + describe(deptype) + "); all pairs must use the same type");
+                }
+            }
+        }
         ReducingFunctions newred = get_reducing(deptype);
 
         auto newdep = DepartureContribution(std::move(F), std::move(funcs));
