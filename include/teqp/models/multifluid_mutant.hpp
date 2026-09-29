@@ -101,6 +101,16 @@ namespace teqp {
                 using mat = std::decay_t<decltype(MultiFluidInvariantReducingFunction::phiT)>;
                 mat phiT = mat::Zero(N, N), lambdaT = mat::Zero(N, N), phiV = mat::Zero(N, N), lambdaV = mat::Zero(N, N);
 
+                // The diagonal of phi must be unity, or the reducing function loses its
+                // pure-component part. MultiFluidInvariantReducingFunction::Y implements
+                // Table 7.18 of GERG-2004,
+                //     Y = sum_i z_i [ sum_j z_j phi_ij Y_ij + ( sum_j z_j lambda_ij^(1/3) Y_ij^(1/3) )^3 ],
+                // which at z = e_i is phi_ii*Y_ii + (lambda_ii^(1/3) * Y_ii^(1/3))^3 =
+                // (phi_ii + lambda_ii)*Y_ii. lambda is stored antisymmetrically, so lambda_ii is
+                // necessarily zero and phi_ii must be one for Y(e_i) to equal Y_ii = Tc_i (or vc_i).
+                // Only the off-diagonal entries are read from the JSON below.
+                for (auto i = 0; i < N; ++i) { phiT(i, i) = 1.0; phiV(i, i) = 1.0; }
+
                 for (auto i = 0; i < N; ++i) {
                     for (auto j = i+1; j < N; ++j) {
                         // Extract the given entry
