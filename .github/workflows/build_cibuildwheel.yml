@@ -21,7 +21,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-15-intel, macos-14]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: checkout submodules
         run: git submodule update --init --recursive
 
@@ -61,7 +61,7 @@ jobs:
         run: python -m twine check wheelhouse/*.whl
 
       - name: Upload Files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dist-${{ matrix.os }}
           path: |
@@ -73,7 +73,7 @@ jobs:
    needs: build_wheels
    steps:
      - name: Merge Artifacts
-       uses: actions/upload-artifact/merge@v4
+       uses: actions/upload-artifact/merge@v5
        with:
          name: dist
          pattern: dist-*
@@ -91,7 +91,7 @@ jobs:
       with:
         python-version: '3.12'
 
-    - uses: actions/download-artifact@v5
+    - uses: actions/download-artifact@v6
       with:
         name: dist
         path: dist
@@ -124,7 +124,7 @@ jobs:
       with:
         python-version: '3.12'
 
-    - uses: actions/download-artifact@v5
+    - uses: actions/download-artifact@v6
       with:
         name: dist
         path: dist
