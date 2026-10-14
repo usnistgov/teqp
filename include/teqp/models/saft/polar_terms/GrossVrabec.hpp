@@ -108,6 +108,23 @@ auto get_JDQ_3ijk(const Eta& eta, const MType& mijk) {
 }
 
 /***
+ * \brief The Pade approximant \f$ \alpha_2/(1-\alpha_3/\alpha_2) \f$ for the dipolar and quadrupolar contributions
+ *
+ * This is 0/0 when \f$ \alpha_2 \f$ is zero, which happens at zero density, or when all the
+ * polar components have mole fractions of zero. In both cases \f$ \alpha_3 \f$ goes to zero
+ * faster than \f$ \alpha_2 \f$, so \f$ \alpha_2+\alpha_3 \f$, the leading terms of the
+ * expansion of the approximant, is returned instead. Its value is zero and its leading
+ * derivatives (with autodiff types, for instance) are kept
+ */
+template<typename A2Type, typename A3Type>
+auto get_alpha_Pade(const A2Type& alpha2, const A3Type& alpha3) -> std::common_type_t<A2Type, A3Type>{
+    if (getbaseval(alpha2) == 0){
+        return forceeval(alpha2 + alpha3);
+    }
+    return forceeval(alpha2/(1.0-alpha3/alpha2));
+}
+
+/***
  * \brief The dipolar contribution given in Gross and Vrabec
  */
 class DipolarContributionGrossVrabec {
@@ -182,7 +199,7 @@ public:
     auto eval(const TTYPE& T, const RhoType& rho_A3, const EtaType& eta, const VecType& mole_fractions) const {
         auto alpha2 = get_alpha2DD(T, rho_A3, eta, mole_fractions);
         auto alpha3 = get_alpha3DD(T, rho_A3, eta, mole_fractions);
-        auto alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
+        auto alpha = get_alpha_Pade(alpha2, alpha3);
         
         using alpha2_t = decltype(alpha2);
         using alpha3_t = decltype(alpha3);
@@ -274,7 +291,7 @@ public:
     auto eval(const TTYPE& T, const RhoType& rho_A3, const EtaType& eta, const VecType& mole_fractions) const {
         auto alpha2 = get_alpha2QQ(T, rho_A3, eta, mole_fractions);
         auto alpha3 = get_alpha3QQ(T, rho_A3, eta, mole_fractions);
-        auto alpha = forceeval(alpha2/(1.0-alpha3/alpha2));
+        auto alpha = get_alpha_Pade(alpha2, alpha3);
         
         using alpha2_t = decltype(alpha2);
         using alpha3_t = decltype(alpha3);
@@ -444,14 +461,14 @@ public:
         if (di && di.value().has_a_polar){
             alpha2DD = di.value().get_alpha2DD(T, rho_A3, eta, mole_fractions);
             alpha3DD = di.value().get_alpha3DD(T, rho_A3, eta, mole_fractions);
-            alphaDD = forceeval(alpha2DD/(1.0-alpha3DD/alpha2DD));
+            alphaDD = get_alpha_Pade(alpha2DD, alpha3DD);
         }
         
         type alpha2QQ = 0.0, alpha3QQ = 0.0, alphaQQ = 0.0;
         if (quad && quad.value().has_a_polar){
             alpha2QQ = quad.value().get_alpha2QQ(T, rho_A3, eta, mole_fractions);
             alpha3QQ = quad.value().get_alpha3QQ(T, rho_A3, eta, mole_fractions);
-            alphaQQ = forceeval(alpha2QQ/(1.0-alpha3QQ/alpha2QQ));
+            alphaQQ = get_alpha_Pade(alpha2QQ, alpha3QQ);
         }
         
         type alpha2DQ = 0.0, alpha3DQ = 0.0, alphaDQ = 0.0;

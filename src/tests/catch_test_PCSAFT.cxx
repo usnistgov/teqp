@@ -332,6 +332,59 @@ TEST_CASE("Check PCSAFT with quadrupole for CO2", "[PCSAFTQ]")
     CHECK(std::get<0>(crit) == Approx(325).margin(10));
 }
 
+TEST_CASE("Check PCSAFT with quadrupole when alpha2 is zero", "[PCSAFTQ]")
+{
+    // CO2 with a quadrupole and methane without, from Gross, AICHEJ, 2005 and Gross and Sadowski, IECR, 2001
+    std::vector<double> eoverk = { 169.33, 150.03 }, m = { 1.5131, 1.0 }, sigma = { 3.1869, 3.7039 };
+    auto conv_factor = 1e-69/1.380649e-23/1e-50;
+    auto QDA = 4.4; // [DA]
+    auto Qstar2 = conv_factor*QDA*QDA/(m[0]*eoverk[0]*pow(sigma[0], 5));
+    std::vector<teqp::PCSAFT::SAFTCoeffs> coeffs;
+    for (auto i = 0; i < eoverk.size(); ++i) {
+        teqp::PCSAFT::SAFTCoeffs c;
+        c.m = m[i];
+        c.sigma_Angstrom = sigma[i];
+        c.epsilon_over_k = eoverk[i];
+        c.Qstar2 = (i == 0) ? Qstar2 : 0.0;
+        c.nQ = (i == 0) ? 1 : 0;
+        coeffs.push_back(c);
+    }
+    auto model = PCSAFT::PCSAFTMixture(coeffs);
+    auto modelCH4 = PCSAFT::PCSAFTMixture(std::vector<teqp::PCSAFT::SAFTCoeffs>{coeffs[1]});
+    double T = 300, rho = 300;
+
+    SECTION("mole fraction of zero for the quadrupolar component"){
+        auto z = (Eigen::ArrayXd(2) << 0.0, 1.0).finished();
+        auto z1 = (Eigen::ArrayXd(1) << 1.0).finished();
+        CHECK(model.alphar(T, rho, z) == Approx(modelCH4.alphar(T, rho, z1)));
+
+        using tdx = teqp::TDXDerivatives<decltype(model), double, Eigen::ArrayXd>;
+        CHECK(tdx::get_Ar01(model, T, rho, z) == Approx(tdx::get_Ar01(modelCH4, T, rho, z1)));
+
+        // Composition derivatives at infinite dilution from autodiff match those at a tiny mole fraction
+        using id = teqp::IsochoricDerivatives<decltype(model), double, Eigen::ArrayXd>;
+        auto zdilute = (Eigen::ArrayXd(2) << 1e-10, 1.0-1e-10).finished();
+        auto H = id::build_Psir_Hessian_autodiff(model, T, (rho*z).eval());
+        auto Hdilute = id::build_Psir_Hessian_autodiff(model, T, (rho*zdilute).eval());
+        for (auto i = 0; i < 2; ++i){
+            for (auto j = 0; j < 2; ++j){
+                CHECK(H(i,j) == Approx(Hdilute(i,j)));
+            }
+        }
+        auto lnphi = id::get_fugacity_coefficients(model, T, (rho*z).eval()).log().eval();
+        auto lnphidilute = id::get_fugacity_coefficients(model, T, (rho*zdilute).eval()).log().eval();
+        CHECK(lnphi[0] == Approx(lnphidilute[0]));
+        CHECK(lnphi[1] == Approx(lnphidilute[1]));
+    }
+    SECTION("density of zero for the second virial coefficient"){
+        auto z = (Eigen::ArrayXd(2) << 1.0, 0.0).finished();
+        using vd = teqp::VirialDerivatives<decltype(model), double, Eigen::ArrayXd>;
+        using tdx = teqp::TDXDerivatives<decltype(model), double, Eigen::ArrayXd>;
+        double rhotest = 1e-6;
+        CHECK_THAT(vd::get_Bnvir<2>(model, T, z)[2], WithinRel(tdx::get_Ar01(model, T, rhotest, z)/rhotest, 1e-8));
+    }
+}
+
 TEST_CASE("Check PCSAFT with kmat options", "[PCSAFT],[kmat]")
 {
     SECTION("null; ok"){
