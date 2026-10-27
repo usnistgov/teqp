@@ -257,6 +257,19 @@ struct CriticalTracing {
         b << derivs[3], derivs[4],             // row is d^3\Psi/d\sigma_1^3, d^4\Psi/d\sigma_1^4
             deriv_sigma2[2], deriv_sigma2[3]; // row is d/d\sigma_2(d^3\Psi/d\sigma_1^3), d/d\sigma_2(d^3\Psi/d\sigma_1^3)
 
+        // The second criticality condition, d^3\Psi/d\sigma_1^3, is a cubic form in the eigenvector v0,
+        // and v0 turns when rhovec moves along v0. derivs[4] holds v0 fixed, so the derivative of that
+        // condition along sigma_1 also needs the rotation term 3*Psi_001^2/(lambda_0 - lambda_1), from
+        // first-order perturbation of the eigenvector, dv0/dsigma_1 = Psi_001/(lambda_0 - lambda_1)*v1.
+        // Psi_001 = d/d\sigma_2(d^2\Psi/d\sigma_1^2) is deriv_sigma2[2]. The first condition, lambda_0,
+        // is stationary with respect to v0 and needs no such term, and the derivatives along sigma_2
+        // and T re-solve the eigenproblem at the perturbed state, so they already contain the rotation.
+        // At infinite dilution the reduced eigenproblem has one eigenvalue: there lambda_1 diverges
+        // with the ideal-gas term RT/rho_i of the absent component, and the term vanishes.
+        if (ei.eigenvalues.size() > 1) {
+            b(0, 1) += 3.0*deriv_sigma2[2]*deriv_sigma2[2]/(ei.eigenvalues(0) - ei.eigenvalues(1));
+        }
+
         auto LHS = (ei.eigenvectorscols * b).transpose();
         Eigen::MatrixXd RHS(2, 1); RHS << -derivT[2], -derivT[3];
         Eigen::MatrixXd drhovec_dT = LHS.colPivHouseholderQr().solve(RHS);
@@ -708,8 +721,9 @@ struct CriticalTracing {
                 auto step_sizes = ((-rhovec) / drhodt).eval();
                 Eigen::Index ipure;
                 rhovec.maxCoeff(&ipure);
-                // Find new step size based on the pure we are heading towards
-                auto new_step_size = step_sizes(ipure);
+                // Find new step size based on the pure we are heading towards: the step that takes
+                // the OTHER concentration, the one that vanishes there, to zero
+                auto new_step_size = step_sizes(1 - ipure);
                 // Take an Euler step of the new size
                 const auto new_rhovec = (rhovec + drhodt*new_step_size).eval();
                 const double new_T = T + extract_dTdt(dxdt)*new_step_size;
