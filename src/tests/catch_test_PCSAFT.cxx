@@ -385,6 +385,28 @@ TEST_CASE("Check PCSAFT with quadrupole when alpha2 is zero", "[PCSAFTQ]")
     }
 }
 
+TEST_CASE("Check B2 of SAFT-VR-Mie with dipolar and quadrupolar terms at zero density", "[GrossVrabec],[B]")
+{
+    // The parameters of the Paricaud R1234YF test, with the Gross and Vrabec polar model, which
+    // adds the cross dipolar-quadrupolar term when both moments are present
+    std::string base = R"({"name": "R1234YF", "BibTeXKey": "Paricaud", "m": 1.3656, "sigma_Angstrom": 4.5307, "epsilon_over_k": 299.424, "lambda_r": 21.7779, "lambda_a": 6.0)";
+    std::string both = base + R"(, "mu_D": 2.2814, "nmu": 1.0, "Q_DA": 1.4151, "nQ": 1.0})";
+    std::string dipole = base + R"(, "mu_D": 2.2814, "nmu": 1.0})";
+    std::string quadrupole = base + R"(, "Q_DA": 1.4151, "nQ": 1.0})";
+    double T = 300, rhotest = 1e-6;
+
+    SECTION("pure fluid with both moments"){
+        auto model = teqp::cppinterface::make_model(nlohmann::json::parse(R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [)" + both + R"(], "polar_model": "GrossVrabec"}})"));
+        auto z = (Eigen::ArrayXd(1) << 1.0).finished();
+        CHECK_THAT(model->get_Bnvir(2, T, z)[2], WithinRel(model->get_Ar01(T, rhotest, z)/rhotest, 1e-8));
+    }
+    SECTION("mixture of a dipolar and a quadrupolar fluid"){
+        auto model = teqp::cppinterface::make_model(nlohmann::json::parse(R"({"kind": "SAFT-VR-Mie", "model": {"coeffs": [)" + dipole + "," + quadrupole + R"(], "polar_model": "GrossVrabec"}})"));
+        auto z = (Eigen::ArrayXd(2) << 0.4, 0.6).finished();
+        CHECK_THAT(model->get_Bnvir(2, T, z)[2], WithinRel(model->get_Ar01(T, rhotest, z)/rhotest, 1e-8));
+    }
+}
+
 TEST_CASE("Check PCSAFT with kmat options", "[PCSAFT],[kmat]")
 {
     SECTION("null; ok"){
