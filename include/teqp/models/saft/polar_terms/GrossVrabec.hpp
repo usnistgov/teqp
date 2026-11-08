@@ -19,7 +19,7 @@ auto get_JDD_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
     for (auto n = 0; n < 5; ++n){
         auto anij = a_0[n] + (mij-1)/mij*a_1[n] + (mij-1)/mij*(mij-2)/mij*a_2[n]; // Eq. 12
         auto bnij = b_0[n] + (mij-1)/mij*b_1[n] + (mij-1)/mij*(mij-2)/mij*b_2[n]; // Eq. 13
-        summer += (anij + bnij/Tstarij)*pow(eta, n);
+        summer += (anij + bnij/Tstarij)*powi(eta, n);
     }
     return forceeval(summer);
 }
@@ -33,7 +33,7 @@ auto get_JDD_3ijk(const Eta& eta, const MType& mijk) {
     std::common_type_t<Eta, MType> summer = 0.0;
     for (auto n = 0; n < 5; ++n){
         auto cnijk = c_0[n] + (mijk-1)/mijk*c_1[n] + (mijk-1)/mijk*(mijk-2)/mijk*c_2[n]; // Eq. 14
-        summer += cnijk*pow(eta, n);
+        summer += cnijk*powi(eta, n);
     }
     return forceeval(summer);
 }
@@ -53,7 +53,7 @@ auto get_JQQ_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
     for (auto n = 0; n < 5; ++n){
         auto anij = a_0[n] + (mij-1)/mij*a_1[n] + (mij-1)/mij*(mij-2)/mij*a_2[n]; // Eq. 12
         auto bnij = b_0[n] + (mij-1)/mij*b_1[n] + (mij-1)/mij*(mij-2)/mij*b_2[n]; // Eq. 13
-        summer += (anij + bnij/Tstarij)*pow(eta, n);
+        summer += (anij + bnij/Tstarij)*powi(eta, n);
     }
     return forceeval(summer);
 }
@@ -67,7 +67,7 @@ auto get_JQQ_3ijk(const Eta& eta, const MType& mijk) {
     std::common_type_t<Eta, MType> summer = 0.0;
     for (auto n = 0; n < 5; ++n){
         auto cnijk = c_0[n] + (mijk-1)/mijk*c_1[n] + (mijk-1)/mijk*(mijk-2)/mijk*c_2[n]; // Eq. 14
-        summer += cnijk*pow(eta, n);
+        summer += cnijk*powi(eta, n);
     }
     return forceeval(summer);
 }
@@ -88,7 +88,7 @@ auto get_JDQ_2ij(const Eta& eta, const MType& mij, const TType& Tstarij) {
     for (auto n = 0; n < 4; ++n){
         auto anij = a_0[n] + (mij-1)/mij*a_1[n] + (mij-1)/mij*(mij-2)/mij*a_2[n]; // Eq. 18
         auto bnij = b_0[n] + (mij-1)/mij*b_1[n] + (mij-1)/mij*(mij-2)/mij*b_2[n]; // Eq. 19
-        summer += (anij + bnij/Tstarij)*pow(eta, n);
+        summer += (anij + bnij/Tstarij)*powi(eta, n);
     }
     return forceeval(summer);
 }
@@ -102,7 +102,7 @@ auto get_JDQ_3ijk(const Eta& eta, const MType& mijk) {
     std::common_type_t<Eta, MType> summer = 0.0;
     for (auto n = 0; n < 4; ++n){
         auto cnijk = c_0[n] + (mijk-1)/mijk*c_1[n]; // Eq. 20
-        summer += cnijk*pow(eta, n);
+        summer += cnijk*powi(eta, n);
     }
     return forceeval(summer);
 }
