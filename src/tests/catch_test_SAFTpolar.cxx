@@ -493,3 +493,27 @@ TEST_CASE("Critical points with Stockmayer-LJ model of Mooji", "[polar]"){
     }
     
 }
+
+TEST_CASE("Derivatives of the Gross and Vrabec J integrals at zero packing fraction", "[polar],[GrossVrabec]"){
+    // The J integrals are polynomials of degree four or less in eta, so the Taylor series
+    // built from their derivatives at eta = 0 should give back their values at any eta. These
+    // derivatives are what the virial coefficients of the polar terms need
+    using namespace teqp::saft::polar_terms::GrossVrabec;
+    double m = 1.5, Tstar = 1.3, eta1 = 0.3;
+    auto check = [&](const auto& J){
+        autodiff::Real<4, double> eta0 = 0.0;
+        auto ders = derivatives(J, along(1), at(eta0));
+        double taylor = 0.0, factorial = 1.0;
+        for (auto k = 0; k <= 4; ++k){
+            if (k > 0){ factorial *= k; }
+            taylor += ders[k]/factorial*pow(eta1, k);
+        }
+        CHECK(taylor == Approx(J(eta1)).epsilon(1e-12));
+    };
+    check([&](const auto& eta){ return get_JDD_2ij(eta, m, Tstar); });
+    check([&](const auto& eta){ return get_JDD_3ijk(eta, m); });
+    check([&](const auto& eta){ return get_JQQ_2ij(eta, m, Tstar); });
+    check([&](const auto& eta){ return get_JQQ_3ijk(eta, m); });
+    check([&](const auto& eta){ return get_JDQ_2ij(eta, m, Tstar); });
+    check([&](const auto& eta){ return get_JDQ_3ijk(eta, m); });
+}
