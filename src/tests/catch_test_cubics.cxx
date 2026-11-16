@@ -664,6 +664,122 @@ TEST_CASE("QCPR", "[QCPR]"){
     }
 }
 
+/// Aasen et al., Fluid Phase Equilib. 524 (2020) 112790, Table 3: helium ("Empirical") and neon
+/// (FH1), with their Peneloux shifts converted from cm^3/mol to m^3/mol, and k_ij of He + Ne.
+/// cfactor scales the shifts; cfactor = 0 is the untranslated equation of state.
+static nlohmann::json QCPR_HeNe(double cfactor){
+    nlohmann::json j = {
+        {"Ls", {0.48558, 0.40453}}, {"Ms", {1.7173, 0.95861}}, {"Ns", {0.30271, 0.8396}},
+        {"As", {1.4912, 0.4673}}, {"Bs", {3.2634, 2.4634}},
+        {"cs / m^3/mol", {cfactor*-3.1791e-6, cfactor*-2.4665e-6}},
+        {"Tcrit / K", {5.1953, 44.492}}, {"pcrit / Pa", {2.276e5, 26.79e5}},
+        {"kmat", {{0.0, -0.17}, {-0.17, 0.0}}}, {"lmat", {{0.0, 0.0}, {0.0, 0.0}}}
+    };
+    return j;
+}
+static nlohmann::json QCPR_Ne(double cfactor){
+    nlohmann::json j = {
+        {"Ls", {0.40453}}, {"Ms", {0.95861}}, {"Ns", {0.8396}}, {"As", {0.4673}}, {"Bs", {2.4634}},
+        {"cs / m^3/mol", {cfactor*-2.4665e-6}}, {"Tcrit / K", {44.492}}, {"pcrit / Pa", {26.79e5}},
+        {"kmat", {{0.0}}}, {"lmat", {{0.0}}}
+    };
+    return j;
+}
+
+TEST_CASE("QCPR Peneloux volume translation", "[QCPR]"){
+    // The translated equation of state is p(T, v) = p_PR(T, v + c), with c = sum_i x_i c_i
+    // (Eq. 24 of Aasen et al. 2020); these are consequences of that definition
+    const QuantumCorrectedPR model(QCPR_HeNe(1.0)), model0(QCPR_HeNe(0.0));
+    using tdx = TDXDerivatives<QuantumCorrectedPR>;
+    const std::vector<double> cs = {-3.1791e-6, -2.4665e-6};
+    
+    auto pressure = [](const QuantumCorrectedPR& m, double T, double rho, const Eigen::ArrayXd& z){
+        return rho*m.R(z)*T*(1.0 + tdx::get_Ar01(m, T, rho, z));
+    };
+    
+    SECTION("pressure is the untranslated pressure at the translated volume"){
+        for (double x0 : {1e-6, 0.3, 0.7, 1.0-1e-6}){
+            Eigen::ArrayXd z(2); z << x0, 1.0-x0;
+            double c = z[0]*cs[0] + z[1]*cs[1];
+            for (double T : {25.0, 40.0, 150.0}){
+                for (double rho : {10.0, 1e3, 1e4, 3e4, 4.5e4}){
+                    double rhoprime = 1.0/(1.0/rho + c);
+                    CAPTURE(x0, T, rho);
+                    // relative to rho R T: p itself passes through zero in the two-phase region
+                    double scale = rho*model.R(z)*T;
+                    CHECK((pressure(model, T, rho, z) - pressure(model0, T, rhoprime, z))/scale == Approx(0.0).margin(1e-12));
+                }
+            }
+        }
+    }
+    SECTION("second virial coefficient is shifted by -c"){
+        for (double x0 : {0.0, 0.3, 1.0}){
+            Eigen::ArrayXd z(2); z << x0, 1.0-x0;
+            double c = z[0]*cs[0] + z[1]*cs[1];
+            for (double T : {30.0, 100.0, 300.0}){
+                CAPTURE(x0, T);
+                double B = VirialDerivatives<QuantumCorrectedPR>::get_B2vir(model, T, z);
+                double B0 = VirialDerivatives<QuantumCorrectedPR>::get_B2vir(model0, T, z);
+                CHECK(B == Approx(B0 - c).epsilon(1e-12));
+            }
+        }
+    }
+    SECTION("ln of the fugacity coefficients is shifted by -c_i p/(RT) at the same (T, p, x)"){
+        // This is what leaves the Pxy phase envelopes unchanged (Aasen et al. 2020, Sec. 2.5)
+        using id = IsochoricDerivatives<QuantumCorrectedPR>;
+        // vapour and liquid states with p > 0 (x_He, T / K, rho / mol/m^3 of the untranslated model)
+        const std::vector<std::tuple<double, double, double>> states = {
+            {0.05, 26.0, 100.0}, {0.05, 40.0, 100.0}, {0.05, 40.0, 5e4},
+            {0.5, 26.0, 100.0}, {0.5, 26.0, 5e4}, {0.5, 40.0, 5e4}};
+        for (auto [x0, T, rho0] : states){
+            Eigen::ArrayXd z(2); z << x0, 1.0-x0;
+            double c = z[0]*cs[0] + z[1]*cs[1];
+            double rho = 1.0/(1.0/rho0 - c); // same pressure in the translated model
+            double p = pressure(model0, T, rho0, z);
+            CAPTURE(x0, T, rho0);
+            REQUIRE(p > 0);
+            REQUIRE(pressure(model, T, rho, z) == Approx(p).epsilon(1e-12));
+            Eigen::ArrayXd lnphi = id::get_ln_fugacity_coefficients(model, T, (rho*z).eval());
+            Eigen::ArrayXd lnphi0 = id::get_ln_fugacity_coefficients(model0, T, (rho0*z).eval());
+            for (auto i = 0; i < 2; ++i){
+                CAPTURE(i);
+                CHECK(lnphi[i] == Approx(lnphi0[i] - cs[i]*p/(model.R(z)*T)).margin(1e-11));
+            }
+        }
+    }
+}
+
+TEST_CASE("QCPR saturation states with the Peneloux volume translation", "[QCPR]"){
+    // A Peneloux shift leaves the saturation pressure unchanged and shifts each saturated
+    // molar volume by -c
+    const QuantumCorrectedPR model(QCPR_Ne(1.0)), model0(QCPR_Ne(0.0));
+    auto am = make_model({{"kind", "QCPRAasen"}, {"model", QCPR_Ne(1.0)}});
+    using tdx = TDXDerivatives<QuantumCorrectedPR>;
+    const double c = -2.4665e-6;
+    Eigen::ArrayXd z(1); z << 1.0;
+    auto pressure = [&](const QuantumCorrectedPR& m, double T, double rho){
+        return rho*m.R(z)*T*(1.0 + tdx::get_Ar01(m, T, rho, z));
+    };
+    auto gibbs = [&](const QuantumCorrectedPR& m, double T, double rho){ // g/(RT) up to a function of T
+        return tdx::get_Ar00(m, T, rho, z) + tdx::get_Ar01(m, T, rho, z) + log(rho);
+    };
+    for (double T : {26.0, 30.0, 35.0, 40.0, 43.0}){
+        CAPTURE(T);
+        auto [rhoL0, rhoV0] = model0.superanc_rhoLV(T);
+        auto [rhoL, rhoV] = model.superanc_rhoLV(T);
+        CHECK(1.0/rhoL == Approx(1.0/rhoL0 - c).epsilon(1e-14));
+        CHECK(1.0/rhoV == Approx(1.0/rhoV0 - c).epsilon(1e-14));
+        double psat0 = pressure(model0, T, rhoL0);
+        CHECK(pressure(model, T, rhoL) == Approx(psat0).epsilon(1e-10));
+        CHECK(pressure(model, T, rhoV) == Approx(psat0).epsilon(1e-10));
+        CHECK(gibbs(model, T, rhoL) == Approx(gibbs(model, T, rhoV)).margin(1e-10));
+        // and teqp's own pure-fluid VLE solver, started 1 % away, lands on the same state
+        auto rhoLV = pure_VLE_T(*am, T, 1.01*rhoL, 0.99*rhoV, 100);
+        CHECK(rhoLV[0] == Approx(rhoL).epsilon(1e-9));
+        CHECK(rhoLV[1] == Approx(rhoV).epsilon(1e-9));
+    }
+}
+
 TEST_CASE("Advanced cubic EOS", "[AdvancedPR]"){
 
     // Values for CO2 + N2 from Table 6.3 of Lasala dissertation which come from DIPPR
