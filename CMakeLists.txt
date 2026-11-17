@@ -129,7 +129,9 @@ target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/mcx/multicomplex/include")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann_json")
-target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
+# SYSTEM: the vendored boost headers emit warnings (e.g. -Wdeprecated-literal-operator
+# on clang >= 20 from cpp_int/literals.hpp) that are not ours to fix
+target_include_directories(teqpinterface SYSTEM INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/boost_teqp")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-interop/include")
 target_include_directories(teqpinterface INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/externals/stbrumme-hashing/include")
 
