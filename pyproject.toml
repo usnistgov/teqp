@@ -32,7 +32,7 @@ Homepage = "https://github.com/usnistgov/teqp"
 minimum-version = "0.10"
 
 # Setuptools-style build caching in a local directory
-build-dir = "build/{wheel_tag}"
+build-dir = "build/cibw"  # fixed path so ccache sees identical commands for every Python version
 
 # The package to be built is that in the teqp folder
 wheel.packages = ["teqp"]
