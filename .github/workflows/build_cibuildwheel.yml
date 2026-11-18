@@ -15,6 +15,7 @@ jobs:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         # macos-15-intel replaces the retired macOS-13 image; it is the last
         # x86_64 macOS runner and is itself scheduled for removal in Aug 2027.
@@ -41,15 +42,28 @@ jobs:
         run: pipx run build --sdist --outdir wheelhouse
         if: runner.os == 'Windows'
 
+      # ccache lets every Python version after the first reuse the Python-independent
+      # teqpcpp objects. scikit-build-core wipes CMakeFiles/ between Python versions,
+      # so without a compiler cache everything is recompiled for each version.
+      # Windows needs no ccache: the Visual Studio generator keeps objects outside
+      # CMakeFiles/, so the fixed build-dir in pyproject.toml is enough there.
+      - name: Install ccache (macOS)
+        run: brew install ccache
+        if: runner.os == 'macOS'
+
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
         # to supply options, put them in 'env', like:
         env:
           CIBW_ARCHS: auto64
           # CIBW_ARCHS_MACOS: "universal2"
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 CMAKE_BUILD_PARALLEL_LEVEL='1'
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 CMAKE_BUILD_PARALLEL_LEVEL='1' CC=clang CXX=clang++ CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache CCACHE_MAXSIZE=10G
           CIBW_TEST_COMMAND: python -c "import teqp"
-          CIBW_ENVIRONMENT_LINUX: CXXFLAGS='-fconcepts' CMAKE_BUILD_PARALLEL_LEVEL='1'
+          # EPEL's ccache 3.7 breaks on the pybind11 module's flags; use an upstream 4.x binary
+          CIBW_BEFORE_ALL_LINUX: curl -fsSL https://github.com/ccache/ccache/releases/download/v4.11.3/ccache-4.11.3-linux-x86_64.tar.xz | tar -xJ -C /tmp && install /tmp/ccache-4.11.3-linux-x86_64/ccache /usr/local/bin/ccache && ccache --version
+          CIBW_BEFORE_BUILD_LINUX: ccache -s
+          CIBW_BEFORE_BUILD_MACOS: ccache -s
+          CIBW_ENVIRONMENT_LINUX: CXXFLAGS='-fconcepts' CMAKE_BUILD_PARALLEL_LEVEL='1' CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache CCACHE_MAXSIZE=10G
           CIBW_ENVIRONMENT_WINDOW: CMAKE_BUILD_PARALLEL_LEVEL='1'
           CIBW_BUILD_VERBOSITY_WINDOWS: 2
           # cp314t (free-threaded) is built by default as of cibuildwheel 4.x.
