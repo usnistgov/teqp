@@ -81,6 +81,8 @@ jobs:
   testpypi-publish:
     name: Upload to TestPyPI
     needs: [merge_wheels]
+    # A/B build-timing experiment: never upload from the experiment branches
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: testpypi
