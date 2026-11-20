@@ -126,14 +126,22 @@ TEST_CASE("Evaluation of Gubbins and Twu combos ", "[GTLPolar]")
     SECTION("+ Luckas"){
         MCGTL GTL{sigma_m, epsilon_over_k, mubar2, Qbar2, multipolar_rhostar_approach::calculate_Gubbins_rhostar};
         auto z = (Eigen::ArrayXd(2) << 0.1, 0.9).finished();
-        auto rhoN = std::complex<double>(300, 1e-100);
-        GTL.eval(300.0, rhoN, rhoN, z);
+        // Liquid-like number density in 1/m^3 (rhostar ~ 0.3); rhostar must be computed, not set to rhoN
+        auto rhoN = std::complex<double>(1e28, 1e-72);
+        auto rhostar = GTL.get_rhostar(rhoN, 0.0, z);
+        auto terms = GTL.eval(300.0, rhoN, rhostar, z);
+        CHECK(std::isfinite(terms.alpha.real()));
+        CHECK(std::isfinite(terms.alpha.imag()));
     }
     SECTION("+ Gubbins&Twu"){
         MCGG GTL{sigma_m, epsilon_over_k, mubar2, Qbar2, multipolar_rhostar_approach::calculate_Gubbins_rhostar};
         auto z = (Eigen::ArrayXd(2) << 0.1, 0.9).finished();
-        auto rhoN = std::complex<double>(300, 1e-100);
-        GTL.eval(300.0, rhoN, rhoN, z);
+        // Liquid-like number density in 1/m^3 (rhostar ~ 0.3); rhostar must be computed, not set to rhoN
+        auto rhoN = std::complex<double>(1e28, 1e-72);
+        auto rhostar = GTL.get_rhostar(rhoN, 0.0, z);
+        auto terms = GTL.eval(300.0, rhoN, rhostar, z);
+        CHECK(std::isfinite(terms.alpha.real()));
+        CHECK(std::isfinite(terms.alpha.imag()));
     }
 }
 
