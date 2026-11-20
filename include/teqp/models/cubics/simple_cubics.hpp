@@ -533,7 +533,10 @@ public:
         if (static_cast<std::size_t>(molefrac.size()) != alphas.size()) {
             throw std::invalid_argument("Sizes do not match");
         }
-        // First shift the volume by the volume translation
+        // Peneloux volume translation: p(T, v) = p_PR(T, v + c), so A(T, v) = A_PR(T, v + c) for the
+        // full Helmholtz energy. The ideal-gas part of A_PR at v + c differs from the ideal-gas part
+        // at v by -RT ln(1 + c rho), which therefore belongs to the residual part:
+        // alphar(T, rho) = alphar_PR(T, rho') - ln(1 + c rho), with rho' = 1/(1/rho + c)
         auto c = get_c(T, molefrac);
         auto rho = 1.0/(1.0/rhoinit + c);
         auto Delta1 = 1.0 + sqrt(2.0);
@@ -541,12 +544,13 @@ public:
         auto [a, b] = get_ab(T, molefrac);
         auto Psiminus = -log(1.0 - b * rho);
         auto Psiplus = log((Delta1 * b * rho + 1.0) / (Delta2 * b * rho + 1.0)) / (b * (Delta1 - Delta2));
-        auto val = Psiminus - a / (Ru * T) * Psiplus;
+        auto val = Psiminus - a / (Ru * T) * Psiplus - log(1.0 + c * rhoinit);
         return forceeval(val);
     }
     
     /// Return a tuple of saturated liquid and vapor densities for the EOS given the temperature
-    /// Uses the superancillary equations from Bell and Deiters:
+    /// Uses the superancillary equations from Bell and Deiters for the untranslated Peng-Robinson
+    /// equation, then applies the volume translation, v = v_PR - c
     ///
     /// \param T Temperature, in K
     /// \param ifluid Index of fluid you want to get superancillary for. Must be provided in the case of mixtures
@@ -569,12 +573,12 @@ public:
         }
         
         auto [a, b] = get_ab(T, molefracs);
+        auto c = get_c(T, molefracs);
         auto Ttilde = R(molefracs)*T*b/a;
         auto superanc_index = CubicSuperAncillary::PR_CODE;
-        return std::make_tuple(
-                               CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)/b,
-                               CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)/b
-                               );
+        auto rhoL_PR = CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOL_CODE, Ttilde)/b;
+        auto rhoV_PR = CubicSuperAncillary::supercubic(superanc_index, CubicSuperAncillary::RHOV_CODE, Ttilde)/b;
+        return std::make_tuple(1.0/(1.0/rhoL_PR - c), 1.0/(1.0/rhoV_PR - c));
     }
 };
 
