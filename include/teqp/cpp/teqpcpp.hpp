@@ -155,6 +155,8 @@ namespace teqp {
                 ISOCHORIC_multimatrix_args
             #undef X
             virtual Eigen::ArrayXd get_Psir_sigma_derivs(const double T, const EArrayd& rhovec, const EArrayd& v) const = 0;
+            virtual EArrayd build_R_gradient_autodiff(const EArrayd& rhovec) const = 0;
+            virtual EArrayd get_Psir_mixed_dir_derivs(const double T, const EArrayd& rhovec, const EArrayd& Tdir, const EMatrixd& V) const = 0;
             
             double get_neff(const double, const double, const EArrayd&) const;
             
