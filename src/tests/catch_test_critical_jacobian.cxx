@@ -140,8 +140,12 @@ TEST_CASE("Mixed derivatives of Psi^r from nested dual numbers", "[crit][critjac
             CHECK_THAT(d4[3], WithinRel(s[2], 1e-11));
             CHECK_THAT(d4[7], WithinRel(s[3], 1e-10));
             CHECK_THAT(d4[15], WithinRel(s[4], 1e-9));
-            // every entry with the same number of bits is the same derivative
-            CHECK_THAT(d4[2], WithinRel(d4[1], 1e-13)); CHECK_THAT(d4[5], WithinRel(d4[3], 1e-13)); CHECK_THAT(d4[11], WithinRel(d4[7], 1e-13)); CHECK_THAT(d4[14], WithinRel(d4[7], 1e-13));
+            // every entry with the same number of bits is the same derivative, reached through a different order of
+            // operations; the tolerance per order is the one used against get_Psir_sigma_derivs above, because a
+            // derivative of order 3 can be small against the terms it is summed from (AppleClang on arm64 contracts
+            // to fused multiply-adds and differs from GCC beyond 1e-13 there)
+            CHECK_THAT(d4[2], WithinRel(d4[1], 1e-12)); CHECK_THAT(d4[5], WithinRel(d4[3], 1e-11));
+            CHECK_THAT(d4[11], WithinRel(d4[7], 1e-10)); CHECK_THAT(d4[14], WithinRel(d4[7], 1e-10));
 
             // Directions e0, e1 and temperature: the Hessian of Psi^r, d2Psi^r/dT drho_i and dPsi^r/dT = rho R (Ar00 - Ar10)
             Eigen::ArrayXXd V3(3, 2); V3 << 1, 0, 0, 1, 0, 0;
