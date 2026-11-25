@@ -116,17 +116,19 @@ TEST_CASE("Critical-locus tangent equals the temperature derivative of exact cri
                 REQUIRE(scaled_criticality_residual(*c.model, T, rhovec) < 1e-10);
 
                 Eigen::ArrayXd tangent = ct::get_drhovec_dT_crit(*c.model, T, rhovec);
-                double h = 1e-4 * T;
+                double h = 1e-5 * T;
                 Eigen::ArrayXd rhovec_plus = exact_critical_point(*c.model, T + h, rhovec + h * tangent);
                 Eigen::ArrayXd rhovec_minus = exact_critical_point(*c.model, T - h, rhovec - h * tangent);
                 Eigen::ArrayXd fd = (rhovec_plus - rhovec_minus) / (2 * h);
                 worst = std::max(worst, (tangent - fd).matrix().norm() / fd.matrix().norm());
             }
             CAPTURE(c.label, T0, worst);
-            // Without the eigenvector-rotation term in get_drhovec_dT_crit, worst is 0.20-0.22 here.
-            // With it, worst is set by the finite-difference steps inside get_drhovec_dT_crit (up to
-            // 1.6e-5 for methane + ethane near pure methane).
-            CHECK(worst < 1e-4);
+            // worst is the truncation of this centered difference: it falls as h^2 from h = 1e-4 T to 1e-5 T, and at
+            // h = 1e-5 T it is 5.9e-10 and 5.8e-10 for van der Waals and 3.1e-9 and 1.6e-8 for methane + ethane (from
+            // methane and from ethane). At h = 3e-6 T the rounding of the solved points shows (up to 8.7e-9).
+            // The bound is 12 times the largest value. Without the eigenvector-rotation terms in the Jacobian of the
+            // criticality conditions, worst is 0.20-0.22.
+            CHECK(worst < 2e-7);
         }
     }
 }

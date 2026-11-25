@@ -48,6 +48,12 @@ TEST_CASE("Test infinite dilution critical locus derivatives for multifluid", "[
         auto infdil = ct::get_drhovec_dT_crit(model, T0, rhovec0);
         auto epinfdil = ct::eigen_problem(model, T0, rhovec0);
 
+        // get_criticality_conditions_Jacobian takes the templated model too; its null vector is the tangent
+        auto cj = ct::get_criticality_conditions_Jacobian(model, T0, rhovec0);
+        Eigen::Vector3d r0 = cj.J.row(0).transpose(), r1 = cj.J.row(1).transpose(), t = r0.cross(r1);
+        CHECK_THAT(t[1] / t[0], WithinRel(infdil(0), 1e-12));
+        CHECK_THAT(t[2] / t[0], WithinRel(infdil(1), 1e-12));
+
         // Just slightly not infinite dilution, values should be very similar
         Eigen::ArrayXd rhovec0almost = rhovec0; rhovec0almost[1 - i] = 1e-6;
         auto dil = ct::get_drhovec_dT_crit(model, T0, rhovec0almost);
