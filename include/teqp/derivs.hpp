@@ -3,8 +3,10 @@
 #if defined(TEQP_COMPLEXSTEP_ENABLED)
 #include <complex>
 #endif
+#include <array>
 #include <map>
 #include <tuple>
+#include <utility>
 #include <numeric>
 #include <concepts>
 
@@ -866,6 +868,28 @@ struct VirialDerivatives {
     }
 };
 
+namespace detail {
+
+/// The components of a nested dual number: out[m] is the derivative with respect to every level whose bit is set in m (level 1 is bit 0)
+template<typename D>
+void collect_dual_components(const D& u, const int bit, const int mask, Eigen::ArrayXd& out) {
+    if constexpr (std::is_arithmetic_v<D>) {
+        out[mask] = u;
+    }
+    else {
+        collect_dual_components(u.val, bit + 1, mask, out);
+        collect_dual_components(u.grad, bit + 1, mask | (1 << bit), out);
+    }
+}
+
+/// Seed level k of a nested dual number with components[k-1], for every level
+template<typename D, std::size_t... Is>
+void seed_dual_levels(D& x, const std::array<double, sizeof...(Is)>& components, std::index_sequence<Is...>) {
+    (autodiff::seed<Is + 1>(x, components[Is]), ...);
+}
+
+} // namespace detail
+
 /**
  In the isochoric formalism, the fugacity coefficient array can be obtained by the gradient of the residual Helmholtz energy density (which is a scalar) and the compressibility factor \f$Z\f$  (which is also a scalar) in terms of the temperature \f$T\f$ and the molar concentration vector \f$\vec\rho\f$:
  \f[
@@ -1120,6 +1144,24 @@ struct IsochoricDerivatives{
             return forceeval(model.alphar(T, rhotot_, molefrac) * model.R(molefrac) * T * rhotot_);
         };
         auto val = autodiff::gradient(psirfunc, wrt(rhovecc), at(rhovecc)).eval(); // evaluate the gradient
+        return val;
+    }
+
+    /**
+     * \brief Gradient of the molar gas constant \f$R(\vec x)\f$, \f$\vec x = \vec\rho/\rho\f$, w.r.t. the molar concentrations
+     *
+     * Zero for a model with a constant R. Not zero where R depends on composition, as for the
+     * mole-fraction-weighted R of the multifluid model with different gas constants in the pure-fluid equations.
+     */
+    static auto build_R_gradient_autodiff(const Model& model, const VectorType& rho) {
+        ArrayXdual rhovecc(rho.size()); for (auto i = 0; i < rho.size(); ++i) { rhovecc[i] = rho[i]; }
+        auto Rfunc = [&model](const ArrayXdual& rho_) {
+            auto rhotot_ = rho_.sum();
+            auto molefrac = (rho_ / rhotot_).eval();
+            autodiff::dual R_ = model.R(molefrac);
+            return R_;
+        };
+        auto val = autodiff::gradient(Rfunc, wrt(rhovecc), at(rhovecc)).eval(); // evaluate the gradient
         return val;
     }
 
@@ -1506,6 +1548,41 @@ struct IsochoricDerivatives{
         VectorType ret(der.size());
         for (auto i = 0; i < ret.size(); ++i){ ret[i] = der[i];}
         return ret;
+    }
+
+    /**
+     * \brief Mixed derivatives of \f$\Psi^{\rm r}\f$ along N joint directions in temperature and molar concentrations
+     *
+     * Direction k has the temperature component \f$t_k\f$ = Tdir[k] and the components \f$\vec V_k\f$ = V.row(k) in the molar
+     * concentrations. The function
+     * \f$f(\varepsilon_1, \dots, \varepsilon_N) = \Psi^{\rm r}(T + \sum_k\varepsilon_k t_k,\ \vec\rho + \sum_k\varepsilon_k\vec V_k)\f$
+     * is evaluated once with nested dual numbers, one level per direction. Entry m of the result is the derivative of f
+     * with respect to every \f$\varepsilon_k\f$ whose bit k is set in m (bit 0 is the first direction), taken at
+     * \f$\varepsilon = 0\f$; entry 0 is \f$\Psi^{\rm r}\f$. A direction given more than once gives the higher derivative
+     * along it. Each mixed derivative is the coefficient of its own product of dual units.
+     */
+    template<int N>
+    static Eigen::ArrayXd get_Psir_mixed_dir_derivs(const Model& model, const Scalar& T, const VectorType& rhovec, const Eigen::ArrayXd& Tdir, const Eigen::ArrayXXd& V) {
+        using adtype = autodiff::HigherOrderDual<N, double>;
+        if (Tdir.size() != N || V.rows() != N || V.cols() != rhovec.size()) {
+            throw teqp::InvalidArgument("get_Psir_mixed_dir_derivs needs one temperature component and one row of V per direction");
+        }
+        std::array<double, N> comps;
+        adtype Tad = T;
+        for (auto k = 0; k < N; ++k) { comps[k] = Tdir[k]; }
+        detail::seed_dual_levels(Tad, comps, std::make_index_sequence<N>{});
+        Eigen::ArrayX<adtype> rhoad(rhovec.size());
+        for (auto i = 0; i < rhovec.size(); ++i) {
+            rhoad[i] = rhovec[i];
+            for (auto k = 0; k < N; ++k) { comps[k] = V(k, i); }
+            detail::seed_dual_levels(rhoad[i], comps, std::make_index_sequence<N>{});
+        }
+        adtype rhotot = rhoad.sum();
+        Eigen::ArrayX<adtype> molefrac = (rhoad / rhotot).eval();
+        adtype psir = forceeval(model.alphar(Tad, rhotot, molefrac) * model.R(molefrac) * Tad * rhotot);
+        Eigen::ArrayXd out(1 << N);
+        detail::collect_dual_components(psir, 0, 0, out);
+        return out;
     }
 };
 

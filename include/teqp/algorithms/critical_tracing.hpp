@@ -1,7 +1,9 @@
 #pragma once
 
 #include <fstream>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 
 #include "nlohmann/json.hpp"
 
@@ -34,6 +36,35 @@ struct CriticalTracing {
     static auto sorted_eigen(const Eigen::MatrixXd& H) {
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(H);
         return std::make_tuple(es.eigenvalues(), es.eigenvectors());
+    }
+
+    /**
+    * \brief Eigenvalues and eigenvectors of the symmetric 2x2 matrix \f$[[a, b], [b, d]]\f$ from one Jacobi rotation
+    * \returns The eigenvalues in increasing order and the eigenvectors as columns
+    *
+    * The tangent of the rotation angle is \f$t = {\rm sgn}(z)/(|z| + \sqrt{1 + z^2})\f$ with \f$z = (d - a)/(2b)\f$
+    * and \f${\rm sgn}(0) = 1\f$; for \f$b = 0\f$ there is no rotation.
+    * The small component of an eigenvector is then a product of t and a number of order one, and it has the relative
+    * accuracy of the matrix entries. This matters for the Hessian of \f$\Psi\f$ at a small concentration of one component:
+    * its diagonal entry \f$RT/\rho_i\f$ is large, the component of \f$\vec v_0\f$ along that component is of the order
+    * of \f$\rho_i\f$, and the derivatives of the criticality conditions contain it divided by \f$\rho_i\f$.
+    */
+    static auto symmetric_eigen_2x2(const double a, const double b, const double d) {
+        double t = 0;
+        if (b != 0) {
+            const double z = (d - a) / (2 * b);
+            t = ((z < 0) ? -1.0 : 1.0) / (std::abs(z) + std::hypot(1.0, z));
+        }
+        const double c = 1 / std::hypot(1.0, t), s = t * c;
+        Eigen::Vector2d values(a - t * b, d + t * b);
+        Eigen::Matrix2d vectors;
+        vectors << c, s,
+                  -s, c;
+        if (values[0] > values[1]) {
+            std::swap(values[0], values[1]);
+            vectors.col(0).swap(vectors.col(1));
+        }
+        return std::make_pair(values, vectors);
     }
 
     static auto eigen_problem(const AbstractModel& model, const Scalar T, const VecType& rhovec, const std::optional<VecType>& alignment_v0 = std::nullopt) {
@@ -69,6 +100,21 @@ struct CriticalTracing {
             rhovec.minCoeff(&ind);
             if (ed.eigenvectorscols.col(ind).minCoeff() < 0) {
                 ed.eigenvectorscols *= -1.0;
+            }
+
+            if (N == 2) {
+                // The closed form for two components, each eigenvector with the sign of the aligned one of the
+                // iterative solver. The closed form reads the entry of H that the solver reads. Where the two
+                // eigenvalues are equal to rounding, the matrix does not determine its eigenvectors, and the
+                // closed form and the solver can return different pairs.
+                auto [values, vectors] = symmetric_eigen_2x2(H(0, 0), H(1, 0), H(1, 1));
+                for (auto k = 0; k < 2; ++k) {
+                    if (vectors.col(k).dot(ed.eigenvectorscols.col(k)) < 0) {
+                        vectors.col(k) *= -1.0;
+                    }
+                }
+                ed.eigenvalues = values;
+                ed.eigenvectorscols = vectors;
             }
         }
         else if (zero_count == 1) {
@@ -202,92 +248,196 @@ struct CriticalTracing {
         return std::any_of(std::begin(foo), std::end(foo), [](const auto x) { return x; });
     }
 
-    static auto get_drhovec_dT_crit(const AbstractModel& model, const Scalar& T, const VecType& rhovec) {
-
-        // The derivatives of total Psi w.r.t.sigma_1 (numerical for residual, analytic for ideal)
-        // Returns a tuple, with residual, ideal, total dicts with of number of derivatives, value of derivative
-        auto all_derivs = get_derivs(model, T, rhovec, std::nullopt);
-        auto derivs = all_derivs.tot;
-
-        // The temperature derivative of total Psi w.r.t.T from a centered finite difference in T
-        auto dT = 1e-7;
-        auto plusT = get_derivs(model, T + dT, rhovec, all_derivs.ei.v0).tot;
-        auto minusT = get_derivs(model, T - dT, rhovec, all_derivs.ei.v0).tot;
-        auto derivT = (plusT - minusT) / (2.0 * dT);
-
-        // Solve the eigenvalue problem for the given T & rho
-        auto ei = all_derivs.ei;
-
-        auto sigma2 = 2e-5 * rhovec.sum(); // This is the perturbation along the second eigenvector
-
-        auto rhovec_plus = (rhovec + ei.v1 * sigma2).eval();
-        auto rhovec_minus = (rhovec - ei.v1 * sigma2).eval();
-        std::string stepping_desc = "";
-        auto deriv_sigma2 = all_derivs.tot;
-        auto eval = [](const auto& ex) { return ex.eval(); };
-        if (all(eval(rhovec_minus > 0)) && all(eval(rhovec_plus > 0))) {
-            // Conventional centered derivative
-            auto plus_sigma2 = get_derivs(model, T, rhovec_plus, ei.v0);
-            auto minus_sigma2 = get_derivs(model, T, rhovec_minus, ei.v0);
-            deriv_sigma2 = (plus_sigma2.tot - minus_sigma2.tot) / (2.0 * sigma2);
-            stepping_desc = "conventional centered";
+private:
+    /// Mixed derivatives of a function f along two directions e0, e1 in concentration space and along temperature
+    struct MixedDerivs {
+        double f00, f01, f000, f001, f011, f0000, f0001, f00T, f000T, f01T;
+        MixedDerivs operator+(const MixedDerivs& o) const {
+            return { f00 + o.f00, f01 + o.f01, f000 + o.f000, f001 + o.f001, f011 + o.f011, f0000 + o.f0000, f0001 + o.f0001, f00T + o.f00T, f000T + o.f000T, f01T + o.f01T };
         }
-        else if (all(eval(rhovec_plus > 0))) {
-            // Forward derivative in the direction of v1
-            auto plus_sigma2 = get_derivs(model, T, rhovec_plus, ei.v0);
-            auto rhovec_2plus = (rhovec + 2 * ei.v1 * sigma2).eval();
-            auto plus2_sigma2 = get_derivs(model, T, rhovec_2plus, ei.v0);
-            deriv_sigma2 = (-3 * derivs + 4 * plus_sigma2.tot - plus2_sigma2.tot) / (2.0 * sigma2);
-            stepping_desc = "forward";
+    };
+
+    /**
+     * \brief The mixed derivatives of \f$\Psi^{\rm r}\f$ other than \f$f_{011}\f$ and \f$f_{01T}\f$, each taken directly
+     *
+     * One derivative of order 4 along \f$\vec e_0\f$ (get_Psir_sigma_derivs) gives \f$f_{00}\f$, \f$f_{000}\f$ and \f$f_{0000}\f$. Nested dual
+     * numbers (get_Psir_mixed_dir_derivs) with the levels along \f$(\vec e_0, \vec e_0, \vec e_0, T)\f$ give \f$f_{000T}\f$ and
+     * \f$f_{00T}\f$, and along \f$(\vec e_0, \vec e_0, \vec e_0, \vec e_1)\f$ \f$f_{0001}\f$, \f$f_{001}\f$ and \f$f_{01}\f$.
+     * \f$f_{011}\f$ and \f$f_{01T}\f$ are returned as zero; mixed_derivs_f011_f01T gives them.
+     */
+    static MixedDerivs mixed_derivs(const AbstractModel& model, const double T, const VecType& rhovec, const Eigen::ArrayXd& e0, const Eigen::ArrayXd& e1) {
+        MixedDerivs m{};
+        const Eigen::ArrayXd s = model.get_Psir_sigma_derivs(T, rhovec, e0);
+        m.f00 = s[2]; m.f000 = s[3]; m.f0000 = s[4];
+        // Entry 15 is the derivative along all four levels, entry 11 along levels 1, 2 and 4, entry 9 along levels 1 and 4
+        Eigen::ArrayXXd V(4, 2);
+        Eigen::ArrayXd Tdir = Eigen::ArrayXd::Zero(4);
+        V.row(0) = e0.transpose(); V.row(1) = e0.transpose(); V.row(2) = e0.transpose(); V.row(3).setZero(); Tdir[3] = 1.0;
+        const Eigen::ArrayXd A = model.get_Psir_mixed_dir_derivs(T, rhovec, Tdir, V);
+        m.f000T = A[15]; m.f00T = A[11];
+        V.row(3) = e1.transpose(); Tdir[3] = 0.0;
+        const Eigen::ArrayXd B = model.get_Psir_mixed_dir_derivs(T, rhovec, Tdir, V);
+        m.f0001 = B[15]; m.f001 = B[11]; m.f01 = B[9];
+        return m;
+    }
+
+    /**
+     * \brief The mixed derivatives \f$f_{011}\f$ and \f$f_{01T}\f$ of \f$\Psi^{\rm r}\f$, from nested dual numbers with the levels along
+     * \f$(\vec e_0, \vec e_1, \vec e_1)\f$ and \f$(\vec e_0, \vec e_1, T)\f$
+     */
+    static std::pair<double, double> mixed_derivs_f011_f01T(const AbstractModel& model, const double T, const VecType& rhovec, const Eigen::ArrayXd& e0, const Eigen::ArrayXd& e1) {
+        Eigen::ArrayXXd V(3, 2);
+        Eigen::ArrayXd Tdir = Eigen::ArrayXd::Zero(3);
+        V.row(0) = e0.transpose(); V.row(1) = e1.transpose(); V.row(2) = e1.transpose();
+        const double f011 = model.get_Psir_mixed_dir_derivs(T, rhovec, Tdir, V)[7];
+        V.row(2).setZero(); Tdir[2] = 1.0;
+        const double f01T = model.get_Psir_mixed_dir_derivs(T, rhovec, Tdir, V)[7];
+        return { f011, f01T };
+    }
+
+    /**
+     * \brief The mixed derivatives of the ideal-gas part \f$\Psi^0 = RT\sum_i\rho_i(\ln\rho_i - 1)\f$, with R the value at the state
+     *
+     * The derivative tensors of \f$\Psi^0\f$ are diagonal: \f$\Psi^0_{ii} = RT/\rho_i\f$, \f$\Psi^0_{iii} = -RT/\rho_i^2\f$, \f$\Psi^0_{iiii} = 2RT/\rho_i^3\f$,
+     * \f$\Psi^0_{iiT} = R/\rho_i\f$, \f$\Psi^0_{iiiT} = -R/\rho_i^2\f$. They are contracted with the directions term by term.
+     * They are not taken with dual numbers along the eigenvectors: near infinite dilution the terms of order
+     * \f$1/\rho_i^3\f$ of the minor component would be subtracted from each other.
+     *
+     * Each term is a product of the ratios \f$e_{0,i}/\rho_i\f$ and \f$e_{1,i}/\rho_i\f$ and of components of the directions,
+     * so no power of \f$1/\rho_i\f$ is formed alone. At a small concentration of component q the component
+     * \f$v_{0,q}\f$ of the eigenvector is of the order of \f$\rho_q\f$ and \f$v_{0,q}/\rho_q\f$ stays of order one.
+     */
+    static MixedDerivs ideal_mixed_derivs(const double R, const double T, const VecType& rhovec, const Eigen::ArrayXd& e0, const Eigen::ArrayXd& e1) {
+        const Eigen::ArrayXd u0 = e0 / rhovec, u1 = e1 / rhovec;
+        MixedDerivs m;
+        m.f00 = R * T * (u0 * e0).sum();
+        m.f01 = R * T * (u0 * e1).sum();
+        m.f000 = -R * T * (u0 * u0 * e0).sum();
+        m.f001 = -R * T * (u0 * u0 * e1).sum();
+        m.f011 = -R * T * (u0 * u1 * e1).sum();
+        m.f0000 = 2 * R * T * (u0 * u0 * u0 * e0).sum();
+        m.f0001 = 2 * R * T * (u0 * u0 * u0 * e1).sum();
+        m.f00T = R * (u0 * e0).sum();
+        m.f000T = -R * (u0 * u0 * e0).sum();
+        m.f01T = R * (u0 * e1).sum();
+        return m;
+    }
+
+    /// The temperature and the molar concentrations of a state, for an error message
+    static std::string describe_state(const double T, const VecType& rhovec) {
+        std::stringstream ss;
+        ss << std::setprecision(17) << "T = " << T << " K, rhovec = [";
+        for (auto i = 0; i < rhovec.size(); ++i) {
+            ss << ((i > 0) ? ", " : "") << rhovec[i];
         }
-        else if (all(eval(rhovec_minus > 0))) {
-            // Negative derivative in the direction of v1
-            auto minus_sigma2 = get_derivs(model, T, rhovec_minus, ei.v0);
-            auto rhovec_2minus = (rhovec - 2 * ei.v1 * sigma2).eval();
-            auto minus2_sigma2 = get_derivs(model, T, rhovec_2minus, ei.v0);
-            deriv_sigma2 = (-3 * derivs + 4 * minus_sigma2.tot - minus2_sigma2.tot) / (-2.0 * sigma2);
-            stepping_desc = "backwards";
+        ss << "] mol/m^3";
+        return ss.str();
+    }
+
+public:
+    /**
+     * \brief The criticality conditions \f$C = [\lambda_0, \partial^3\Psi/\partial\sigma_1^3]\f$ of a binary mixture and their exact Jacobian
+     *
+     * The second condition is a cubic form in the eigenvector
+     * \f$\vec v_0\f$, which turns with the state; its derivatives carry the rotation terms with
+     * \f$1/(\lambda_0 - \lambda_1)\f$ from first-order perturbation of the eigenvector.
+     * The ideal-gas part of \f$\Psi\f$ is built with the number \f$R(\vec x)\f$ at the state, so where
+     * R depends on composition the conditions also depend on the concentrations through R;
+     * the Jacobian carries that term, \f$(\partial C/\partial R)\,\nabla_{\vec\rho}R\f$.
+     *
+     * \param alignment_v0 If given, \f$\vec v_0\f$ is oriented to have a positive projection on it. The sign of \f$\vec v_0\f$ sets the sign of the second condition.
+     * \throws std::invalid_argument if the mixture is not binary, if a molar concentration is negative, or if both
+     * molar concentrations are zero (from eigen_problem). The result is not finite, and nothing is thrown, where the
+     * temperature or a molar concentration is not finite, where the model returns a derivative that is not finite, and
+     * where the two eigenvalues of the Hessian are equal (the rotation terms divide by their difference).
+     */
+    static CriticalJacobianData get_criticality_conditions_Jacobian(const AbstractModel& model, const Scalar T, const VecType& rhovec, const std::optional<VecType>& alignment_v0 = std::nullopt) {
+        if (rhovec.size() != 2) {
+            throw std::invalid_argument("get_criticality_conditions_Jacobian is implemented for binary mixtures");
+        }
+        if ((rhovec < 0).any()) {
+            throw std::invalid_argument("get_criticality_conditions_Jacobian needs molar concentrations that are not negative; " + describe_state(T, rhovec));
+        }
+        CriticalJacobianData out;
+        out.ei = eigen_problem(model, T, rhovec, alignment_v0);
+        const Eigen::Index nzero = (rhovec == 0).count();
+        if (nzero == 0) {
+            const Eigen::ArrayXd v0 = out.ei.v0, v1 = out.ei.v1;
+            const double R = model.R(rhovec / rhovec.sum());
+            const auto mi = ideal_mixed_derivs(R, T, rhovec, v0, v1);
+            auto mr = mixed_derivs(model, T, rhovec, v0, v1);
+            std::tie(mr.f011, mr.f01T) = mixed_derivs_f011_f01T(model, T, rhovec, v0, v1);
+            const auto m = mr + mi;
+            const double gap = out.ei.eigenvalues[0] - out.ei.eigenvalues[1];
+
+            // f011 and the gap grow as 1/rho_i at a small concentration of component i; their ratio does not
+            out.C << out.ei.eigenvalues[0], m.f000;
+            const Eigen::Vector2d dC_dsigma1(m.f000, m.f0000 + 3 * m.f001 * (m.f001 / gap));
+            const Eigen::Vector2d dC_dsigma2(m.f001, m.f0001 + 3 * m.f001 * (m.f011 / gap));
+            const Eigen::Vector2d dC_dT(m.f00T, m.f000T + 3 * m.f001 * (m.f01T / gap));
+            out.J.col(0) = dC_dT;
+            out.J.block(0, 1, 2, 2) = dC_dsigma1 * v0.matrix().transpose() + dC_dsigma2 * v1.matrix().transpose();
+
+            // Dependence through R: d(Hessian)/dR = diag(T/rho_i), d(Psi_000)/dR = -T sum_i v0_i^3/rho_i^2 at fixed v0.
+            // These are T/R times the ideal-gas parts of the temperature derivatives f00T, f01T and f000T.
+            const Eigen::ArrayXd gradR = model.build_R_gradient_autodiff(rhovec);
+            const Eigen::Vector2d dC_dR(T / R * mi.f00T, T / R * (mi.f000T + 3 * m.f001 * (mi.f01T / gap)));
+            out.J.block(0, 1, 2, 2) += dC_dR * gradR.matrix().transpose();
         }
         else {
-            throw std::invalid_argument("This is not possible I think.");
+            // Component q is absent (eigen_problem has thrown if both concentrations are zero). As rho_q -> 0, lambda_1 ~ RT/rho_q diverges, v0 -> e_p, and
+            // lambda_0 = H_pp - rho_q H_pq^2/(RT) + O(rho_q^2), v0 = e_p - (rho_q H_pq/(RT)) e_q + O(rho_q^2).
+            // The conditions and their derivatives then have the finite limits below, in which the
+            // derivatives of Psi^r are plain component derivatives.
+            out.at_infinite_dilution = true;
+            const Eigen::Index q = (rhovec[0] == 0) ? 0 : 1, p = 1 - q;
+            Eigen::ArrayXd ep = Eigen::ArrayXd::Zero(2), eq = Eigen::ArrayXd::Zero(2);
+            ep[p] = 1.0; eq[q] = 1.0;
+            const double R = model.R(rhovec / rhovec.sum()), RT = R * T, rhop = rhovec[p];
+            const auto m = mixed_derivs(model, T, rhovec, ep, eq); // derivatives of Psi^r
+            const double psir_pp = m.f00, psir_pq = m.f01;
+
+            Eigen::Array2d C(RT / rhop + psir_pp, -RT / (rhop * rhop) + m.f000);
+            Eigen::Vector2d dC_dT(R / rhop + m.f00T, -R / (rhop * rhop) + m.f000T);
+            Eigen::Vector2d dC_drhop(C[1], 2 * RT / (rhop * rhop * rhop) + m.f0000);
+            Eigen::Vector2d dC_drhoq(m.f001 - psir_pq * psir_pq / RT,
+                                     m.f0001 - 3 * m.f001 * psir_pq / RT + psir_pq * psir_pq * psir_pq / (RT * RT));
+            // Dependence through R, in the same limit: dC/dR = [T/rho_p, -T/rho_p^2]
+            const Eigen::ArrayXd gradR = model.build_R_gradient_autodiff(rhovec);
+            const Eigen::Vector2d dC_dR(T / rhop, -T / (rhop * rhop));
+            dC_drhop += dC_dR * gradR[p];
+            dC_drhoq += dC_dR * gradR[q];
+            // The second condition is odd in v0; eigen_problem may have returned v0 = -e_p
+            const double sign = (out.ei.v0[p] < 0) ? -1.0 : 1.0;
+            C[1] *= sign; dC_dT[1] *= sign; dC_drhop[1] *= sign; dC_drhoq[1] *= sign;
+            out.C = C;
+            out.J.col(0) = dC_dT;
+            out.J.col(1 + p) = dC_drhop;
+            out.J.col(1 + q) = dC_drhoq;
         }
+        return out;
+    }
 
-        // The columns of b are from Eq. 31 and Eq. 33
-        Eigen::MatrixXd b(2, 2);
-        b << derivs[3], derivs[4],             // row is d^3\Psi/d\sigma_1^3, d^4\Psi/d\sigma_1^4
-            deriv_sigma2[2], deriv_sigma2[3]; // row is d/d\sigma_2(d^3\Psi/d\sigma_1^3), d/d\sigma_2(d^3\Psi/d\sigma_1^3)
-
-        // The second criticality condition, d^3\Psi/d\sigma_1^3, is a cubic form in the eigenvector v0,
-        // and v0 turns when rhovec moves along v0. derivs[4] holds v0 fixed, so the derivative of that
-        // condition along sigma_1 also needs the rotation term 3*Psi_001^2/(lambda_0 - lambda_1), from
-        // first-order perturbation of the eigenvector, dv0/dsigma_1 = Psi_001/(lambda_0 - lambda_1)*v1.
-        // Psi_001 = d/d\sigma_2(d^2\Psi/d\sigma_1^2) is deriv_sigma2[2]. The first condition, lambda_0,
-        // is stationary with respect to v0 and needs no such term, and the derivatives along sigma_2
-        // and T re-solve the eigenproblem at the perturbed state, so they already contain the rotation.
-        // At infinite dilution the reduced eigenproblem has one eigenvalue: there lambda_1 diverges
-        // with the ideal-gas term RT/rho_i of the absent component, and the term vanishes.
-        if (ei.eigenvalues.size() > 1) {
-            b(0, 1) += 3.0*deriv_sigma2[2]*deriv_sigma2[2]/(ei.eigenvalues(0) - ei.eigenvalues(1));
+    /**
+     * \brief The derivative of the molar concentrations with respect to temperature along the critical curve of a binary mixture
+     *
+     * The tangent of the critical curve is the null vector \f$\vec t\f$ of the exact Jacobian of the
+     * criticality conditions (get_criticality_conditions_Jacobian); this function returns \f$(t_1, t_2)/t_0\f$.
+     *
+     * \throws std::invalid_argument if the mixture is not binary, if a molar concentration is negative, if both molar
+     * concentrations are zero, or if the result is not finite. The result is not finite where the temperature or a
+     * molar concentration is not finite, where the model returns a derivative that is not finite, where the two
+     * eigenvalues of the Hessian are equal, and where the temperature has an extremum along the curve (\f$t_0 = 0\f$).
+     */
+    static auto get_drhovec_dT_crit(const AbstractModel& model, const Scalar& T, const VecType& rhovec) {
+        const auto cj = get_criticality_conditions_Jacobian(model, T, rhovec);
+        const Eigen::Vector3d r0 = cj.J.row(0).transpose(), r1 = cj.J.row(1).transpose();
+        const Eigen::Vector3d t = r0.cross(r1);
+        Eigen::MatrixXd drhovec_dT(2, 1);
+        drhovec_dT << t[1] / t[0], t[2] / t[0];
+        if (!drhovec_dT.allFinite()) {
+            throw std::invalid_argument("The tangent of the critical curve is not finite; " + describe_state(T, rhovec));
         }
-
-        auto LHS = (ei.eigenvectorscols * b).transpose();
-        Eigen::MatrixXd RHS(2, 1); RHS << -derivT[2], -derivT[3];
-        Eigen::MatrixXd drhovec_dT = LHS.colPivHouseholderQr().solve(RHS);
-
-#if defined(DEBUG_get_drhovec_dT_crit)
-        std::cout << "LHS: " << LHS << std::endl;
-        std::cout << "RHS: " << RHS << std::endl;
-        std::cout << "b: " << b << std::endl;
-        std::cout << "stepping_desc: " << stepping_desc << std::endl;
-        std::cout << "deriv_sigma2: " << deriv_sigma2 << std::endl;
-        std::cout << "rhovec_plus: " << rhovec_plus << std::endl;
-        std::cout << "all_derivs.tot:" << all_derivs.tot << std::endl;
-        std::cout << "all_derivs.psir:" << all_derivs.psir << std::endl; 
-        auto plus_sigma2 = get_derivs(model, T, rhovec_plus, ei.v0);
-        std::cout << "plus_sigma2.tot:" << plus_sigma2.tot << std::endl;
-        std::cout << "plus_sigma2.psir:" << plus_sigma2.psir << std::endl;
-        std::cout << "dot of v0: " << plus_sigma2.ei.v0 * ei.v0 << std::endl;
-#endif
         return drhovec_dT;
     }
 
@@ -769,6 +919,7 @@ struct CriticalTracing {
     X(trace_critical_arclength_binary) \
     X(critical_polish_fixedmolefrac)  \
     X(get_drhovec_dT_crit) \
+    X(get_criticality_conditions_Jacobian) \
     X(get_derivs) \
     X(eigen_problem)
 

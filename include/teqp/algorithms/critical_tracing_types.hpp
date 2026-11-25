@@ -29,4 +29,12 @@ struct EigenData {
     Eigen::MatrixXd eigenvectorscols;
 };
 
+/// The criticality conditions of a binary mixture and their exact Jacobian
+struct CriticalJacobianData {
+    Eigen::Array2d C; ///< The conditions \f$[\lambda_0, \partial^3\Psi/\partial\sigma_1^3]\f$
+    Eigen::Matrix<double, 2, 3> J; ///< \f$\partial C/\partial(T, \rho_0, \rho_1)\f$, one row per condition
+    EigenData ei; ///< The eigenvalues and eigenvectors of the Hessian of \f$\Psi\f$ the conditions were built with
+    bool at_infinite_dilution = false; ///< True if one molar concentration is exactly zero and the limiting forms were used
+};
+
 }

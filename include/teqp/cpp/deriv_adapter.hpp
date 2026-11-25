@@ -241,6 +241,17 @@ public:
     virtual Eigen::ArrayXd get_Psir_sigma_derivs(const double T, const EArrayd& rhovec, const EArrayd& v) const override{
         return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::get_Psir_sigma_derivs(mp.get_cref(), T, rhovec, v);
     };
+    virtual EArrayd build_R_gradient_autodiff(const EArrayd& rhovec) const override{
+        return IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>::build_R_gradient_autodiff(mp.get_cref(), rhovec);
+    };
+    virtual EArrayd get_Psir_mixed_dir_derivs(const double T, const EArrayd& rhovec, const EArrayd& Tdir, const EMatrixd& V) const override{
+        using id = IsochoricDerivatives<decltype(mp.get_cref()), double, EArrayd>;
+        switch (Tdir.size()) {
+            case 3: return id::template get_Psir_mixed_dir_derivs<3>(mp.get_cref(), T, rhovec, Tdir, V);
+            case 4: return id::template get_Psir_mixed_dir_derivs<4>(mp.get_cref(), T, rhovec, Tdir, V);
+            default: throw teqp::InvalidArgument("get_Psir_mixed_dir_derivs takes 3 or 4 directions");
+        }
+    };
     
     virtual EArray33d get_deriv_mat2(const double T, double rho, const EArrayd& z ) const override {
         return DerivativeHolderSquare<2>(mp.get_cref(), T, rho, z).derivs;
