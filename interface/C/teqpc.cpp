@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <variant>
 #include <atomic>
+#include <cstring>
+#include <vector>
 
 #include "teqp/cpp/teqpcpp.hpp"
 #include "teqp/exceptions.hpp"
@@ -45,6 +47,11 @@ std::unordered_map<unsigned long long int, std::shared_ptr<teqp::cppinterface::A
 void exception_handler(int& errcode, char* message_buffer, const int buffer_length)
 {
     auto write_error = [&](const std::string& msg){
+        // A non-positive length means there is no buffer to write to; a negative
+        // value would otherwise become an enormous std::size_t in the comparisons below
+        if (message_buffer == nullptr || buffer_length <= 0){
+            return;
+        }
         if (msg.size() < static_cast<std::size_t>(buffer_length)){
             strcpy(message_buffer, msg.c_str());
         }
@@ -55,6 +62,10 @@ void exception_handler(int& errcode, char* message_buffer, const int buffer_leng
             }
             else if (buffer_length > 1){
                 strcpy(message_buffer, "?");
+            }
+            else{
+                // Only room for the null terminator
+                message_buffer[0] = '\0';
             }
         }
     };
@@ -455,9 +466,51 @@ TEST_CASE("Use of C interface","[teqpc]") {
         REQUIRE(e2 == 0);
         return val;
     };
-    
+
 }
-#else 
+
+TEST_CASE("Error messages are bounded by the buffer length given", "[teqpc]") {
+
+    // A "kind" that is not understood yields an error message that echoes the kind back,
+    // so the length of the message is entirely under the control of the caller's JSON
+    nlohmann::json j = {
+        {"kind", std::string(4096, 'A')},
+        {"model", nlohmann::json::object()}
+    };
+    const std::string js = j.dump();
+
+    // The buffer is over-allocated and filled with a sentinel; only the first
+    // reported_length bytes may be touched, the rest must be left alone
+    constexpr std::size_t allocated = 8192;
+    constexpr char sentinel = '\xCC';
+
+    auto check_bounded = [&](int reported_length){
+        std::vector<char> buffer(allocated, sentinel);
+        long long int uuid = -1;
+        int errcode = build_model(js.c_str(), &uuid, buffer.data(), reported_length);
+        CAPTURE(reported_length);
+        REQUIRE(errcode != 0); // The build must fail, that is the point of the bogus kind
+
+        // Nothing past the length the caller reported may have been written
+        for (std::size_t i = (reported_length > 0) ? static_cast<std::size_t>(reported_length) : 0; i < allocated; ++i){
+            REQUIRE(buffer[i] == sentinel);
+        }
+        if (reported_length > 0){
+            // What was written must be a null-terminated string fitting in the buffer
+            const auto* end = static_cast<const char*>(memchr(buffer.data(), '\0', static_cast<std::size_t>(reported_length)));
+            REQUIRE(end != nullptr);
+            REQUIRE(strlen(buffer.data()) < static_cast<std::size_t>(reported_length));
+        }
+    };
+
+    SECTION("typical buffer, message far too long"){ check_bounded(300); }
+    SECTION("buffer too small even for the fallback message"){ check_bounded(10); }
+    SECTION("room for one character plus terminator"){ check_bounded(2); }
+    SECTION("room for the terminator only"){ check_bounded(1); }
+    SECTION("no buffer at all"){ check_bounded(0); }
+    SECTION("negative length must not be treated as enormous"){ check_bounded(-1); }
+}
+#else
 int main() {
 }
 #endif
